@@ -39,9 +39,16 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
             $artNo = $artNo === '' ? null : $artNo;
 
             $effectiveFromRaw = $row['effective_from'] ?? null;
-            $effectiveFrom = $this->parseDate($effectiveFromRaw);
-            if (!$effectiveFrom) {
-                $rowErrors[] = "Row {$rowNumber}: Effective From '{$effectiveFromRaw}' is invalid. Use DD-MM-YYYY format.";
+            $effectiveFromRawStr = trim((string)$effectiveFromRaw);
+            $effectiveFrom = null;
+            
+            if ($effectiveFromRawStr === '') {
+                $rowErrors[] = "Row {$rowNumber}: Effective From is required.";
+            } else {
+                $effectiveFrom = $this->parseDate($effectiveFromRaw);
+                if (!$effectiveFrom) {
+                    $rowErrors[] = "Row {$rowNumber}: Effective From '{$effectiveFromRaw}' is invalid. Use DD-MM-YYYY format.";
+                }
             }
 
             $status = trim((string)($row['status'] ?? 'Active'));

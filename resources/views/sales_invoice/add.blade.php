@@ -389,7 +389,7 @@
                                                 @if(!empty($row->sku))
                                                     <div class="small text-primary">Barcode: {{ $row->sku }}</div>
                                                 @endif
-                                                <input type="hidden" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
+                                                <input type="hidden" class="invoice-item-db-id" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][item_id]" class="item-id" value="{{ $row->item_id ?? '' }}">
@@ -423,15 +423,15 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
+                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
                                                     <label>Qty *</label>
                                                 </div>
                                                 <div class="qty-error text-danger small" style="display:none;"></div>
                                                 @if(isset($row->max_qty) && $row->max_qty !== '' && (!isset($row->is_open_order) || $row->is_open_order != 1))
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif
-                                                @if(!isset($invoice) && isset($row->stock_qty) && $row->stock_qty !== '')
-                                                    <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block" style="font-weight: 500;">Stock: {{ $row->stock_qty }}</small>
+                                                @if(isset($row->stock_qty) && $row->stock_qty !== '')
+                                                    <small class="{{ max(0, $row->stock_qty) < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block" style="font-weight: 500;">Stock: {{ max(0, $row->stock_qty) }}</small>
                                                 @endif
                                             </td>
                                             <td>
@@ -503,14 +503,14 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="min-width: 250px;">Stock Item *</th>
-                                        <th style="min-width: 150px;">SKU</th>
+                                        <th style="min-width: 200px;">SKU</th>
                                         <th style="min-width: 150px;">Color</th>
                                         <th style="min-width: 100px;">Sleeve</th>
                                         <th style="min-width: 150px;">Art No *</th>
                                         <th style="min-width: 100px;">UOM *</th>
                                         <th style="min-width: 120px;">Size *</th>
                                         <th style="min-width: 120px;">Quantity *</th>
-                                        <th style="min-width: 120px;">MRP</th>
+                                        <th style="min-width: 160px;">MRP</th>
                                         <th style="min-width: 120px;">Selling Price *</th>
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 50px;">Action</th>
@@ -520,10 +520,11 @@
                                     @if(!empty($openOrderItems))
                                         @foreach($openOrderItems as $index => $row)
                                             @php
-                                                $displayName = !empty($row->finished_item_code) ? $row->finished_item_code : ($row->sku ?? '');
+                                                /* $displayName = !empty($row->finished_item_code) ? $row->finished_item_code : ($row->sku ?? '');
                                                 if (!empty($row->item_name)) {
                                                     $displayName .= ' - ' . $row->item_name;
-                                                }
+                                                } */
+                                               $displayName = !empty($row->brand_name) ? $row->brand_name.' ' : (!empty($row->finished_item_code) ? $row->finished_item_code : ($row->sku ?? ''));
                                             @endphp
                                             <tr class="item-row">
                                                 <td>
@@ -574,11 +575,11 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" min="0.01" step="0.01">
-                                                        <div class="stock-info-wrapper mt-1">
-                                                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format($row->stock_qty ?? 0, 2) }}</span></small>
-                                                            <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
-                                                        </div>
+                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" min="0.01" step="0.01">
+                                                    </div>
+                                                    <div class="stock-info-wrapper mt-1">
+                                                        <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format(max(0, $row->stock_qty ?? 0), 2) }}</span></small>
+                                                        <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -597,7 +598,11 @@
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                    @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                                        <span class="text-muted">-</span>
+                                                    @else
+                                                        <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -1358,13 +1363,13 @@
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="number" step="any" class="form-control mrp" name="items[${index}][mrp]" value="${matchedItem.mrp || 0}" readonly>
+                            <input type="number" step="any" class="form-control mrp" name="items[${index}][mrp]" value="${matchedItem.mrp || 0}">
                             <label>MRP</label>
                         </div>
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="number" step="any" class="form-control rate" name="items[${index}][rate]" value="${matchedItem.rate || 0}" readonly>
+                            <input type="number" step="any" class="form-control rate" name="items[${index}][rate]" value="${matchedItem.rate || 0}">
                             <label>Price *</label>
                         </div>
                     </td>
@@ -1752,14 +1757,17 @@
             var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
             var stockAttr = qtyInput.attr('data-stock');
             var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
+            var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0; //new line
+            var maxAllowedStock = !isNaN(stock) ? Math.max(stock, originalQty) : NaN; //new line
             var errorDiv = row.find('.qty-error');
             
-            var isExistingItem = row.find('input[name^="items"][name$="[id]"]').length > 0 && row.find('input[name^="items"][name$="[id]"]').val() !== '';
+            var isExistingItem = row.find('.invoice-item-db-id').length > 0 && row.find('.invoice-item-db-id').val() !== ''; //new line
 
             if (!isNaN(max) && qty > max) {
                 errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                 qtyInput.addClass('is-invalid');
-            } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) {
+            // } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) { // old line
+            } else if (!isNaN(maxAllowedStock) && qty > maxAllowedStock) { // new line
                 errorDiv.text('Exceeds stock!').show();
                 qtyInput.addClass('is-invalid');
             } else {
@@ -1787,15 +1795,18 @@
                 var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
                 var stockAttr = qtyInput.attr('data-stock');
                 var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
+                var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
+                var maxAllowedStock = !isNaN(stock) ? Math.max(stock, originalQty) : NaN;
                 var errorDiv = row.find('.qty-error');
                 
-                var isExistingItem = row.find('input[name^="items"][name$="[id]"]').length > 0 && row.find('input[name^="items"][name$="[id]"]').val() !== '';
+                var isExistingItem = row.find('.invoice-item-db-id').length > 0 && row.find('.invoice-item-db-id').val() !== '';
 
                 if (!isNaN(max) && qty > max) {
                     errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                     qtyInput.addClass('is-invalid');
                     hasError = true;
-                } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) {
+                // } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) { // old line
+                } else if (!isNaN(maxAllowedStock) && qty > maxAllowedStock) { // new line
                     errorDiv.text('Exceeds stock!').show();
                     qtyInput.addClass('is-invalid');
                     hasError = true;
@@ -1811,9 +1822,12 @@
                 var qtyInput = row.find('.open-qty');
                 if (qtyInput.length === 0) return;
                 var qty = parseFloat(qtyInput.val()) || 0;
+                var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
                 var available = parseFloat(row.find('.available-stock-display').text()) || 0;
+                var maxAllowedStock = Math.max(available, originalQty);
 
-                if (qty > available) {
+                // if (qty > available) { // old line
+                if (qty > maxAllowedStock) { // new line
                     qtyInput.addClass('is-invalid');
                     row.find('.stock-error-msg').show();
                     hasError = true;
@@ -2206,8 +2220,9 @@
             }
 
             let index = parseInt($('#openOrderItemIndex').val()) || 0;
-            let displayName = res.finished_item_code || res.sku || '';
-            if (res.item_name) displayName += ' - ' + res.item_name;
+            /* let displayName = res.finished_item_code || res.sku || '';
+            if (res.item_name) displayName += ' - ' + res.item_name; */
+            let displayName = res.brand_name ? res.brand_name + ' ' : (res.finished_item_code || res.sku || '');
 
             let mrp = parseFloat(res.mrp || 0).toFixed(2);
             let price = parseFloat(res.price || 0).toFixed(2);
@@ -2268,11 +2283,11 @@
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" min="0.01" step="0.01">
-                        <div class="stock-info-wrapper mt-1">
-                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">${parseFloat(balance).toFixed(2)}</span></small>
-                            <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
-                        </div>
+                        <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" data-original-qty="${qty}" min="0.01" step="0.01">
+                    </div>
+                    <div class="stock-info-wrapper mt-1">
+                        <small class="stock-label text-muted">Stock: <span class="available-stock-display">${Math.max(0, parseFloat(balance)).toFixed(2)}</span></small>
+                        <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
                     </div>
                 </td>
                 <td>
@@ -2306,10 +2321,13 @@
             let $row = $(this).closest('.item-row');
             let qtyInput = $row.find('.open-qty');
             let qty = parseFloat(qtyInput.val()) || 0;
+            let originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
             let rate = parseFloat($row.find('.open-rate').val()) || 0;
             let available = parseFloat($row.find('.available-stock-display').text()) || 0;
+            let maxAllowedStock = Math.max(available, originalQty);
 
-            if (qty > available) {
+            // if (qty > available) { // old line
+            if (qty > maxAllowedStock) { // new line
                 qtyInput.addClass('is-invalid');
                 $row.find('.stock-error-msg').show();
             } else {

@@ -351,7 +351,7 @@ class SalesInvoiceController extends Controller
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
                     $deletedItems = $invoice->items()->whereNotIn('id', $itemIds)->get();
                     foreach ($deletedItems as $dItem) {
-                        $this->createReturnStockEntry($dItem, $dItem->quantity, $invoice->inv_no);
+                        $this->sequentialStockRevert($dItem, $dItem->quantity);
                     }
                     
                     $invoice->items()->whereNotIn('id', $itemIds)->forceDelete();
@@ -1670,6 +1670,7 @@ class SalesInvoiceController extends Controller
             'stock_entry_items.price',
             'stock_entry_items.mrp',
             'stock_entry_items.sku',
+            'stock_entry_items.finished_item_code',
             'colors.name as color_name',
             \DB::raw('(stock_entry_items.qty_in - COALESCE(stock_entry_items.qty_out, 0)) as available_qty')
         )
@@ -1696,6 +1697,33 @@ class SalesInvoiceController extends Controller
             if ($item->size) $displayName .= " - " . $item->size;
             if ($item->sleeve_type) $displayName .= " - " . $item->sleeve_type;
             
+            $itemPrice = \DB::table('item_prices')
+                ->where('finished_item_code', $item->finished_item_code)
+                ->where('art_no', $item->art_no)
+                ->where('size', $item->size)
+                ->where('status', 'Active')
+                ->whereNull('deleted_at')
+                ->whereDate('effective_from', '<=', now())
+                ->orderBy('effective_from', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if (!$itemPrice) {
+                $itemPrice = \DB::table('item_prices')
+                    ->where('finished_item_code', $item->finished_item_code)
+                    ->where('art_no', $item->art_no)
+                    ->whereNull('size')
+                    ->where('status', 'Active')
+                    ->whereNull('deleted_at')
+                    ->whereDate('effective_from', '<=', now())
+                    ->orderBy('effective_from', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+            }
+
+            $mrp = $itemPrice ? $itemPrice->selling_price : 0;
+            $price = $itemPrice ? $itemPrice->unit_price : 0;
+
             $results[] = [
                 'id' => $item->id,
                 'text' => $displayName . " (Stock: {$item->available_qty})",
@@ -1704,8 +1732,8 @@ class SalesInvoiceController extends Controller
                 'color_id' => $item->color_id,
                 'color_name' => $item->color_name,
                 'sleeve_type' => $item->sleeve_type,
-                'price' => $item->price,
-                'mrp' => $item->mrp,
+                'price' => $price,
+                'mrp' => $mrp,
                 'sku' => $item->sku,
                 'available_qty' => $item->available_qty,
             ];
@@ -1810,6 +1838,9 @@ class SalesInvoiceController extends Controller
                 if (!empty($item['size'])) {
                     $stockQuery->where('size', $item['size']);
                 }
+                if (!empty($item['art_no'])) {
+                    $stockQuery->where('art_no', $item['art_no']);
+                }
                 if (!empty($item['sleeve_type'])) {
                     $sleeveUpper = strtoupper(trim($item['sleeve_type']));
                     if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
@@ -1845,6 +1876,9 @@ class SalesInvoiceController extends Controller
                 });
             if ($req['size']) {
                 $stockQuery->where('size', $req['size']);
+            }
+            if ($req['art_no']) {
+                $stockQuery->where('art_no', $req['art_no']);
             }
             if ($req['finished_item_code']) {
                 $stockQuery->where('finished_item_code', $req['finished_item_code']);
@@ -1939,6 +1973,9 @@ class SalesInvoiceController extends Controller
                     if (!empty($item->size)) {
                         $stockQuery->where('size', $item->size);
                     }
+                    if (!empty($item->art_no)) {
+                        $stockQuery->where('art_no', $item->art_no);
+                    }
 
                     if (!empty($item->sleeve_type)) {
                         $sleeveUpper = strtoupper(trim($item->sleeve_type));
@@ -2010,7 +2047,7 @@ class SalesInvoiceController extends Controller
                             $this->sequentialStockDeduct($item, $delta);
                         } elseif ($delta < 0) {
                             $returnQty = abs($delta);
-                            $this->createReturnStockEntry($item, $returnQty, $oldQuantities[$item->id]['inv_no']);
+                            $this->sequentialStockRevert($item, $returnQty);
                         }
                     } else {
                         $this->sequentialStockDeduct($item, $item->quantity);

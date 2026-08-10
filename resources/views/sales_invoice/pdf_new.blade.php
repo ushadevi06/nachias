@@ -532,7 +532,27 @@ if ($showPrice) $colsAfterQty++;
                         @endif
                     </tr>
                 @endforeach
-                
+                @if(count($pageItems) < 10)
+                    @for($j = 0; $j < (10 - count($pageItems)); $j++)
+                        <tr>
+                            <td class="text-center">&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            @if($showMrp)
+                            <td>&nbsp;</td>
+                            @endif
+                            @if($showPrice)
+                            <td>&nbsp;</td>
+                            @endif
+                            @if($showAmount)
+                            <td>&nbsp;</td>
+                            @endif
+                        </tr>
+                    @endfor
+                @endif
             </tbody>
             
             @if($pageIndex < count($pages) - 1)
@@ -763,15 +783,25 @@ if ($showPrice) $colsAfterQty++;
                     </div>
                     <div style="font-weight: bold; font-size: 10px;">Terms & Conditions :</div>
                     <div style="font-size: 9px; line-height: 1.4;">
-                        1. Goods once sold will not be taken back or exchange<br>
-                        2. Our responsibility ceases on delivery of goods to carriers.<br>
-                        3. Cheque or DD only in favour of NACHIAS FASHION PRIVATE LIMITED<br>
-                        4. Discount should be deducted from Gross Amount only<br>
-                        5. Payment with in 45 days, Subject to Madurai Jurisdiction
+                        {!! nl2br(e($setting->terms_and_conditions)) !!}
                     </div>
                 </td>
                 <td width="40%" class="text-right" style="vertical-align: bottom;">
+                    @php
+                        $qrBase64 = '';
+                        if (!empty($setting->upi_id)) {
+                            $upiUrl = "upi://pay?pa=" . $setting->upi_id . "&pn=" . urlencode($setting->company_name ?? 'Nachias') . "&am=" . ($invoice->grand_total ?? 0) . "&cu=INR";
+                            $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::size(70)->generate($upiUrl));
+                        }
+                    @endphp
+                    @if($qrBase64)
+                    <div style="text-align: center; margin-bottom: 5px;">
+                        <span style="font-size: 10px; font-weight: bold;">For UPI Payment</span><br>
+                        <img src="{{ $qrBase64 }}" style="width: 70px; height: 70px; margin-top: 2px;">
+                    </div>
+                    @else
                     <br>
+                    @endif
                     <div style="border: 2px solid #000; border-radius: 2px; text-align: center; height: 90px; position: relative;">
                         <div style="padding-top: 5px; font-size: 11px;">For Nachias Fashion Private Limited</div>
                         

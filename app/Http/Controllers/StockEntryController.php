@@ -771,12 +771,12 @@ class StockEntryController extends Controller
             fputcsv($file, $headers);
             fputcsv($file, [
                 date('d-m-Y'),
-                'CDS-PRNT',
-                'CDS30906',
+                'CB-PRT-FS',
+                'CB0906-1',
                 '38',
-                'Blue',
-                'PLAIN',
-                'Full',
+                'BLUE',
+                'PRINT',
+                'FULL',
                 '50',
                 '0',
                 '499.00',

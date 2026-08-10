@@ -139,7 +139,9 @@ class OrderaxeService
             $effectiveDateMs = $orderData['updated_at'] ?? $orderData['created_at'] ?? 0;
             $orderDate = date('Y-m-d');
             if ($effectiveDateMs > 0) {
-                $orderDate = date('Y-m-d', (int)($effectiveDateMs / 1000));
+                $dt = new \DateTime('@' . (int)($effectiveDateMs / 1000));
+                $dt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+                $orderDate = $dt->format('Y-m-d');
                 if ($orderDate < '2026-07-02') {
                     return 'skipped';
                 }
@@ -201,7 +203,9 @@ class OrderaxeService
             $orderaxeRefId = $orderData['retailer']['reference_id'] ?? null;
             $deliveryDate = null;
             if (!empty($orderData['delivery_date'])) {
-                $deliveryDate = date('Y-m-d', (int)($orderData['delivery_date'] / 1000));
+                $delDt = new \DateTime('@' . (int)($orderData['delivery_date'] / 1000));
+                $delDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+                $deliveryDate = $delDt->format('Y-m-d');
             }
 
             DB::beginTransaction();

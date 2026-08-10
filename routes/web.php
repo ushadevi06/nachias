@@ -96,6 +96,33 @@ Route::get('/update_page', function () {
     return view('update_page');
 });
 
+Route::get('/sync-two-orders', function () {
+    set_time_limit(0);
+    $service = new \App\Services\OrderaxeService();
+    
+    // Create a timestamp for 20 days ago to ensure we catch them
+    $timestampMs = round(microtime(true) * 1000) - (20 * 24 * 60 * 60 * 1000);
+    
+    // Fetch orders directly from API without touching the cache
+    $orders = $service->fetchOrders($timestampMs, 5000);
+    
+    $processed = 0;
+    foreach ($orders as $orderData) {
+        $orderNo = $orderData['order_no'] ?? null;
+        
+        // ONLY process if it's one of the two missing orders!
+        if (in_array($orderNo, ['100009484', '100009485'])) {
+            $service->processOrder($orderData);
+            $processed++;
+        }
+    }
+    
+    return response()->json([
+        'status' => 'success',
+        'message' => "Done! Successfully found and synced {$processed} target orders out of the downloaded batch.",
+    ]);
+});
+
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);

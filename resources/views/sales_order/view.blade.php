@@ -126,7 +126,12 @@
             $('#so_date_range').flatpickr({
                 mode: 'range',
                 dateFormat: 'd-m-Y',
-                allowInput: true
+                allowInput: true,
+                onClose: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 1) {
+                        instance.setDate([selectedDates[0], selectedDates[0]], true);
+                    }
+                }
             });
 
             $('#filterBtn').click(function () { table.ajax.reload(); });

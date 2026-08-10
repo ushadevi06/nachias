@@ -846,6 +846,12 @@ class SalesOrderController extends Controller
             if ($sleeveType) {
                 $query->where('sleeve_type', $sleeveType);
             }
+            if ($size) {
+                $query->where('size', $size);
+            }
+            if ($artNo) {
+                $query->where('art_no', $artNo);
+            }
         }
 
         $items = $query->select('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku', DB::raw('MAX(stock_entry_items.id) as stock_entry_item_id'), DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance'))
@@ -895,8 +901,8 @@ class SalesOrderController extends Controller
                 }
 
                 $sizePrices[$sz] = [
-                    'mrp' => $priceRec ? $priceRec->selling_price : ($item ? $item->mrp : $target->price),
-                    'price' => $priceRec ? $priceRec->unit_price : $target->price,
+                    'mrp' => $priceRec ? $priceRec->selling_price : 0,
+                    'price' => $priceRec ? $priceRec->unit_price : 0,
                 ];
             }
 
@@ -1028,8 +1034,8 @@ class SalesOrderController extends Controller
                     ->first();
             }
 
-            $finalPrice = $itemPrice ? $itemPrice->unit_price : $item->fallback_price;
-            $finalMrp = $itemPrice ? $itemPrice->selling_price : $item->fallback_price;
+            $finalPrice = $itemPrice ? $itemPrice->unit_price : 0;
+            $finalMrp = $itemPrice ? $itemPrice->selling_price : 0;
 
             $formattedResults[] = [
                 'id' => $item->finished_item_code,

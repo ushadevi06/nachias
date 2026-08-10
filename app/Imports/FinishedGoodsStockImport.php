@@ -73,6 +73,22 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             throw new \Exception('Product Code is required.');
         }
 
+        $parts = explode('-', $finishedItemCode);
+        if (count($parts) >= 2) {
+            $brandPart = trim($parts[0]);
+            $stylePart = trim($parts[1]);
+            
+            $brandExists = \App\Models\Brand::where('brand_name', $brandPart)->orWhere('code', $brandPart)->exists();
+            if (!$brandExists) {
+                throw new \Exception("Brand '{$brandPart}' from Product Code '{$finishedItemCode}' does not exist in the Brands master.");
+            }
+
+            $styleExists = \App\Models\Style::where('code', $stylePart)->orWhere('style_name', $stylePart)->exists();
+            if (!$styleExists) {
+                throw new \Exception("Style '{$stylePart}' from Product Code '{$finishedItemCode}' does not exist in the Styles master.");
+            }
+        }
+
         if (!$artNo) {
             throw new \Exception('Art No is required.');
         }

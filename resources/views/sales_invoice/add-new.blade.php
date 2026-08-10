@@ -502,14 +502,14 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="min-width: 250px;">Stock Item *</th>
-                                        <th style="min-width: 150px;">SKU</th>
+                                        <th style="min-width: 200px;">SKU</th>
                                         <th style="min-width: 150px;">Color</th>
                                         <th style="min-width: 100px;">Sleeve</th>
                                         <th style="min-width: 150px;">Art No *</th>
                                         <th style="min-width: 100px;">UOM *</th>
                                         <th style="min-width: 120px;">Size *</th>
                                         <th style="min-width: 120px;">Quantity *</th>
-                                        <th style="min-width: 120px;">MRP</th>
+                                        <th style="min-width: 160px;">MRP</th>
                                         <th style="min-width: 120px;">Selling Price *</th>
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 50px;">Action</th>
@@ -519,10 +519,7 @@
                                     @if(!empty($openOrderItems))
                                         @foreach($openOrderItems as $index => $row)
                                             @php
-                                                $displayName = !empty($row->finished_item_code) ? $row->finished_item_code : ($row->sku ?? '');
-                                                if (!empty($row->item_name)) {
-                                                    $displayName .= ' - ' . $row->item_name;
-                                                }
+                                               $displayName = !empty($row->brand_name) ? $row->brand_name.' ' : (!empty($row->finished_item_code) ? $row->finished_item_code : ($row->sku ?? ''));
                                             @endphp
                                             <tr class="item-row">
                                                 <td>
@@ -574,7 +571,7 @@
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
                                                         <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" min="0.01" step="0.01">
-                                                        <div class="stock-info-wrapper mt-1">
+                                                        <div class="stock-info-wrapper mt-1" style="display: none;">
                                                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format($row->stock_qty ?? 0, 2) }}</span></small>
                                                             <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
                                                         </div>
@@ -596,7 +593,11 @@
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                    @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                                        <span class="text-muted">-</span>
+                                                    @else
+                                                        <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -1822,7 +1823,7 @@
                 var qty = parseFloat(qtyInput.val()) || 0;
                 var available = parseFloat(row.find('.available-stock-display').text()) || 0;
 
-                if (qty > available) {
+                if (!window.isEditMode && qty > available) {
                     qtyInput.addClass('is-invalid');
                     row.find('.stock-error-msg').show();
                     hasError = true;
@@ -2213,8 +2214,7 @@
             }
 
             let index = parseInt($('#openOrderItemIndex').val()) || 0;
-            let displayName = res.finished_item_code || res.sku || '';
-            if (res.item_name) displayName += ' - ' + res.item_name;
+            let displayName = res.brand_name ? res.brand_name + ' ' : (res.finished_item_code || res.sku || '');
 
             let mrp = parseFloat(res.mrp || 0).toFixed(2);
             let price = parseFloat(res.price || 0).toFixed(2);
@@ -2314,13 +2314,8 @@
             let rate = parseFloat($row.find('.open-rate').val()) || 0;
             let available = parseFloat($row.find('.available-stock-display').text()) || 0;
 
-            if (qty > available) {
-                qtyInput.addClass('is-invalid');
-                $row.find('.stock-error-msg').show();
-            } else {
-                qtyInput.removeClass('is-invalid');
-                $row.find('.stock-error-msg').hide();
-            }
+            qtyInput.removeClass('is-invalid');
+            $row.find('.stock-error-msg').hide();
 
             $row.find('.open-amount').val((qty * rate).toFixed(2));
             calculateTotals();
