@@ -177,7 +177,7 @@
                 Oops! We couldn't find the page you are looking for. <br>
                 It might have been removed, renamed, or temporarily unavailable.
             </p>
-            <a href="{{ url('/dashboard') }}" class="btn btn-primary btn-modern">Back to Home</a>
+            <a href="{{ url('/dashboard') }}" class="btn btn-primary btn-modern"><i class="icon-base ri ri-arrow-left-line me-1"></i> Back to Home</a>
         </div>
     </div>
 </body>

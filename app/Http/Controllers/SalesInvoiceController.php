@@ -336,6 +336,67 @@ class SalesInvoiceController extends Controller
                     $file->move($dir, $fileName);
                     $invoiceData['attachment_file'] = 'uploads/sales_invoices/attachments/' . $fileName;
                 }
+                //new 
+                $calculatedSubTotal = 0;
+                $calculatedTotalQty = 0;
+                foreach ($request->items as $item) {
+                    $qty = (float)($item['quantity'] ?? 0);
+                    $mrp = (float)($item['mrp'] ?? 0);
+                    $rate = (float)($item['rate'] ?? 0);
+                    $price = $rate > 0 ? $rate : $mrp;
+                    $calculatedSubTotal += $qty * $price;
+                    $calculatedTotalQty += $qty;
+                }
+
+                $salesDiscPercent = (float)($request->sales_discount ?? 0);
+                if ($salesDiscPercent <= 0 && $request->customer_id) {
+                    $customer = \App\Models\Customer::find($request->customer_id);
+                    if ($customer && $customer->sales_discount) {
+                        $salesDiscPercent = (float)$customer->sales_discount;
+                    }
+                }
+                $boxDiscountPerPc = (float)($request->box_discount_amount ?? 0);
+                $salesDiscountValue = ($calculatedSubTotal * $salesDiscPercent) / 100;
+                $boxDiscountValue = $calculatedTotalQty * $boxDiscountPerPc;
+                $calculatedDiscount = $salesDiscountValue + $boxDiscountValue;
+
+                $preGstCharges = (float)($request->pre_gst_charges ?? 0);
+                $calculatedTotal = $calculatedSubTotal - $calculatedDiscount + $preGstCharges;
+
+                $cgst = 0; $sgst = 0; $igst = 0;
+                if ($request->other_state == 'yes') {
+                    $igstPercent = (float)($request->igst_percent ?? 0);
+                    $igst = ($calculatedTotal * $igstPercent) / 100;
+                } else {
+                    $cgstPercent = (float)($request->cgst_percent ?? 0);
+                    $sgstPercent = (float)($request->sgst_percent ?? 0);
+                    $cgst = ($calculatedTotal * $cgstPercent) / 100;
+                    $sgst = ($calculatedTotal * $sgstPercent) / 100;
+                }
+                $calculatedTaxAmount = $cgst + $sgst + $igst;
+
+                $otherCharges = (float)($request->other_charges ?? 0);
+                $postGstCharges = (float)($request->post_gst_charges ?? 0);
+                
+                $totalBeforeRoundOff = $calculatedTotal + $calculatedTaxAmount + $otherCharges + $postGstCharges;
+                $calculatedGrandTotal = round($totalBeforeRoundOff);
+                $calculatedRoundOff = abs($calculatedGrandTotal - $totalBeforeRoundOff);
+                $calculatedRoundOffType = ($calculatedGrandTotal >= $totalBeforeRoundOff) ? 'Add' : 'Less';
+
+                // Override request data with recalculated values
+                $invoiceData['sub_total'] = $calculatedSubTotal;
+                $invoiceData['sales_discount'] = $salesDiscPercent;
+                $invoiceData['discount_percent'] = $salesDiscPercent;
+                $invoiceData['discount'] = $calculatedDiscount;
+                $invoiceData['total'] = $calculatedTotal;
+                $invoiceData['cgst'] = $cgst;
+                $invoiceData['sgst'] = $sgst;
+                $invoiceData['igst'] = $igst;
+                $invoiceData['tax_amount'] = $calculatedTaxAmount;
+                $invoiceData['round_off'] = $calculatedRoundOff;
+                $invoiceData['round_off_type'] = $calculatedRoundOffType;
+                $invoiceData['grand_total'] = $calculatedGrandTotal;
+                //new
 
                 $oldQuantities = [];
                 if ($id) {
@@ -345,7 +406,9 @@ class SalesInvoiceController extends Controller
                     }
                     
                     $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
-                    $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
+                    // new
+                    $invoiceData['received_amount'] = 0.00;
+                    $invoiceData['due_amount'] = $calculatedGrandTotal; //new
                     $invoice->update($invoiceData);                     
                     
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
@@ -356,7 +419,9 @@ class SalesInvoiceController extends Controller
                     
                     $invoice->items()->whereNotIn('id', $itemIds)->forceDelete();
                 } else {
-                    $invoiceData['received_amount'] = (float)$request->received_amount;
+                    //new
+                    $invoiceData['received_amount'] = 0.00;
+                    $invoiceData['due_amount'] = $calculatedGrandTotal;//new
                     $invoice = SalesInvoice::create($invoiceData);
                 }
                 $invoiceId = $invoice->id;
@@ -921,6 +986,7 @@ class SalesInvoiceController extends Controller
             $c = $so->customer;
             $billingAddress = implode(', ', array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3, $c->city, $c->state, $c->pincode]));
         }
+        // not in live
         $preGstCharges = 0;
         $courierCharge = 0;
         $postGstCharges = 0;

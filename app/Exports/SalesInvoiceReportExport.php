@@ -168,7 +168,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $inv->irn,
             $inv->ack_no,
             $inv->ack_date ? $inv->ack_date->format('d-m-Y') : '',
-            $inv->grand_total, // BILL VALUE
+            $isFirstRow ? $inv->grand_total : '', // BILL VALUE
             $nameOfItem,
             $brandName,
             $mappedSize,
@@ -179,7 +179,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $item->amount, // SALES VALUE
             $isFirstRow ? $inv->discount : '', // SALES DISCOUNT
             $isFirstRow ? $inv->box_discount_amount : '', // SALES DISCOUNT (WITHOUT BOX)
-            $inv->sub_total, 
+            $isFirstRow ? $inv->sub_total : '', 
             $gstPercent,
             $isFirstRow ? $cgst2_5 : '',
             $isFirstRow ? $sgst2_5 : '',
@@ -187,10 +187,10 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $isFirstRow ? $sgst6 : '',
             $isFirstRow ? $igst5 : '',
             $isFirstRow ? $igst12 : '',
-            $inv->total,
-            $inv->other_charges,
-            $inv->round_off,
-            $inv->grand_total,
+            $isFirstRow ? $inv->total : '',
+            $isFirstRow ? $inv->other_charges : '',
+            $isFirstRow ? $inv->round_off : '',
+            $isFirstRow ? $inv->grand_total : '',
         ];
     }
 

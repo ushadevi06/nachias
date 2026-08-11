@@ -56,7 +56,7 @@
                                     <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer/Buyer" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'disabled' : '' }}>
                                         <option value="">Select Customer/Buyer</option>
                                         @foreach($customers as $customer)
-                                            <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-pincode="{{ $customer->zip_code }}" {{ (old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
+                                            <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-pincode="{{ $customer->zip_code }}" data-sales-discount="{{ $customer->sales_discount ?? 0 }}" {{ (old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
                                     @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
@@ -1556,6 +1556,9 @@
         $('#customer_id').on('change', function() {
             let customerId = $(this).val();
             if (customerId) {
+                let salesDiscount = $(this).find(':selected').data('sales-discount') || 0;
+                $('#sales_discount').val(parseFloat(salesDiscount).toFixed(2));
+
                 let customerStateId = $(this).find(':selected').data('state-id');
                 let companyStateId = "{{ $web_settings->state_id ?? '' }}";
 

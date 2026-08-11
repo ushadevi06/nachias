@@ -342,8 +342,9 @@ $footerHeight += 140; // Terms and Remarks
 $footerHeight += 20; // Safe Buffer
 
 $contentAreaHeight = $PAGE_HEIGHT_PX - $HEADER_HEIGHT_PX;
-$rowsPerFullPage = max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX) / $ROW_HEIGHT_PX));
-$rowsPerLastPage = max(1, (int) floor(($contentAreaHeight - $footerHeight) / $ROW_HEIGHT_PX));
+$tableHeaderHeight = 32; // Buffer to account for table thead height and borders
+$rowsPerFullPage = max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX - $tableHeaderHeight) / $ROW_HEIGHT_PX));
+$rowsPerLastPage = max(1, (int) floor(($contentAreaHeight - $footerHeight - $tableHeaderHeight) / $ROW_HEIGHT_PX));
 
 $allItems = collect($invoice->items)->values();
 $totalItemsCount = $allItems->count();
