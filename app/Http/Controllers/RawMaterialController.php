@@ -123,7 +123,8 @@ class RawMaterialController extends Controller
                     'string',
                     'min:3',
                     'max:150',
-                    'regex:/^(?!0+$).*$/'
+                    'regex:/^(?!0+$).*$/',
+                    'unique:raw_materials,name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'uom_id' => 'required|exists:uoms,id',
                 'material_type' => [

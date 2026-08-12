@@ -479,7 +479,7 @@
                                                 <input type="hidden" name="charges[name][]" value="{{ $chargeName }}">
                                             </td>
                                             <td>
-                                                {{ $taxType }}
+                                                {{ strtoupper(trim($chargeName)) === 'BROKERAGE' ? '-' : $taxType }}
                                                 <input type="hidden" name="charges[tax_type][]" value="{{ $taxType }}">
                                             </td>
                                             <td>
@@ -1505,10 +1505,30 @@
                         select.append(`<option value="${charge.id}">${charge.charge_name}</option>`);
                     });
                     refreshChargeDropdownState();
+                    select.trigger('change');
                 }
             });
         }
         loadCharges();
+
+        $('#charges_select').on('change', function() {
+            var selectedText = $(this).find('option:selected').text().trim().toUpperCase();
+            if (selectedText === 'BROKERAGE') {
+                $('#charge_tax_type').val('Post-GST').trigger('change');
+                $('#charge_tax_type').prop('disabled', true).select2({
+                    width: '100%',
+                    dropdownParent: $('body')
+                });
+            } else {
+                if ($('#charge_tax_type').prop('disabled')) {
+                    $('#charge_tax_type').prop('disabled', false).select2({
+                        width: '100%',
+                        dropdownParent: $('body')
+                    });
+                }
+            }
+        });
+
         $('#add_charge_btn').click(function () {
             let chargeId = $('#charges_select').val();
             let chargeText = $('#charges_select option:selected').text();
@@ -1535,7 +1555,7 @@
                                 <input type="hidden" name="charges[name][]" value="${chargeText}">
                             </td>
                             <td>
-                                ${taxType}
+                                ${chargeText.trim().toUpperCase() === 'BROKERAGE' ? '-' : taxType}
                                 <input type="hidden" name="charges[tax_type][]" value="${taxType}">
                             </td>
                             <td>

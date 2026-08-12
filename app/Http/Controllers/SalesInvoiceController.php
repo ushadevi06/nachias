@@ -28,6 +28,72 @@ use App\Exports\SalesInvoiceItemsExport;
 
 class SalesInvoiceController extends Controller
 {
+    public static function getActiveItemPrice($finishedItemCode, $artNo, $sizeName = null)
+    {
+        if (!$finishedItemCode || !$artNo) {
+            return null;
+        }
+
+        $baseCode = preg_replace('/-(FS|HS)$/i', '', $finishedItemCode);
+        $candidateCodes = [
+            $finishedItemCode,
+            $baseCode . '-FS',
+            $baseCode . '-HS',
+            $baseCode
+        ];
+        $candidateCodes = array_values(array_unique(array_filter($candidateCodes)));
+
+        $cleanedArtNo = str_replace(' ', '', $artNo);
+
+        $query = \DB::table('item_prices')
+            ->whereIn('finished_item_code', $candidateCodes)
+            ->whereRaw("REPLACE(art_no, ' ', '') = ?", [$cleanedArtNo])
+            ->where('status', 'Active')
+            ->whereNull('deleted_at')
+            ->whereDate('effective_from', '<=', now());
+
+        if ($sizeName) {
+            $pricesList = (clone $query)
+                ->where(function($q) use ($sizeName) {
+                    $q->where('size', $sizeName)
+                      ->orWhereNull('size');
+                })
+                ->get();
+        } else {
+            $pricesList = $query->get();
+        }
+
+        if ($pricesList->isEmpty()) {
+            return null;
+        }
+
+        $sorted = $pricesList->sort(function($a, $b) use ($finishedItemCode, $candidateCodes, $sizeName) {
+            if ($sizeName) {
+                $aSizeMatch = ($a->size === $sizeName) ? 1 : 0;
+                $bSizeMatch = ($b->size === $sizeName) ? 1 : 0;
+                if ($aSizeMatch !== $bSizeMatch) {
+                    return $bSizeMatch - $aSizeMatch;
+                }
+            }
+
+            $aIndex = array_search($a->finished_item_code, $candidateCodes);
+            $bIndex = array_search($b->finished_item_code, $candidateCodes);
+            if ($aIndex !== $bIndex) {
+                return $aIndex - $bIndex;
+            }
+
+            $aEff = strtotime($a->effective_from);
+            $bEff = strtotime($b->effective_from);
+            if ($aEff !== $bEff) {
+                return $bEff - $aEff;
+            }
+
+            return $b->id - $a->id;
+        });
+
+        return $sorted->first();
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
@@ -297,7 +363,7 @@ class SalesInvoiceController extends Controller
                     'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'sales_discount', 'box_discount_amount', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
-                    'other_charges', 'pre_gst_charges', 'post_gst_charges','round_off_type', 'round_off',
+                    'other_charges','round_off_type', 'round_off',
                     'grand_total', 'due_amount'
                 ]);
                 if ($request->tran_doc_date) {
@@ -360,9 +426,9 @@ class SalesInvoiceController extends Controller
                 $boxDiscountValue = $calculatedTotalQty * $boxDiscountPerPc;
                 $calculatedDiscount = $salesDiscountValue + $boxDiscountValue;
 
-                $preGstCharges = (float)($request->pre_gst_charges ?? 0);
-                $calculatedTotal = $calculatedSubTotal - $calculatedDiscount + $preGstCharges;
-
+                // $preGstCharges = (float)($request->pre_gst_charges ?? 0);
+                // $calculatedTotal = $calculatedSubTotal - $calculatedDiscount + $preGstCharges;
+                $calculatedTotal = $calculatedSubTotal - $calculatedDiscount;
                 $cgst = 0; $sgst = 0; $igst = 0;
                 if ($request->other_state == 'yes') {
                     $igstPercent = (float)($request->igst_percent ?? 0);
@@ -376,9 +442,10 @@ class SalesInvoiceController extends Controller
                 $calculatedTaxAmount = $cgst + $sgst + $igst;
 
                 $otherCharges = (float)($request->other_charges ?? 0);
-                $postGstCharges = (float)($request->post_gst_charges ?? 0);
+                // $postGstCharges = (float)($request->post_gst_charges ?? 0);
                 
-                $totalBeforeRoundOff = $calculatedTotal + $calculatedTaxAmount + $otherCharges + $postGstCharges;
+                // $totalBeforeRoundOff = $calculatedTotal + $calculatedTaxAmount + $otherCharges + $postGstCharges;
+                $totalBeforeRoundOff = $calculatedTotal + $calculatedTaxAmount + $otherCharges ;
                 $calculatedGrandTotal = round($totalBeforeRoundOff);
                 $calculatedRoundOff = abs($calculatedGrandTotal - $totalBeforeRoundOff);
                 $calculatedRoundOffType = ($calculatedGrandTotal >= $totalBeforeRoundOff) ? 'Add' : 'Less';
@@ -763,6 +830,24 @@ class SalesInvoiceController extends Controller
                         $brandName = $item->item_name;
                         $itemName = '';
                     }
+                   
+                    $finishedItemCode = '';
+                    if ($item->item && $item->item->code) {
+                        $finishedItemCode = $item->item->code;
+                    } elseif ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) {
+                        $finishedItemCode = $item->stockEntryItem->finished_item_code;
+                    }
+                    $finalMrp = $item->mrp ?? 0;
+                    $finalRate = $item->rate ?? 0;
+
+                    if ($finishedItemCode && $item->art_no) {
+                        $sizeName = $item->size ? $item->size->size : ($item->size_id ?: null);
+                        $itemPrice = self::getActiveItemPrice($finishedItemCode, $item->art_no, $sizeName);
+                        if ($itemPrice) {
+                            $finalMrp = $itemPrice->selling_price;
+                            $finalRate = $itemPrice->unit_price;
+                        }
+                    }
 
                     $itemData = [
                         'brand_id' => $item->brand_cat_id,
@@ -774,9 +859,9 @@ class SalesInvoiceController extends Controller
                         'uom_code' => $item->uom_id ?: '',
                         'qty' => $pendingQty, 
                         'stock_qty' => (float)$stockQty,
-                        'rate' => $item->rate,
-                        'mrp' => $item->mrp ?? 0,
-                        'amount' => $item->amount,
+                        'rate' => $finalRate,
+                        'mrp' => $finalMrp,
+                        'amount' => (float)$finalRate * $pendingQty,
                         'art_no' => $item->art_no,
                         'hsn_sac' => $item->hsn_sac ?? null,
                         'sku' => $item->sku,
@@ -821,26 +906,26 @@ class SalesInvoiceController extends Controller
 
         $totalSubTotal = 0;
         $totalDiscountAmount = 0;
-        $totalPreGstCharges = 0;
+        // $totalPreGstCharges = 0;
         $totalCourierCharges = 0;
-        $totalOtherPostGstCharges = 0;
+        // $totalOtherPostGstCharges = 0;
         foreach ($saleOrders as $so) {
             $totalSubTotal += $so->sub_total ?? 0;
             $totalDiscountAmount += $so->discount_amount ?? 0;
             
-            if ($so->charges) {
-                $totalPreGstCharges += $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
-                
-                $totalCourierCharges += $so->charges->where('tax_type', 'Post-GST')
-                    ->filter(function($charge) {
-                        return stripos($charge->charge_name, 'COURIER') !== false;
-                    })->sum('charge_amount');
-                
-                $totalOtherPostGstCharges += $so->charges->where('tax_type', 'Post-GST')
-                    ->filter(function($charge) {
-                        return stripos($charge->charge_name, 'COURIER') === false;
-                    })->sum('charge_amount');
-            }
+            // if ($so->charges) {
+            //     // $totalPreGstCharges += $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
+            //     
+            //     // $totalCourierCharges += $so->charges->where('tax_type', 'Post-GST')
+            //     //     ->filter(function($charge) {
+            //     //         return stripos($charge->charge_name, 'COURIER') !== false;
+            //     //     })->sum('charge_amount');
+            //     
+            //     // $totalOtherPostGstCharges += $so->charges->where('tax_type', 'Post-GST')
+            //     //     ->filter(function($charge) {
+            //     //         return stripos($charge->charge_name, 'COURIER') === false;
+            //     //     })->sum('charge_amount');
+            // }
         }
         $weightedDiscountPercent = $totalSubTotal > 0 ? round(($totalDiscountAmount / $totalSubTotal) * 100, 2) : ($firstSo->discount_percent ?? 0);
         return response()->json([
@@ -861,9 +946,9 @@ class SalesInvoiceController extends Controller
             'transport_mode_id' => $transportModeId,
             'sales_discount' => (!empty($firstSo->sales_discount_percent) && (float)$firstSo->sales_discount_percent > 0) ? $firstSo->sales_discount_percent : ($firstSo->customer->sales_discount ?? 0),
             'box_discount_amount' => (!empty($firstSo->box_discount_amount) && (float)$firstSo->box_discount_amount > 0) ? $firstSo->box_discount_amount : ($firstSo->customer->box_discount_amount ?? 0),
-            'pre_gst_charges' => $totalPreGstCharges,
+            // 'pre_gst_charges' => $totalPreGstCharges,
             'courier_charge' => $totalCourierCharges,
-            'post_gst_charges' => $totalOtherPostGstCharges,
+            // 'post_gst_charges' => $totalOtherPostGstCharges,
             'items' => $allItems->values()
         ]);
     }
@@ -955,6 +1040,25 @@ class SalesInvoiceController extends Controller
                 $itemName = '';
             }
 
+            $finishedItemCode = '';
+            if ($item->item && $item->item->code) {
+                $finishedItemCode = $item->item->code;
+            } elseif ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) {
+                $finishedItemCode = $item->stockEntryItem->finished_item_code;
+            }
+
+            $finalMrp = $item->mrp ?? 0;
+            $finalRate = $item->rate ?? 0;
+
+            if ($finishedItemCode && $item->art_no) {
+                $sizeName = $item->size ? $item->size->size : ($item->size_id ?: null);
+                $itemPrice = self::getActiveItemPrice($finishedItemCode, $item->art_no, $sizeName);
+                if ($itemPrice) {
+                    $finalMrp = $itemPrice->selling_price;
+                    $finalRate = $itemPrice->unit_price;
+                }
+            }
+
             return [
                 'brand_id' => $item->brand_cat_id,
                 'brand_name' => $brandName ?: '',
@@ -965,9 +1069,9 @@ class SalesInvoiceController extends Controller
                 'uom_code' => $item->uom_id ?: '',
                 'qty' => $item->qty,
                 'stock_qty' => (float)$stockQty,
-                'rate' => $item->rate,
-                'mrp' => $item->mrp ?? 0,
-                'amount' => $item->amount,
+                'rate' => $finalRate,
+                'mrp' => $finalMrp,
+                'amount' => (float)$finalRate * $item->qty,
                 'art_no' => $item->art_no,
                 'hsn_sac' => $item->hsn_sac ?? null,
                 'sku' => $item->sku,
@@ -987,20 +1091,20 @@ class SalesInvoiceController extends Controller
             $billingAddress = implode(', ', array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3, $c->city, $c->state, $c->pincode]));
         }
         // not in live
-        $preGstCharges = 0;
+        // $preGstCharges = 0;
         $courierCharge = 0;
-        $postGstCharges = 0;
-        if ($so->charges) {
-            $preGstCharges = $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
-            $courierCharge = $so->charges->where('tax_type', 'Post-GST')
-                ->filter(function($charge) {
-                    return stripos($charge->charge_name, 'COURIER') !== false;
-                })->sum('charge_amount');
-            $postGstCharges = $so->charges->where('tax_type', 'Post-GST')
-                ->filter(function($charge) {
-                    return stripos($charge->charge_name, 'COURIER') === false;
-                })->sum('charge_amount');
-        }
+        // $postGstCharges = 0;
+        // if ($so->charges) {
+        //     // $preGstCharges = $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
+        //     // $courierCharge = $so->charges->where('tax_type', 'Post-GST')
+        //     //     ->filter(function($charge) {
+        //     //         return stripos($charge->charge_name, 'COURIER') !== false;
+        //     //     })->sum('charge_amount');
+        //     // $postGstCharges = $so->charges->where('tax_type', 'Post-GST')
+        //     //     ->filter(function($charge) {
+        //     //         return stripos($charge->charge_name, 'COURIER') === false;
+        //     //     })->sum('charge_amount');
+        // }
 
         return response()->json([
             'success' => true,
@@ -1020,9 +1124,9 @@ class SalesInvoiceController extends Controller
             'transport_mode_id' => $so->transport_mode_id,
             'sales_discount' => $so->sales_discount_percent ?? ($so->customer->sales_discount ?? 0),
             'box_discount_amount' => $so->box_discount_amount ?? ($so->customer->box_discount_amount ?? 0),
-            'pre_gst_charges' => $preGstCharges,
+            // 'pre_gst_charges' => $preGstCharges,
             'courier_charge' => $courierCharge,
-            'post_gst_charges' => $postGstCharges,
+            // 'post_gst_charges' => $postGstCharges,
             'items' => $items
         ]);
     }

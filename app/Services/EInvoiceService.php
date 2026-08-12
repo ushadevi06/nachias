@@ -24,12 +24,15 @@ class EInvoiceService
         $setting = Setting::first();
         $sellerStateCode = substr(env('EINV_GSTIN'), 0, 2);
         $buyerStateCode = $invoice->customer->state->state_code ?? "33";
-        $isInterState = $sellerStateCode !== $buyerStateCode;
+        $isInterState = (bool)($invoice->other_state ?? false);
+        if ((float)($invoice->igst_percent ?? 0) > 0 || (float)($invoice->igst ?? 0) > 0) {
+            $isInterState = true;
+        }
 
         $rndOff = (float) ($invoice->round_off ?? 0);
         if (strtolower($invoice->round_off_type ?? '') === 'less') {
             $rndOff = -$rndOff;
-        }
+        }   
 
         $itemList = [];
         $totalAssVal = 0.00;
@@ -43,11 +46,17 @@ class EInvoiceService
             $taxRate = $isInterState ? (float) $invoice->igst_percent : (float) ($invoice->cgst_percent + $invoice->sgst_percent);
 
             $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
-            $discountPercent = (float) ($invoice->discount_percent ?? 0);
-            if ($discountPercent == 0 && (float) ($invoice->discount ?? 0) > 0 && (float) ($invoice->sub_total ?? 0) > 0) {
+            $salesDiscountPercent = (float) ($invoice->sales_discount ?? 0);
+            $boxDiscountAmount = (float) ($invoice->box_discount_amount ?? 0);
+
+            if ($salesDiscountPercent == 0 && $boxDiscountAmount == 0 && (float) ($invoice->discount ?? 0) > 0 && (float) ($invoice->sub_total ?? 0) > 0) {
                 $discountPercent = ((float) $invoice->discount / (float) $invoice->sub_total) * 100;
+                $itemDiscount = (float) number_format(($totAmt * $discountPercent) / 100, 2, '.', '');
+            } else {
+                $itemSalesDiscount = ($totAmt * $salesDiscountPercent) / 100;
+                $itemBoxDiscount = (float) $item->quantity * $boxDiscountAmount;
+                $itemDiscount = (float) number_format($itemSalesDiscount + $itemBoxDiscount, 2, '.', '');
             }
-            $itemDiscount = (float) number_format(($totAmt * $discountPercent) / 100, 2, '.', '');
             $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
             
             $cgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->cgst_percent) / 100, 2, '.', '');
@@ -89,8 +98,9 @@ class EInvoiceService
         }
 
         $othChrg = (float) number_format((float) ($invoice->other_charges ?? 0.00), 2, '.', '');
-        $rndOffAmt = (float) number_format((float) $rndOff, 2, '.', '');
-        $totInvVal = $totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg + $rndOffAmt;
+        $expectedTot = $totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg;
+        $rndOffAmt = (float) number_format((float) $invoice->grand_total - $expectedTot, 2, '.', '');
+        $totInvVal = $expectedTot + $rndOffAmt;
 
         $payload = [
             "Version" => "1.1",
@@ -133,22 +143,6 @@ class EInvoiceService
                 "TotInvVal" => (float) number_format($totInvVal, 2, '.', ''),
             ]
         ];
-        dd([
-            'invoice_id' => $invoice->id,
-            'invoice_no' => $invoice->inv_no,
-            'discount_percent' => $invoice->discount_percent,
-            'discount' => $invoice->discount,
-            'sub_total' => $invoice->sub_total,
-            'items' => $invoice->items->map(function ($item) {
-                return [
-                    'item_id' => $item->id,
-                    'amount' => $item->amount,
-                    'quantity' => $item->quantity,
-                    'rate' => $item->rate,
-                ];
-            }),
-            'payload' => $payload,
-        ]);
         $authData = $this->authenticate($setting);
         if (!$authData['success']) {
             return $authData;
@@ -305,9 +299,12 @@ class EInvoiceService
             ? (!empty($transporterData['tran_doc_date']) ? $transporterData['tran_doc_date'] : now()->format('d/m/Y'))
             : null;
 
-        $sellerStateCode = $setting->state->state_code;
+        $sellerStateCode = substr(env('EINV_GSTIN'), 0, 2);
         $buyerStateCode  = $invoice->customer->state->state_code ?? '33';
-        $isInterState    = $sellerStateCode !== $buyerStateCode;
+        $isInterState = (bool)($invoice->other_state ?? false);
+        if ((float)($invoice->igst_percent ?? 0) > 0 || (float)($invoice->igst ?? 0) > 0) {
+            $isInterState = true;
+        }
 
         $taxableAmount = (float) ($invoice->taxable_amount ?? $invoice->total);
         $totalValue    = (float) $invoice->grand_total;
@@ -318,11 +315,17 @@ class EInvoiceService
         $itemList = [];
         foreach ($invoice->items as $idx => $item) {
             $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
-            $discountPercent = (float) ($invoice->discount_percent ?? 0);
-            if ($discountPercent == 0 && (float) ($invoice->discount ?? 0) > 0 && (float) ($invoice->sub_total ?? 0) > 0) {
+            $salesDiscountPercent = (float) ($invoice->sales_discount ?? 0);
+            $boxDiscountAmount = (float) ($invoice->box_discount_amount ?? 0);
+
+            if ($salesDiscountPercent == 0 && $boxDiscountAmount == 0 && (float) ($invoice->discount ?? 0) > 0 && (float) ($invoice->sub_total ?? 0) > 0) {
                 $discountPercent = ((float) $invoice->discount / (float) $invoice->sub_total) * 100;
+                $itemDiscount = (float) number_format(($totAmt * $discountPercent) / 100, 2, '.', '');
+            } else {
+                $itemSalesDiscount = ($totAmt * $salesDiscountPercent) / 100;
+                $itemBoxDiscount = (float) $item->quantity * $boxDiscountAmount;
+                $itemDiscount = (float) number_format($itemSalesDiscount + $itemBoxDiscount, 2, '.', '');
             }
-            $itemDiscount = (float) number_format(($totAmt * $discountPercent) / 100, 2, '.', '');
             $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
 
             $itemList[] = [
@@ -607,7 +610,10 @@ class EInvoiceService
         $setting = Setting::first();
         $sellerStateCode = substr(env('EINV_GSTIN'), 0, 2);
         $buyerStateCode = $creditNote->customer->state->state_code ?? "33";
-        $isInterState = $sellerStateCode !== $buyerStateCode;
+        $isInterState = (bool)($creditNote->other_state ?? false);
+        if ((float)($creditNote->igst_percent ?? 0) > 0 || (float)($creditNote->igst ?? 0) > 0) {
+            $isInterState = true;
+        }
 
         $rndOff = (float) ($creditNote->round_off ?? 0);
         if (strtolower($creditNote->round_off_type ?? '') === 'less') {
@@ -672,8 +678,9 @@ class EInvoiceService
         }
 
         $othChrg = (float) number_format((float) ($creditNote->other_charges ?? 0.00), 2, '.', '');
-        $rndOffAmt = (float) number_format((float) $rndOff, 2, '.', '');
-        $totInvVal = $totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg + $rndOffAmt;
+        $expectedTot = $totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg;
+        $rndOffAmt = (float) number_format((float) $creditNote->grand_total - $expectedTot, 2, '.', '');
+        $totInvVal = $expectedTot + $rndOffAmt;
 
         $precDocDtls = [];
         if ($creditNote->sales_invoice_id) {

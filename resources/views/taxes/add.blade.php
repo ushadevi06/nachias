@@ -10,7 +10,7 @@
             <div class="card">
                 <div class="card-body">
                     <div class="card-header-box">
-                        <h4>{{ $tax ? 'Edit' : 'Add' }} Taxes</h4>
+                        <h4>{{ $tax ? 'Edit' : 'Add' }} Tax</h4>
                     </div>
                     <form action="{{ url('taxes/add' . ($tax ? '/' . $tax->id : '')) }}" method="POST"
                         class="common-form" autocomplete="off">

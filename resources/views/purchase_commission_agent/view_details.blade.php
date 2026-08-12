@@ -22,11 +22,11 @@
                                 <span class="badge bg-label-info">Purchase Commission Agent</span>
                             </p>
                             <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-sm-start">
-                                <span class="badge {{ $agent->status == 'Active' ? 'bg-success' : 'bg-danger' }}">
-                                    <i class="ri ri-checkbox-circle-line me-1"></i> {{ $agent->status }}
+                                <span class="badge {{ $agent->status == 'Active' ? 'bg-success' : 'bg-danger' }} d-inline-flex align-items-center">
+                                    <i class="ri ri-checkbox-circle-line me-1" style="vertical-align: middle; line-height: 1;"></i> {{ $agent->status }}
                                 </span>
-                                <span class="badge bg-label-secondary">
-                                    <i class="ri ri-map-pin-line me-1"></i> {{ $agent->city->city_name ?? '-' }}, {{ $agent->state->state_name ?? '-' }}
+                                <span class="badge bg-label-secondary d-inline-flex align-items-center">
+                                    <i class="ri ri-map-pin-line me-1" style="vertical-align: middle; line-height: 1;"></i> {{ $agent->city->city_name ?? '-' }}, {{ $agent->state->state_name ?? '-' }}
                                 </span>
                             </div>
                         </div>

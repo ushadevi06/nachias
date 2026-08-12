@@ -22,11 +22,11 @@
                                 <span class="badge bg-label-info">{{ $customer->category }}</span>
                             </p>
                             <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-sm-start align-items-center">
-                                <span class="badge {{ $customer->status == 'Active' ? 'bg-success' : 'bg-danger' }} d-flex align-items-center">
-                                    <i class="ri ri-checkbox-circle-line me-1"></i> {{ $customer->status }}
+                                <span class="badge {{ $customer->status == 'Active' ? 'bg-success' : 'bg-danger' }} d-inline-flex align-items-center">
+                                    <i class="ri ri-checkbox-circle-line me-1" style="vertical-align: middle; line-height: 1;"></i> {{ $customer->status }}
                                 </span>
-                                <span class="badge bg-label-secondary d-flex align-items-center">
-                                    <i class="ri ri-map-pin-line me-1"></i> {{ $customer->city->city_name ?? '-' }}, {{ $customer->state->state_name ?? '-' }}
+                                <span class="badge bg-label-secondary d-inline-flex align-items-center">
+                                    <i class="ri ri-map-pin-line me-1" style="vertical-align: middle; line-height: 1;"></i> {{ $customer->city->city_name ?? '-' }}, {{ $customer->state->state_name ?? '-' }}
                                 </span>
                             </div>
                         </div>

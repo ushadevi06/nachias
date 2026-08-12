@@ -2480,5 +2480,61 @@
         if ($('#brand_id').val()) {
             updateInvoiceNo();
         }
+
+        // Lock fields once e-invoice is generated
+        $(function() {
+            if (window.einvoiceStatus === 'generated') {
+                $('form.common-form input, form.common-form select, form.common-form textarea').each(function() {
+                    var $el = $(this);
+                    var nameAttr = $el.attr('name');
+                    
+                    // Keep PDF display checkboxes editable
+                    if (nameAttr === 'show_fields[]' || nameAttr === 'delivery_show_fields[]') {
+                        return;
+                    }
+                    
+                    // Keep token, method, submit buttons enabled
+                    if ($el.attr('type') === 'hidden' && (nameAttr === '_token' || nameAttr === '_method')) {
+                        return;
+                    }
+                    if ($el.attr('type') === 'submit' || $el.is('button') || $el.hasClass('btn')) {
+                        return;
+                    }
+                    
+                    // Disable select elements and checkboxes/radios/files/dates
+                    if ($el.is('select')) {
+                        $el.prop('disabled', true);
+                        if ($el.hasClass('select2-hidden-accessible')) {
+                            $el.select2({
+                                width: '100%',
+                                dropdownParent: $('body')
+                            });
+                        }
+                    } else if ($el.attr('type') === 'checkbox' || $el.attr('type') === 'radio' || $el.attr('type') === 'file' || $el.hasClass('flatpickr-input') || $el.hasClass('date-picker') || nameAttr === 'inv_date' || nameAttr === 'due_date' || nameAttr === 'tran_doc_date') {
+                        $el.prop('disabled', true);
+                        if ($el.hasClass('flatpickr-input') || $el.hasClass('date-picker') || nameAttr === 'inv_date' || nameAttr === 'due_date' || nameAttr === 'tran_doc_date') {
+                            $el.css('pointer-events', 'none');
+                        }
+                    } else {
+                        $el.prop('readonly', true);
+                    }
+                });
+
+                // Destroy flatpickr instances so they don't open on click
+                $('input').each(function() {
+                    if (this._flatpickr) {
+                        this._flatpickr.destroy();
+                    }
+                });
+
+                // Hide item deletion and addition buttons
+                $('#btn_add_extra_item, #open_camera, #open_order_camera, .remove-item').hide();
+
+                // Re-enable disabled elements right before form submit so Laravel receives all values and validation passes
+                $('form.common-form').on('submit', function() {
+                    $(this).find('select, input[type="checkbox"], input[type="radio"], input[type="file"], .flatpickr-input, .date-picker, input[name="inv_date"], input[name="due_date"], input[name="tran_doc_date"]').prop('disabled', false);
+                });
+            }
+        });
 </script>
 @endsection

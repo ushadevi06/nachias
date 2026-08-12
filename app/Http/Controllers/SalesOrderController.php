@@ -876,29 +876,7 @@ class SalesOrderController extends Controller
             }
             $sizePrices = [];
             foreach (['36', '38', '40', '42', '44', '46', '48', '50'] as $sz) {
-                $priceRec = DB::table('item_prices')
-                    ->where('finished_item_code', $target->finished_item_code)
-                    ->where('art_no', $target->art_no)
-                    ->where('size', $sz)
-                    ->where('status', 'Active')
-                    ->whereNull('deleted_at')
-                    ->whereDate('effective_from', '<=', now())
-                    ->orderBy('effective_from', 'desc')
-                    ->orderBy('id', 'desc')
-                    ->first();
-                
-                if (!$priceRec) {
-                    $priceRec = DB::table('item_prices')
-                        ->where('finished_item_code', $target->finished_item_code)
-                        ->where('art_no', $target->art_no)
-                        ->whereNull('size')
-                        ->where('status', 'Active')
-                        ->whereNull('deleted_at')
-                        ->whereDate('effective_from', '<=', now())
-                        ->orderBy('effective_from', 'desc')
-                        ->orderBy('id', 'desc')
-                        ->first();
-                }
+                $priceRec = \App\Http\Controllers\SalesInvoiceController::getActiveItemPrice($target->finished_item_code, $target->art_no, $sz);
 
                 $sizePrices[$sz] = [
                     'mrp' => $priceRec ? $priceRec->selling_price : 0,
@@ -906,29 +884,7 @@ class SalesOrderController extends Controller
                 ];
             }
 
-            $itemPrice = DB::table('item_prices')
-                ->where('finished_item_code', $target->finished_item_code)
-                ->where('art_no', $target->art_no)
-                ->where('size', $target->size)
-                ->where('status', 'Active')
-                ->whereNull('deleted_at')
-                ->whereDate('effective_from', '<=', now())
-                ->orderBy('effective_from', 'desc')
-                ->orderBy('id', 'desc')
-                ->first();
-
-            if (!$itemPrice) {
-                $itemPrice = DB::table('item_prices')
-                    ->where('finished_item_code', $target->finished_item_code)
-                    ->where('art_no', $target->art_no)
-                    ->whereNull('size')
-                    ->where('status', 'Active')
-                    ->whereNull('deleted_at')
-                    ->whereDate('effective_from', '<=', now())
-                    ->orderBy('effective_from', 'desc')
-                    ->orderBy('id', 'desc')
-                    ->first();
-            }
+            $itemPrice = \App\Http\Controllers\SalesInvoiceController::getActiveItemPrice($target->finished_item_code, $target->art_no, $target->size);
 
             $finalMrp = $itemPrice ? $itemPrice->selling_price : ($item ? $item->mrp : $target->price);
             $finalPrice = $itemPrice ? $itemPrice->unit_price : $target->price;

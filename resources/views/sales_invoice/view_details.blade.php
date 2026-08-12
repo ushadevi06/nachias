@@ -366,10 +366,12 @@
                                                 <label class="detail-title">Box Discount:</label>
                                                 <div class="text-muted">₹{{ number_format($boxDiscountTotal, 2) }}</div>
                                             </div>
+                                            {{-- @if($invoice->pre_gst_charges > 0)
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Pre-GST Charges:</label>
                                                 <div class="text-muted">₹{{ number_format($invoice->pre_gst_charges, 2) }}</div>
                                             </div>
+                                            @endif --}}
                                             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                                                 <label class="detail-title">Total:</label>
                                                 <div class="text-muted fw-bold">₹{{ number_format($invoice->total, 2) }}
@@ -407,11 +409,13 @@
                                                 <div class="text-muted">₹{{ number_format($invoice->other_charges, 2) }}
                                                 </div>
                                             </div>
+                                            {{-- @if($invoice->post_gst_charges > 0)
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Post GST charges from Sales Order:</label>
                                                 <div class="text-muted">₹{{ number_format($invoice->post_gst_charges, 2) }}
                                                 </div>
                                             </div>
+                                            @endif --}}
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Round Off
                                                     ({{ $invoice->round_off_type }}):</label>

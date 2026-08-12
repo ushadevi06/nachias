@@ -395,7 +395,7 @@
                             <td class="text-left" style="padding: 4px;">Commission
                                 ({{ number_format($purchaseOrder->commission, 2) }}%):</td>
                             <td class="text-right" style="padding: 4px;">
-                                {{ number_format((($purchaseOrder->sub_total * $purchaseOrder->commission) / 100), 2) }}
+                                -{{ number_format((($purchaseOrder->sub_total * $purchaseOrder->commission) / 100), 2) }}
                             </td>
                         </tr>
                         @endif

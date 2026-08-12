@@ -22,11 +22,11 @@
                                 <span class="badge bg-label-info">{{ $serviceProvider->operationStage->operation_stage_name ?? '-' }}</span>
                             </p>
                             <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-sm-start">
-                                <span class="badge {{ $serviceProvider->status == 'Active' ? 'bg-success' : 'bg-danger' }}">
-                                    <i class="ri ri-checkbox-circle-line me-1"></i> {{ $serviceProvider->status }}
+                                <span class="badge {{ $serviceProvider->status == 'Active' ? 'bg-success' : 'bg-danger' }} d-inline-flex align-items-center">
+                                    <i class="ri ri-checkbox-circle-line me-1" style="vertical-align: middle; line-height: 1;"></i> {{ $serviceProvider->status }}
                                 </span>
-                                <span class="badge bg-label-secondary">
-                                    <i class="ri ri-map-pin-line me-1"></i> {{ $serviceProvider->city->city_name ?? '-' }}, {{ $serviceProvider->state->state_name ?? '-' }}
+                                <span class="badge bg-label-secondary d-inline-flex align-items-center">
+                                    <i class="ri ri-map-pin-line me-1" style="vertical-align: middle; line-height: 1;"></i> {{ $serviceProvider->city->city_name ?? '-' }}, {{ $serviceProvider->state->state_name ?? '-' }}
                                 </span>
                             </div>
                         </div>

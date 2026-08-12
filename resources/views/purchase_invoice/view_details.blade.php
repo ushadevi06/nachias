@@ -399,7 +399,7 @@
                                 <div class="d-flex justify-content-between mb-3">
                                     <span class="text-muted small fw-bold">Post-GST Charges</span>
                                     <span
-                                        class="fw-bold text-dark">+₹{{ number_format($postGstCharges->sum('charge_amount'), 2) }}</span>
+                                        class="fw-bold text-dark">+₹{{ number_format($invoice->other_charges, 2) }}</span>
                                 </div>
 
                                 @if($invoice->round_off > 0)

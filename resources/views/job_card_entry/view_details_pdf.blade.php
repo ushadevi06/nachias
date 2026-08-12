@@ -301,34 +301,34 @@
 
     <table class="table table-bordered" style="margin-top: -0.5pt;">
         <tr>
-            <td class="fw-bold" style="width: 8%; font-size: 7px;">CUTTING NO</td>
-            <td style="width: 12%; font-size: 7px;">{{ $jobCard->job_card_no }}</td>
-            <td class="bg-light fw-bold" style="width: 5%; font-size: 7px;">FIT</td>
-            <td class="text-center fw-bold" style="width: 15%; font-size: 7px;">{{ strtoupper($jobCard->fit->fit_name ?? 'CROSS') }}</td>
-            <td class="bg-light fw-bold" style="width: 6%; font-size: 7px;">CUFF</td>
-            <td class="text-center fw-bold" style="width: 10%; font-size: 7px;">{{ strtoupper($jobCard->cuffType->cuff_type_name ?? 'CROSS') }}</td>
-            <td class="fw-bold" style="width: 12%; font-size: 7px;">CUTTING MASTER</td>
-            <td style="width: 10%; font-size: 7px;">{{ $jobCard->cuttingMaster->name ?? '' }}</td>
+            <td class="fw-bold" style="width: 8%; font-size: 9px;">CUTTING NO</td>
+            <td style="width: 12%; font-size: 10px;">{{ $jobCard->job_card_no }}</td>
+            <td class="bg-light fw-bold" style="width: 5%; font-size: 9px;">FIT</td>
+            <td class="text-center fw-bold" style="width: 15%; font-size: 10px;">{{ strtoupper($jobCard->fit->fit_name ?? 'CROSS') }}</td>
+            <td class="bg-light fw-bold" style="width: 6%; font-size: 9px;">CUFF</td>
+            <td class="text-center fw-bold" style="width: 10%; font-size: 10px;">{{ strtoupper($jobCard->cuffType->cuff_type_name ?? 'CROSS') }}</td>
+            <td class="fw-bold" style="width: 12%; font-size: 9px;">CUTTING MASTER</td>
+            <td style="width: 10%; font-size: 10px;">{{ $jobCard->cuttingMaster->name ?? '' }}</td>
         </tr>
         <tr>
-            <td class="fw-bold" style="font-size: 7px;">ISSUE DATE</td>
-            <td style="font-size: 7px;">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
-            <td class="bg-light fw-bold" style="font-size: 7px;">N.PATTI</td>
-            <td class="text-center fw-bold" style="font-size: 7px;">{{ strtoupper($jobCard->pattiType->patti_type_name ?? 'CROSS') }}</td>
-            <td class="bg-light fw-bold" style="font-size: 7px;">POCKET</td>
-            <td class="text-center fw-bold" style="font-size: 7px;">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? 'CROSS') }}</td>
-            <td class="fw-bold" style="font-size: 7px;">CUTTING DATE</td>
-            <td class="fw-bold text-end" style="font-size: 7px;">H.O / D.C /NO</td>
+            <td class="fw-bold" style="font-size: 9px;">ISSUE DATE</td>
+            <td style="font-size: 10px;">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
+            <td class="bg-light fw-bold" style="font-size: 9px;">N.PATTI</td>
+            <td class="text-center fw-bold" style="font-size: 10px;">{{ strtoupper($jobCard->pattiType->patti_type_name ?? 'CROSS') }}</td>
+            <td class="bg-light fw-bold" style="font-size: 9px;">POCKET</td>
+            <td class="text-center fw-bold" style="font-size: 10px;">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? 'CROSS') }}</td>
+            <td class="fw-bold" style="font-size: 9px;">CUTTING DATE</td>
+            <td class="fw-bold text-end" style="font-size: 10px;">H.O / D.C /NO</td>
         </tr>
         <tr>
-            <td class="fw-bold" style="font-size: 7px;">DELIVERY DATE</td>
-            <td style="font-size: 7px;">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
-            <td class="bg-light fw-bold" style="font-size: 7px;">COLLAR</td>
-            <td class="text-center fw-bold" style="font-size: 7px;">{{ strtoupper($jobCard->collarType->collar_type_name ?? 'CROSS') }}</td>
-            <td class="bg-light fw-bold" style="font-size: 7px;">BOT.CUT</td>
-            <td class="text-center fw-bold" style="font-size: 7px;">{{ strtoupper($jobCard->bottomCut->bottom_cut_name ?? 'CROSS') }}</td>
-            <td class="fw-bold" style="font-size: 7px;">CUTTING ISSUE UNIT</td>
-            <td style="font-size: 7px;">{{ $jobCard->cuttingIssueUnitMapping->name ?? $jobCard->cutting_issue_unit }}</td>
+            <td class="fw-bold" style="font-size: 9px;">DELIVERY DATE</td>
+            <td style="font-size: 10px;">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
+            <td class="bg-light fw-bold" style="font-size: 9px;">COLLAR</td>
+            <td class="text-center fw-bold" style="font-size: 10px;">{{ strtoupper($jobCard->collarType->collar_type_name ?? 'CROSS') }}</td>
+            <td class="bg-light fw-bold" style="font-size: 9px;">BOT.CUT</td>
+            <td class="text-center fw-bold" style="font-size: 10px;">{{ strtoupper($jobCard->bottomCut->bottom_cut_name ?? 'CROSS') }}</td>
+            <td class="fw-bold" style="font-size: 9px;">CUTTING ISSUE UNIT</td>
+            <td style="font-size: 10px;">{{ $jobCard->cuttingIssueUnitMapping->name ?? $jobCard->cutting_issue_unit }}</td>
         </tr>
     </table>
 
@@ -347,12 +347,11 @@
             <col style="width: 12%;">
         </colgroup>
         <tr>
-            <td class="fw-bold" style="width: 8%; font-size: 7px;">WITHIN DAYS</td>
-            <td style="width: 12%; font-size: 7px;">{{ $jobCard->no_of_days ?? '' }}</td>
-            <td colspan="{{ count($allSizes) + 1 }}" class="text-center fw-bold bg-light" style="width: 40%;">CUTTING SIZE RATIO
-            </td>
-            <td colspan="3" class="text-center fw-bold bg-light" style="width: 28%;">{{ $isCanvas ? '' : 'CUTTING MARK' }}</td>
-            <td class="fw-bold text-end" style="width: 12%;">H.O / D.C /DATE</td>
+            <td class="fw-bold" style="width: 8%; font-size: 9px;">WITHIN DAYS</td>
+            <td style="width: 12%; font-size: 10px;">{{ $jobCard->no_of_days ?? '' }}</td>
+            <td colspan="{{ count($allSizes) + 1 }}" class="text-center fw-bold bg-light" style="width: 40%; font-size: 10px;">CUTTING SIZE RATIO</td>
+            <td colspan="3" class="text-center fw-bold bg-light" style="width: 28%; font-size: 10px;">{{ $isCanvas ? '' : 'CUTTING MARK' }}</td>
+            <td class="fw-bold text-end" style="width: 12%; font-size: 10px;">H.O / D.C /DATE</td>
         </tr>
         @php 
             $totalRatioRows = max(4, (count($fsRows) ?: 1) + (count($hsRows) ?: 1)) + 1;
@@ -360,8 +359,8 @@
             $currentRow = 0;
         @endphp
         <tr>
-            <td class="fw-bold" style="font-size:7px;">WIDTH</td>
-            <td class="text-center">{{ $jobCard->width ?: '-' }}</td>
+            <td class="fw-bold" style="font-size:9px;">WIDTH</td>
+            <td class="text-start" style="font-size:10px;">{{ $jobCard->width ?: '-' }}</td>
             <td class="text-center fw-bold bg-light" style="width: 8%;">SIZE</td>
             @foreach($allSizes as $s)
                 <td class="text-center fw-bold" style="width: {{ 32 / (count($allSizes) ?: 1) }}%;">{{ $s }}</td>
@@ -394,13 +393,13 @@
                                 @php $lm = $allLayMarks[$i] ?? null; @endphp
                                 @if($lm)
                                     <tr>
-                                        <td class="text-center" style="width: 35%; font-size: 7px; border: none; border-bottom: 0.5px solid #ddd; border-right: 0.5px solid #ddd;">
+                                        <td class="text-center" style="width: 35%; font-size: 10px; border: none; border-bottom: 0.5px solid #ddd; border-right: 0.5px solid #ddd;">
                                             {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
                                         </td>
-                                        <td class="text-center" style="width: 30%; font-size: 7px; border: none; border-bottom: 0.5px solid #ddd; border-right: 0.5px solid #ddd;">
+                                        <td class="text-center" style="width: 30%; font-size: 10px; border: none; border-bottom: 0.5px solid #ddd; border-right: 0.5px solid #ddd;">
                                             {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
                                         </td>
-                                        <td class="text-center" style="width: 35%; font-size: 7px; border: none; border-bottom: 0.5px solid #ddd;">
+                                        <td class="text-center" style="width: 35%; font-size: 10px; border: none; border-bottom: 0.5px solid #ddd;">
                                             {{ $lm->lay_mark_meter }}
                                         </td>
                                     </tr>
@@ -411,7 +410,7 @@
                     </td>
                 @endif
                 @php $currentRow++; @endphp
-                <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
+                <td class="text-center fw-bold" style="font-size: 10px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
             </tr>
             @endforeach
         @else
@@ -521,7 +520,7 @@
                         @if($imageSrc)
                             <img src="{{ $imageSrc }}" alt="GRN Image" class="art-img">
                         @else
-                            <div style="height: 35pt; width: 100%;"></div>
+                            <div style="height: 120px; width: 100%;"></div>
                         @endif
                     </td>
                 @endforeach
@@ -530,9 +529,9 @@
                 @endfor
             </tr>
             <tr>
-                <td class="bg-light fw-bold">ART NO</td>
+                <td class="bg-light fw-bold" style="font-size:8px;">ART NO</td>
                 @foreach($chunk as $detail)
-                    <td class="text-center fw-bold">
+                    <td class="text-center fw-bold" style="font-size:8px;">
                         {{ $detail->art_no }}
                     </td>
                 @endforeach
@@ -546,7 +545,7 @@
                 @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
             </tr>
             <tr>
-                <td class="bg-light fw-bold">Issue Meter</td>
+                <td class="bg-light fw-bold">ISSUE METER</td>
                 @foreach($chunk as $detail)
                     <td class="text-center">{{ $detail->mtr ?: '-' }}</td>
                 @endforeach

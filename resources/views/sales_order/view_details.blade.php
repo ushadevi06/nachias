@@ -292,11 +292,12 @@
                                             </span>
                                         </td>
                                         <td class="text-end">
-                                            <div>₹{{ number_format($item->rate, 2) }}</div>
-                                        </td>
-                                        <td class="text-end">
                                             <div>₹{{ number_format($item->mrp, 2) }}</div>
                                         </td>
+                                        <td class="text-end">
+                                            <div>₹{{ number_format($item->rate, 2) }}</div>
+                                        </td>
+                                        
                                         <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
                                     </tr>
                                     @endforeach

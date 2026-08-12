@@ -860,11 +860,11 @@
                                         <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
                                         <input type="hidden" name="discount_percent" id="discount_percent" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    {{-- <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="text-secondary fw-medium">Pre-GST Charges:</span>
                                         <span class="fw-bold mb-0" id="pre_gst_charges_val">{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="pre_gst_charges" id="pre_gst_charges" value="{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}">
-                                    </div>
+                                    </div> --}}
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <span class="text-secondary fw-medium">Net Amount (Before Tax):</span>
                                         <span class="fw-bold h5 mb-0" id="total_val">{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}</span>
@@ -933,13 +933,13 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="text-secondary fw-medium">Courier Charge:</span>
                                         <span class="fw-bold mb-0" id="other_charges_val">{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
-                                        <input type="hidden" name="other_charges" id="other_charges" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
+                                        {{-- Removed duplicate hidden other_charges input --}}
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    {{-- <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="text-secondary fw-medium">Post GST charges:</span>
                                         <span class="fw-bold mb-0" id="post_gst_charges_val">{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="post_gst_charges" id="post_gst_charges" value="{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}">
-                                    </div>
+                                    </div> --}}
                                     <div class="row g-2 align-items-center mb-1 pb-1">
                                         <div class="col-4"><span class="text-secondary fw-medium">Total Before Round Off:</span></div>
                                         <div class="col-8 d-flex align-items-center justify-content-end">
@@ -1686,6 +1686,7 @@
             $('#tax_amount').val(taxAmount.toFixed(2));
 
             var otherCharges = parseFloat($('#other_charges').val()) || 0;
+            $('#other_charges_val').text(otherCharges.toFixed(2));
             var postGstCharges = parseFloat($('#post_gst_charges').val()) || 0;
 
             var totalBeforeRoundOff = total + taxAmount + otherCharges + postGstCharges;

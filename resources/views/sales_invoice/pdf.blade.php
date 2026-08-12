@@ -324,7 +324,18 @@ $footerHeight = 0;
 $footerHeight += 180; 
 
 $summaryLines = 1;
-if ($showDiscount && ($invoice->discount ?? 0) > 0) $summaryLines++;
+if ($showDiscount && ($invoice->discount ?? 0) > 0) {
+    $salesDiscountPercent = (float)($invoice->sales_discount ?? 0);
+    $hasSpecificDiscounts = $salesDiscountPercent > 0 || (isset($invoice->box_discount_amount) && $invoice->box_discount_amount > 0);
+    if (!$hasSpecificDiscounts) {
+        $summaryLines++;
+    } else {
+        $salesDiscountAmount = ($invoice->sub_total * $salesDiscountPercent) / 100;
+        $boxDiscountTotal = (float)($invoice->discount ?? 0) - $salesDiscountAmount;
+        if ($salesDiscountAmount > 0) $summaryLines++;
+        if ($boxDiscountTotal > 0) $summaryLines++;
+    }
+}
 if ($showSubTotal) $summaryLines++;
 if ($showTax) $summaryLines += (!$invoice->other_state ? 2 : 1);
 if (($invoice->other_charges ?? 0) > 0) $summaryLines++;
@@ -854,11 +865,32 @@ $totalChunks = count($pages);
                                         </tr>
                                     </table>
                                 </td>
+                                @php
+                                    $salesDiscountPercent = (float)($invoice->sales_discount ?? 0);
+                                    $salesDiscountAmount = 0;
+                                    $boxDiscountTotal = 0;
+                                    $hasSpecificDiscounts = false;
+                                    
+                                    if ($salesDiscountPercent > 0 || (isset($invoice->box_discount_amount) && $invoice->box_discount_amount > 0)) {
+                                        $salesDiscountAmount = ($invoice->sub_total * $salesDiscountPercent) / 100;
+                                        $boxDiscountTotal = (float)($invoice->discount ?? 0) - $salesDiscountAmount;
+                                        $hasSpecificDiscounts = true;
+                                    }
+                                @endphp
                                 <!-- Right Side Labels -->
                                 <td style="width: {{ $midW }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
                                     <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
                                         @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount</td></tr>
+                                            @if(!$hasSpecificDiscounts)
+                                                <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount</td></tr>
+                                            @else
+                                                @if($salesDiscountAmount > 0)
+                                                    <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount ({{ number_format($salesDiscountPercent, 2) }}%)</td></tr>
+                                                @endif
+                                                @if($boxDiscountTotal > 0)
+                                                    <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Box Discount</td></tr>
+                                                @endif
+                                            @endif
                                         @endif
                                         @if($showSubTotal)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Taxable Value</td></tr>
@@ -881,7 +913,16 @@ $totalChunks = count($pages);
                                 <td style="width: {{ $rightW }}%; padding: 0; vertical-align: top; border-bottom: 1px solid #000000;">
                                     <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
                                         @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
+                                            @if(!$hasSpecificDiscounts)
+                                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
+                                            @else
+                                                @if($salesDiscountAmount > 0)
+                                                    <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($salesDiscountAmount, 2) }}</td></tr>
+                                                @endif
+                                                @if($boxDiscountTotal > 0)
+                                                    <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($boxDiscountTotal, 2) }}</td></tr>
+                                                @endif
+                                            @endif
                                         @endif
                                         @if($showSubTotal)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td></tr>
