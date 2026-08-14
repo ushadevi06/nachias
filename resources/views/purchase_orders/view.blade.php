@@ -161,10 +161,11 @@
                         status: status
                     },
                     success: function (response) {
-                        if (response.rate_missing) {
+                        if (response.success === false || response.rate_missing) {
                             $select.val(previousStatus).trigger('change.select2');
-                            let msg = '<span class="text-danger" style="font-size:12px;"><i class="ri ri-alert-line"></i> Pls Update Price!</span>';
-                            $('.status_msg_' + id).html(msg).fadeIn();
+                            let errorMsg = response.message || 'Update failed';
+                            let msg = '<span class="text-danger" style="font-size:11px; display:block; line-height:1.2; max-width:150px;"><i class="ri ri-alert-line"></i> ' + errorMsg + '</span>';
+                            $('.status_msg_' + id).html(msg).fadeIn().delay(4000).fadeOut();
                             return;
                         }
                         $select.data('previous-status', status);

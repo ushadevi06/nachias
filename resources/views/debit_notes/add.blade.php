@@ -4,7 +4,7 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <form action="{{ url('debit_notes/add/' . ($debitNote->id ?? '')) }}" method="POST" class="common-form"
+            <form id="debit_note_form" action="{{ url('debit_notes/add/' . ($debitNote->id ?? '')) }}" method="POST" class="common-form"
                 enctype="multipart/form-data" autocomplete="off">
                 @csrf
                 <div class="card mb-4">
@@ -231,8 +231,8 @@
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <select id="charge_tax_type" class="form-select select2">
-                                        <option value="Pre-GST">Pre-GST (Taxable)</option>
-                                        <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
+                                        <option value="Pre-GST" selected>Pre-GST (Taxable)</option>
+                                        <option value="Post-GST">Post-GST (Non-Taxable)</option>
                                     </select>
                                     <label>Tax Type</label>
                                 </div>
@@ -304,7 +304,12 @@
                                                 <input type="hidden" name="charges[amount][]" value="{{ $chargeAmount }}">
                                             </td>
                                             <td>
-                                                <button type="button" class="btn btn-danger btn-sm remove-charge">X</button>
+                                                <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                                                    <i class="ri ri-edit-line"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
+                                                    <i class="ri ri-delete-bin-line"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -382,11 +387,17 @@
                                     </div>
                                 </div>
 
+                                @php
+                                    $discPercent = old('discount_percent', $debitNote->discount_percent ?? 0);
+                                    $subTotalVal = old('sub_total', $debitNote->sub_total ?? 0);
+                                    $discAmt = old('discount_amount', $debitNote->discount_amount ?? (($subTotalVal + $preGstTotal) * $discPercent / 100));
+                                    $taxableAmt = old('taxable_amount', $debitNote->taxable_amount ?? (($subTotalVal + $preGstTotal) - $discAmt));
+                                @endphp
                                 <div class="d-flex justify-content-between mb-3">
                                     <label class="text-muted">Sub total:</label>
                                     <div class="text-end">
-                                        <input type="hidden" id="sub_total" name="sub_total" value="{{ old('sub_total', $debitNote->sub_total ?? '0.00') }}">
-                                        <span id="sub_total_display" class="fw-bold">₹{{ number_format(old('sub_total', $debitNote->sub_total ?? 0), 2) }}</span>
+                                        <input type="hidden" id="sub_total" name="sub_total" value="{{ $subTotalVal }}">
+                                        <span id="sub_total_display" class="fw-bold">₹{{ number_format($subTotalVal, 2) }}</span>
                                     </div>
                                 </div>
 
@@ -397,10 +408,24 @@
                                         <span id="pre_gst_total_display" class="fw-bold">₹{{ number_format($preGstTotal, 2) }}</span>
                                     </div>
                                 </div>
+
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <label class="text-muted">Discount:</label>
+                                    <div class="text-end">
+                                        <div class="d-flex gap-2 align-items-center justify-content-end">
+                                            <input type="number" name="discount_percent" id="discount_percent" value="{{ $discPercent }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01" min="0" max="100">
+                                            <span class="small">%</span>
+                                            <input type="hidden" id="discount_amount" name="discount_amount" value="{{ $discAmt }}">
+                                            <strong id="discount_amt_display" class="ms-2">₹{{ number_format($discAmt, 2) }}</strong>
+                                        </div>
+                                        <div class="text-danger small discount-error-msg mt-1" style="display:none;"></div>
+                                        @error('discount_percent') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                    </div>
+                                </div>
+
                                 <div class="d-flex justify-content-between mb-3">
                                     <label class="text-muted">Taxable Total:</label>
                                     <div class="text-end">
-                                        @php $taxableAmt = old('sub_total', $debitNote->sub_total ?? 0) + $preGstTotal; @endphp
                                         <input type="hidden" id="taxable_amount" name="taxable_amount" value="{{ $taxableAmt }}">
                                         <span id="taxable_amount_display" class="fw-bold">₹{{ number_format($taxableAmt, 2) }}</span>
                                     </div>
@@ -504,6 +529,7 @@
             $.each(data, function (key, value) {
                 select.append('<option value="' + value.id + '">' + value.charge_name + '</option>');
             });
+            refreshChargeDropdownState();
         });
 
         $('#add_charge_btn').click(function () {
@@ -539,7 +565,12 @@
                         <input type="hidden" name="charges[amount][]" value="${chargeAmount.toFixed(2)}">
                     </td>
                     <td>
-                        <button type="button" class="btn btn-danger btn-sm remove-charge">X</button>
+                        <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                            <i class="ri ri-edit-line"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
+                            <i class="ri ri-delete-bin-line"></i>
+                        </button>
                     </td>
                 </tr>
             `;
@@ -551,6 +582,7 @@
             $('#charge_amount').val('');
 
             calculateTotals();
+            refreshChargeDropdownState();
         });
 
         $(document).on('click', '.remove-charge', function () {
@@ -559,6 +591,26 @@
                 $('#charges_table').addClass('d-none');
             }
             calculateTotals();
+            refreshChargeDropdownState();
+        });
+
+        $(document).on('click', '.edit-charge', function () {
+            let $row = $(this).closest('tr');
+            let chargeId = $row.data('charge-id');
+            let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
+            let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Post-GST';
+
+            $('#charges_select').val(chargeId).trigger('change');
+            $('#charge_amount').val(amount.toFixed(2));
+            $('#charge_tax_type').val(taxType).trigger('change');
+
+            $row.remove();
+
+            if ($('#added_charges_list tr').length === 0) {
+                $('#charges_table').addClass('d-none');
+            }
+            calculateTotals();
+            refreshChargeDropdownState();
         });
         $('#purchase_invoice_id').on('change', function () {
             let invoiceId = $(this).val();
@@ -572,6 +624,7 @@
                         $('#igst_percent').val(res.igst_percent);
                         $('#cgst_percent').val(res.cgst_percent);
                         $('#sgst_percent').val(res.sgst_percent);
+                        $('#discount_percent').val(res.discount_percent || 0);
 
                         toggleTaxDivs();
 
@@ -646,7 +699,7 @@
             }
         }
 
-        $(document).on('input', '.item-qty, #igst_percent, #cgst_percent, #sgst_percent', function () {
+        $(document).on('input', '.item-qty, #igst_percent, #cgst_percent, #sgst_percent, #discount_percent', function () {
             let row = $(this).closest('tr');
             if (row.hasClass('item-row')) {
                 let qty = parseFloat(row.find('.item-qty').val()) || 0;
@@ -695,7 +748,26 @@
                 $('#pre_gst_charges_div').hide();
             }
 
-            let taxableAmount = subTotal + preGstTotal;
+            let discountPercent = parseFloat($('#discount_percent').val()) || 0;
+            let discountError = $('.discount-error-msg');
+            
+            if (discountPercent < 0 || discountPercent > 100) {
+                discountError.text("Discount percentage must be between 0% and 100%.").show();
+                $('#discount_percent').addClass('is-invalid');
+            } else {
+                discountError.hide();
+                $('#discount_percent').removeClass('is-invalid');
+            }
+
+            let discountAmount = (subTotal + preGstTotal) * (discountPercent / 100);
+            $('#discount_amount').val(discountAmount.toFixed(2));
+            $('#discount_amt_display').text('₹' + discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+            let taxableAmount = (subTotal + preGstTotal) - discountAmount;
+            if (taxableAmount < 0) {
+                discountError.text("Discount cannot exceed the subtotal amount.").show();
+                $('#discount_percent').addClass('is-invalid');
+            }
             $('#taxable_amount').val(taxableAmount.toFixed(2));
             $('#taxable_amount_display').text('₹' + taxableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
@@ -749,6 +821,29 @@
             $('#grand_total_display').text('₹' + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         }
 
+        function refreshChargeDropdownState() {
+            let selectedChargeIds = [];
+            $('#added_charges_list tr').each(function () {
+                let id = $(this).data('charge-id');
+                if (id) selectedChargeIds.push(id.toString());
+            });
+
+            $('#charges_select option').each(function () {
+                let optionId = $(this).val();
+                if (optionId) {
+                    if (selectedChargeIds.includes(optionId.toString())) {
+                        $(this).prop('disabled', true);
+                    } else {
+                        $(this).prop('disabled', false);
+                    }
+                }
+            });
+
+            $('#charges_select').select2('destroy').select2({
+                dropdownParent: $('#charges_select').closest('.card-body').length ? $('#charges_select').closest('.card-body') : $('body')
+            });
+        }
+
         @if(isset($debitNote) || old('other_state'))
             toggleTaxDivs();
             calculateTotals();
@@ -771,6 +866,44 @@
                 $(this).removeClass('is-invalid');
             }
             calculateTotals();
+        });
+
+        $(document).on('submit', '#debit_note_form', function (e) {
+            let discountPercent = parseFloat($('#discount_percent').val()) || 0;
+            let subTotal = parseFloat($('#sub_total').val()) || 0;
+            let preGstTotal = parseFloat($('#pre_gst_total').val()) || 0;
+            let discountAmount = (subTotal + preGstTotal) * (discountPercent / 100);
+            let taxableAmount = (subTotal + preGstTotal) - discountAmount;
+
+            if (discountPercent < 0 || discountPercent > 100) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Validation Error',
+                        text: 'Discount percentage must be between 0% and 100%.',
+                        confirmButtonColor: '#8c57ff'
+                    });
+                } else {
+                    alert('Discount percentage must be between 0% and 100%.');
+                }
+                return false;
+            }
+
+            if (taxableAmount < 0) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Validation Error',
+                        text: 'Discount cannot exceed the subtotal amount.',
+                        confirmButtonColor: '#8c57ff'
+                    });
+                } else {
+                    alert('Discount cannot exceed the subtotal amount.');
+                }
+                return false;
+            }
         });
 
         toggleTaxDivs();

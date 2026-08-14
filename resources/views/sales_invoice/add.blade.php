@@ -532,6 +532,7 @@
                                                         <input type="text" class="form-control" value="{{ $displayName }}" readonly tabindex="-1">
                                                         <label>Stock Item*</label>
                                                     </div>
+                                                    <input type="hidden" class="invoice-item-db-id" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $row->item_id ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $row->brand_cat_id ?? '' }}">
@@ -864,7 +865,7 @@
                                         <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
                                         <input type="hidden" name="discount_percent" id="discount_percent" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3" style="display: none !important;">
                                         <span class="text-secondary fw-medium">Pre-GST Charges:</span>
                                         <span class="fw-bold mb-0" id="pre_gst_charges_val">{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="pre_gst_charges" id="pre_gst_charges" value="{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}">
@@ -939,7 +940,7 @@
                                         <span class="fw-bold mb-0" id="other_charges_val">{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="other_charges" id="other_charges" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3" style="display: none !important;">
                                         <span class="text-secondary fw-medium">Post GST charges:</span>
                                         <span class="fw-bold mb-0" id="post_gst_charges_val">{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="post_gst_charges" id="post_gst_charges" value="{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}">
@@ -1536,8 +1537,36 @@
         function updateSerialNumbers() {
             $('#item-rows .item-row').each(function(index) {
                 $(this).find('.s-no').text(index + 1);
+                $(this).find('input, select, textarea').each(function() {
+                    let name = $(this).attr('name');
+                    if (name) {
+                        let newName = name.replace(/items\[\d+\]/, 'items[' + index + ']');
+                        $(this).attr('name', newName);
+                    }
+                });
             });
         }
+
+        function updateOpenOrderIndices() {
+            $('#open-order-item-rows tbody .item-row').each(function(index) {
+                $(this).find('input, select, textarea').each(function() {
+                    let name = $(this).attr('name');
+                    if (name) {
+                        let newName = name.replace(/items\[(open_\d+|\d+)\]/, 'items[open_' + index + ']');
+                        $(this).attr('name', newName);
+                    }
+                });
+            });
+            $('#openOrderItemIndex').val($('#open-order-item-rows tbody .item-row').length);
+        }
+
+        window.updateSerialNumbers = updateSerialNumbers;
+        window.updateOpenOrderIndices = updateOpenOrderIndices;
+        window.calculateTotals = calculateTotals;
+
+        // Initialize open order indices on page load
+        updateOpenOrderIndices();
+        calculateTotals();
 
         $('#item-rows').on('click', '.remove-item', function() {
             if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
@@ -1642,8 +1671,8 @@
             $('#discount_val').text('- ₹' + discount.toFixed(2));
             $('#discount').val(discount.toFixed(2));
 
-            var preGstCharges = parseFloat($('#pre_gst_charges').val()) || 0;
-            var total = subTotal - discount + preGstCharges;
+            // var preGstCharges = parseFloat($('#pre_gst_charges').val()) || 0;
+            var total = subTotal - discount; // + preGstCharges;
             $('#total_val').text(total.toFixed(2));
             $('#total').val(total.toFixed(2));
 
@@ -1682,9 +1711,9 @@
             $('#tax_amount').val(taxAmount.toFixed(2));
 
             var otherCharges = parseFloat($('#other_charges').val()) || 0;
-            var postGstCharges = parseFloat($('#post_gst_charges').val()) || 0;
+            // var postGstCharges = parseFloat($('#post_gst_charges').val()) || 0;
 
-           var totalBeforeRoundOff = total + taxAmount + otherCharges + postGstCharges;
+           var totalBeforeRoundOff = total + taxAmount + otherCharges; // + postGstCharges;
             $('#total_before_round_off').val(totalBeforeRoundOff.toFixed(2));
             
             var nearestWhole = Math.round(totalBeforeRoundOff);
@@ -2113,6 +2142,12 @@
                 }
                 
                 if (ui.item) {
+                    // Clear the input synchronously to prevent text from lingering
+                    $('#open_order_barcode_scanner').val('');
+                    if ($('#open_order_barcode_scanner').data('ui-autocomplete')) {
+                        $('#open_order_barcode_scanner').autocomplete('close');
+                    }
+
                     let sleeveParam = ui.item.sleeve_type ? `&sleeve_type=${encodeURIComponent(ui.item.sleeve_type)}` : '';
                     let sizeParam = ui.item.size ? `&size=${encodeURIComponent(ui.item.size)}` : '';
                     let itemCodeParam = ui.item.id ? `&item_code=${encodeURIComponent(ui.item.id)}` : '';
@@ -2124,9 +2159,6 @@
                             if (res.success) {
                                 handleOpenOrderScan(res);
                                 $('#open_order_barcode_scanner').val('');
-                                if ($('#open_order_barcode_scanner').data('ui-autocomplete')) {
-                                    $('#open_order_barcode_scanner').autocomplete('close');
-                                }
                                 setTimeout(function() { $('#open_order_barcode_scanner').val('').focus(); }, 300);
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
@@ -2179,6 +2211,12 @@
                 e.preventDefault();
                 let val = $(this).val();
                 if (val) {
+                    // Clear the input synchronously to prevent text from lingering
+                    $('#open_order_barcode_scanner').val('');
+                    if ($('#open_order_barcode_scanner').data('ui-autocomplete')) {
+                        $('#open_order_barcode_scanner').autocomplete('close');
+                    }
+
                     let codeToSearch = val.split('|')[0].trim();
                     $.ajax({
                         url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(codeToSearch)}`,
@@ -2314,9 +2352,15 @@
             </tr>`;
 
             $('#open-order-item-rows tbody').append(rowHtml);
-            $('#openOrderItemIndex').val(index + 1);
+            if (typeof window.updateOpenOrderIndices === 'function') {
+                window.updateOpenOrderIndices();
+            } else if (typeof updateOpenOrderIndices === 'function') {
+                updateOpenOrderIndices();
+            }
             if (typeof window.calculateTotals === 'function') {
                 window.calculateTotals();
+            } else if (typeof calculateTotals === 'function') {
+                calculateTotals();
             }
         }
 
@@ -2344,7 +2388,16 @@
 
         $(document).on('click', '.open_delete_row', function() {
             $(this).closest('.item-row').remove();
-            if (typeof window.calculateTotals === 'function') window.calculateTotals();
+            if (typeof window.updateOpenOrderIndices === 'function') {
+                window.updateOpenOrderIndices();
+            } else if (typeof updateOpenOrderIndices === 'function') {
+                updateOpenOrderIndices();
+            }
+            if (typeof window.calculateTotals === 'function') {
+                window.calculateTotals();
+            } else if (typeof calculateTotals === 'function') {
+                calculateTotals();
+            }
         });
 
         let openOrderHtml5QrCode = null;

@@ -164,6 +164,7 @@ class PurchaseInvoiceController extends Controller
 
         if (request()->isMethod('post')) {
             $request = request();
+            $oldInvoice = $id ? PurchaseInvoice::findOrFail($id) : null;
 
             $rules = [
                 'invoice_no' => [($id ? 'nullable' : 'required'), 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
@@ -173,10 +174,10 @@ class PurchaseInvoiceController extends Controller
                 'po_reference' => 'nullable|string|min:3|max:50',
                 'transport' => 'nullable|string|max:100',
                 'destination' => 'nullable|string|max:100',
-                'lr_no' => 'nullable|string|max:100',
+                'lr_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
                 'lr_date' => 'nullable|date_format:d-m-Y',
-                'eway_billno' => 'nullable|string|max:100',
-                'indent_no' => 'nullable|string|max:100',
+                'eway_billno' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
+                'indent_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
                 'indent_date' => 'nullable|date_format:d-m-Y',
                 'invoice_status' => 'required|in:Draft,Unpaid/Credit,Paid,Partially Paid',
                 'items' => 'required|array|min:1',
@@ -192,9 +193,9 @@ class PurchaseInvoiceController extends Controller
                 'cgst_percent' => 'nullable|numeric|min:0|max:100',
                 'sgst_percent' => 'nullable|numeric|min:0|max:100',
                 'other_charges' => 'nullable|numeric|min:0',
-                'round_off' => 'nullable|numeric',
+                'round_off' => 'nullable|numeric|min:0|max:99.99',
                 'round_off_type' => 'required|in:Add,Less',
-                'grand_total' => 'required|numeric|min:0',
+                'grand_total' => 'required|numeric',
                 'received_amount' => 'nullable|numeric|min:0',
                 'charges_select' => 'nullable',
                 'charge_amount' => 'nullable|numeric|min:0',
@@ -202,6 +203,8 @@ class PurchaseInvoiceController extends Controller
                 'transaction_id' => 'nullable|max:100',
                 'auth_sign' => 'nullable|mimes:jpeg,jpg,png,webp,pdf,doc,docx|max:2048',
                 'attachments' => 'nullable|mimes:jpeg,jpg,png,webp,pdf,doc,docx|max:2048',
+                'discount_percent' => 'nullable|numeric|min:0|max:100',
+                'commission' => 'nullable|numeric|min:0|max:100',
             ];
 
             $messages = [
@@ -225,12 +228,18 @@ class PurchaseInvoiceController extends Controller
                 'charges_select.required' => 'Please select a charge.',
                 'charge_amount.numeric' => 'Charge amount must be a number.',
                 'charges.amount.*.numeric' => 'Charge amount must be a number.',
+                'round_off.min' => 'Round off cannot be negative. Please enter 0 or a positive value.',
+                'round_off.max' => 'Round off amount cannot exceed 99.99.',
                 'min' => 'This field must be at least :min characters.',
                 'max' => 'This field should not be more than :max characters.',
                 'auth_sign.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp, .pdf, .doc, .docx).',
                 'auth_sign.max' => 'Uploaded file cannot exceed 2MB.',
                 'attachments.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp, .pdf, .doc, .docx).',
                 'attachments.max' => 'Uploaded file cannot exceed 2MB.',
+                'discount_percent.min' => 'Discount cannot be negative. Please enter 0 or a positive value.',
+                'discount_percent.max' => 'Discount percentage cannot exceed 100%.',
+                'commission.min' => 'Commission cannot be negative. Please enter 0 or a positive value.',
+                'commission.max' => 'Commission percentage cannot exceed 100%.',
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -275,6 +284,109 @@ class PurchaseInvoiceController extends Controller
                 ]);
             }
 
+            // Recalculate amounts to validate against negative values
+            $subTotal = 0;
+            if ($request->has('items')) {
+                foreach ($request->items as $item) {
+                    if (isset($item['selected']) && $item['selected'] == '1') {
+                        $subTotal += floatval($item['quantity'] ?? 0) * floatval($item['rate'] ?? 0);
+                    }
+                }
+            }
+
+            $discountPercent = floatval($request->discount_percent ?? 0);
+            if ($discountPercent < 0) {
+                $errors['discount_percent'] = 'Discount percentage cannot be negative.';
+            }
+            $discountAmount = ($subTotal * $discountPercent) / 100;
+
+            $preGstCharges = 0;
+            $postGstCharges = 0;
+            $brokerageAmount = 0;
+            if ($request->has('charges') && isset($request->charges['charge_id'])) {
+                $chargeAmounts = $request->charges['amount'] ?? [];
+                $chargeNames = $request->charges['name'] ?? [];
+                $taxTypes = $request->charges['tax_type'] ?? [];
+
+                foreach ($chargeAmounts as $idx => $amount) {
+                    $cName = strtoupper(trim($chargeNames[$idx] ?? ''));
+                    $amt = floatval($amount);
+                    if ($cName === 'BROKERAGE') {
+                        $brokerageAmount += $amt;
+                    } else {
+                        $type = $taxTypes[$idx] ?? 'Post-GST';
+                        if ($type === 'Pre-GST') {
+                            $preGstCharges += $amt;
+                        } else {
+                            $postGstCharges += $amt;
+                        }
+                    }
+                }
+            }
+
+            $commissionPercent = floatval($request->commission ?? 0);
+            if ($commissionPercent < 0) {
+                $errors['commission'] = 'Commission percentage cannot be negative.';
+            }
+            $baseCommissionAmount = 0;
+            if ($commissionPercent > 0) {
+                $baseCommissionAmount = ($subTotal * $commissionPercent) / 100;
+            } else {
+                $baseCommissionAmount = floatval($request->commission_amount ?? 0) - $brokerageAmount;
+                if ($baseCommissionAmount < 0) {
+                    $baseCommissionAmount = 0;
+                }
+            }
+            $totalCommission = $baseCommissionAmount + $brokerageAmount;
+
+            $itemTotal = $subTotal - $discountAmount - $totalCommission;
+            $taxableAmount = $itemTotal + $preGstCharges;
+
+            if ($taxableAmount < 0) {
+                if ($discountPercent > 0) {
+                    $errors['discount_percent'] = 'Discount cannot exceed the subtotal.';
+                }
+                $errors['taxable_amount'] = 'Taxable Total cannot be negative. Please check the discount, commission, and Pre-GST charges.';
+            }
+
+            $taxAmount = 0;
+            $igstAmount = 0;
+            $cgstAmount = 0;
+            $sgstAmount = 0;
+
+            $displayTaxableAmount = $taxableAmount >= 0 ? $taxableAmount : 0;
+            $otherStateVal = $request->has('other_state') ? $request->other_state : ($oldInvoice && $oldInvoice->other_state ? 'Y' : 'N');
+
+            if ($otherStateVal === 'Y') {
+                $igstPercent = floatval($request->igst_percent ?? 0);
+                $igstAmount = ($displayTaxableAmount * $igstPercent) / 100;
+                if ($igstAmount < 0) $igstAmount = 0;
+                $taxAmount = $igstAmount;
+            } else {
+                $cgstPercent = floatval($request->cgst_percent ?? 0);
+                $sgstPercent = floatval($request->sgst_percent ?? 0);
+                $cgstAmount = ($displayTaxableAmount * $cgstPercent) / 100;
+                $sgstAmount = ($displayTaxableAmount * $sgstPercent) / 100;
+                if ($cgstAmount < 0) $cgstAmount = 0;
+                if ($sgstAmount < 0) $sgstAmount = 0;
+                $taxAmount = $cgstAmount + $sgstAmount;
+            }
+
+            $totalBeforeRoundOff = round($taxableAmount + $taxAmount + $postGstCharges, 2);
+            $roundOffAmount = floatval($request->round_off ?? 0);
+            $roundOffType = $request->round_off_type ?? 'Add';
+            $finalTotal = 0;
+
+            if ($roundOffType === 'Add') {
+                $finalTotal = $totalBeforeRoundOff + $roundOffAmount;
+            } else {
+                $finalTotal = $totalBeforeRoundOff - $roundOffAmount;
+            }
+
+            if ($finalTotal < 0) {
+                $errors['grand_total'] = 'Grand Total cannot be negative. Please check the round off and other charges.';
+            }
+
             if (!empty($errors)) {
                 return back()->withInput()->withErrors($errors);
             }
@@ -299,7 +411,7 @@ class PurchaseInvoiceController extends Controller
                     'discount_percent' => $request->discount_percent ?? 0,
                     'discount_amount' => $request->discount_amount ?? 0,
                     'taxable_amount' => $request->taxable_amount ?? 0,
-                    'other_state' => $request->other_state === 'Y',
+                    'other_state' => $request->has('other_state') ? ($request->other_state === 'Y') : ($oldInvoice ? $oldInvoice->other_state : false),
                     'igst_percent' => $request->igst_percent ?? 0,
                     'igst_amount' => $request->igst_amount ?? 0,
                     'cgst_percent' => $request->cgst_percent ?? 0,
@@ -358,7 +470,6 @@ class PurchaseInvoiceController extends Controller
 
 
                 if ($id) {
-                    $oldInvoice = PurchaseInvoice::findOrFail($id);
                     $oldData = $oldInvoice->toArray();
                     $oldReceived = $oldInvoice->received_amount ?? 0;
 
@@ -412,6 +523,19 @@ class PurchaseInvoiceController extends Controller
 
 
                 if ($request->has('items')) {
+                    if ($id) {
+                        $selectedPoItemIds = [];
+                        foreach ($request->items as $item) {
+                            if (isset($item['selected']) && $item['selected'] == '1') {
+                                if (isset($item['purchase_order_item_id'])) {
+                                    $selectedPoItemIds[] = $item['purchase_order_item_id'];
+                                }
+                            }
+                        }
+                        PurchaseInvoiceItem::where('purchase_invoice_id', $id)
+                            ->whereNotIn('purchase_order_item_id', $selectedPoItemIds)
+                            ->delete();
+                    }
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == '1') {
                             if (isset($item['fabric_type_id']) && !empty($item['fabric_type_id']) && !empty($item['purchase_order_item_id'])) {
@@ -499,32 +623,35 @@ class PurchaseInvoiceController extends Controller
 
         $purchaseOrders = PurchaseOrder::with('supplier')
             ->where('purchase_orders.status', '!=', 'Draft')
-            ->where('purchase_orders.is_self_closed', 0)
             ->where(function ($query) use ($invoice) {
-                $query->whereIn(
-                    'purchase_orders.id',
-                    function ($q) {
-                        $q->select('purchase_order_items.purchase_order_id')
-                            ->from('purchase_order_items')
-                            ->leftJoin(
-                                'purchase_invoice_items',
-                                'purchase_invoice_items.purchase_order_item_id',
-                                '=',
-                                'purchase_order_items.id'
-                            )
-                            ->groupBy(
-                                'purchase_order_items.id',
-                                'purchase_order_items.quantity',
-                                'purchase_order_items.purchase_order_id'
-                            )
-                            ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
-                    }
-                );
+                $query->where(function ($sub) {
+                    $sub->where('purchase_orders.is_self_closed', 0)
+                        ->whereIn(
+                            'purchase_orders.id',
+                            function ($q) {
+                                $q->select('purchase_order_items.purchase_order_id')
+                                    ->from('purchase_order_items')
+                                    ->leftJoin(
+                                        'purchase_invoice_items',
+                                        'purchase_invoice_items.purchase_order_item_id',
+                                        '=',
+                                        'purchase_order_items.id'
+                                    )
+                                    ->groupBy(
+                                        'purchase_order_items.id',
+                                        'purchase_order_items.quantity',
+                                        'purchase_order_items.purchase_order_id'
+                                    )
+                                    ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
+                            }
+                        );
+                });
 
                 if ($invoice) {
-                    $query->orWhere('id', $invoice->purchase_order_id);
+                    $query->orWhere('purchase_orders.id', $invoice->purchase_order_id);
                 }
             })
+            ->orderBy('purchase_orders.id', 'desc')
             ->get();
         $brands = Brand::active()->orderBy('brand_name')->get();
         $fabricSizes = FabricSize::active()->orderBy('width')->get();

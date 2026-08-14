@@ -64,7 +64,7 @@ class ProductionReceiptController extends Controller
 
             foreach ($receipts as $row) {
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('edit production-receipts')) {
+                if ((auth()->id() == 1 || auth()->user()->can('edit production-receipts')) && $row->status !== 'Posted') {
                     $action .= '<a href="' . url('production_receipts/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('view_details production-receipts')) {
@@ -115,22 +115,23 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        $receipt = $id ?ProductionReceipt::with(['items'])->findOrFail($id) : null;
+        $receipt = $id ? ProductionReceipt::with(['items'])->findOrFail($id) : null;
+        $fullyReceivedJobCardIds = $this->getFullyReceivedJobCardIds($id);
+
         if ($id) {
             $currentReceipt = ProductionReceipt::find($id);
-            $usedJobCardIds = ProductionReceipt::where('id', '!=', $id)->whereNotNull('job_card_id')->pluck('job_card_id')->toArray();
-
             $jobCards = JobCardEntry::with('serviceProvider')
-                ->where(function ($query) use ($currentReceipt, $usedJobCardIds) {
-                $query->whereNotIn('id', $usedJobCardIds);
+                ->where(function ($query) use ($currentReceipt, $fullyReceivedJobCardIds) {
+                $query->whereNotIn('id', $fullyReceivedJobCardIds);
                 if ($currentReceipt && $currentReceipt->job_card_id) {
                     $query->orWhere('id', $currentReceipt->job_card_id);
                 }
             })->orderBy('id', 'desc')->get();
         }
         else {
-            $usedJobCardIds = ProductionReceipt::whereNotNull('job_card_id')->pluck('job_card_id')->toArray();
-            $jobCards = JobCardEntry::with('serviceProvider')->whereNotIn('id', $usedJobCardIds)->orderBy('id', 'desc')->get();
+            $jobCards = JobCardEntry::with('serviceProvider')
+                ->whereNotIn('id', $fullyReceivedJobCardIds)
+                ->orderBy('id', 'desc')->get();
         }
         $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('id','desc')->get();
@@ -409,7 +410,7 @@ class ProductionReceiptController extends Controller
 
                 if ($barcodeMaster) {
                     $sku = $barcodeMaster->barcode_no;
-                    $itemCode = $barcodeMaster->item_code ?: $itemCode;
+                    $itemCode = str_replace('/', '', $barcodeMaster->item_code ?: $itemCode);
                     $barcodeMasterId = $barcodeMaster->id;
                 } else {
                     $formattedSize = str_pad(trim((string)$item->size), 2, '0', STR_PAD_LEFT);
@@ -506,6 +507,57 @@ class ProductionReceiptController extends Controller
         }
 
         return $stockEntry;
+    }
+
+    private function getFullyReceivedJobCardIds($excludeReceiptId = null)
+    {
+        $usedJobCardIds = ProductionReceipt::whereNotNull('job_card_id')
+            ->when($excludeReceiptId, function ($q) use ($excludeReceiptId) {
+                return $q->where('id', '!=', $excludeReceiptId);
+            })
+            ->pluck('job_card_id')
+            ->unique()
+            ->filter()
+            ->toArray();
+
+        if (empty($usedJobCardIds)) {
+            return [];
+        }
+
+        $jobCards = JobCardEntry::whereIn('id', $usedJobCardIds)->get();
+        $fullyReceivedIds = [];
+
+        foreach ($jobCards as $jc) {
+            $totalOrdered = \DB::table('job_card_matrix_quantities as jmq')
+                ->join('job_card_fabric_details as jfd', 'jmq.job_card_fabric_detail_id', '=', 'jfd.id')
+                ->where('jfd.job_card_entry_id', $jc->id)
+                ->sum(\DB::raw('jmq.qty_fs + jmq.qty_hs'));
+
+            if ($totalOrdered <= 0) {
+                $totalOrdered = ($jc->total_qty_fs ?? 0) + ($jc->total_qty_hs ?? 0);
+                if ($totalOrdered <= 0) {
+                    $totalOrdered = $jc->grand_total_qty ?? 0;
+                }
+            }
+
+            if ($totalOrdered <= 0) {
+                continue;
+            }
+
+            $totalReceived = \DB::table('production_receipt_items as pri')
+                ->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')
+                ->where('pr.job_card_id', $jc->id)
+                ->when($excludeReceiptId, function ($q) use ($excludeReceiptId) {
+                    return $q->where('pr.id', '!=', $excludeReceiptId);
+                })
+                ->sum('pri.qty_to_receive');
+
+            if ($totalReceived >= $totalOrdered) {
+                $fullyReceivedIds[] = $jc->id;
+            }
+        }
+
+        return $fullyReceivedIds;
     }
 
     public function getJobCardDetails(Request $request, $id)
@@ -840,7 +892,7 @@ class ProductionReceiptController extends Controller
                     }
                     $sleeveCode = str_replace('/', '', $sleeve);
                     $fallbackCode = implode('-', array_filter([trim($brandCode), trim($styleCode), $sleeveCode], function($v) { return $v !== ''; }));
-                    $itemCode = $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $fallbackCode;
+                    $itemCode = str_replace('/', '', $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $fallbackCode);
                     $itemName = $brandName . ' ' . $styleName . ' ' . $sleeve;
 
                     if ($isCanvas) {
@@ -892,7 +944,7 @@ class ProductionReceiptController extends Controller
 
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
-                        'item_code' => $isCanvas ? $itemCode : ($barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $itemCode),
+                        'item_code' => $isCanvas ? $itemCode : ($barcodeMaster && $barcodeMaster->item_code ? str_replace('/', '', $barcodeMaster->item_code) : $itemCode),
                         'service_name' => $serviceName,
                         'sleeve' => $sleeve,
                         'size' => $size,

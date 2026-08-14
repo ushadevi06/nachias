@@ -171,7 +171,8 @@
                             @php
                                 $preGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Pre-GST')->sum('charge_amount') : 0;
                                 $postGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Post-GST')->sum('charge_amount') : 0;
-                                $taxableAmt = $debitNote->sub_total + $preGstCharges;
+                                $discountAmt = $debitNote->discount_amount ?? (($debitNote->sub_total + $preGstCharges) * ($debitNote->discount_percent ?? 0) / 100);
+                                $taxableAmt = $debitNote->taxable_amount ?? (($debitNote->sub_total + $preGstCharges) - $discountAmt);
                             @endphp
 
                             <div class="d-flex justify-content-between mb-3">
@@ -184,6 +185,16 @@
                                 <span class="text-muted fw-medium">Pre-GST Charges</span>
                                 <span class="fw-bold">₹{{ number_format($preGstCharges, 2) }}</span>
                             </div>
+                            @endif
+
+                            @if(($debitNote->discount_percent ?? 0) > 0)
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Discount ({{ number_format($debitNote->discount_percent, 2) }}%)</span>
+                                <span class="fw-bold">-₹{{ number_format($discountAmt, 2) }}</span>
+                            </div>
+                            @endif
+
+                            @if($preGstCharges > 0 || ($debitNote->discount_percent ?? 0) > 0)
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-muted fw-medium">Taxable Total</span>
                                 <span class="fw-bold">₹{{ number_format($taxableAmt, 2) }}</span>

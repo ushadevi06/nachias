@@ -135,6 +135,9 @@ class DebitNoteController extends Controller
                 'reason' => 'nullable|string|min:5|max:255',
                 'items' => 'required|array|min:1',
                 'sub_total' => 'required|numeric|min:0',
+                'discount_percent' => 'nullable|numeric|min:0|max:100',
+                'discount_amount' => 'nullable|numeric|min:0',
+                'taxable_amount' => 'required|numeric|min:0',
                 'other_charges' => 'nullable|numeric|min:0',
                 'charges_select' => 'nullable',
                 'charge_amount' => 'nullable|numeric|min:0',
@@ -159,6 +162,25 @@ class DebitNoteController extends Controller
             ];
 
             $validated = $request->validate($rules, $messages);
+
+            // Calculate pre-GST charges total from request
+            $preGstTotal = 0;
+            if ($request->has('charges') && isset($request->charges['amount'])) {
+                foreach ($request->charges['amount'] as $idx => $amt) {
+                    $taxType = $request->charges['tax_type'][$idx] ?? 'Post-GST';
+                    if ($taxType === 'Pre-GST') {
+                        $preGstTotal += floatval($amt);
+                    }
+                }
+            }
+
+            $discountPercent = floatval($request->discount_percent ?? 0);
+            $discountAmountCalculated = ($request->sub_total + $preGstTotal) * ($discountPercent / 100);
+            $taxableAmountCalculated = ($request->sub_total + $preGstTotal) - $discountAmountCalculated;
+
+            if ($taxableAmountCalculated < 0) {
+                return back()->withInput()->withErrors(['discount_percent' => 'Discount cannot exceed the subtotal amount.']);
+            }
 
             DB::beginTransaction();
             try {
@@ -190,6 +212,9 @@ class DebitNoteController extends Controller
                     'cgst_percent' => $request->cgst_percent ?? 0,
                     'sgst_percent' => $request->sgst_percent ?? 0,
                     'sub_total' => $request->sub_total,
+                    'discount_percent' => $request->discount_percent ?? 0,
+                    'discount_amount' => $request->discount_amount ?? 0,
+                    'taxable_amount' => $request->taxable_amount ?? 0,
                     'other_charges' => $request->other_charges ?? 0,
                     'tax_amount' => $request->tax_amount ?? 0,
                     'round_off_type' => $request->round_off_type ?? 'Add',
@@ -377,6 +402,7 @@ class DebitNoteController extends Controller
             'igst_percent' => $invoice->igst_percent,
             'cgst_percent' => $invoice->cgst_percent,
             'sgst_percent' => $invoice->sgst_percent,
+            'discount_percent' => $invoice->discount_percent ?? 0,
         ]);
     }
     public function getSupplierInvoices($supplierId)

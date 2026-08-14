@@ -35,7 +35,7 @@
                     <div class="card-body p-4">
                         <div class="row g-4 text-break">
                             <div class="col-md-3">
-                                <div class="mb-1 text-muted small fw-bold">Supplier</div>
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
                                 <div class="fw-bold text-dark">
                                     {{ $invoice->supplier->name ?? 'N/A' }}
                                     @if($invoice->supplier && $invoice->supplier->supplier_code)
@@ -44,7 +44,7 @@
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">PO Reference</div>
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Order No</div>
                                 <div class="fw-bold text-dark">{{ $invoice->po_reference ?? '-' }}</div>
                             </div>
                             <div class="col-md-3">
@@ -208,7 +208,7 @@
                             </div>
                             <div class="card-body p-4">
                                 <div class="row g-4">
-                                    @php $preGstCharges = $invoice->charges->where('tax_type', 'Pre-GST'); @endphp
+                                    @php $preGstCharges = $invoice->charges->filter(fn($c) => $c->tax_type === 'Pre-GST' && strtoupper(trim($c->charge_name)) !== 'BROKERAGE'); @endphp
                                     @if($preGstCharges->count() > 0)
                                         @foreach($preGstCharges as $charge)
                                             <div
@@ -252,7 +252,7 @@
                             </div>
                             <div class="card-body p-4">
                                 <div class="row g-4">
-                                    @php $postGstCharges = $invoice->charges->where('tax_type', 'Post-GST'); @endphp
+                                    @php $postGstCharges = $invoice->charges->filter(fn($c) => $c->tax_type === 'Post-GST' && strtoupper(trim($c->charge_name)) !== 'BROKERAGE'); @endphp
                                     @if($postGstCharges->count() > 0)
                                         @foreach($postGstCharges as $charge)
                                             <div
@@ -355,12 +355,27 @@
                                     <span class="fw-bold text-dark">₹{{ number_format($invoice->sub_total, 2) }}</span>
                                 </div>
 
-                                @if($invoice->commission_amount > 0)
+                                @php
+                                    $brokerageAmount = $invoice->charges ? $invoice->charges->filter(fn($c) => strtoupper(trim($c->charge_name)) === 'BROKERAGE')->sum('charge_amount') : 0;
+                                    $poCommissionAmount = max(0, $invoice->commission_amount - $brokerageAmount);
+                                @endphp
+
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted small fw-bold">PO Commission ({{ number_format($invoice->commission, 2) }}%)</span>
+                                    <span class="fw-bold text-dark">₹{{ number_format($poCommissionAmount, 2) }}</span>
+                                </div>
+
+                                @if($brokerageAmount > 0)
                                     <div class="d-flex justify-content-between mb-3">
-                                        <span class="text-muted small fw-bold">Commission ({{ number_format($invoice->commission, 2) }}%)</span>
-                                        <span class="fw-bold text-danger">-₹{{ number_format($invoice->commission_amount, 2) }}</span>
+                                        <span class="text-muted small fw-bold">Additional Brokerage</span>
+                                        <span class="fw-bold text-dark">₹{{ number_format($brokerageAmount, 2) }}</span>
                                     </div>
                                 @endif
+
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted small fw-bold">Total Commission</span>
+                                    <span class="fw-bold text-danger">-₹{{ number_format($invoice->commission_amount, 2) }}</span>
+                                </div>
 
                                 <div class="d-flex justify-content-between mb-3">
                                     <span class="text-muted small fw-bold">Discount
@@ -403,11 +418,11 @@
                                 </div>
 
                                 @if($invoice->round_off > 0)
-                                    <div class="d-flex justify-content-between mb-3 text-muted italic small">
-                                        <span class="fw-bold">Round Off ({{ $invoice->round_off_type }})</span>
-                                        <span
-                                            class="fw-bold text-dark">{{ $invoice->round_off_type == 'Less' ? '-' : '+' }}₹{{ number_format($invoice->round_off, 2) }}</span>
-                                    </div>
+                                <div class="d-flex justify-content-between mb-3 text-muted italic small">
+                                    <span class="fw-bold">Round Off ({{ $invoice->round_off_type }})</span>
+                                    <span
+                                        class="fw-bold text-dark">{{ $invoice->round_off_type == 'Less' ? '-' : '+' }}₹{{ number_format($invoice->round_off, 2) }}</span>
+                                </div>
                                 @endif
 
                                 <div class="bg-primary-soft p-3 rounded-3 mt-4 border-start border-primary border-4">

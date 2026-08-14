@@ -97,10 +97,45 @@ class EInvoiceService
             ];
         }
 
+        $grandTotal = round((float) ($invoice->grand_total ?? 0), 2);
         $othChrg = (float) number_format((float) ($invoice->other_charges ?? 0.00), 2, '.', '');
-        $expectedTot = $totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg;
-        $rndOffAmt = (float) number_format((float) $invoice->grand_total - $expectedTot, 2, '.', '');
-        $totInvVal = $expectedTot + $rndOffAmt;
+        $expectedTot = round($totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg, 2);
+        
+        // Dynamically calculate round-off to absorb item-level tax rounding differences
+        $rndOffAmt = round($grandTotal - $expectedTot, 2);
+
+        if ($rndOffAmt < -99.99 || $rndOffAmt > 99.99) {
+            return [
+                'success' => false,
+                'message' => 'E-Invoice cannot be generated. Round-off amount must be between -99.99 and 99.99. Current round-off: ' . number_format($rndOffAmt, 2),
+            ];
+        }
+        
+        $totInvVal = round($expectedTot + $rndOffAmt, 2);
+        
+        if (abs($totInvVal - $grandTotal) > 0.01) {
+            \Log::error('E-Invoice Mismatch Detail', [
+                'invoice_id' => $invoice->id,
+                'invoice_no' => $invoice->inv_no,
+                'saved_grand_total' => $grandTotal,
+                'expected_tot_before_roundoff' => $expectedTot,
+                'round_off_amount' => $rndOffAmt,
+                'calculated_tot_inv_val' => $totInvVal,
+                'ass_val_sum' => $totalAssVal,
+                'cgst_val_sum' => $totalCgstVal,
+                'sgst_val_sum' => $totalSgstVal,
+                'igst_val_sum' => $totalIgstVal,
+                'other_charges' => $othChrg
+            ]);
+            return [
+                'success' => false,
+                'message' => 'E-Invoice total mismatch. Sales Invoice Grand Total: ₹'
+                    . number_format($grandTotal, 2)
+                    . ', E-Invoice calculated total: ₹'
+                    . number_format($totInvVal, 2)
+                    . '. Please verify discount, tax, other charges and round-off.',
+            ];
+        }
 
         $payload = [
             "Version" => "1.1",
@@ -143,6 +178,11 @@ class EInvoiceService
                 "TotInvVal" => (float) number_format($totInvVal, 2, '.', ''),
             ]
         ];
+        \Log::info('E-Invoice Request Payload', [
+            'invoice_id' => $invoice->id,
+            'invoice_no' => $invoice->inv_no,
+            'payload' => $payload
+        ]);
         $authData = $this->authenticate($setting);
         if (!$authData['success']) {
             return $authData;
@@ -194,6 +234,7 @@ class EInvoiceService
         $errorMessage = 'Failed to generate E-Invoice';
         
         \Log::error('E-Invoice Failure', [
+            'payload' => $payload,
             'response' => $apiData
         ]);
 

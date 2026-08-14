@@ -66,19 +66,23 @@ class SalesInvoiceItem extends Model
 
     public function getArtNoAttribute($value)
     {
-        if (!empty($value)) {
-            return $value;
-        }
-
+        $stockItem = null;
         if ($this->relationLoaded('stockEntryItem') && $this->stockEntryItem) {
-            return $this->stockEntryItem->art_no;
+            $stockItem = $this->stockEntryItem;
+        } elseif ($this->stock_entry_item_id) {
+            $stockItem = StockEntryItem::find($this->stock_entry_item_id);
+        }
+        if (!$stockItem && !empty($this->sku)) {
+            $stockItem = StockEntryItem::where(function ($q) {
+                    $q->where('sku', $this->sku)
+                      ->orWhere('barcode', $this->sku);
+                })
+                ->where('stock_type', 'finished_goods')
+                ->first();
         }
 
-        if ($this->stock_entry_item_id) {
-            $stockItem = $this->stockEntryItem;
-            if ($stockItem && !empty($stockItem->art_no)) {
-                return $stockItem->art_no;
-            }
+        if ($stockItem && !empty($stockItem->art_no)) {
+            return $stockItem->art_no;
         }
 
         return $value;

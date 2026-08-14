@@ -69,11 +69,11 @@
                                             <div class="form-floating form-floating-outline">
                                                 <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                                     <option value="">Select Status</option>
-                                                    <option value="Draft" {{ old('status', $grn->status ?? 'Received') == 'Draft' ? 'selected' : '' }}>Draft</option>
-                                                    <option value="Received" {{ old('status', $grn->status ?? 'Received') == 'Received' ? 'selected' : '' }}>Received</option>
-                                                    <option value="Partially Received" {{ old('status', $grn->status ?? 'Received') == 'Partially Received' ? 'selected' : '' }}>Partially Received</option>
-                                                    <option value="Invoiced" {{ old('status', $grn->status ?? 'Received') == 'Invoiced' ? 'selected' : '' }}>Invoiced</option>
-                                                    <option value="Cancelled" {{ old('status', $grn->status ?? 'Received') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                                    <option value="Draft" {{ old('status', $grn->status ?? 'Draft') == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                                    <option value="Received" {{ old('status', $grn->status ?? 'Draft') == 'Received' ? 'selected' : '' }}>Received</option>
+                                                    <option value="Partially Received" {{ old('status', $grn->status ?? 'Draft') == 'Partially Received' ? 'selected' : '' }}>Partially Received</option>
+                                                    <option value="Invoiced" {{ old('status', $grn->status ?? 'Draft') == 'Invoiced' ? 'selected' : '' }}>Invoiced</option>
+                                                    <option value="Cancelled" {{ old('status', $grn->status ?? 'Draft') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
                                                 </select>
                                                 <label>Status *</label>
                                             </div>
@@ -782,7 +782,7 @@
                 for (let piId in groupTotals) {
                     let group = groupTotals[piId];
                     let balance = group.ordered - group.alreadyReceived;
-                    let groupError = group.totalReceived > balance;
+                    let groupError = group.totalReceived > (balance + 0.0001);
                     group.rows.forEach(row => {
                         if (groupError) {
                             row.find('.qty-received').addClass('is-invalid');
@@ -808,6 +808,9 @@
                     }
                 });
                 let currentBalance = ordered - alreadyReceived - totalReceivedInGroup;
+                if (currentBalance < 0.0001) {
+                    currentBalance = 0;
+                }
                 groupRows.forEach(row => row.find('.qty-balanced').val(currentBalance.toFixed(2)));
             }
 

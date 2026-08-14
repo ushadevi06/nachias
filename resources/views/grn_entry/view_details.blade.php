@@ -64,10 +64,7 @@
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier Invoice No</div>
-                            <div class="fw-bold text-dark">{{ $grn->purchaseInvoice->po_reference ?? 'N/A' }}</div>
-                        </div>
-                        <div class="col-md-3">
+
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier Invoice Date</div>
                             <div class="fw-bold text-dark">{{ $grn->supplier_invoice_date->format('d M, Y') }}</div>
                         </div>
@@ -87,7 +84,7 @@
                                 <tr>
                                     <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="60">S.No</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold">Grn Image</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold">Item Image</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Style</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Color</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Width</th>

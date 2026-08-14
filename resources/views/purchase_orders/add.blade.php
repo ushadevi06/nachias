@@ -7,7 +7,7 @@
             @include('flash_messages')
         </div>
         <div class="col-lg-12">
-            <form action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
+            <form action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off" novalidate>
                 @csrf
                 <div class="card mb-4">
                     <div class="card-body">
@@ -17,7 +17,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? $nextPoNumber ?? '') }}">
+                                    <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? $nextPoNumber ?? '') }}" readonly>
                                     <label for="po_number">PO Number <span class="text-danger">*</span></label>
                                 </div>
                                 @error('po_number')
@@ -54,6 +54,7 @@
                                     <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
                                     <label for="commission">Commission (%)</label>
                                 </div>
+                                <div id="commission-error" class="text-danger mt-1 small d-none"></div>
                                 @error('commission')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
@@ -736,6 +737,11 @@
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
+                                            @error('discount_percent')
+                                                <div class="text-danger text-end mt-1 small">
+                                                    {{ $message }}
+                                                </div>
+                                            @enderror
                                             <div class="text-end mt-1">
                                                 <input type="text" class="form-control-plaintext form-control-sm text-end py-0" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $purchaseOrder->discount_amount ?? '') }}" readonly>
                                             </div>
@@ -774,6 +780,11 @@
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
+                                            @error('igst_percent')
+                                                <div class="text-danger text-end mt-1 small">
+                                                    {{ $message }}
+                                                </div>
+                                            @enderror
                                         </div>
                                         <div class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }} mt-1">
                                             <div class="d-flex justify-content-between align-items-center">
@@ -789,6 +800,11 @@
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
+                                            @error('cgst_percent')
+                                                <div class="text-danger text-end mt-1 small">
+                                                    {{ $message }}
+                                                </div>
+                                            @enderror
                                         </div>
                                         <div class="cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-1">
                                             <div class="d-flex justify-content-between align-items-center">
@@ -804,6 +820,11 @@
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
+                                            @error('sgst_percent')
+                                                <div class="text-danger text-end mt-1 small">
+                                                    {{ $message }}
+                                                </div>
+                                            @enderror
                                         </div>
                                         <div class="sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-1">
                                             <div class="d-flex justify-content-between align-items-center">
@@ -826,9 +847,13 @@
                                                     <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="round_off_less">Less</label>
                                                 </div>
-                                                <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}" autocomplete="off">
+                                                <input type="number" class="form-control form-control-sm text-end @error('round_off') is-invalid @enderror" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" max="99.99" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}" autocomplete="off">
                                             </div>
+                                            
                                         </div>
+                                        @error('round_off')
+                                            <div class="text-danger text-end mt-1 small">{{ $message }}</div>
+                                        @enderror
                                         <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
                                             <label for="total_amount" class="fw-bold fs-5">Total Amount:</label>
                                             <input type="text" class="form-control-plaintext text-end w-50 fw-bold fs-5 text-primary" id="total_amount" name="total_amount" value="{{ old('total_amount', $purchaseOrder->total_amount ?? '') }}" readonly>
@@ -977,7 +1002,6 @@
                 itemIndex++;
                 toggleTaxDivs();
                 calculateTotals();
-                // toggleRateRequired(); // This function is undefined and throws a ReferenceError, halting JS execution
             });
 
             function initSelect2Fields(context = document) {
@@ -1084,12 +1108,10 @@
                 let rate = parseFloat(row.find('.rate').val()) || 0;
 
                 if (isAccessories) {
-                    // In Accessories: if qty & rate are both set, calculate amount
                     if (qty > 0 && rate > 0) {
                         row.find('.amount').val((qty * rate).toFixed(2));
                     }
                 } else {
-                    // Normal mode: amount = qty × rate (readonly)
                     row.find('.amount').val((qty * rate).toFixed(2));
                 }
                 calculateTotals();
@@ -1110,6 +1132,41 @@
                     row.find('.rate').val('');
                 }
                 calculateTotals();
+            });
+
+            $(document).on('keypress', '#discount_percent, #commission', function (e) {
+                if (e.which === 45 || e.which === 43) {
+                    e.preventDefault();
+                }
+            });
+            $(document).on('paste', '#discount_percent, #commission', function (e) {
+                let pasteData = e.originalEvent.clipboardData.getData('text');
+                if (parseFloat(pasteData) < 0) {
+                    e.preventDefault();
+                }
+            });
+             $('form.common-form').on('submit', function (e) {
+                calculateTotals();
+
+                let discountPercent = parseFloat($('#discount_percent').val()) || 0;
+                let commissionPercent = parseFloat($('#commission').val()) || 0;
+
+                let status = $('#status').val();
+                let totalAmount = parseFloat($('#total_amount').val()) || 0;
+                if (status === 'Approved' && totalAmount <= 0) {
+                    e.preventDefault();
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Validation Error',
+                            text: 'Grand total must be greater than 0 to approve this purchase order.',
+                            confirmButtonColor: '#8c57ff'
+                        });
+                    } else {
+                        alert('Grand total must be greater than 0 to approve this purchase order.');
+                    }
+                    return false;
+                }
             });
 
             $('#discount_percent').on('input', function () {
@@ -1148,10 +1205,8 @@
                     let amount;
 
                     if (isAccessories) {
-                        // In Accessories: amount is entered by user, read it directly
                         amount = parseFloat($(this).find('.amount').val()) || 0;
                     } else {
-                        // Normal: calculate amount = qty × rate and set it
                         amount = qty * rate;
                         $(this).find('.amount').val(amount.toFixed(2));
                     }
@@ -1202,36 +1257,38 @@
                 $('#discount_amount').val(discountAmount.toFixed(2));
 
                 let taxableAmount = subTotal - discountAmount - commissionAmount;
+                let displayTaxableAmount = taxableAmount >= 0 ? taxableAmount : 0;
 
-                $('#taxable_amount').val(taxableAmount.toFixed(2));
+                $('#taxable_amount').val(displayTaxableAmount.toFixed(2));
 
                 let taxAmount = 0;
                 let cgstAmountDisplay = 0;
                 let sgstAmountDisplay = 0;
                 let igstAmountDisplay = 0;
                 
-                if (isAccessories) {
-                    taxAmount = itemsTaxTotal;
-                    if (otherState === 'yes') {
-                        igstAmountDisplay = itemsTaxTotal;
+                if (taxableAmount >= 0) {
+                    if (isAccessories) {
+                        taxAmount = itemsTaxTotal;
+                        if (otherState === 'yes') {
+                            igstAmountDisplay = itemsTaxTotal;
+                        } else {
+                            $('.item-row').each(function() {
+                                cgstAmountDisplay += parseFloat($(this).find('.cgst_amount').val()) || 0;
+                                sgstAmountDisplay += parseFloat($(this).find('.sgst_amount').val()) || 0;
+                            });
+                        }
                     } else {
-                        // sum item-level cgst/sgst amounts
-                        $('.item-row').each(function() {
-                            cgstAmountDisplay += parseFloat($(this).find('.cgst_amount').val()) || 0;
-                            sgstAmountDisplay += parseFloat($(this).find('.sgst_amount').val()) || 0;
-                        });
-                    }
-                } else {
-                    if (otherState === 'yes') {
-                        let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                        igstAmountDisplay = (taxableAmount * igstPercent) / 100;
-                        taxAmount = igstAmountDisplay;
-                    } else {
-                        let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
-                        let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-                        cgstAmountDisplay = (taxableAmount * cgstPercent) / 100;
-                        sgstAmountDisplay = (taxableAmount * sgstPercent) / 100;
-                        taxAmount = cgstAmountDisplay + sgstAmountDisplay;
+                        if (otherState === 'yes') {
+                            let igstPercent = parseFloat($('#igst_percent').val()) || 0;
+                            igstAmountDisplay = (displayTaxableAmount * igstPercent) / 100;
+                            taxAmount = igstAmountDisplay;
+                        } else {
+                            let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
+                            let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
+                            cgstAmountDisplay = (displayTaxableAmount * cgstPercent) / 100;
+                            sgstAmountDisplay = (displayTaxableAmount * sgstPercent) / 100;
+                            taxAmount = cgstAmountDisplay + sgstAmountDisplay;
+                        }
                     }
                 }
 
@@ -1240,7 +1297,7 @@
                 $('#summary_igst_amount').val(igstAmountDisplay.toFixed(2));
                 $('#tax_amount').val(taxAmount.toFixed(2));
 
-                let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount).toFixed(2));
+                let totalBeforeRoundOff = parseFloat((displayTaxableAmount + taxAmount).toFixed(2));
 
                 let roundOffAmount = parseFloat($('#round_off').val()) || 0;
                 let roundOffType = $('input[name="round_off_type"]:checked').val();
@@ -1252,7 +1309,12 @@
                     finalTotal = totalBeforeRoundOff - roundOffAmount;
                 }
 
+                if (finalTotal < 0) {
+                    finalTotal = 0;
+                }
+
                 $('#total_amount').val(finalTotal.toFixed(2));
+
             }
 
             function toggleTaxDivs() {

@@ -134,8 +134,21 @@
                         <table style="border: none;">
                             <tr>
                                 <td style="border: none; vertical-align: top; width:25%;">
-                                    <img src="{{ isset($is_print) && $is_print ? url('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}"
-                                        style="width: 150px;">
+                                    @php
+                                        $logoPath = '';
+                                        if (isset($setting) && !empty($setting->logo)) {
+                                            if (isset($is_print) && $is_print) {
+                                                $logoPath = url('uploads/logo/' . $setting->logo);
+                                            } else {
+                                                $logoPath = public_path('uploads/logo/' . $setting->logo);
+                                            }
+                                        }
+                                        
+                                        if (empty($logoPath) || (!isset($is_print) && !file_exists($logoPath))) {
+                                            $logoPath = isset($is_print) && $is_print ? url('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png');
+                                        }
+                                    @endphp
+                                    <img src="{{ $logoPath }}" style="width: 150px;">
                                 </td>
                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;">
                                     <div style="font-size: 10px; line-height: 1.2;">

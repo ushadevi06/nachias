@@ -8,7 +8,7 @@
         </div>
         <div class="col-lg-12">
             <form action="{{ $invoice ? url('purchase_invoices/add/' . $invoice->id) : url('purchase_invoices/add') }}"
-                method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
+                method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off" novalidate>
                 @csrf
                 <input type="hidden" id="isEditMode" value="{{ isset($invoice) ? 1 : 0 }}">
                 <input type="hidden" name="purchase_commission_agent_id" id="purchase_commission_agent_id" value="{{ old('purchase_commission_agent_id', $invoice->purchase_commission_agent_id ?? '') }}">
@@ -267,7 +267,7 @@
                                                 <input type="number" step="any" min="0" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" {{ isset($item['selected']) ? '' : 'readonly' }}>
                                             </td>
                                                 <td class="item-amount">
-                                                    {{ number_format(($item['quantity'] ?? 0) * ($item['rate'] ?? 0), 2) }}
+                                                     {{ isset($item['selected']) ? number_format(($item['quantity'] ?? 0) * ($item['rate'] ?? 0), 2) : '0.00' }}
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -418,9 +418,8 @@
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <select id="charge_tax_type" class="form-select select2">
-                                        <option value="">Tax Type</option>
-                                        <option value="Pre-GST">Pre-GST (Taxable)</option>
-                                        <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
+                                        <option value="Pre-GST" selected>Pre-GST (Taxable)</option>
+                                        <option value="Post-GST">Post-GST (Non-Taxable)</option>
                                     </select>
                                     <label>Tax Type</label>
                                 </div>
@@ -454,6 +453,7 @@
                                                 'charge_id' => $id,
                                                 'charge_name' => $oldCharges['name'][$index] ?? '',
                                                 'charge_amount' => $oldCharges['amount'][$index] ?? 0,
+                                                'tax_type' => $oldCharges['tax_type'][$index] ?? 'Post-GST',
                                                 'id' => null
                                             ];
                                         }
@@ -490,7 +490,7 @@
                                                 <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
                                                     <i class="ri ri-pencil-line"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge" {{ isset($invoice) ? 'disabled' : '' }}>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
                                                     <i class="ri ri-delete-bin-line"></i>
                                                 </button>
                                             </td>
@@ -511,7 +511,7 @@
                                         <h5 class="mb-3 fw-semibold">Invoice Details</h5>
                                         <div class="form-floating form-floating-outline mb-2">
                                             @php
-                                            $currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
+                                            $currentStatus = old('invoice_status', $invoice->invoice_status ?? 'Draft');
                                             @endphp
 
                                             <select id="invoice_status" name="invoice_status"
@@ -722,18 +722,21 @@
                                     @enderror
                                     <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
                                         <span>Discount:</span>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <div class="input-group input-group-sm" style="width:120px;">
-                                                <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
-                                                <span class="input-group-text">%</span>
+                                        <div class="d-flex flex-column align-items-end gap-1">
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                                <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
+                                                <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
                                             </div>
-                                            <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
-                                            <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
+                                            @error('discount_percent')
+                                                <div class="text-danger mt-1">{{ $message }}</div>
+                                            @enderror
+                                            <div id="discount-error" class="text-danger small d-none"></div>
                                         </div>
                                     </div>
-                                    @error('discount_percent')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
                                     <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Pre-GST Charges:</span>
                                         <strong id="pre_gst_total_display">{{ number_format($preGstTotal, 2) }}</strong>
@@ -745,19 +748,22 @@
                                         <input type="hidden" name="taxable_amount" id="taxable_amount_input" value="{{ $taxableAmount }}">
                                     </div>
                                     <div class="py-3 border-bottom">
-                                        <label class="fw-semibold mb-2 d-block">Other State?</label>
-                                        <div class="d-flex gap-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="Y" {{ $otherState === 'Y' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
-                                                <label class="form-check-label">Yes</label>
-                                            </div>
+                                         <label class="fw-semibold mb-2 d-block">Other State?</label>
+                                         <div class="d-flex gap-4">
+                                             <div class="form-check">
+                                                 <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="Y" {{ $otherState === 'Y' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
+                                                 <label class="form-check-label">Yes</label>
+                                             </div>
 
-                                            <div class="form-check">
-                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="N" {{ $otherState === 'N' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
-                                                <label class="form-check-label">No</label>
-                                            </div>
-                                        </div>
-                                    </div>
+                                             <div class="form-check">
+                                                 <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="N" {{ $otherState === 'N' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
+                                                 <label class="form-check-label">No</label>
+                                             </div>
+                                         </div>
+                                         @if(isset($invoice))
+                                             <input type="hidden" name="other_state" value="{{ $otherState }}">
+                                         @endif
+                                     </div>
                                     @error('other_state')
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
@@ -766,7 +772,7 @@
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span>IGST</span>
                                             <div class="d-flex gap-2 align-items-center">
-                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;">
+                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" step="any" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;">
                                                 <span>%</span>
                                                 <strong id="igst_amt">{{ number_format($igstAmount, 2) }}</strong>
                                                 <input type="hidden" name="igst_amount" id="igst_amount_input" value="{{ $igstAmount }}">
@@ -1082,48 +1088,16 @@
                             });
                             let hasFabric = response.items.some(i => parseInt(i.store_category_id) === 1);
                             toggleFabricColumns(hasFabric);
-                            $('.item-row').each(function () {
-                                let $row = $(this);
-                                let qty = parseFloat($row.find('.item-quantity').val()) || 0;
-                                let rate = parseFloat($row.find('.item-rate').val()) || 0;
-                                let amount = qty * rate;
-                                $row.find('.item-amount').text(amount.toFixed(2));
-                            });
 
                             $('#select_all_items').prop('checked', false);
 
-                            $('#subtotal').text('0.00');
-                            $('#sub_total_input').val('0');
-                            $('#discount_value').text('0.00');
-                            $('#discount_amount_input').val('0');
-                            $('#total').text('0.00');
-                            $('#taxable_amount_input').val('0');
-                            $('#tax_amount').text('0.00');
-                            $('#tax_amount_input').val('0');
-                            $('#other_charges').text('0.00');
-                            $('#other_charges_input').val('0');
-                            $('#grand_total').text('0.00');
-                            $('#grand_total_input').val('0');
-                            $('#due_amount').text('0.00');
-                            $('#due_amount_input').val('0');
-                            $('#cgst_amt').text('0.00');
-                            $('#sgst_amt').text('0.00');
-                            $('#igst_amt').text('0.00');
+                            $('.item-row').each(function () {
+                                let $row = $(this);
+                                let checkbox = $row.find('.item-checkbox');
+                                toggleItemFields(checkbox);
+                            });
 
-                            setTimeout(() => {
-                                $('.item-row').each(function () {
-                                    let $row = $(this);
-                                    let checkbox = $row.find('.item-checkbox');
-
-                                    toggleItemFields(checkbox);
-
-                                    if (!checkbox.is(':checked')) {
-                                        $row.find('.item-amount').text('0.00');
-                                    }
-                                });
-
-                                calculateTotals();
-                            }, 200);
+                            calculateTotals();
                         }
                     },
                     error: function () {
@@ -1330,7 +1304,10 @@
                 let $row = $(this);
                 let isChecked = $row.find('.item-checkbox').is(':checked');
 
-                if (!isChecked) return;
+                if (!isChecked) {
+                    $row.find('.item-amount').text('0.00');
+                    return;
+                }
 
                 let qty = parseFloat($row.find('.item-quantity').val()) || 0;
                 let rate = parseFloat($row.find('.item-rate').val()) || 0;
@@ -1391,6 +1368,7 @@
                 $('#brokerage_value').text(brokerageAmount.toFixed(2));
                 $('#brokerage_row').show();
             } else {
+                $('#brokerage_value').text('0.00');
                 $('#brokerage_row').hide();
             }
             
@@ -1400,39 +1378,52 @@
             let itemTotal = subTotal - discountAmount - totalCommission;
 
             let taxableAmount = itemTotal + preGstCharges;
-            $('#total').text(taxableAmount.toFixed(2));
-            $('#taxable_amount_input').val(taxableAmount.toFixed(2));
+            let displayTaxableAmount = taxableAmount >= 0 ? taxableAmount : 0;
+            $('#total').text(displayTaxableAmount.toFixed(2));
+            $('#taxable_amount_input').val(displayTaxableAmount.toFixed(2));
 
             let taxAmount = 0;
 
-            if ($('input[name="other_state"]:checked').val() === 'Y') {
-                let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                let igstAmount = (taxableAmount * igstPercent) / 100;
+            if (taxableAmount >= 0) {
+                if ($('input[name="other_state"]:checked').val() === 'Y') {
+                    let igstPercent = parseFloat($('#igst_percent').val()) || 0;
+                    let igstAmount = (displayTaxableAmount * igstPercent) / 100;
 
-                $('#igst_amt').text(igstAmount.toFixed(2));
-                $('#igst_amount_input').val(igstAmount.toFixed(2));
+                    $('#igst_amt').text(igstAmount.toFixed(2));
+                    $('#igst_amount_input').val(igstAmount.toFixed(2));
 
+                    $('#cgst_amt').text("0.00");
+                    $('#sgst_amt').text("0.00");
+                    $('#cgst_amount_input').val("0.00");
+                    $('#sgst_amount_input').val("0.00");
+
+                    taxAmount = igstAmount;
+
+                } else {
+                    let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
+                    let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
+
+                    let cgstAmount = (displayTaxableAmount * cgstPercent) / 100;
+                    let sgstAmount = (displayTaxableAmount * sgstPercent) / 100;
+
+                    $('#cgst_amt').text(cgstAmount.toFixed(2));
+                    $('#sgst_amt').text(sgstAmount.toFixed(2));
+
+                    $('#cgst_amount_input').val(cgstAmount.toFixed(2));
+                    $('#sgst_amount_input').val(sgstAmount.toFixed(2));
+
+                    $('#igst_amt').text("0.00");
+                    $('#igst_amount_input').val("0.00");
+
+                    taxAmount = cgstAmount + sgstAmount;
+                }
+            } else {
+                $('#igst_amt').text("0.00");
+                $('#igst_amount_input').val("0.00");
                 $('#cgst_amt').text("0.00");
                 $('#sgst_amt').text("0.00");
-
-                taxAmount = igstAmount;
-
-            } else {
-                let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
-                let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-
-                let cgstAmount = (taxableAmount * cgstPercent) / 100;
-                let sgstAmount = (taxableAmount * sgstPercent) / 100;
-
-                $('#cgst_amt').text(cgstAmount.toFixed(2));
-                $('#sgst_amt').text(sgstAmount.toFixed(2));
-
-                $('#cgst_amount_input').val(cgstAmount.toFixed(2));
-                $('#sgst_amount_input').val(sgstAmount.toFixed(2));
-
-                $('#igst_amt').text("0.00");
-
-                taxAmount = cgstAmount + sgstAmount;
+                $('#cgst_amount_input').val("0.00");
+                $('#sgst_amount_input').val("0.00");
             }
 
             $('#tax_amount').text(taxAmount.toFixed(2));
@@ -1446,7 +1437,7 @@
             $('#post_gst_total_display').text(postGstCharges.toFixed(2));
             $('#other_charges_input').val(postGstCharges.toFixed(2));
 
-            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
+            let totalBeforeRoundOff = parseFloat((displayTaxableAmount + taxAmount + postGstCharges).toFixed(2));
 
             let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
             let roundOffType = $('input[name="round_off_type"]:checked').val();
@@ -1458,6 +1449,10 @@
                 finalTotal = totalBeforeRoundOff - roundOffAmount;
             }
 
+            if (finalTotal < 0) {
+                finalTotal = 0;
+            }
+
             $('#grand_total').text(finalTotal.toFixed(2));
             $('#grand_total_input').val(finalTotal.toFixed(2));
 
@@ -1466,6 +1461,8 @@
 
             $('#due_amount').text(dueAmount.toFixed(2));
             $('#due_amount_input').val(dueAmount.toFixed(2));
+
+            validatePurchaseInvoiceTaxSummary();
         }
 
         function refreshChargeDropdownState() {
@@ -1544,6 +1541,46 @@
                 alert("Please enter a valid amount");
                 return;
             }
+
+            // --- Pre-add check: would this charge make taxable total negative? ---
+            let cName = chargeText.trim().toUpperCase();
+            let currentSubTotal   = parseFloat($('#sub_total_input').val()) || 0;
+            let currentDiscount   = (currentSubTotal * (parseFloat($('#discount_input').val()) || 0)) / 100;
+            let currentCommission = parseFloat($('#commission_amount_input').val()) || 0;
+
+            // Add the new charge's impact
+            let projectedBrokerage = 0;
+            let projectedPreGst    = 0;
+            if (cName === 'BROKERAGE') {
+                projectedBrokerage = amount;
+            } else if (taxType === 'Pre-GST') {
+                projectedPreGst = amount;
+            }
+
+            // Existing charges
+            $('.charge-row').each(function () {
+                let existingName = ($(this).find('input[name="charges[name][]"]').val() || '').trim().toUpperCase();
+                let existingAmt  = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                if (existingName === 'BROKERAGE') {
+                    projectedBrokerage += existingAmt;
+                } else {
+                    let existingTax = $(this).attr('data-tax-type') || 'Post-GST';
+                    if (existingTax === 'Pre-GST') projectedPreGst += existingAmt;
+                }
+            });
+
+            let projectedTaxable = (currentSubTotal - currentDiscount - currentCommission - projectedBrokerage) + projectedPreGst;
+
+            if (projectedTaxable < 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Cannot Add Charge',
+                    text: 'Adding this charge would make the Taxable Total negative. Please reduce the charge amount or remove other charges first.',
+                    confirmButtonColor: '#8c57ff'
+                });
+                return;
+            }
+            // ---------------------------------------------------------------
 
             $('#charges_table').removeClass('d-none');
 
@@ -1717,25 +1754,29 @@
             $('#taxable_amount_input').val(taxableAmount.toFixed(2));
 
             let taxAmount = 0;
+            let displayTaxableAmount = taxableAmount >= 0 ? taxableAmount : 0;
 
             if ($('input[name="other_state"]:checked').val() === 'Y') {
                 let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                let igstAmount = (taxableAmount * igstPercent) / 100;
+                let igstAmount = (displayTaxableAmount * igstPercent) / 100;
                 $('#igst_amt').text(igstAmount.toFixed(2));
                 $('#igst_amount_input').val(igstAmount.toFixed(2));
                 $('#cgst_amt').text('0.00');
                 $('#sgst_amt').text('0.00');
+                $('#cgst_amount_input').val('0.00');
+                $('#sgst_amount_input').val('0.00');
                 taxAmount = igstAmount;
             } else {
                 let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                 let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-                let cgstAmount = (taxableAmount * cgstPercent) / 100;
-                let sgstAmount = (taxableAmount * sgstPercent) / 100;
+                let cgstAmount = (displayTaxableAmount * cgstPercent) / 100;
+                let sgstAmount = (displayTaxableAmount * sgstPercent) / 100;
                 $('#cgst_amt').text(cgstAmount.toFixed(2));
                 $('#sgst_amt').text(sgstAmount.toFixed(2));
                 $('#cgst_amount_input').val(cgstAmount.toFixed(2));
                 $('#sgst_amount_input').val(sgstAmount.toFixed(2));
                 $('#igst_amt').text('0.00');
+                $('#igst_amount_input').val('0.00');
                 taxAmount = cgstAmount + sgstAmount;
             }
 
@@ -1847,6 +1888,7 @@
                 $('#brokerage_value').text(brokerageAmount.toFixed(2));
                 $('#brokerage_row').show();
             } else {
+                $('#brokerage_value').text('0.00');
                 $('#brokerage_row').hide();
             }
             
@@ -1905,13 +1947,95 @@
 
             $('#due_amount').text(due.toFixed(2));
             $('#due_amount_input').val(due.toFixed(2));
+
+            validatePurchaseInvoiceTaxSummary();
         }
 
         $(document).on('change', 'input[name="round_off_type"]', function () {
             calculateSummaryOnly();
         });
 
+        function validatePurchaseInvoiceTaxSummary() {
+            let hasErrors = false;
+
+            let discountInputVal = $('#discount_input').val();
+            let discountVal = parseFloat(discountInputVal);
+
+            // if (discountInputVal !== '' && (discountVal < 0 || discountVal > 100)) {
+            //     $('#discount_input').addClass('is-invalid');
+            //     $('#discount-error').text(discountVal < 0 ? "Discount cannot be negative. Please enter 0 or a positive value." : "Discount percentage cannot exceed 100%.").removeClass('d-none');
+            //     hasErrors = true;
+            // } else {
+            //     $('#discount_input').removeClass('is-invalid');
+            //     $('#discount-error').addClass('d-none');
+            // }
+
+            let subTotal = parseFloat($('#sub_total_input').val()) || 0;
+            let discountPercent = discountVal >= 0 ? discountVal : 0;
+            let discountAmount = (subTotal * discountPercent) / 100;
+
+            let totalCommission = parseFloat($('#commission_amount_input').val()) || 0;
+            
+            let preGstCharges = 0;
+            $('.charge-row').each(function () {
+                let chargeNameNode = $(this).find('input[name="charges[name][]"]').val();
+                let cName = chargeNameNode ? chargeNameNode.trim().toUpperCase() : '';
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                
+                if (cName !== 'BROKERAGE') {
+                    let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                    if (taxType === 'Pre-GST') {
+                        preGstCharges += amount;
+                    }
+                }
+            });
+
+            let itemTotal = subTotal - discountAmount - totalCommission;
+            let taxableAmount = itemTotal + preGstCharges;
+
+            if (taxableAmount < 0) {
+                // if (discountVal > 0) {
+                //     $('#discount_input').addClass('is-invalid');
+                //     $('#discount-error').text("Discount cannot exceed the subtotal.").removeClass('d-none');
+                // }
+                //hasErrors = true;
+            }
+
+            if (hasErrors) {
+                $('button[type="submit"]').prop('disabled', true);
+            } else {
+                $('button[type="submit"]').prop('disabled', false);
+            }
+
+            return !hasErrors;
+        }
+
+        $(document).on('keypress', '#discount_input', function (e) {
+            if (e.which === 45 || e.which === 43) { 
+                e.preventDefault();
+            }
+        });
+
+        $(document).on('paste', '#discount_input', function (e) {
+            let pasteData = e.originalEvent.clipboardData.getData('text');
+            if (parseFloat(pasteData) < 0) {
+                e.preventDefault();
+            }
+        });
+
         $('form.common-form').on('submit', function (e) {
+            // let discountVal = parseFloat($('#discount_input').val()) || 0;
+            // if (discountVal > 100) {
+            //     e.preventDefault();
+            //     Swal.fire({
+            //         icon: 'warning',
+            //         title: 'Validation Error',
+            //         text: 'Discount percentage cannot exceed 100%.',
+            //         confirmButtonColor: '#8c57ff'
+            //     });
+            //     return false;
+            // }
+
             let hasSelectedItems = $('.item-checkbox:checked').length > 0;
             if (!hasSelectedItems && $('#purchase_order').val()) {
                 e.preventDefault();
@@ -1921,6 +2045,12 @@
                     text: 'Please select at least one item from the Item Details section before submitting.',
                     confirmButtonColor: '#8c57ff'
                 });
+                return false;
+            }
+
+            calculateTotals();
+            if (!validatePurchaseInvoiceTaxSummary()) {
+                e.preventDefault();
                 return false;
             }
         });

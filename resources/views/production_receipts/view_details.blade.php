@@ -69,6 +69,7 @@
                                     <th>Item Name</th>
                                     <th>Art No</th>
                                     <th>Size / Variant</th>
+                                    <th class="text-center">Ordered Qty</th>
                                     <th class="text-center">Scan Qty</th>
                                     <th class="text-center">Received Qty</th>
                                     <th class="text-center">UOM</th>
@@ -86,6 +87,7 @@
                                         </td>
                                         <td>{{ $item->resolved_art_no ?? $item->art_no ?? '-' }}</td>
                                         <td>{{ $item->size_variant }}</td>
+                                        <td class="text-center">{{ number_format($item->ordered_qty, 2) }}</td>
                                         <td class="text-center">{{ number_format($item->scan_qty, 2) }}</td>
                                         <td class="text-center fw-bold">{{ number_format($item->qty_to_receive, 2) }}</td>
                                         <td class="text-center">{{ $item->uom_code }}</td>
@@ -96,7 +98,9 @@
                             </tbody>
                             <tfoot class="table-light">
                                 <tr class="fw-bold">
-                                    <td colspan="5" class="text-end">Total Qty:</td>
+                                    <td colspan="4" class="text-end">Total Qty:</td>
+                                    <td class="text-center">{{ number_format($receipt->items->sum('ordered_qty'), 2) }}</td>
+                                    <td class="text-center">{{ number_format($receipt->items->sum('scan_qty'), 2) }}</td>
                                     <td class="text-center">{{ number_format($receipt->items->sum('qty_to_receive'), 2) }}</td>
                                     <td></td>
                                     <td class="text-end">Grand Total:</td>

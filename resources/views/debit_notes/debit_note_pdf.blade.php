@@ -290,7 +290,8 @@
         @php
           $preGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Pre-GST')->sum('charge_amount') : 0;
           $postGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Post-GST')->sum('charge_amount') : 0;
-          $taxableAmt = $debitNote->sub_total + $preGstCharges;
+          $discountAmt = $debitNote->discount_amount ?? (($debitNote->sub_total + $preGstCharges) * ($debitNote->discount_percent ?? 0) / 100);
+          $taxableAmt = $debitNote->taxable_amount ?? (($debitNote->sub_total + $preGstCharges) - $discountAmt);
         @endphp
         <tr style="border-top:1px solid #000; font-weight:bold;">
           <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Sub Total</td>
@@ -304,6 +305,16 @@
             <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Pre-GST Charges</td>
             <td colspan="2" style="text-align:right; padding:6px;">{{ number_format($preGstCharges, 2) }}</td>
           </tr>
+        @endif
+
+        @if(($debitNote->discount_percent ?? 0) > 0)
+          <tr>
+            <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Discount ({{ number_format($debitNote->discount_percent, 2) }}%)</td>
+            <td colspan="2" style="text-align:right; padding:6px;">-{{ number_format($discountAmt, 2) }}</td>
+          </tr>
+        @endif
+
+        @if($preGstCharges > 0 || ($debitNote->discount_percent ?? 0) > 0)
           <tr style="font-weight:bold;">
             <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Taxable Total</td>
             <td colspan="2" style="text-align:right; padding:6px;">{{ number_format($taxableAmt, 2) }}</td>

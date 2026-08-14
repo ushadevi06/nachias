@@ -2795,7 +2795,8 @@ class JobCardEntryController extends Controller
 
             $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');
             $customItemName = trim("$brandName $styleName $sleeveShort");
-            $customItemCode = implode('-', array_filter([$brandCode, $styleCode, $sleeveShort]));
+            $sleeveCodeClean = str_replace('/', '', $sleeveShort);
+            $customItemCode = implode('-', array_filter([$brandCode, $styleCode, $sleeveCodeClean]));
 
             BarcodeMaster::updateOrCreate(
                 ['barcode_no' => $barcodeNo],

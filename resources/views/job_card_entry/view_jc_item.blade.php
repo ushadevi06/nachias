@@ -684,7 +684,7 @@ $(document).ready(function() {
                 return false;
             }
 
-            const totalRecorded = parseFloat(use) + parseFloat(adj);
+            /* const totalRecorded = parseFloat(use) + parseFloat(adj);
             if (calcQty > 0 && totalRecorded < (calcQty - 0.001)) {
                 const deficit = (calcQty - totalRecorded).toFixed(2);
                 Swal.fire({
@@ -705,7 +705,7 @@ $(document).ready(function() {
                     }
                 });
                 return false;
-            }
+            } */
             
             let formData = {};
             formData['_token'] = '{{ csrf_token() }}';

@@ -134,7 +134,7 @@
                                     @endif
                                     <th class="text-end text-uppercase small fw-bold">Amount</th>
                                     <th class="text-uppercase small fw-bold">Remarks</th>
-                                    <th class="text-center text-uppercase small fw-bold pe-4">Action</th>
+                                    <th class="text-center text-uppercase small fw-bold pe-4">Image</th>
                                 </tr>
                             </thead>
                             <tbody>

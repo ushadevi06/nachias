@@ -463,8 +463,8 @@ class SalesInvoiceController extends Controller
                 $invoiceData['round_off'] = $calculatedRoundOff;
                 $invoiceData['round_off_type'] = $calculatedRoundOffType;
                 $invoiceData['grand_total'] = $calculatedGrandTotal;
+               
                 //new
-
                 $oldQuantities = [];
                 if ($id) {
                     $invoice = SalesInvoice::with('items')->findOrFail($id);
@@ -476,7 +476,9 @@ class SalesInvoiceController extends Controller
                     // new
                     $invoiceData['received_amount'] = 0.00;
                     $invoiceData['due_amount'] = $calculatedGrandTotal; //new
-                    $invoice->update($invoiceData);                     
+
+                    $invoice->update($invoiceData);             
+                          
                     
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
                     $deletedItems = $invoice->items()->whereNotIn('id', $itemIds)->get();
@@ -755,6 +757,27 @@ class SalesInvoiceController extends Controller
         $currentInvoiceId = $request->invoice_id ?? null;
         $soItemInvoiced = $this->getCustomerPendingItems($customerId, $currentInvoiceId);
 
+        $allSkus = [];
+        foreach ($saleOrders as $so) {
+            foreach ($so->items as $item) {
+                if ($item->sku) {
+                    $allSkus[] = $item->sku;
+                }
+            }
+        }
+        $allSkus = array_unique(array_filter($allSkus));
+
+        $prefetchedStockEntryItems = collect();
+        if (!empty($allSkus)) {
+            $prefetchedStockEntryItems = \App\Models\StockEntryItem::where(function ($q) use ($allSkus) {
+                    $q->whereIn('sku', $allSkus)
+                      ->orWhereIn('barcode', $allSkus);
+                })
+                ->where('stock_type', 'finished_goods')
+                ->whereNull('deleted_at')
+                ->get();
+        }
+
         $allItems = collect();
         $billingAddress = '';
         $shippingAddress = '';
@@ -782,24 +805,32 @@ class SalesInvoiceController extends Controller
                     $itemName = '';
                     $sleeveType = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
 
+                    // Resolve Stock Entry Item dynamically if not set
+                    $stockEntryItem = $item->stockEntryItem;
+                    if (!$stockEntryItem && $item->sku) {
+                        $stockEntryItem = $prefetchedStockEntryItems->first(function ($se) use ($item) {
+                            return $se->sku === $item->sku || $se->barcode === $item->sku;
+                        });
+                    }
+
                     if ($item->item) {
                         if ($item->item->brand) $brandName = $item->item->brand->brand_name;
                         elseif ($item->brandCategory) $brandName = $item->brandCategory->name;
                         
                         if ($item->item->style) $itemName = $item->item->style->style_name;
                         else $itemName = $item->item->name;
-                    } elseif ($item->stockEntryItem) {
-                        if ($item->stockEntryItem->item) {
-                            $seItem = $item->stockEntryItem->item;
+                    } elseif ($stockEntryItem) {
+                        if ($stockEntryItem->item) {
+                            $seItem = $stockEntryItem->item;
                             if ($seItem->brand) $brandName = $seItem->brand->brand_name;
                             elseif ($seItem->brandCategory) $brandName = $seItem->brandCategory->name;
 
                             if ($seItem->style) $itemName = $seItem->style->style_name;
                             else $itemName = $seItem->name;
                         } else {
-                            $brandName = $item->stockEntryItem->finished_item_code;
+                            $brandName = $stockEntryItem->finished_item_code;
                         }
-                        if (empty($sleeveType)) $sleeveType = $item->stockEntryItem->sleeve_type;
+                        if (empty($sleeveType)) $sleeveType = $stockEntryItem->sleeve_type;
                     } elseif ($item->brandCategory) {
                         $brandName = $item->brandCategory->name;
                     } 
@@ -818,12 +849,14 @@ class SalesInvoiceController extends Controller
                         }
                         if ($item->item && $item->item->code) {
                             $stockQtyQuery->where('finished_item_code', $item->item->code);
-                        } elseif ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) {
-                            $stockQtyQuery->where('finished_item_code', $item->stockEntryItem->finished_item_code);
+                        } elseif ($stockEntryItem && $stockEntryItem->finished_item_code) {
+                            $stockQtyQuery->where('finished_item_code', $stockEntryItem->finished_item_code);
                         }
                         $stockQty = $stockQtyQuery->sum(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
                     } elseif ($item->stock_entry_item_id) {
                         $stockQty = DB::table('stock_entry_items')->where('id', $item->stock_entry_item_id)->whereNull('deleted_at')->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                    } elseif ($stockEntryItem) {
+                        $stockQty = DB::table('stock_entry_items')->where('id', $stockEntryItem->id)->whereNull('deleted_at')->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
                     }
 
                     if (empty($brandName)) {
@@ -834,15 +867,20 @@ class SalesInvoiceController extends Controller
                     $finishedItemCode = '';
                     if ($item->item && $item->item->code) {
                         $finishedItemCode = $item->item->code;
-                    } elseif ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) {
-                        $finishedItemCode = $item->stockEntryItem->finished_item_code;
+                    } elseif ($stockEntryItem && $stockEntryItem->finished_item_code) {
+                        $finishedItemCode = $stockEntryItem->finished_item_code;
                     }
                     $finalMrp = $item->mrp ?? 0;
                     $finalRate = $item->rate ?? 0;
 
-                    if ($finishedItemCode && $item->art_no) {
+                    $artNo = $item->art_no;
+                    if ($stockEntryItem && !empty($stockEntryItem->art_no)) {
+                        $artNo = $stockEntryItem->art_no;
+                    }
+
+                    if ($finishedItemCode && $artNo) {
                         $sizeName = $item->size ? $item->size->size : ($item->size_id ?: null);
-                        $itemPrice = self::getActiveItemPrice($finishedItemCode, $item->art_no, $sizeName);
+                        $itemPrice = self::getActiveItemPrice($finishedItemCode, $artNo, $sizeName);
                         if ($itemPrice) {
                             $finalMrp = $itemPrice->selling_price;
                             $finalRate = $itemPrice->unit_price;
@@ -854,7 +892,7 @@ class SalesInvoiceController extends Controller
                         'brand_name' => $brandName ?: '',
                         'item_id' => $item->item_id,
                         'item_name' => $itemName ?: ($item->item_name ?? ''),
-                        'item_code' => $item->item ? $item->item->code : '',
+                        'item_code' => $item->item ? $item->item->code : ($stockEntryItem ? $stockEntryItem->finished_item_code : ''),
                         'uom_id' => $item->uom_id,
                         'uom_code' => $item->uom_id ?: '',
                         'qty' => $pendingQty, 
@@ -862,7 +900,7 @@ class SalesInvoiceController extends Controller
                         'rate' => $finalRate,
                         'mrp' => $finalMrp,
                         'amount' => (float)$finalRate * $pendingQty,
-                        'art_no' => $item->art_no,
+                        'art_no' => $artNo,
                         'hsn_sac' => $item->hsn_sac ?? null,
                         'sku' => $item->sku,
                         'size_id' => $item->size_id,
@@ -871,7 +909,7 @@ class SalesInvoiceController extends Controller
                         'color_name' => $item->color ? $item->color->color_name : '',
                         'api_color' => $item->api_color,
                         'sleeve' => $sleeveType ?: '',
-                        'stock_entry_item_id' => $item->stock_entry_item_id,
+                        'stock_entry_item_id' => $item->stock_entry_item_id ?: ($stockEntryItem ? $stockEntryItem->id : null),
                     ];
 
                     $existingItemKey = $allItems->search(function($i) use ($itemData) {
@@ -971,10 +1009,37 @@ class SalesInvoiceController extends Controller
             return response()->json(['success' => false, 'message' => 'Sale Order not found']);
         }
 
-        $items = $so->items->map(function($item) {
+        $allSkus = [];
+        foreach ($so->items as $item) {
+            if ($item->sku) {
+                $allSkus[] = $item->sku;
+            }
+        }
+        $allSkus = array_unique(array_filter($allSkus));
+
+        $prefetchedStockEntryItems = collect();
+        if (!empty($allSkus)) {
+            $prefetchedStockEntryItems = \App\Models\StockEntryItem::where(function ($q) use ($allSkus) {
+                    $q->whereIn('sku', $allSkus)
+                      ->orWhereIn('barcode', $allSkus);
+                })
+                ->where('stock_type', 'finished_goods')
+                ->whereNull('deleted_at')
+                ->get();
+        }
+
+        $items = $so->items->map(function($item) use ($prefetchedStockEntryItems) {
             $brandName = '';
             $itemName = '';
             $sleeveType = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
+
+            // Resolve Stock Entry Item dynamically if not set
+            $stockEntryItem = $item->stockEntryItem;
+            if (!$stockEntryItem && $item->sku) {
+                $stockEntryItem = $prefetchedStockEntryItems->first(function ($se) use ($item) {
+                    return $se->sku === $item->sku || $se->barcode === $item->sku;
+                });
+            }
 
             if ($item->item) {
                 if ($item->item->brand) {
@@ -989,9 +1054,9 @@ class SalesInvoiceController extends Controller
                     $itemName = $item->item->name;
                 }
             } 
-            elseif ($item->stockEntryItem) {
-                if ($item->stockEntryItem->item) {
-                    $seItem = $item->stockEntryItem->item;
+            elseif ($stockEntryItem) {
+                if ($stockEntryItem->item) {
+                    $seItem = $stockEntryItem->item;
                     if ($seItem->brand) {
                         $brandName = $seItem->brand->brand_name;
                     } elseif ($seItem->brandCategory) {
@@ -1004,11 +1069,11 @@ class SalesInvoiceController extends Controller
                         $itemName = $seItem->name;
                     }
                 } else {
-                    $brandName = $item->stockEntryItem->finished_item_code;
+                    $brandName = $stockEntryItem->finished_item_code;
                 }
                 
                 if (empty($sleeveType)) {
-                    $sleeveType = $item->stockEntryItem->sleeve_type;
+                    $sleeveType = $stockEntryItem->sleeve_type;
                 }
             }
             elseif ($item->brandCategory) {
@@ -1029,10 +1094,14 @@ class SalesInvoiceController extends Controller
                 }
                 if ($item->item && $item->item->code) {
                     $stockQtyQuery->where('finished_item_code', $item->item->code);
+                } elseif ($stockEntryItem && $stockEntryItem->finished_item_code) {
+                    $stockQtyQuery->where('finished_item_code', $stockEntryItem->finished_item_code);
                 }
                 $stockQty = $stockQtyQuery->sum(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
             } elseif ($item->stock_entry_item_id) {
                 $stockQty = DB::table('stock_entry_items')->where('id', $item->stock_entry_item_id)->whereNull('deleted_at')->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+            } elseif ($stockEntryItem) {
+                $stockQty = DB::table('stock_entry_items')->where('id', $stockEntryItem->id)->whereNull('deleted_at')->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
             }
 
             if (empty($brandName)) {
@@ -1043,16 +1112,21 @@ class SalesInvoiceController extends Controller
             $finishedItemCode = '';
             if ($item->item && $item->item->code) {
                 $finishedItemCode = $item->item->code;
-            } elseif ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) {
-                $finishedItemCode = $item->stockEntryItem->finished_item_code;
+            } elseif ($stockEntryItem && $stockEntryItem->finished_item_code) {
+                $finishedItemCode = $stockEntryItem->finished_item_code;
             }
 
             $finalMrp = $item->mrp ?? 0;
             $finalRate = $item->rate ?? 0;
 
-            if ($finishedItemCode && $item->art_no) {
+            $artNo = $item->art_no;
+            if ($stockEntryItem && !empty($stockEntryItem->art_no)) {
+                $artNo = $stockEntryItem->art_no;
+            }
+
+            if ($finishedItemCode && $artNo) {
                 $sizeName = $item->size ? $item->size->size : ($item->size_id ?: null);
-                $itemPrice = self::getActiveItemPrice($finishedItemCode, $item->art_no, $sizeName);
+                $itemPrice = self::getActiveItemPrice($finishedItemCode, $artNo, $sizeName);
                 if ($itemPrice) {
                     $finalMrp = $itemPrice->selling_price;
                     $finalRate = $itemPrice->unit_price;
@@ -1064,7 +1138,7 @@ class SalesInvoiceController extends Controller
                 'brand_name' => $brandName ?: '',
                 'item_id' => $item->item_id,
                 'item_name' => $itemName ?: ($item->item_name ?? ''),
-                'item_code' => $item->item ? $item->item->code : '',
+                'item_code' => $item->item ? $item->item->code : ($stockEntryItem ? $stockEntryItem->finished_item_code : ''),
                 'uom_id' => $item->uom_id,
                 'uom_code' => $item->uom_id ?: '',
                 'qty' => $item->qty,
@@ -1072,7 +1146,7 @@ class SalesInvoiceController extends Controller
                 'rate' => $finalRate,
                 'mrp' => $finalMrp,
                 'amount' => (float)$finalRate * $item->qty,
-                'art_no' => $item->art_no,
+                'art_no' => $artNo,
                 'hsn_sac' => $item->hsn_sac ?? null,
                 'sku' => $item->sku,
                 'size_id' => $item->size_id,
@@ -1081,7 +1155,7 @@ class SalesInvoiceController extends Controller
                 'color_name' => $item->color ? $item->color->color_name : '',
                 'api_color' => $item->api_color,
                 'sleeve' => $sleeveType ?: '',
-                'stock_entry_item_id' => $item->stock_entry_item_id,
+                'stock_entry_item_id' => $item->stock_entry_item_id ?: ($stockEntryItem ? $stockEntryItem->id : null),
             ];
         });
 

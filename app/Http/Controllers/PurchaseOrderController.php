@@ -225,18 +225,19 @@ class PurchaseOrderController extends Controller
                 'items.*.fabric_width_id' => 'nullable|exists:fabric_sizes,id',
                 'items.*.fabric_type_id' => 'nullable|exists:fabric_types,id',
                 'items.*.style_id' => 'required_if:items.*.store_category_id,1|nullable|exists:styles,id',
-                'items.*.cgst_percent' => 'nullable|numeric|min:0',
-                'items.*.cgst_amount' => 'nullable|numeric|min:0',
-                'items.*.sgst_percent' => 'nullable|numeric|min:0',
-                'items.*.sgst_amount' => 'nullable|numeric|min:0',
-                'items.*.igst_percent' => 'nullable|numeric|min:0',
-                'items.*.igst_amount' => 'nullable|numeric|min:0',
-                'discount_percent' => 'nullable',
+                'cgst_percent' => 'nullable|numeric|min:0|max:100',
+                'cgst_amount' => 'nullable|numeric|min:0',
+                'sgst_percent' => 'nullable|numeric|min:0|max:100',
+                'sgst_amount' => 'nullable|numeric|min:0',
+                'igst_percent' => 'nullable|numeric|min:0|max:100',
+                'igst_amount' => 'nullable|numeric|min:0',
+                'discount_percent' => 'nullable|numeric|min:0|max:100',
+                'commission' => 'nullable|numeric|min:0|max:100',
                 'additional_attachments' => 'nullable|array|max:5',
                 'additional_attachments.*' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp',
                 'existing_additional_attachments' => 'nullable|array',
                 'round_off_type' => 'nullable|in:Add,Less',
-                'round_off' => 'nullable|numeric|min:0',
+                'round_off' => 'nullable|numeric|min:0|max:99.99',
             ];
 
             $messages = [
@@ -246,6 +247,18 @@ class PurchaseOrderController extends Controller
                 '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
                 '*.after_or_equal' => 'Due date must be after or equal to PO date.',
                 '*.numeric' => 'This field must be a valid number.',
+                'commission.min' => 'Commission cannot be negative. Please enter 0 or a positive value.',
+                'commission.max' => 'Commission percentage cannot exceed 100%.',
+                'igst_percent.min' => 'IGST cannot be negative. Please enter 0 or a positive value.',
+                'igst_percent.max' => 'IGST percentage cannot exceed 100%.',
+                'cgst_percent.min' => 'CGST cannot be negative. Please enter 0 or a positive value.',
+                'cgst_percent.max' => 'CGST percentage cannot exceed 100%.',
+                'sgst_percent.min' => 'SGST cannot be negative. Please enter 0 or a positive value.',
+                'sgst_percent.max' => 'SGST percentage cannot exceed 100%.',
+                'discount_percent.min' => 'Discount cannot be negative. Please enter 0 or a positive value.',
+                'discount_percent.max' => 'Discount percentage cannot exceed 100%.',
+                'round_off.min' => 'Round off cannot be negative. Please enter 0 or a positive value.',
+                'round_off.max' => 'Round off amount cannot exceed 99.99.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 'items.*.style_id.required_if' => 'Please select a Style for the Fabric store category.',
@@ -269,6 +282,40 @@ class PurchaseOrderController extends Controller
             ];
 
             $validated = $request->validate($rules, $messages);
+
+            $subTotal = 0;
+            if (is_array($request->items)) {
+                foreach ($request->items as $item) {
+                    $qty = floatval($item['quantity'] ?? 0);
+                    $rate = floatval($item['rate'] ?? 0);
+                    $subTotal += ($qty * $rate);
+                }
+            }
+
+            $discountPercent = floatval($request->discount_percent ?? 0);
+            $commissionPercent = floatval($request->commission ?? 0);
+
+            $discountAmount = ($subTotal * $discountPercent) / 100;
+            $commissionAmount = ($subTotal * $commissionPercent) / 100;
+
+            $taxableAmountCalculated = $subTotal - $discountAmount - $commissionAmount;
+
+            $taxableAmount = $request->taxable_amount ?? 0;
+            $taxAmount = $request->tax_amount ?? 0;
+            $totalBeforeRoundOff = round($taxableAmount + $taxAmount, 2);
+            $roundOffAmount = $request->round_off ?? 0;
+            $roundOffType = $request->round_off_type ?? 'Add';
+
+            $finalTotal = $totalBeforeRoundOff;
+            if ($roundOffType === 'Add') {
+                $finalTotal += $roundOffAmount;
+            } elseif ($roundOffType === 'Less') {
+                $finalTotal -= $roundOffAmount;
+            }
+
+            if ($request->status === 'Approved' && $finalTotal <= 0) {
+                return back()->withInput()->withErrors(['status' => 'Grand total must be greater than 0 to approve this purchase order.']);
+            }
 
             DB::beginTransaction();
             try {
@@ -579,6 +626,13 @@ class PurchaseOrderController extends Controller
                 ]);
             }
 
+            if ($request->status === 'Approved' && $purchaseOrder->total_amount <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Grand total must be greater than 0 to approve this purchase order.'
+                ]);
+            }
+
             if (in_array($request->status, ['Dispatched', 'Received'])) {
                 return response()->json([
                     'success' => false,
@@ -586,6 +640,7 @@ class PurchaseOrderController extends Controller
                 ]);
             }
         }
+
         $oldData = $purchaseOrder->toArray();
         $purchaseOrder->status = $request->status;
         $purchaseOrder->save();
