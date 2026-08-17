@@ -24,10 +24,10 @@ class EInvoiceService
         $setting = Setting::first();
         $sellerStateCode = substr(env('EINV_GSTIN'), 0, 2);
         $buyerStateCode = $invoice->customer->state->state_code ?? "33";
-        $isInterState = (bool)($invoice->other_state ?? false);
-        if ((float)($invoice->igst_percent ?? 0) > 0 || (float)($invoice->igst ?? 0) > 0) {
-            $isInterState = true;
-        }
+
+        // Explicit inter-state evaluation (other_state === 'Y' / 'N' / 1 / 0)
+        $otherStateRaw = strtoupper(trim((string)($invoice->other_state ?? '')));
+        $isInterState = ($otherStateRaw === 'Y' || $otherStateRaw === 'YES' || $otherStateRaw === '1' || $invoice->other_state === true);
 
         $rndOff = (float) ($invoice->round_off ?? 0);
         if (strtolower($invoice->round_off_type ?? '') === 'less') {
@@ -43,8 +43,6 @@ class EInvoiceService
         $slNo = 1;
 
         foreach ($invoice->items as $item) {
-            $taxRate = $isInterState ? (float) $invoice->igst_percent : (float) ($invoice->cgst_percent + $invoice->sgst_percent);
-
             $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
             $salesDiscountPercent = (float) ($invoice->sales_discount ?? 0);
             $boxDiscountAmount = (float) ($invoice->box_discount_amount ?? 0);
@@ -59,9 +57,20 @@ class EInvoiceService
             }
             $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
             
-            $cgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->cgst_percent) / 100, 2, '.', '');
-            $sgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->sgst_percent) / 100, 2, '.', '');
-            $igstAmt = $isInterState ? (float) number_format(($assAmt * (float) $invoice->igst_percent) / 100, 2, '.', '') : 0.00;
+            if ($isInterState) {
+                // Inter-State: Set CGST & SGST to 0, calculate IGST
+                $cgstAmt = 0.00;
+                $sgstAmt = 0.00;
+                $igstAmt = (float) number_format(($assAmt * (float) ($invoice->igst_percent ?? 0)) / 100, 2, '.', '');
+                $taxRate = (float) ($invoice->igst_percent ?? 0);
+            } else {
+                // Intra-State: Calculate CGST & SGST based on percentages, set IGST to 0
+                $cgstAmt = (float) number_format(($assAmt * (float) ($invoice->cgst_percent ?? 0)) / 100, 2, '.', '');
+                $sgstAmt = (float) number_format(($assAmt * (float) ($invoice->sgst_percent ?? 0)) / 100, 2, '.', '');
+                $igstAmt = 0.00;
+                $taxRate = (float) ($invoice->cgst_percent ?? 0) + (float) ($invoice->sgst_percent ?? 0);
+            }
+
             $totItemVal = (float) number_format($assAmt + $cgstAmt + $sgstAmt + $igstAmt, 2, '.', '');
 
             $totalAssVal += $assAmt;
@@ -113,6 +122,7 @@ class EInvoiceService
         
         $totInvVal = round($expectedTot + $rndOffAmt, 2);
         
+        dd($totInvVal);
         if (abs($totInvVal - $grandTotal) > 0.01) {
             \Log::error('E-Invoice Mismatch Detail', [
                 'invoice_id' => $invoice->id,

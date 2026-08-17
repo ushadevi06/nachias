@@ -771,17 +771,18 @@
                                         style="{{ $otherState === 'Y' ? '' : 'display:none;' }}">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span>IGST</span>
-                                            <div class="d-flex gap-2 align-items-center">
+                                            <div class="d-flex gap-2 align-items-center" style="min-width: 180px;">
                                                 <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" step="any" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;">
                                                 <span>%</span>
                                                 <strong id="igst_amt">{{ number_format($igstAmount, 2) }}</strong>
                                                 <input type="hidden" name="igst_amount" id="igst_amount_input" value="{{ $igstAmount }}">
                                             </div>
-                                        </div>
+                                        </div>   
                                         @error('igst_percent')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                            <div class="text-danger small text-end mt-1">{{ $message }}</div>
                                         @enderror
                                     </div>
+                                    
                                     <div id="cgst_sgst_div" class="py-2 border-bottom"
                                         style="{{ $otherState === 'N' ? '' : 'display:none;' }}">
                                         <div class="d-flex justify-content-between mb-2">
@@ -837,6 +838,9 @@
                                             <input type="number" class="form-control form-control-sm text-end" style="width: 80px;" id="round_off_input" name="round_off" value="{{ $roundOff }}" step="0.01" min="0">
                                         </div>
                                     </div>
+                                    @error('round_off')
+                                        <div class="text-danger text-end mt-1 small">{{ $message }}</div>
+                                    @enderror
                                     <div class="d-flex justify-content-between py-2 border-top fw-semibold">
                                         <span>Grand Total:</span>
                                         <strong id="grand_total">{{ number_format($grandTotal, 2) }}</strong>

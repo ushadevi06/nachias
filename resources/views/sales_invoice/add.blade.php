@@ -7,7 +7,7 @@
             <div class="col-lg-12">
                 @include('flash_messages')
             </div>
-            <form action="{{ isset($invoice) ? url('sales_invoices/add/' . $invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data">
+            <form action="{{ isset($invoice) ? url('sales_invoices/add/' . $invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data" novalidate>
                 @csrf
                 <div class="card mb-4">
                     <div class="card-body">
@@ -17,7 +17,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}">
+                                    <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}" readonly>
                                     <input type="hidden" name="is_manual_inv_no" id="is_manual_inv_no" value="{{ old('is_manual_inv_no', '0') }}">
                                     <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
                                     @error('inv_no')
@@ -174,7 +174,7 @@
                             <div class="col-md-6 text-center">
                                 <div class="input-group mb-2 mx-auto">
                                     <div class="form-floating form-floating-outline flex-grow-1">
-                                        <input type="text" id="barcode_scanner" class="form-control border-primary" placeholder="Scan Barcode" autocomplete="off" style="border-width: 2px; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0;" autofocus>
+                                        <input type="text" id="barcode_scanner" class="form-control border-primary" placeholder="Scan Barcode" autocomplete="off" style="border-width: 2px; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0;">
                                         <label for="barcode_scanner" class="text-primary fw-bold">SCAN BARCODE</label>
                                     </div>
                                     <button class="btn btn-outline-primary px-4" type="button" id="btn_camera_scan" style="border-width: 2px; border-left: none; border-top-left-radius: 0; border-bottom-left-radius: 0;">
@@ -445,6 +445,9 @@
                                                     <input type="number" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price">
                                                     <label>Price *</label>
                                                 </div>
+                                                @error("items.$index.rate")
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                @enderror
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
@@ -845,17 +848,29 @@
                                         <span class="fw-bold mb-0" id="sub_total_val">{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="sub_total" id="sub_total" value="{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <div class="d-flex align-items-center">
-                                            <span class="text-secondary fw-medium me-2">Sales Discount (%):</span>
-                                            <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount > 0 ? $invoice->sales_discount : $invoice->discount_percent, 2, '.', '') : '0.00') }}">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="d-flex flex-column">
+                                            <div class="d-flex align-items-center">
+                                                <span class="text-secondary fw-medium me-2">Sales Discount (%):</span>
+                                                <input type="number" step="any" min="0" class="form-control form-control-sm text-end @error('sales_discount') is-invalid @enderror" style="width: 80px;" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount > 0 ? $invoice->sales_discount : $invoice->discount_percent, 2, '.', '') : '0.00') }}">
+                                            </div>
+                                            @error('sales_discount')
+                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
                                         </div>
-                                        <span class="fw-bold mb-0" id="sales_discount_amount_val">₹0.00</span>
+                                        <span class="fw-bold" id="sales_discount_amount_val">
+                                            ₹0.00
+                                        </span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                                        <div class="d-flex align-items-center">
-                                            <span class="text-secondary fw-medium me-2">Box Discount (₹/pc):</span>
-                                            <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="box_discount_amount" id="box_discount_amount" value="{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}">
+                                        <div class="d-flex flex-column">
+                                            <div class="d-flex align-items-center">
+                                                <span class="text-secondary fw-medium me-2">Box Discount (₹/pc):</span>
+                                                <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="box_discount_amount" id="box_discount_amount" value="{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}">
+                                            </div>
+                                            @error('box_discount_amount')
+                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
                                         </div>
                                         <span class="fw-bold mb-0" id="box_discount_amount_val">₹0.00</span>
                                     </div>
@@ -898,7 +913,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">IGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '18.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
+                                                    <input type="number" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="igst_val">{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}</span>
@@ -911,7 +926,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">CGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '9.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
+                                                    <input type="number" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="cgst_val">{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}</span>
@@ -922,7 +937,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">SGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '9.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
+                                                    <input type="number" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="sgst_val">{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}</span>
@@ -1093,7 +1108,13 @@
         $('.item-row').each(function() {
             updateColorFromArtNo($(this));
         });
-
+        let $firstError = $('.is-invalid, .text-danger:visible, .alert-danger:visible').first();
+        if ($firstError.length) {
+            $('html, body').animate({
+                scrollTop: $firstError.offset().top - 120
+            }, 400);
+            $firstError.focus();
+        }
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.addedNodes && mutation.addedNodes.length > 0) {
@@ -2386,6 +2407,24 @@
             if (typeof window.calculateTotals === 'function') window.calculateTotals();
         });
 
+        $(document).on('input change', '.qty, .rate, .open-qty, .open-rate', function() {
+            var row = $(this).closest('.item-row');
+            var qtyInput = row.find('.qty, .open-qty');
+            var qtyVal = qtyInput.val();
+            var rateInput = row.find('.rate, .open-rate');
+            var rateVal = rateInput.val();
+            var amountInput = row.find('.amount, .open-amount');
+            if (rateVal === '' || rateVal === null || rateVal === undefined || qtyVal === '' || qtyVal === null) {
+                amountInput.val('');
+            } else {
+                var qty = parseFloat(qtyVal) || 0;
+                var rate = parseFloat(rateVal) || 0;
+                amountInput.val((qty * rate).toFixed(2));
+            }
+            calculateTotals();
+        });
+
+        
         $(document).on('click', '.open_delete_row', function() {
             $(this).closest('.item-row').remove();
             if (typeof window.updateOpenOrderIndices === 'function') {

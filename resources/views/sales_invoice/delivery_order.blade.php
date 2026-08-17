@@ -220,149 +220,93 @@
 
                 $brandName = '';
                 $styleName = '';
-                $sleeve = '';
-                $resolved = false;
+                $sleeveType = $item->sleeve_type;
 
                 $seItem = $item->stockEntryItem;
-                if (!$seItem && $soItem && $soItem->stock_entry_item_id) {
-                    $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
-                }
-
-                if ($seItem) {
-                    if ($seItem->brand) {
-                        $brandName = $seItem->brand->brand_name;
-                    }
-                    if ($seItem->style) {
-                        $styleName = $seItem->style->style_name;
-                    }
-                    
-                    if (empty($brandName) && !empty($seItem->finished_item_code)) {
-                        $seParts = explode('-', $seItem->finished_item_code);
-                        if (count($seParts) > 0) {
-                            $dbBrand = \App\Models\Brand::where('code', trim($seParts[0]))->first();
-                            if ($dbBrand) {
-                                $brandName = $dbBrand->brand_name;
-                            }
-                        }
-                    }
-                    
-                    if (!empty($brandName) || !empty($styleName)) {
-                        $resolved = true;
-                    }
-                    if (empty($sleeve) && !empty($seItem->sleeve_type)) {
-                        $sleeve = $seItem->sleeve_type;
-                    }
-                }
-                
-                if (!empty($item->sleeve_type)) {
-                    $sleeveValUpper = strtoupper(trim($item->sleeve_type));
-                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                        $sleeve = 'F/S';
-                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                        $sleeve = 'H/S';
-                    } else {
-                        $sleeve = $item->sleeve_type;
-                    }
-                } elseif (!empty($sleeve)) {
-                    $sleeveValUpper = strtoupper(trim($sleeve));
-                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                        $sleeve = 'F/S';
-                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                        $sleeve = 'H/S';
+                if (!$seItem && $invoice->so_id) {
+                    $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                        ->where('sku', $item->sku)
+                        ->first();
+                    if ($soItem && $soItem->stock_entry_item_id) {
+                        $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
                     }
                 }
 
-                if ((empty($brandName) || empty($styleName)) && !empty($codeToParse) && $codeToParse !== '-') {
-                    $parts = explode('-', $codeToParse);
-                    
-                    if (count($parts) >= 2) {
-                        $brandCode = trim($parts[0]);
-                        $styleCode = trim($parts[1]);
-                        
-                        $dbBrand = \App\Models\Brand::where('code', $brandCode)->first();
-                        $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
-                        
-                        if ($dbBrand && empty($brandName)) {
+                // 1. Get Brand Name (priority: from finished_item_code, e.g. CF => Casino Formal)
+                if ($seItem && !empty($seItem->finished_item_code)) {
+                    $parts = explode('-', $seItem->finished_item_code);
+                    if (count($parts) > 0) {
+                        $dbBrand = \App\Models\Brand::where('code', trim($parts[0]))->first();
+                        if ($dbBrand) {
                             $brandName = $dbBrand->brand_name;
                         }
-                        if ($dbStyle && empty($styleName)) {
-                            $styleName = $dbStyle->style_name;
-                        }
-                        if (!empty($brandName) || !empty($styleName)) {
-                            $resolved = true;
-                        }
-                        
-                        if (empty($sleeve) && isset($parts[2])) {
-                            $sleeveVal = trim($parts[2]);
-                            $sleeveValUpper = strtoupper($sleeveVal);
-                            if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                $sleeve = 'F/S';
-                            } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                $sleeve = 'H/S';
-                            } else {
-                                $sleeve = $sleeveVal;
-                            }
-                        }
                     }
-                    
-                    if ((empty($brandName) || empty($styleName)) && count($parts) >= 1) {
-                        $mainCode = trim($parts[0]);
-                        $dbBrand = null;
-                        $brandCode = '';
-                        $allBrands = \App\Models\Brand::all();
-                        foreach ($allBrands as $brand) {
-                            $bCode = trim($brand->code);
-                            if (!empty($bCode) && stripos($mainCode, $bCode) === 0) {
-                                $dbBrand = $brand;
-                                $brandCode = $bCode;
-                                break;
-                            }
-                        }
-                        
-                        if ($dbBrand) {
-                            if (empty($brandName)) {
-                                $brandName = $dbBrand->brand_name;
-                            }
-                            $styleCode = substr($mainCode, strlen($brandCode));
-                            $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
-                            if ($dbStyle && empty($styleName)) {
-                                $styleName = $dbStyle->style_name;
-                            }
-                            $resolved = true;
-                            
-                            if (empty($sleeve) && isset($parts[1])) {
-                                $sleeveVal = trim($parts[1]);
-                                $sleeveValUpper = strtoupper($sleeveVal);
-                                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                    $sleeve = 'F/S';
-                                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                    $sleeve = 'H/S';
-                                } else {
-                                    $sleeve = $sleeveVal;
-                                }
-                            }
+                }
+                if (empty($brandName)) {
+                    if ($item->item && $item->item->brand) {
+                        $brandName = $item->item->brand->brand_name;
+                    } elseif ($seItem && $seItem->brand) {
+                        $brandName = $seItem->brand->brand_name;
+                    } elseif ($item->brandCategory) {
+                        $brandName = $item->brandCategory->name;
+                    } elseif ($invoice->brand) {
+                        $brandName = $invoice->brand->brand_name;
+                    }
+                }
+
+                // 2. Get Style Name (Authoritative priority: finished_item_code e.g. CF-CKD-FS => CKD => CHECKED)
+                if ($seItem && !empty($seItem->finished_item_code)) {
+                    $parts = explode('-', $seItem->finished_item_code);
+                    if (count($parts) >= 2) {
+                        $styleCode = trim($parts[1]);
+                        $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
+                        if ($dbStyle) {
+                            $styleName = $dbStyle->style_name;
+                        } elseif (strcasecmp($styleCode, 'CKD') === 0) {
+                            $styleName = 'CHECKED';
+                        } elseif (strcasecmp($styleCode, 'PLN') === 0 || strcasecmp($styleCode, 'PL') === 0) {
+                            $styleName = 'PLAIN';
+                        } elseif (strcasecmp($styleCode, 'PRT') === 0) {
+                            $styleName = 'PRINT';
+                        } elseif (strcasecmp($styleCode, 'STR') === 0 || strcasecmp($styleCode, 'STP') === 0) {
+                            $styleName = 'STRIPES';
                         }
                     }
                 }
 
-                if ($resolved) {
-                    $itemName = trim($brandName . ' ' . $styleName . ' ' . $sleeve);
-                } else {
-                    $itemName = $codeToParse;
+                // Fallback to relations
+                if (empty($styleName)) {
+                    if ($item->item && $item->item->style) {
+                        $styleName = $item->item->style->style_name;
+                    } elseif ($seItem && $seItem->style) {
+                        $styleName = $seItem->style->style_name;
+                    } elseif ($seItem && $seItem->item && $seItem->item->style) {
+                        $styleName = $seItem->item->style->style_name;
+                    }
+                }
+
+                // 3. Sleeve
+                if (empty($sleeveType) && $seItem) {
+                    $sleeveType = $seItem->sleeve_type;
                 }
 
                 $sleeveDisplay = '';
-                if ($item->sleeve_type) {
-                    $sleeveLower = strtolower(trim($item->sleeve_type));
-                    if ($sleeveLower === 'half') {
-                        $sleeveDisplay = 'H/S';
-                    } elseif ($sleeveLower === 'full') {
+                if (!empty($sleeveType)) {
+                    $sUpper = strtoupper(trim($sleeveType));
+                    if ($sUpper === 'FULL' || $sUpper === 'FULL SLEEVE' || $sUpper === 'F/S' || $sUpper === 'FS') {
                         $sleeveDisplay = 'F/S';
+                    } elseif ($sUpper === 'HALF' || $sUpper === 'HALF SLEEVE' || $sUpper === 'H/S' || $sUpper === 'HS') {
+                        $sleeveDisplay = 'H/S';
                     } else {
-                        $sleeveDisplay = $item->sleeve_type;
+                        $sleeveDisplay = $sleeveType;
                     }
                 }
-                $desc = $itemName;
+
+                // Format: CASINO FORMAL CHECKED F/S
+                $desc = trim(($brandName ? $brandName . ' ' : '') . ($styleName ? $styleName . ' ' : '') . $sleeveDisplay);
+                if (empty($desc)) {
+                    $desc = $item->sku ?? '-';
+                }
                 $uom = $item->uom_id ?? '-';
                 $art = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : ($item->art_no ?? '-');
                 $mrp = $item->mrp ?? 0;

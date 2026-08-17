@@ -293,6 +293,9 @@
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
                                                     <input type="number" class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item['cgst_percent'] ?? 0 }}">
+                                                    @error('items.' . $index . '.cgst_percent')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
                                                     <input type="number" class="form-control cgst_amount text-end" name="items[{{ $index }}][cgst_amount]" step="0.01" min="0" value="{{ $item['cgst_amount'] ?? 0 }}" readonly>
@@ -849,7 +852,6 @@
                                                 </div>
                                                 <input type="number" class="form-control form-control-sm text-end @error('round_off') is-invalid @enderror" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" max="99.99" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}" autocomplete="off">
                                             </div>
-                                            
                                         </div>
                                         @error('round_off')
                                             <div class="text-danger text-end mt-1 small">{{ $message }}</div>
@@ -1145,7 +1147,7 @@
                     e.preventDefault();
                 }
             });
-             $('form.common-form').on('submit', function (e) {
+            $('form.common-form').on('submit', function (e) {
                 calculateTotals();
 
                 let discountPercent = parseFloat($('#discount_percent').val()) || 0;

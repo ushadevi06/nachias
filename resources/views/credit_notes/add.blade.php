@@ -32,7 +32,7 @@
                             <!-- 2. Date -->
                             <div class="col-lg-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control flatpickr" id="note_date" name="note_date" placeholder="Enter Date" value="{{ old('note_date', isset($creditNote) ? $creditNote->note_date->format('Y-m-d') : date('Y-m-d')) }}">
+                                    <input type="text" class="form-control flatpickr" id="note_date" name="note_date" placeholder="Enter Date" value="{{ old('note_date', isset($creditNote) ? $creditNote->note_date->format('d-m-Y') : date('d-m-Y')) }}">
                                     <label for="note_date">Date *</label>
                                     @error('note_date') <small class="text-danger">{{ $message }}</small> @enderror
                                 </div>
@@ -520,7 +520,7 @@ $(document).ready(function() {
     // Initialize components
     $(".select2").select2();
     $('.flatpickr').flatpickr({
-        dateFormat: "Y-m-d",
+        dateFormat: "d-m-Y",
         allowInput: true
     });
 

@@ -83,7 +83,12 @@ class SalesMarketingReportController extends Controller
                     return $inv->dispatch_completed_at ?? $inv->inv_date;
                 })->first();
 
-                $latestDate = $latestInvoice->dispatch_completed_at ? $latestInvoice->dispatch_completed_at->format('d-m-Y') : ($latestInvoice->inv_date ? $latestInvoice->inv_date->format('d-m-Y') : null);
+                $latestDate = null;
+                if (!empty($latestInvoice->dispatch_completed_at)) {
+                    $latestDate = \Carbon\Carbon::parse($latestInvoice->dispatch_completed_at)->format('d-m-Y');
+                } elseif (!empty($latestInvoice->inv_date)) {
+                    $latestDate = \Carbon\Carbon::parse($latestInvoice->inv_date)->format('d-m-Y');
+                }
                 
                 $order->partial_d_date = $latestDate;
                 
@@ -107,10 +112,10 @@ class SalesMarketingReportController extends Controller
         $customers = Customer::where('status', 'Active')->get();
         $executives = SalesAgent::where('status', 'Active')->get();
 
-        $zones = Zone::where('status', 'active')->get();
+        $zones = Zone::whereIn('status', ['active', 'Active'])->get();
         $cityIdToZone = [];
         foreach ($zones as $zone) {
-            $ids = explode(',', $zone->city_ids);
+            $ids = explode(',', (string)($zone->city_ids ?? ''));
             foreach ($ids as $id) {
                 if ($id)
                     $cityIdToZone[trim($id)] = $zone->zone_name;
@@ -118,10 +123,10 @@ class SalesMarketingReportController extends Controller
         }
 
         $incentiveReport = [];
-        $agents = SalesAgent::where('status', 'Active')->get();
+        $agents = SalesAgent::whereIn('status', ['active', 'Active'])->get();
 
         foreach ($agents as $agent) {
-            $zoneName = $cityIdToZone[$agent->city_id] ?? 'Unassigned';
+            $zoneName = $cityIdToZone[$agent->city_id ?? ''] ?? 'Unassigned';
 
             $agentOrders = $orders->where('agent_id', $agent->id)->where('status', 'Approved');
             $totalSales = $agentOrders->sum('total_amount');
@@ -146,8 +151,8 @@ class SalesMarketingReportController extends Controller
         });
 
         // Sales Comparison (Month & Year) Logic
-        $currentYear = 2026;
-        $prevYear = 2025;
+        $currentYear = (int)date('Y');
+        $prevYear = $currentYear - 1;
 
         $months = [
             1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
@@ -158,14 +163,13 @@ class SalesMarketingReportController extends Controller
         $currentYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')
             ->whereYear('inv_date', $currentYear)
             ->whereNull('deleted_at')
-            ->groupBy('month')
+            ->groupByRaw('month')
             ->pluck('total', 'month')
             ->toArray();
-
         $prevYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')
             ->whereYear('inv_date', $prevYear)
             ->whereNull('deleted_at')
-            ->groupBy('month')
+            ->groupByRaw('month')
             ->pluck('total', 'month')
             ->toArray();
 
@@ -202,7 +206,7 @@ class SalesMarketingReportController extends Controller
 
             if ($totalDue > 0) {
                 $outstandingReport[] = [
-                    'zone' => $customer->zone->zone_name ?? 'Unassigned',
+                    'zone' => optional($customer->zone)->zone_name ?? 'Unassigned',
                     'customer_name' => $customer->name,
                     'customer_code' => $customer->code,
                     'total_sales' => $totalInvoiced,

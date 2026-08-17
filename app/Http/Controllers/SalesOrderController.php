@@ -154,7 +154,12 @@ class SalesOrderController extends Controller
 
         if (request()->isMethod('post')) {
             $request = request();
-
+            $rawItems = $request->input('items', []);
+            $validItems = array_filter($rawItems, function ($item) {
+                return !empty($item['stock_item_key']) || !empty($item['sku']) || !empty($item['item_id']) || !empty($item['stock_entry_item_id']);
+            });
+            
+            $request->merge(['items' => array_values($validItems)]);
             $rules = [
                 'so_no' => ['required', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'so_date' => 'required|date_format:d-m-Y',
@@ -183,6 +188,12 @@ class SalesOrderController extends Controller
                 'commission_amount' => 'nullable|numeric|min:0',
                 'sales_discount_percent' => 'nullable|numeric|min:0|max:100',
                 'box_discount_amount' => 'nullable|numeric|min:0',
+                'cgst_percent' => 'nullable|numeric|min:0|max:100',
+                'cgst_amount' => 'nullable|numeric|min:0',
+                'sgst_percent' => 'nullable|numeric|min:0|max:100',
+                'sgst_amount' => 'nullable|numeric|min:0',
+                'igst_percent' => 'nullable|numeric|min:0|max:100',
+                'igst_amount' => 'nullable|numeric|min:0',
                 'round_off_type' => 'nullable|in:Add,Less',
                 'round_off' => 'nullable|numeric|min:0',
                 'apply_box_discount' => 'nullable|boolean',
@@ -198,12 +209,22 @@ class SalesOrderController extends Controller
 
             $messages = [
                 '*.required' => 'This field is required.',
+                'items.required' => 'Item details is required. Please add at least one stock item.',
                 '*.unique' => 'This field already exists.',
                 '*.exists' => 'Selected value is invalid.',
 				'*.not_regex' => 'This field is an invalid format.',
                 '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
                 '*.numeric' => 'This field must be a valid number.',
                 '*.regex' => 'This field is an invalid format.',
+                'igst_percent.min' => 'IGST cannot be negative. Please enter 0 or a positive value.',
+                'igst_percent.max' => 'IGST percentage cannot exceed 100%.',
+                'cgst_percent.min' => 'CGST cannot be negative. Please enter 0 or a positive value.',
+                'cgst_percent.max' => 'CGST percentage cannot exceed 100%.',
+                'sgst_percent.min' => 'SGST cannot be negative. Please enter 0 or a positive value.',
+                'sgst_percent.max' => 'SGST percentage cannot exceed 100%.',
+                'sales_discount_percent.min' => 'Discount cannot be negative. Please enter 0 or a positive value.',
+                'sales_discount_percent.max' => 'Discount percentage cannot exceed 100%.',
+                'box_discount_amount.min' => 'Box discount cannot be negative. Please enter 0 or a positive value.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field must be at most :max characters.',
                 'items.*.qty.required' => 'This field is required.',

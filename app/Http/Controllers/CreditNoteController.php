@@ -42,7 +42,7 @@ class CreditNoteController extends Controller
                 if(auth()->id() == 1 || auth()->user()->can('view_details credit-notes')) {
                     $action .= '<a href="' . url('credit_notes/view/' . $note->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if(auth()->id() == 1 || auth()->user()->can('edit credit-notes')) {
+                if($note->status != 'Approved' && (auth()->id() == 1 || auth()->user()->can('edit credit-notes'))) {
                     $action .= '<a href="' . url('credit_notes/add/' . $note->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 // if(auth()->id() == 1 || auth()->user()->can('delete credit-notes')) {
@@ -104,13 +104,19 @@ class CreditNoteController extends Controller
                 return unauthorizedRedirect();
             }
         }
-
-        $creditNote = $id ? CreditNote::with('items.item', 'items.uom', 'items.brandCategory', 'charges')->findOrFail($id) : null;
-
+        
+        $creditNote = null;
+        if ($id) {
+            $creditNote = CreditNote::with('items.item', 'items.uom', 'items.brandCategory', 'charges')->findOrFail($id);
+            
+            if ($creditNote->status === 'Approved') {
+                return redirect('credit_notes')->with('error', 'This Credit Note cannot be edited.');
+            }
+        }
         if ($request->isMethod('POST')) {
             $request->validate([
                 'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'note_date' => 'required|date',
+                'note_date' => 'required|date_format:d-m-Y',
                 'sales_invoice_ids' => 'required|array|min:1',
                 'sales_invoice_ids.*' => 'exists:sales_invoices,id',
                 'customer_id' => 'required|exists:customers,id',
@@ -186,10 +192,18 @@ class CreditNoteController extends Controller
 
                     $referenceDoc = $filename;
                 }
+                $noteDate = null;
+                if ($request->note_date) {
+                    try {
+                        $noteDate = \Carbon\Carbon::createFromFormat('d-m-Y', $request->note_date)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $noteDate = \Carbon\Carbon::parse($request->note_date)->format('Y-m-d');
+                    }
+                }
 
                 $creditNoteData = [
                     'note_no' => $request->note_no,
-                    'note_date' => Carbon::parse($request->note_date)->format('Y-m-d'),
+                    'note_date' => $noteDate ?? \Carbon\Carbon::now()->format('Y-m-d'),
                     'sales_invoice_ids' => $request->sales_invoice_ids,
                     'customer_id' => $request->customer_id,
                     'reason' => $request->reason,

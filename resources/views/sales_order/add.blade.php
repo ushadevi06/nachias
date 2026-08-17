@@ -7,7 +7,7 @@
             <div class="col-lg-12">
                 @include('flash_messages')
             </div>
-            <form action="{{ $salesOrder ? url('sales_orders/add/' . $salesOrder->id) : url('sales_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
+            <form action="{{ $salesOrder ? url('sales_orders/add/' . $salesOrder->id) : url('sales_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off" novalidate>
                 @csrf
                 <div class="card mb-4">
                     <div class="card-header">
@@ -237,6 +237,13 @@
                                 <small class="text-muted">Tip: Scan a barcode or type item code to quickly add it to the order.</small>
                             </div>
                         </div>
+                        @error('items')
+                            <div class="alert alert-danger py-2 px-3 d-flex align-items-center mb-3"
+                                style="width: 300px;">
+                                <i class="ri-error-warning-line fs-5 me-2"></i>
+                                <span>{{ $message }}</span>
+                            </div>
+                        @enderror
                         <div class="table-responsive text-nowrap">
                             <table class="table table-bordered align-middle" id="item-rows">
                                 <thead class="table-light">
@@ -301,13 +308,9 @@
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div class="form-floating form-floating-outline">
-                                                        <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select @error("items.$index.size_id") is-invalid @enderror" data-selected="{{ $item['size_id'] ?? '' }}">
-                                                            <option value="">Select Size</option>
-                                                            @foreach(['36','38','40','42','44', '46','48','50'] as $s)
-                                                                <option value="{{ $s }}" {{ ($item['size_id'] ?? '') == $s ? 'selected' : '' }}>{{ $s }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                    <div class="form-floating form-floating-outline" >
+                                                        <input type="text" name="items[{{ $index }}][size_id]" class="form-control size-input @error("items.$index.size_id") is-invalid @enderror" placeholder="Size" value="{{ $item['size_id'] ?? '' }}" readonly tabindex="-1">
+                                                        <label>Size *</label>
                                                     </div>
                                                     @error("items.$index.size_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                                 </td>
@@ -361,7 +364,7 @@
                                                             }
                                                             $stockItemKey = $item->sku ?: $itemFinishedCode;
                                                         @endphp
-                                                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $itemFinishedCode }}" autocomplete="off">
+                                                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $itemFinishedCode }}" autocomplete="off" readonly>
                                                         <input type="hidden" name="items[{{ $index }}][stock_item_key]" class="stock-item-select" value="{{ $stockItemKey }}">
                                                         <label>Stock Item*</label>
                                                     </div>
@@ -376,7 +379,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="text" name="items[{{ $index }}][api_color]" class="form-control color-input" placeholder="Color" value="{{ $item->api_color }}">
+                                                        <input type="text" name="items[{{ $index }}][api_color]" class="form-control color-input" placeholder="Color" value="{{ $item->api_color }}" readonly>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -386,7 +389,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input" placeholder="Art No" value="{{ $item->art_no }}">
+                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input" placeholder="Art No" value="{{ $item->art_no }}" readonly>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -398,12 +401,8 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select" data-selected="{{ $item->size_id }}">
-                                                            <option value="">Select Size</option>
-                                                            @foreach(['36','38','40','42','44','46','48','50'] as $s)
-                                                                <option value="{{ $s }}" {{ $item->size_id == $s ? 'selected' : '' }}>{{ $s }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                        <input type="text" name="items[{{ $index }}][size_id]" class="form-control size-input" placeholder="Size" value="{{ $item->size_id }}" readonly tabindex="-1">
+                                                        <label>Size *</label>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -497,12 +496,8 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[0][size_id]" class="form-select select2 size-select">
-                                                    <option value="">Select Size</option>
-                                                    @foreach(['36','38','40','42','44','46','48','50'] as $s)
-                                                        <option value="{{ $s }}">{{ $s }}</option>
-                                                    @endforeach
-                                                </select>
+                                                <input type="text" name="items[0][size_id]" class="form-control size-input" placeholder="Size" value="" readonly tabindex="-1">
+                                                <label>Size *</label>
                                             </div>
                                         </td>
                                         <td>
@@ -577,8 +572,8 @@
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <select id="charge_tax_type" class="form-select select2">
-                                        <option value="Pre-GST">Pre-GST (Taxable)</option>
-                                        <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
+                                        <option value="Pre-GST" selected>Pre-GST (Taxable)</option>
+                                        <option value="Post-GST">Post-GST (Non-Taxable)</option>
                                     </select>
                                     <label>Tax Type</label>
                                 </div>
@@ -759,6 +754,9 @@
                                                 <span class="input-group-text px-1">%</span>
                                             </div>
                                         </div>
+                                        @error('sales_discount_percent')
+                                            <div class="text-danger text-end mt-1 small">{{ $message }}</div>
+                                        @enderror
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <label class="fw-bold">Box Discount:</label>
                                             <div class="input-group input-group-sm" style="width:100px;">
@@ -766,6 +764,9 @@
                                                 <input type="number" class="form-control form-control-sm text-end" id="box_discount_amount" name="box_discount_amount" step="0.01" min="0" value="{{ old('box_discount_amount', $salesOrder->box_discount_amount ?? '0') }}">
                                             </div>
                                         </div>
+                                        @error('box_discount_amount')
+                                            <div class="text-danger text-end mt-1 small">{{ $message }}</div>
+                                        @enderror
                                         <input type="hidden" name="apply_box_discount" id="apply_box_discount_hidden" value="1">
                                         <input type="hidden" id="customer_sales_discount" value="0">
                                         <input type="hidden" id="customer_box_discount" value="0">
@@ -819,6 +820,9 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        @error('igst_percent')
+                                            <div class="text-danger text-end mt-1 small">{{ $message }}</div>
+                                        @enderror
                                         <div class="cgst-field {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">CGST:</label>
@@ -828,6 +832,9 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        @error('cgst_percent')
+                                            <div class="text-danger text-end mt-1 small">{{ $message }}</div>
+                                        @enderror
                                         <div class="sgst-field {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">SGST:</label>
@@ -837,6 +844,9 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        @error('sgst_percent')
+                                            <div class="text-danger text-end mt-1 small">{{ $message }}</div>
+                                        @enderror
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Tax Amount:</label>
                                             <input type="text" class="form-control-plaintext text-end w-50" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $salesOrder->tax_amount ?? '0.00') }}" readonly>
@@ -1075,17 +1085,8 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
-                            <option value="">Select Size</option>
-                            <option value="36">36</option>
-                            <option value="38">38</option>
-                            <option value="40">40</option>
-                            <option value="42">42</option>
-                            <option value="44">44</option>
-                            <option value="46">46</option>
-                            <option value="48">48</option>
-                            <option value="50">50</option>
-                        </select>
+                        <input type="text" name="items[${itemIndex}][size_id]" class="form-control size-input" placeholder="Size" value="" readonly tabindex="-1">
+                        <label>Size *</label>
                     </div>
                 </td>
                 <td>
@@ -1361,20 +1362,10 @@ $(document).ready(function () {
             $row.find('.rate-input').val(price.toFixed(2));
         }
         
-        const sizeList = ['36', '38', '40', '42', '44','46','48','50'];
-        let sizeOpts = `<option value="">Select Size</option>`;
-        sizeList.forEach(s => {
-            sizeOpts += `<option value="${s}">${s}</option>`;
-        });
-        let $sizeSelect = $row.find('.size-select');
-        $sizeSelect.html(sizeOpts);
-        
         $row.data('size-stock', res.size_stock);
-        if (res.size && $sizeSelect.val() != res.size) {
-            $sizeSelect.val(res.size).trigger('change');
-        } else {
-            updateStockAndRate($row);
-        }
+        $row.find('.size-input').val(res.size || '');
+        updateStockAndRate($row);
+
         
         $row.find('.qty-input').trigger('input');
         if (typeof calculateTotals === 'function') {
@@ -1490,14 +1481,14 @@ $(document).ready(function () {
             $row.find('.available-stock-display').text('0.00');
             $row.find('.mrp-input').val('');
             $row.find('.rate-input').val('');
-            $row.find('.size-select').html('<option value="">Select Size</option>').trigger('change');
+            $row.find('.size-input').val('');
             $row.data('size-stock', {});
             calculateTotals();
         }
     });
 
     function updateStockAndRate($row) {
-        let size = $row.find('.size-select').val();
+        let size = $row.find('.size-input').val();
         let sizeStock = $row.data('size-stock') || {};
         let balance = sizeStock[size] || 0;
         
