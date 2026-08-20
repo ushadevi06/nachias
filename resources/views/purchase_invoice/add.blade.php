@@ -30,7 +30,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control invoice_date @error('invoice_date') is-invalid @enderror" placeholder="Enter Invoice Date" name="invoice_date" autocomplete="off" value="{{ old('invoice_date', $invoice ? $invoice->invoice_date->format('d-m-Y') : '') }}" {{ isset($invoice) ? 'readonly' : '' }} />
+                                    <input type="text" class="form-control invoice_date @error('invoice_date') is-invalid @enderror" placeholder="Enter Invoice Date" name="invoice_date" autocomplete="off" value="{{ old('invoice_date', isset($invoice) && $invoice->invoice_date ? $invoice->invoice_date->format('d-m-Y') : date('d-m-Y')) }}" {{ isset($invoice) ? 'readonly' : '' }} />
                                     <label for="invoice_date">Invoice Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('invoice_date')
@@ -68,7 +68,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter Purchase Order No" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}">
+                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter Purchase Order No" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}" readonly>
                                     <label for="po_reference">Purchase Order No</label>
                                 </div>
                                 @error('po_reference')
@@ -194,6 +194,10 @@
                                                     <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $item['qty_invoiced'] ?? 0 }}" class="qty-invoiced-val">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $item['fabric_type_name'] ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][store_category_id]" value="{{ $item['store_category_id'] ?? 0 }}">
+                                                    <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $item['store_category_name'] ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][art_no]" value="{{ $item['art_no'] ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $item['brand_name'] ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $item['fabric_width'] ?? '-' }}">
                                                 </td>
                                                 <td>{{ $item['store_category_name'] ?? '-' }}</td>
                                                 <td>{{ $item['raw_material_name'] ?? '-' }}</td>
@@ -250,7 +254,7 @@
                                                 <td class="invoice-qty-column">
                                                     <input type="number" name="items[{{ $index }}][quantity]"
                                                         class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror"
-                                                        value="{{ $item['quantity'] ?? '' }}" step="0.01"
+                                                        value="{{ $item['quantity'] ?? '' }}" step="0.01" min="0" 
                                                         data-max-qty="{{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}"
                                                         {{ isset($item['selected']) ? '' : 'readonly' }}>
 
@@ -286,14 +290,15 @@
                                                     <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ $invItem->uom->uom_code ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $invItem->qty_ordered }}" class="qty-ordered-val">
                                                     <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $invItem->qty_invoiced }}" class="qty-invoiced-val">
-                                                    <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? $invItem->rawMaterial->storeCategory->category_name ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $invItem->brand->brand_name ?? $invItem->purchaseOrderItem->brand->brand_name ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $invItem->fabricWidth->width ?? $invItem->purchaseOrderItem->fabricWidth->width ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}">
-                                                    <input type="hidden" name="items[{{ $index }}][store_category_id]" value="{{ $invItem->purchaseOrderItem->store_category_id ?? 0 }}">
+                                                    <input type="hidden" name="items[{{ $index }}][store_category_id]" value="{{ $invItem->purchaseOrderItem->store_category_id ?? $invItem->rawMaterial->store_category_id ?? 0 }}">
+                                                    <input type="hidden" name="items[{{ $index }}][art_no]" value="{{ $invItem->purchaseOrderItem->supplier_design_name ?? '-' }}">
                                                 </td>
 
-                                                <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}</td>
+                                                <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? $invItem->rawMaterial->storeCategory->category_name ?? '-' }}</td>
                                                 <td>{{ $invItem->rawMaterial->name ?? '-' }}</td>
                                                 <td>{{ $invItem->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
                                                 <td>
@@ -354,7 +359,7 @@
                                                 <td class="balanced-qty-display">{{ $balancedQty }}</td>
 
                                                 <td class="invoice-qty-column">
-                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror" value="{{ $invItem->quantity }}" step="0.01" data-max-qty="{{ $balancedQty }}">
+                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror" value="{{ $invItem->quantity }}" step="0.01" min="0" data-max-qty="{{ $balancedQty }}">
                                                     <small class="text-secondary">
                                                         Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max:
                                                         {{ number_format($invItem->qty_ordered * 1.5, 2) }}).
@@ -725,7 +730,7 @@
                                         <div class="d-flex flex-column align-items-end gap-1">
                                             <div class="d-flex gap-2 align-items-center">
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
+                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" min="0" {{ isset($invoice) ? 'readonly' : '' }}>
                                                     <span class="input-group-text">%</span>
                                                 </div>
                                                 <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
@@ -744,8 +749,12 @@
                                     </div>
                                     <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Taxable Total:</span>
-                                        <strong id="total">{{ number_format($taxableAmount, 2) }}</strong>
-                                        <input type="hidden" name="taxable_amount" id="taxable_amount_input" value="{{ $taxableAmount }}">
+                                        <strong id="total">{{ number_format($taxableAmount >= 0 ? $taxableAmount : 0, 2) }}</strong>
+                                        <input type="hidden" name="taxable_amount" id="taxable_amount_input" value="{{ $taxableAmount >= 0 ? $taxableAmount : 0 }}">
+                                    </div>
+                                    <div id="negative_net_warning" class="alert alert-warning text-dark py-1 px-2 mb-1 mt-1 d-none" style="font-size: 12px;">
+                                        <i class="ri ri-error-warning-line me-1"></i>
+                                        <span id="negative_net_warning_text"></span>
                                     </div>
                                     <div class="py-3 border-bottom">
                                          <label class="fw-semibold mb-2 d-block">Other State?</label>
@@ -772,7 +781,7 @@
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span>IGST</span>
                                             <div class="d-flex gap-2 align-items-center" style="min-width: 180px;">
-                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" step="any" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;">
+                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" step="any" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;" min="0">
                                                 <span>%</span>
                                                 <strong id="igst_amt">{{ number_format($igstAmount, 2) }}</strong>
                                                 <input type="hidden" name="igst_amount" id="igst_amount_input" value="{{ $igstAmount }}">
@@ -788,7 +797,7 @@
                                         <div class="d-flex justify-content-between mb-2">
                                             <span>CGST</span>
                                             <div class="d-flex gap-2 align-items-center">
-                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ $cgstPercent }}" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" style="width:80px;" readonly>
+                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ $cgstPercent }}" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" style="width:80px;" min="0" readonly>
                                                 <span>%</span>
                                                 <strong id="cgst_amt">{{ number_format($cgstAmount, 2) }}</strong>
                                                 <input type="hidden" name="cgst_amount" id="cgst_amount_input" value="{{ $cgstAmount }}">
@@ -801,7 +810,7 @@
                                         <div class="d-flex justify-content-between">
                                             <span>SGST</span>
                                             <div class="d-flex gap-2 align-items-center">
-                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ $sgstPercent }}" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" style="width:80px;" readonly>
+                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ $sgstPercent }}" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" style="width:80px;" min="0" readonly>
                                                 <span>%</span>
                                                 <strong id="sgst_amt">{{ number_format($sgstAmount, 2) }}</strong>
                                                 <input type="hidden" name="sgst_amount" id="sgst_amount_input" value="{{ $sgstAmount }}">
@@ -1071,7 +1080,7 @@
 
                                         <!-- Invoiced Qty (Input Field) -->
                                         <td class="invoice-qty-column">
-                                            <input type="number" name="items[${index}][quantity]" class="form-control form-control-sm item-quantity received-qty-input" step="0.01" value="${balancedQty}" readonly placeholder="0.00" data-max-qty="${balancedQty}" data-ordered-qty="${item.qty_ordered}">
+                                            <input type="number" name="items[${index}][quantity]" class="form-control form-control-sm item-quantity received-qty-input" step="0.01" min="0"  value="${balancedQty}" readonly placeholder="0.00" data-max-qty="${balancedQty}" data-ordered-qty="${item.qty_ordered}">
                                                 <small class="text-secondary">
                                                 Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max: ${(item.qty_ordered * 1.5).toFixed(2)}).
                                             </small>
@@ -1192,6 +1201,9 @@
             let invoicedQty = parseFloat($row.find('.qty-invoiced-val').val()) || 0;
             let rate = parseFloat($row.find('.item-rate').val()) || 0;
             let checkbox = $row.find('.item-checkbox');
+            
+            let balancedQty = Math.max(0, orderedQty - qty);
+            $row.find('.balanced-qty-display').text(balancedQty.toFixed(2));
 
             qtyInput.removeClass('is-invalid');
             qtyInput.next('.invalid-feedback').remove();
@@ -1232,7 +1244,11 @@
             calculateTotals();
         });
 
-
+        $(document).on('keypress', '.item-quantity, .item-rate, #charge_amount', function (e) {
+            if (e.which === 45 || e.which === 43) {
+                e.preventDefault();
+            }
+        });
         $(document).on('change', '.item-checkbox', function () {
             toggleItemFields($(this));
             updateSelectAllState();
@@ -1299,6 +1315,37 @@
 
             $('#due_amount').text(dueAmount.toFixed(2));
             $('#due_amount_input').val(dueAmount.toFixed(2));
+        }
+        function updateNegativeWarning(taxableAmount) {
+            let subTotal = parseFloat($('#sub_total_input').val()) || 0;
+            let discountAmount = parseFloat($('#discount_amount_input').val()) || 0;
+            let totalCommission = parseFloat($('#commission_amount_input').val()) || 0;
+
+            if (taxableAmount <= 0 && subTotal > 0 && (discountAmount > 0 || totalCommission > 0)) {
+                let reasons = [];
+                if (discountAmount > 0 && totalCommission > 0) {
+                    reasons.push('Discount (₹' + discountAmount.toFixed(2) + ')');
+                    reasons.push('Commission (₹' + totalCommission.toFixed(2) + ')');
+                } else if (discountAmount > 0) {
+                    reasons.push('Discount (₹' + discountAmount.toFixed(2) + ')');
+                } else if (totalCommission > 0) {
+                    reasons.push('Commission (₹' + totalCommission.toFixed(2) + ')');
+                }
+                let warningText = '';
+                if (taxableAmount < 0) {
+                    warningText = 'Taxable Total is negative (₹' + taxableAmount.toFixed(2) + '). ' + reasons.join(' + ') + ' exceeds Sub Total + Pre-GST Charges. Showing 0.00.';
+                } else {
+                    warningText = 'Taxable Total is 0.00. ' + reasons.join(' + ') + ' equals Sub Total + Pre-GST Charges. Tax and Grand Total will be 0.00.';
+                }
+                $('#negative_net_warning_text').text(warningText);
+                $('#negative_net_warning').removeClass('d-none');
+                $('#total').addClass('text-danger');
+                $('button[type="submit"]').prop('disabled', true);
+            } else {
+                $('#negative_net_warning').addClass('d-none');
+                $('#total').removeClass('text-danger');
+                $('button[type="submit"]').prop('disabled', false);
+            }
         }
 
 
@@ -1382,16 +1429,18 @@
             let itemTotal = subTotal - discountAmount - totalCommission;
 
             let taxableAmount = itemTotal + preGstCharges;
-            let displayTaxableAmount = taxableAmount >= 0 ? taxableAmount : 0;
-            $('#total').text(displayTaxableAmount.toFixed(2));
-            $('#taxable_amount_input').val(displayTaxableAmount.toFixed(2));
+            let dispTaxableAmt = taxableAmount >= 0 ? taxableAmount : 0;
+            $('#total').text(dispTaxableAmt.toFixed(2));
+            $('#taxable_amount_input').val(dispTaxableAmt.toFixed(2));
+
+            updateNegativeWarning(taxableAmount);
 
             let taxAmount = 0;
 
             if (taxableAmount >= 0) {
                 if ($('input[name="other_state"]:checked').val() === 'Y') {
                     let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                    let igstAmount = (displayTaxableAmount * igstPercent) / 100;
+                    let igstAmount = (dispTaxableAmt * igstPercent) / 100;
 
                     $('#igst_amt').text(igstAmount.toFixed(2));
                     $('#igst_amount_input').val(igstAmount.toFixed(2));
@@ -1407,8 +1456,8 @@
                     let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                     let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
 
-                    let cgstAmount = (displayTaxableAmount * cgstPercent) / 100;
-                    let sgstAmount = (displayTaxableAmount * sgstPercent) / 100;
+                    let cgstAmount = (dispTaxableAmt * cgstPercent) / 100;
+                    let sgstAmount = (dispTaxableAmt * sgstPercent) / 100;
 
                     $('#cgst_amt').text(cgstAmount.toFixed(2));
                     $('#sgst_amt').text(sgstAmount.toFixed(2));
@@ -1441,7 +1490,7 @@
             $('#post_gst_total_display').text(postGstCharges.toFixed(2));
             $('#other_charges_input').val(postGstCharges.toFixed(2));
 
-            let totalBeforeRoundOff = parseFloat((displayTaxableAmount + taxAmount + postGstCharges).toFixed(2));
+            let totalBeforeRoundOff = parseFloat((dispTaxableAmt + taxAmount + postGstCharges).toFixed(2));
 
             let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
             let roundOffType = $('input[name="round_off_type"]:checked').val();
@@ -1515,18 +1564,27 @@
         $('#charges_select').on('change', function() {
             var selectedText = $(this).find('option:selected').text().trim().toUpperCase();
             if (selectedText === 'BROKERAGE') {
-                $('#charge_tax_type').val('Post-GST').trigger('change');
+                if ($('#charge_tax_type option[value=""]').length === 0) {
+                    $('#charge_tax_type').prepend('<option value="">--</option>');
+                }
+                $('#charge_tax_type').val('').trigger('change');
                 $('#charge_tax_type').prop('disabled', true).select2({
                     width: '100%',
                     dropdownParent: $('body')
                 });
             } else {
+                // Remove '--' so it never shows in dropdown for other charges
+                $('#charge_tax_type option[value=""]').remove();
                 if ($('#charge_tax_type').prop('disabled')) {
-                    $('#charge_tax_type').prop('disabled', false).select2({
-                        width: '100%',
-                        dropdownParent: $('body')
-                    });
+                    $('#charge_tax_type').prop('disabled', false);
                 }
+                if ($('#charge_tax_type').val() === '' || !$('#charge_tax_type').val()) {
+                    $('#charge_tax_type').val('Pre-GST');
+                }
+                $('#charge_tax_type').select2({
+                    width: '100%',
+                    dropdownParent: $('body')
+                }).trigger('change');
             }
         });
 
@@ -1618,12 +1676,21 @@
 
             $('#charges_select').val('').trigger('change');
             $('#charge_amount').val('');
+            $('#charge_tax_type').val('Pre-GST').trigger('change');
 
             calculateChargesOnly();
             refreshChargeDropdownState();
         });
 
         $(document).on('click', '.edit-charge', function () {
+            let currentChargeId = $('#charges_select').val();
+            if (currentChargeId) {
+                $('#add_charge_btn').click();
+                if ($('#charges_select').val()) {
+                    return; 
+                }
+            }
+
             let $row = $(this).closest('tr');
             let chargeId = $row.data('charge-id');
             let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
@@ -1754,15 +1821,17 @@
             });
 
             let taxableAmount = itemTotal + preGstCharges;
-            $('#total').text(taxableAmount.toFixed(2));
-            $('#taxable_amount_input').val(taxableAmount.toFixed(2));
+            let dispTaxableAmt = taxableAmount >= 0 ? taxableAmount : 0;
+            $('#total').text(dispTaxableAmt.toFixed(2));
+            $('#taxable_amount_input').val(dispTaxableAmt.toFixed(2));
+
+            updateNegativeWarning(taxableAmount);
 
             let taxAmount = 0;
-            let displayTaxableAmount = taxableAmount >= 0 ? taxableAmount : 0;
 
             if ($('input[name="other_state"]:checked').val() === 'Y') {
                 let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                let igstAmount = (displayTaxableAmount * igstPercent) / 100;
+                let igstAmount = (dispTaxableAmt * igstPercent) / 100;
                 $('#igst_amt').text(igstAmount.toFixed(2));
                 $('#igst_amount_input').val(igstAmount.toFixed(2));
                 $('#cgst_amt').text('0.00');
@@ -1773,8 +1842,8 @@
             } else {
                 let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                 let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-                let cgstAmount = (displayTaxableAmount * cgstPercent) / 100;
-                let sgstAmount = (displayTaxableAmount * sgstPercent) / 100;
+                let cgstAmount = (dispTaxableAmt * cgstPercent) / 100;
+                let sgstAmount = (dispTaxableAmt * sgstPercent) / 100;
                 $('#cgst_amt').text(cgstAmount.toFixed(2));
                 $('#sgst_amt').text(sgstAmount.toFixed(2));
                 $('#cgst_amount_input').val(cgstAmount.toFixed(2));
@@ -1902,8 +1971,11 @@
             let itemTotal = subTotal - discountAmount - totalCommission;
 
             let taxableAmount = itemTotal + preGstCharges;
-            $('#total').text(taxableAmount.toFixed(2));
-            $('#taxable_amount_input').val(taxableAmount.toFixed(2));
+            let dispTaxableAmt = taxableAmount >= 0 ? taxableAmount : 0;
+            $('#total').text(dispTaxableAmt.toFixed(2));
+            $('#taxable_amount_input').val(dispTaxableAmt.toFixed(2));
+
+            updateNegativeWarning(taxableAmount, subTotal, discountAmount, totalCommission);
 
             let taxAmount = 0;
 
@@ -2002,7 +2074,7 @@
                 //     $('#discount_input').addClass('is-invalid');
                 //     $('#discount-error').text("Discount cannot exceed the subtotal.").removeClass('d-none');
                 // }
-                //hasErrors = true;
+                hasErrors = true;
             }
 
             if (hasErrors) {

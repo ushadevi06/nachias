@@ -343,10 +343,25 @@
             table.ajax.reload();
         }
 
-        let firstTab = $('#stockEntryTabs .nav-link').first();
-        if (firstTab.length) {
-            firstTab.addClass('active');
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        let targetTab;
+        if (tabParam === 'finished_goods') {
+            targetTab = $('#finished-goods-tab');
+        } else if (tabParam === 'raw_materials') {
+            targetTab = $('#raw-material-tab');
+        }
+
+        if (targetTab && targetTab.length) {
+            $('#stockEntryTabs .nav-link').removeClass('active');
+            targetTab.addClass('active');
             applyTabLogic();
+        } else {
+            let firstTab = $('#stockEntryTabs .nav-link').first();
+            if (firstTab.length) {
+                firstTab.addClass('active');
+                applyTabLogic();
+            }
         }
 
 
@@ -359,7 +374,6 @@
             table.ajax.reload();
         });
 
-        const urlParams = new URLSearchParams(window.location.search);
         const searchParam = urlParams.get('search');
         if (searchParam) {
             table.search(searchParam).draw();

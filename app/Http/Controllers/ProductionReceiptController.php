@@ -116,6 +116,11 @@ class ProductionReceiptController extends Controller
         }
 
         $receipt = $id ? ProductionReceipt::with(['items'])->findOrFail($id) : null;
+
+        if ($receipt && $receipt->status === 'Posted') {
+            return redirect('production_receipts')->with('error', 'Cannot edit a Posted Production Receipt.');
+        }
+
         $fullyReceivedJobCardIds = $this->getFullyReceivedJobCardIds($id);
 
         if ($id) {

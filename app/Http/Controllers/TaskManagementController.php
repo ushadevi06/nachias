@@ -172,14 +172,22 @@ class TaskManagementController extends Controller
 
             if (!$id && $psStage) {
                 $jobCardId = $psStage->job_card_entry_id;
-                $tasksForJobCard = Task::where('job_card_entry_id', $jobCardId)->pluck('stage_id')->toArray();
+                
+                $taskOpStageIds = Task::with('stage')
+                    ->where('job_card_entry_id', $jobCardId)
+                    ->get()
+                    ->map(function ($task) {
+                        return ($task->stage && $task->stage->operation_stage_id) ? $task->stage->operation_stage_id : $task->stage_id;
+                    })
+                    ->filter()
+                    ->toArray();
                 
                 $canAssign = true;
                 foreach ($stages as $stage) {
                     if ($stage->id == $psStage->id) {
                         break;
                     }
-                    if (!in_array($stage->id, $tasksForJobCard)) {
+                    if (!in_array($stage->operation_stage_id, $taskOpStageIds)) {
                         $canAssign = false;
                         break;
                     }
@@ -209,26 +217,21 @@ class TaskManagementController extends Controller
             $rules = [
                 'assignments' => 'required|array|min:1',
                 'assignments.*.service_id' => 'required',
+                'assignments.*.issued_to' => 'required',
+                'assignments.*.issue_date' => 'required',
+                'assignments.*.issue_qty' => 'required|numeric|min:1',
                 'issued_by' => 'required',
                 'status' => 'required'
             ];
             
             $messages = [
                 'assignments.*.service_id.required' => 'This field is required.',
+                'assignments.*.issued_to.required' => 'This field is required.',
+                'assignments.*.issue_date.required' => 'This field is required.',
+                'assignments.*.issue_qty.required' => 'This field is required.',
+                'assignments.*.issue_qty.min' => 'Issue Qty must be at least 1',
                 'issued_by.required' => 'This field is required.',
             ];
-
-            $assignmentsInput = $request->input('assignments', []);
-            foreach ($assignmentsInput as $index => $assign) {
-                if (!empty($assign['issued_to'])) {
-                    $rules["assignments.{$index}.issue_date"] = 'required';
-                    $rules["assignments.{$index}.issue_qty"] = 'required|numeric|min:1';
-                    
-                    $messages["assignments.{$index}.issue_date.required"] = 'This field is required.';
-                    $messages["assignments.{$index}.issue_qty.required"] = 'This field is required.';
-                    $messages["assignments.{$index}.issue_qty.min"] = 'Issue Qty must be at least 1';
-                }
-            }
 
             $request->validate($rules, $messages);
 
@@ -402,7 +405,8 @@ class TaskManagementController extends Controller
 
                 $allServiceIds = [];
                 $totalIssueQty = 0;
-
+                
+                $existingAssignmentsMap = ($id && $task) ? $task->assignments->keyBy('id') : collect();
                 foreach ($assignments as $assign) {
                     $isAssigned = !empty($assign['issued_to']);
                     $status = $isAssigned ? ($assign['status'] ?? 'Open') : 'Pending Assignment';
@@ -416,6 +420,20 @@ class TaskManagementController extends Controller
                         'remarks' => $assign['remarks'] ?? null,
                         'created_by' => auth()->id(),
                     ];
+                    
+                    if (isset($assign['id']) && $existingAssignmentsMap->has($assign['id'])) {
+                        $existing = $existingAssignmentsMap->get($assign['id']);
+                        $assignData['completed_qty'] = $existing->completed_qty ?? 0;
+                        $assignData['inprogress_qty'] = $existing->inprogress_qty ?? 0;
+                        $assignData['wastage_qty'] = $existing->wastage_qty ?? 0;
+                        $assignData['qc_checked_qty'] = $existing->qc_checked_qty ?? 0;
+                        $assignData['qc_passed_qty'] = $existing->qc_passed_qty ?? 0;
+                        $assignData['qc_rejected_qty'] = $existing->qc_rejected_qty ?? 0;
+                        $assignData['qc_status'] = $existing->qc_status ?? 'Pending';
+                        if (!empty($existing->status)) {
+                        $assignData['status'] = $existing->status;
+                        }
+                    }
 
                     $totalIssueQty += (float) ($assign['issue_qty'] ?? 0);
 

@@ -66,6 +66,9 @@
                                         <thead class="bg-light">
                                             <tr>
                                                 <th>Material / Category</th>
+                                                <th>Brand</th>
+                                                <th>Color</th>
+                                                <th>Store Location</th>
                                                 <th>Art No</th>
                                                 <th>Style</th>
                                                 <th>UOM</th>
@@ -81,6 +84,9 @@
                                                     {{ $item->rawMaterial->name ?? '-' }} <br>
                                                     <small class="text-muted">{{ $item->storeCategory->category_name ?? '-' }}</small>
                                                 </td>
+                                                <td>{{ $item->brand->brand_name ?? ($item->grnEntryItem->brand->brand_name ?? '-') }}</td>
+                                                <td>{{ $item->color->color_name ?? ($item->grnEntryItem->color->color_name ?? '-') }}</td>
+                                                <td>{{ $item->storeLocation->store_location ?? ($item->grnEntryItem->storeLocation->store_location ?? '-') }}</td>
                                                 <td>{{ $item->art_no ?: ($item->grnEntryItem->art_no ?? '-') }}</td>
                                                 <td>{{ $item->style->style_name ?? '-' }}</td>
                                                 <td>{{ $item->uom->uom_code ?? '-' }}</td>
@@ -92,7 +98,7 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <th colspan="4" class="text-end">Total:</th>
+                                                <th colspan="7" class="text-end">Total:</th>
                                                 <th class="text-success fw-bold">+{{ floatval($totalQtyIn) }}</th>
                                                 <th></th>
                                                 <th></th>
@@ -139,7 +145,7 @@
                                                                 <div class="text-muted italic">No SKU Assigned</div>
                                                             @endif
                                                         </div>
-                                                        <div class="col-md-6 ps-md-5 py-3">
+                                                        <div class="col-md-9 ps-md-4 py-3">
                                                             <h4 class="text-primary fw-bold mb-1">
                                                                 @if($isFinishedGoods)
                                                                     {{ $firstItem->finished_item_code ?? '-' }}
@@ -151,29 +157,41 @@
                                                                 <div class="text-muted small mb-3">{{ $firstItem->item->code ?? ($firstItem->rawMaterial->code ?? '-') }}</div>
                                                             @endif
                                                             <div class="row g-3">
-                                                                <div class="col-sm-6">
+                                                                <div class="col-sm-4">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Product SKU</label>
                                                                     <span class="text-dark fw-medium fs-6">{{ $firstItem->sku ?? '-' }}</span>
                                                                 </div>
-                                                                <div class="col-sm-6">
+                                                                <div class="col-sm-4">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Art No</label>
                                                                     <span class="text-dark fw-medium fs-6">{{ $firstItem->art_no ?? '-' }}</span>
                                                                 </div>
-                                                                <div class="col-sm-6">
+                                                                <div class="col-sm-4">
+                                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Style</label>
+                                                                    <span class="text-dark fw-medium fs-6">{{ $firstItem->style->style_name ?? '-' }}</span>
+                                                                </div>
+                                                                <div class="col-sm-4">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Fabric / Sleeve</label>
                                                                     <span class="text-dark fw-medium fs-6">
                                                                         {{ $fabricType }} / 
                                                                         {{ $firstItem->sleeve_type ?? '-' }}
                                                                     </span>
                                                                 </div>
-                                                                <div class="col-sm-6">
+                                                                <div class="col-sm-4">
+                                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Size / Color</label>
+                                                                    <span class="text-dark fw-bold fs-6">{{ $firstItem->size ?? '-' }}</span>
+                                                                    <span class="text-muted ms-1">({{ $firstItem->color->color_name ?? '-' }})</span>
+                                                                </div>
+                                                                <div class="col-sm-4">
+                                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Store Location</label>
+                                                                    <span class="text-dark fw-medium fs-6">{{ $firstItem->storeLocation->store_location ?? ($firstItem->grnEntryItem->storeLocation->store_location ?? '-') }}</span>
+                                                                </div>
+                                                                <div class="col-sm-4">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Quantity</label>
                                                                     <span class="text-success fw-bold fs-5">+{{ floatval($firstItem->qty_in) }} <small class="text-muted fs-6 fw-normal">{{ $firstItem->uom->uom_code ?? 'PCS' }}</small></span>
                                                                 </div>
-                                                                <div class="col-sm-6">
-                                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Size / Color</label>
-                                                                    <span class="text-dark fw-bold fs-5">{{ $firstItem->size ?? '-' }}</span>
-                                                                    <span class="text-muted ms-1">({{ $firstItem->color->color_name ?? '-' }})</span>
+                                                                <div class="col-sm-4">
+                                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Unit Price</label>
+                                                                    <span class="text-dark fw-bold fs-5">{{ $firstItem->price > 0 ? '₹' . number_format($firstItem->price, 2) : '-' }}</span>
                                                                 </div>
                                                             </div>
                                                         </div>

@@ -197,7 +197,7 @@
                                         <div class="text-danger small qty-error" style="${qtyError ? '' : 'display:none;'}">${qtyError || 'Quantity is required'}</div>
                                     </td>
                                     <td>
-                                        <input type="number" name="items[${index}][price]" class="form-control form-control-sm" value="${price}" step="0.01">
+                                        <input type="number" name="items[${index}][price]" class="form-control form-control-sm item-price" value="${price}" step="0.01">
                                         <div class="text-danger small price-error" style="${priceError ? '' : 'display:none;'}">${priceError || 'Price is required'}</div>
                                     </td>
                                     <td>
@@ -231,6 +231,11 @@
             }
         });
 
+        $(document).on('keypress', '.item-qty, .item-price', function (e) {
+            if (e.which === 45 || e.which === 43) {
+                e.preventDefault();
+            }
+        });
 
         if (stockEntry || $('#grn_entry_id').val()) {
             $('#grn_entry_id').trigger('change');

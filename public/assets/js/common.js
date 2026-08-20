@@ -94,6 +94,9 @@ $(document).ready(function () {
 
     /* Global Double Submission Prevention */
     $(document).on('submit', '.common-form', function (e) {
+        if (e.isDefaultPrevented()) {
+            return false;
+        }
         var $form = $(this);
         var $submitBtn = $form.find('button[type="submit"]');
 

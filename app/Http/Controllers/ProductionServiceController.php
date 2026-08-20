@@ -168,7 +168,7 @@ class ProductionServiceController extends Controller
         }
 
         $operationStages = OperationStage::active()->orderBy('id','desc')->get();
-        $processGroups = \App\Models\ProcessGroup::active()->orderBy('name')->get();
+        $processGroups = \App\Models\ProcessGroup::active()->orderBy('id','desc')->get();
         $uoms = \App\Models\Uom::active()->orderBy('id','desc')->get();
 
         return view('production_services.add', compact('service', 'operationStages', 'uoms', 'processGroups'));

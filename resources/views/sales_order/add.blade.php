@@ -316,7 +316,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0.01" step="0.01">
+                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0" step="0.01">
                                                         <div class="stock-info-wrapper mt-1">
                                                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
                                                             <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
@@ -326,13 +326,13 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
+                                                        <input type="number" min="0" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
                                                     </div>
                                                     @error("items.$index.mrp")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
+                                                        <input type="number" min="0" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
                                                     </div>
                                                     @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                                 </td>
@@ -424,7 +424,7 @@
                                                                 $availableStock = $sQuery->sum('qty_in') - $sQuery->sum('qty_out');
                                                             }
                                                         @endphp
-                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0.01" step="0.01">
+                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0" step="0.01">
                                                         <div class="stock-info-wrapper mt-1">
                                                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format($availableStock, 2) }}</span></small>
                                                             <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
@@ -433,12 +433,12 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
+                                                        <input type="number" min="0" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
                                                     </div>
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
+                                                        <input type="number" min="0" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
                                                     </div>
                                                 </td>
 
@@ -502,7 +502,7 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
+                                                <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0" step="0.01">
                                                 <div class="stock-info-wrapper mt-1">
                                                     <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
                                                     <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
@@ -511,12 +511,12 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">
+                                                <input type="number" min="0" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">
                                             </div>
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
+                                                <input type="number" min="0" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
                                             </div>
                                         </td>
 
@@ -716,7 +716,8 @@
                                                     $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
                                                     $fileUrl = url('uploads/so/' . $salesOrder->id . '/' . $file);
                                                 @endphp
-                                                <div class="p-1 border rounded bg-light shadow-sm d-flex align-items-center">
+                                                <div class="p-1 border rounded bg-light shadow-sm d-flex align-items-center position-relative">
+                                                    <input type="hidden" name="existing_attachments[]" value="{{ $file }}">
                                                     @if($isImage)
                                                         <img src="{{ $fileUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" width="45" height="45" style="object-fit: cover;" alt="Attachment">
                                                     @else
@@ -1091,7 +1092,7 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
+                        <input type="number" min="0" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
                         <div class="stock-info-wrapper mt-1">
                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
                             <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
@@ -1100,12 +1101,12 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
+                        <input type="number" min="0" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
                     </div>
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
+                        <input type="number" min="0" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
                     </div>
                 </td>
                 <td>
@@ -1635,6 +1636,35 @@ $(document).ready(function () {
 
         $('#total_amount').val(finalTotal.toFixed(2));
     }
+
+
+    $(document).on('keypress keydown', '.qty-input, .mrp-input, .rate-input, #charge_amount, #box_discount_amount, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #freight_amount', function (e) {
+        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
+            e.preventDefault();
+            return false;
+        }
+        if (e.which === 40 || e.key === 'ArrowDown') {
+            var val = parseFloat($(this).val()) || 0;
+            if (val <= 0) {
+                $(this).val('0.00');
+                $(this).trigger('input');
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+
+    $(document).on('input paste', '.qty-input, .mrp-input, .rate-input, #charge_amount, #box_discount_amount, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #freight_amount', function () {
+        var el = this;
+        setTimeout(function () {
+            var val = $(el).val();
+            if (val !== '' && (parseFloat(val) < 0 || String(val).indexOf('-') !== -1 || String(val).indexOf('+') !== -1)) {
+                var cleaned = String(val).replace(/[-+]/g, '');
+                $(el).val(cleaned ? (parseFloat(cleaned) >= 0 ? cleaned : '0.00') : '0.00');
+                calculateTotals();
+            }
+        }, 0);
+    });
 
     $(document).on('input', '#box_discount_amount, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent', calculateTotals);
     $(document).on('change', 'input[name="other_state"]', calculateTotals);

@@ -105,7 +105,8 @@ class PurchaseInvoiceController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view_details purchase-invoice')) {
                     $action .= '<a href="' . url('purchase_invoices/view/' . $invoice->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid') {
+                $hasGrn = \App\Models\GrnEntry::where('purchase_invoice_id', $invoice->id)->whereNull('deleted_at')->exists();
+                if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid' && !$hasGrn) {
                     $action .= '<a href="' . url('purchase_invoices/add/' . $invoice->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 $action .= '</div>';
@@ -131,7 +132,7 @@ class PurchaseInvoiceController extends Controller
             ]);
         }
 
-        $suppliers = Supplier::where('status', 'Active')->get();
+        $suppliers = Supplier::where('status', 'Active')->orderBy('id','desc')->get();
         return view('purchase_invoice.view', compact('suppliers'));
     }
 
@@ -142,8 +143,13 @@ class PurchaseInvoiceController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit purchase-invoice')) {
                 return unauthorizedRedirect();
             }
+            
+            $hasGrn = \App\Models\GrnEntry::where('purchase_invoice_id', $id)->exists();
+            if ($hasGrn) {
+                return redirect('purchase_invoices')->with('error', 'Cannot edit this Purchase Invoice because a GRN has already been created for it.');
+            }
             $invoice = PurchaseInvoice::with([
-                'items.rawMaterial', 
+                'items.rawMaterial.storeCategory', 
                 'items.uom', 
                 'items.brand', 
                 'items.fabricWidth', 
@@ -234,8 +240,6 @@ class PurchaseInvoiceController extends Controller
                 'charges_select.required' => 'Please select a charge.',
                 'charge_amount.numeric' => 'Charge amount must be a number.',
                 'charges.amount.*.numeric' => 'Charge amount must be a number.',
-                'round_off.min' => 'Round off cannot be negative. Please enter 0 or a positive value.',
-                'round_off.max' => 'Round off amount cannot exceed 99.99.',
                 'round_off.min' => 'Round off cannot be negative. Please enter 0 or a positive value.',
                 'round_off.max' => 'Round off amount cannot exceed 99.99.',
                 'min' => 'This field must be at least :min characters.',

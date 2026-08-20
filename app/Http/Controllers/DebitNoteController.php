@@ -37,6 +37,8 @@ class DebitNoteController extends Controller
                 $search = $request->input('search')['value'];
                 $query->where(function ($q) use ($search) {
                     $q->where('debit_note_no', 'like', "%{$search}%")
+                        ->orWhereRaw("DATE_FORMAT(debit_note_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                        ->orWhere('grand_total', 'like', "%{$search}%")
                         ->orWhereHas('purchaseInvoice', function ($q2) use ($search) {
                             $q2->where('invoice_no', 'like', "%{$search}%");
                         })
@@ -44,6 +46,13 @@ class DebitNoteController extends Controller
                             $q4->where('name', 'like', "%{$search}%")
                                ->orWhere('code', 'like', "%{$search}%");
                         });
+
+                    try {
+                        $parsedDate = \Carbon\Carbon::createFromFormat('d-m-Y', $search);
+                        if ($parsedDate) {
+                            $q->orWhere('debit_note_date', $parsedDate->format('Y-m-d'));
+                        }
+                    } catch (\Exception $e) {}
                 });
             }
 
@@ -75,7 +84,7 @@ class DebitNoteController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view_details debit-notes')) {
                     $action .= '<a href="' . url('debit_notes/view/' . $note->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if (auth()->id() == 1 || auth()->user()->can('edit debit-notesss')) {
+                if ((auth()->id() == 1 || auth()->user()->can('edit debit-notes')) && $note->status == 'Draft') {
                     $action .= '<a href="' . url('debit_notes/add/' . $note->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 /* if (auth()->id() == 1 || auth()->user()->can('delete debit-note')) {
@@ -103,7 +112,7 @@ class DebitNoteController extends Controller
             ]);
         }
 
-        $suppliers = Supplier::where('status', 'Active')->get();
+        $suppliers = Supplier::where('status', 'Active')->orderBy('id','desc')->get();
         return view('debit_notes.view', compact('suppliers'));
     }
 
@@ -114,6 +123,9 @@ class DebitNoteController extends Controller
                 return unauthorizedRedirect();
             }
             $debitNote = DebitNote::with(['purchaseInvoice', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+            if ($debitNote->status == 'Approved') {
+                return redirect('debit_notes')->with('error', 'Approved Debit Notes cannot be edited.');
+            }
             $charges = $debitNote->charges;
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create debit-notes')) {
@@ -129,14 +141,20 @@ class DebitNoteController extends Controller
 
             $rules = [
                 'debit_note_no' => [($id ? 'nullable' : 'required'), 'string', 'max:50', 'not_regex:/^0+$/', 'unique:debit_notes,debit_note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
-                'debit_note_date' => 'required|date',
+                'debit_note_date' => 'required',
                 'purchase_invoice_id' => 'required|exists:purchase_invoices,id',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'reason' => 'nullable|string|min:5|max:255',
                 'items' => 'required|array|min:1',
+                'items.*.quantity' => 'required_if:items.*.selected,1|numeric|gt:0',
                 'sub_total' => 'required|numeric|min:0',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
                 'discount_amount' => 'nullable|numeric|min:0',
+                'igst_percent' => 'nullable|numeric|min:0|max:100',
+                'cgst_percent' => 'nullable|numeric|min:0|max:100',
+                'sgst_percent' => 'nullable|numeric|min:0|max:100',
+                'round_off' => 'nullable|numeric|min:0|max:99.99',
+                'round_off_type' => 'required|in:Add,Less',
                 'taxable_amount' => 'required|numeric|min:0',
                 'other_charges' => 'nullable|numeric|min:0',
                 'charges_select' => 'nullable',
@@ -153,10 +171,26 @@ class DebitNoteController extends Controller
                 '*.unique' => 'This field already exists.',
                 '*.not_regex' => 'This field is an invalid format.',
                 '*.regex' => 'This field is an invalid format',
+                'items.*.quantity.gt' => 'Quantity must be greater than 0.',
+                'items.*.quantity.min' => 'Quantity must be greater than 0.',
+                'items.*.quantity.required_if' => 'Quantity must be greater than 0.',
                 'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
                 '*.attached_file.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 '*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
+                'discount_percent.min' => 'Discount cannot be negative. Please enter 0 or a positive value.',
+                'discount_percent.max' => 'Discount percentage cannot exceed 100%.',
+                'igst_percent.numeric' => 'IGST % must be a number.',
+                'igst_percent.min' => 'IGST cannot be negative. Please enter 0 or a positive value.',
+                'igst_percent.max' => 'IGST percentage cannot exceed 100%.',
+                'cgst_percent.numeric' => 'CGST % must be a number.',
+                'cgst_percent.min' => 'CGST cannot be negative. Please enter 0 or a positive value.',
+                'cgst_percent.max' => 'CGST percentage cannot exceed 100%.',
+                'sgst_percent.numeric' => 'SGST % must be a number.',
+                'sgst_percent.min' => 'SGST cannot be negative. Please enter 0 or a positive value.',
+                'sgst_percent.max' => 'SGST percentage cannot exceed 100%.',
+                'round_off.min' => 'Round off cannot be negative. Please enter 0 or a positive value.',
+                'round_off.max' => 'Round off amount cannot exceed 99.99.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
             ];
@@ -180,6 +214,41 @@ class DebitNoteController extends Controller
 
             if ($taxableAmountCalculated < 0) {
                 return back()->withInput()->withErrors(['discount_percent' => 'Discount cannot exceed the subtotal amount.']);
+            }
+
+            $itemErrors = [];
+            $hasSelectedItem = false;
+            if ($request->has('items') && is_array($request->items)) {
+                foreach ($request->items as $index => $item) {
+                    if (isset($item['selected']) && $item['selected'] == '1') {
+                        $hasSelectedItem = true;
+                        $qty = floatval($item['quantity'] ?? 0);
+                        if ($qty <= 0) {
+                            $itemErrors["items.$index.quantity"] = "Quantity must be greater than 0.";
+                        }
+
+                        $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'])->sum('qty_rejected');
+
+                        $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id']);
+                        if ($id) {
+                            $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
+                        }
+                        $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
+
+                        $availableQty = $rejectedQty - $alreadyDebited;
+                        if ($qty > $availableQty) {
+                            $itemErrors["items.$index.quantity"] = "Quantity exceeds available rejected quantity ($availableQty).";
+                        }
+                    }
+                }
+            }
+
+            if (!$hasSelectedItem) {
+                $itemErrors['items'] = "Please select at least one item.";
+            }
+
+            if (!empty($itemErrors)) {
+                return back()->withInput()->withErrors($itemErrors);
             }
 
             DB::beginTransaction();
@@ -238,29 +307,6 @@ class DebitNoteController extends Controller
                     addLog('create', 'Debit Note', 'debit_notes', $debitNote->id, null, $debitNoteData);
                 }
 
-                $itemErrors = [];
-                foreach ($request->items as $index => $item) {
-                    if (isset($item['selected']) && $item['selected'] == '1') {
-                        $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'])->sum('qty_rejected');
-
-                        $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id']);
-                        if ($id) {
-                            $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
-                        }
-                        $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
-
-                        $availableQty = $rejectedQty - $alreadyDebited;
-                        if ($item['quantity'] > $availableQty) {
-                            $rawMatName = \App\Models\RawMaterial::find($item['raw_material_id'])->name ?? 'Item';
-                            $itemErrors["items.$index.quantity"] = "Quantity exceeds available rejected quantity ($availableQty).";
-                        }
-                    }
-                }
-
-                if (!empty($itemErrors)) {
-                    DB::rollBack();
-                    return back()->withInput()->withErrors($itemErrors);
-                }
 
                 foreach ($request->items as $item) {
                     if (isset($item['selected']) && $item['selected'] == '1') {
@@ -371,7 +417,8 @@ class DebitNoteController extends Controller
             $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->first();
             $categoryName = $item->rawMaterial->storeCategory->store_category_name ?? '-';
             $artNo = $grnItem->art_no ?? '-';
-            $supplierDesignName = $item->purchaseOrderItem->supplier_design_name ?? '-';
+            $poItem = $item->purchaseOrderItem ?? ($invoice->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $invoice->purchase_order_id)->where('raw_material_id', $item->raw_material_id)->first() : null);
+            $supplierDesignName = $poItem->supplier_design_name ?? '-';
 
             return [
                 'id' => $item->id,

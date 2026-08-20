@@ -320,10 +320,10 @@
                         </div>
                         <div class="card-body p-4">
                             <div class="row g-3 text-break">
-                                <div class="col-12 mt-3">
+                                {{-- <div class="col-12 mt-3">
                                     <div class="text-muted text-uppercase small fw-bold mb-1">Terms & Conditions</div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->terms_conditions ?? '-' }}</p>
-                                </div>
+                                </div> --}}
                                 <div class="col-12 mt-3">
                                     <div class="text-muted text-uppercase small fw-bold mb-1">Internal Remarks</div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->internal_remarks ?? '-' }}</p>
@@ -337,37 +337,39 @@
                                     </div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" id="delayReasonDisplay" style="white-space: pre-line;">{{ $salesOrder->reason_for_delay ?? '-' }}</p>
                                 </div>
-                                @if($salesOrder->attachment)
                                 <div class="col-12 mt-3">
                                     <div class="text-muted text-uppercase small fw-bold mb-2">Attachments</div>
-                                    <div class="d-flex flex-wrap gap-3 mt-1">
-                                        @foreach(explode(',', $salesOrder->attachment) as $file)
-                                            @php
-                                                $ext = pathinfo($file, PATHINFO_EXTENSION);
-                                                $isImg = in_array(strtolower($ext), ['jpg','jpeg','png','webp','gif']);
-                                                $url = url('uploads/so/' . $salesOrder->id . '/' . $file);
-                                            @endphp
-                                            <div class="p-2 border rounded bg-white shadow-sm d-flex align-items-center mb-2">
-                                                @if($isImg)
-                                                    <img src="{{ $url }}" class="rounded cursor-pointer view-image border" data-image="{{ $url }}" width="60" height="60" style="object-fit: cover;" alt="Attachment">
-                                                    <div class="ms-3">
-                                                        <div class="fw-bold text-dark small text-uppercase">Image</div>
-                                                        <div class="text-muted small" style="font-size: 10px;">Click to zoom</div>
-                                                    </div>
-                                                @else
-                                                    <a href="{{ $url }}" target="_blank" class="text-decoration-none d-flex align-items-center">
-                                                        @if(strtolower($ext) == 'pdf')
-                                                            <i class="ri ri-file-pdf-2-line text-danger ri-3x"></i>
-                                                        @else
-                                                            <i class="ri ri-file-text-line text-primary ri-3x"></i>
-                                                        @endif
-                                                    </a>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
+                                    @if($salesOrder->attachment)
+                                        <div class="d-flex flex-wrap gap-3 mt-1">
+                                            @foreach(explode(',', $salesOrder->attachment) as $file)
+                                                @php
+                                                    $ext = pathinfo($file, PATHINFO_EXTENSION);
+                                                    $isImg = in_array(strtolower($ext), ['jpg','jpeg','png','webp','gif']);
+                                                    $url = url('uploads/so/' . $salesOrder->id . '/' . $file);
+                                                @endphp
+                                                <div class="p-2 border rounded bg-white shadow-sm d-flex align-items-center mb-2">
+                                                    @if($isImg)
+                                                        <img src="{{ $url }}" class="rounded cursor-pointer view-image border" data-image="{{ $url }}" width="60" height="60" style="object-fit: cover;" alt="Attachment">
+                                                        <div class="ms-3">
+                                                            <div class="fw-bold text-dark small text-uppercase">Image</div>
+                                                            <div class="text-muted small" style="font-size: 10px;">Click to zoom</div>
+                                                        </div>
+                                                    @else
+                                                        <a href="{{ $url }}" target="_blank" class="text-decoration-none d-flex align-items-center">
+                                                            @if(strtolower($ext) == 'pdf')
+                                                                <i class="ri ri-file-pdf-2-line text-danger ri-3x"></i>
+                                                            @else
+                                                                <i class="ri ri-file-text-line text-primary ri-3x"></i>
+                                                            @endif
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break">-</p>
+                                    @endif
                                 </div>
-                                @endif
                             </div>
                         </div>
                     </div>

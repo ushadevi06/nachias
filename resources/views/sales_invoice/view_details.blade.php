@@ -441,10 +441,22 @@
                                                     <label class="detail-title text-muted">Payment Mode:</label>
                                                     <div class="fw-semibold text-dark">{{ $invoice->payment_mode ?? '-' }}</div>
                                                 </div>
-                                                <div class="d-flex justify-content-between mb-2">
-                                                    <label class="detail-title text-muted">Cheque / UPI Ref:</label>
-                                                    <div class="fw-semibold text-dark">{{ $invoice->extra_input ?? '-' }}</div>
-                                                </div>
+                                                @if(!empty($invoice->payment_mode) && $invoice->payment_mode === 'Bank (Cheque)')
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <label class="detail-title text-muted">Cheque No:</label>
+                                                        <div class="fw-semibold text-dark">{{ $invoice->extra_input ?? '-' }}</div>
+                                                    </div>
+                                                @elseif(!empty($invoice->payment_mode) && $invoice->payment_mode === 'Online (UPI)')
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <label class="detail-title text-muted">UPI No:</label>
+                                                        <div class="fw-semibold text-dark">{{ $invoice->extra_input ?? '-' }}</div>
+                                                    </div>
+                                                @elseif(!empty($invoice->payment_mode) && $invoice->payment_mode !== 'Cash' && !empty($invoice->extra_input))
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <label class="detail-title text-muted">Ref No:</label>
+                                                        <div class="fw-semibold text-dark">{{ $invoice->extra_input ?? '-' }}</div>
+                                                    </div>
+                                                @endif
                                                 <div class="d-flex justify-content-between mb-2">
                                                     <label class="detail-title text-muted">Due Date:</label>
                                                     <div class="fw-semibold text-dark">

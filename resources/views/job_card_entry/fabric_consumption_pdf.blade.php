@@ -113,7 +113,7 @@
         <thead>
             <tr>
                 <th>S.No</th>
-                <th>Size</th>
+                {{-- <th>Size</th> --}}
                 <th>Art No</th>
                 <th>Width</th>
                 <th>Qty Produced</th>
@@ -158,7 +158,7 @@
                 @endphp
                 <tr>
                     <td>{{ $index + 1 }}</td>
-                    <td>{{ $item->size_label ?? '-' }}</td>
+                    {{-- <td>{{ $item->size_label ?? '-' }}</td> --}}
                     <td>{{ $artNo }}</td>
                     <td>{{ $item->width ?? '-' }}</td>
                     <td>{{ number_format($item->produced_qty, 0) }}</td>
@@ -176,7 +176,7 @@
         </tbody>
         <tfoot>
             <tr class="footer-row">
-                <td colspan="4" class="text-end">Total</td>
+                <td colspan="3" class="text-end">Total</td>
                 <td>{{ number_format($jobCard->grand_total_qty, 0) }}</td>
                 <td class="text-end">{{ number_format($totalQtyIssued, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyWastage, 2) }}</td>

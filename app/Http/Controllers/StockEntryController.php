@@ -313,7 +313,7 @@ class StockEntryController extends Controller
                 'items.*.qty_in.required' => 'This field is required.',
                 'items.*.qty_in.min' => 'Quantity must be greater than 0.',
                 'items.*.price.required' => 'This field is required.',
-                'items.*.price.min' => 'Price cannot be negative.',
+                'items.*.price.min' => 'Price must be greater than 0.',
             ];
 
             $rules['reference_document'] = 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048';
@@ -324,7 +324,7 @@ class StockEntryController extends Controller
                     if (isset($item['selected'])) {
                         $hasSelectedItem = true;
                         $rules["items.$index.qty_in"] = 'required|numeric|min:0.01';
-                        $rules["items.$index.price"] = 'required|numeric|min:0';
+                        $rules["items.$index.price"] = 'required|numeric|min:0.01';
                         $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     }
                 }
@@ -475,6 +475,7 @@ class StockEntryController extends Controller
             'stockEntryItems.item',
             'stockEntryItems.style',
             'stockEntryItems.color',
+            'stockEntryItems.brand',
             'productionReceipt.jobCard.fabricType',
             'createdBy',
             'updatedBy'
@@ -666,7 +667,7 @@ class StockEntryController extends Controller
 
         try {
             Excel::import(new RawMaterialStockImport, $request->file('import_file'));
-            return redirect('stock_entries')->with('success', 'Raw Materials Stock imported successfully.');
+            return redirect('stock_entries?tab=raw_materials')->with('success', 'Raw Materials Stock imported successfully.');
         } catch (ValidationException $e) {
             $errorMessages = [];
             foreach ($e->errors() as $messages) {
@@ -676,10 +677,10 @@ class StockEntryController extends Controller
                     $errorMessages[] = $messages;
                 }
             }
-            return redirect('stock_entries')->with('error', implode('<br>', $errorMessages));
+            return redirect('stock_entries?tab=raw_materials')->with('error', implode('<br>', $errorMessages));
         } catch (\Exception $e) {
             LaravelLog::error('Raw material stock import failed', ['exception' => $e]);
-            return redirect('stock_entries')->with('error', $e->getMessage());
+            return redirect('stock_entries?tab=raw_materials')->with('error', $e->getMessage());
         }
     }
     public function importFinishedGoods(Request $request)
@@ -695,9 +696,9 @@ class StockEntryController extends Controller
         try {
             set_time_limit(0); // Prevent timeout for large imports
             Excel::import(new FinishedGoodsStockImport, $request->file('import_file'));
-            return redirect('stock_entries')->with('success', 'Finished Goods Stock imported successfully.');
+            return redirect('stock_entries?tab=finished_goods')->with('success', 'Finished Goods Stock imported successfully.');
         } catch (\Exception $e) {
-            return redirect('stock_entries')->with('error', $e->getMessage());
+            return redirect('stock_entries?tab=finished_goods')->with('error', $e->getMessage());
         }
     }
 

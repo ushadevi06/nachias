@@ -25,6 +25,7 @@
                     <select id="labelFormat" class="form-select">
                         <option value="tag" {{ (request('format') ?? 'tag') === 'tag' ? 'selected' : '' }}>Price Tag (45 x 85 mm)</option>
                         <option value="sticker" {{ request('format') === 'sticker' ? 'selected' : '' }}>Price Sticker (50 x 70 mm)</option>
+                        <option value="square" {{ request('format') === 'square' ? 'selected' : '' }}>Square Sticker (45 x 45 mm)</option>
                     </select>
                 </div>
             </div>
@@ -251,6 +252,10 @@
                 orientation = 'landscape';
                 w = 70; 
                 h = 50; 
+            } else if (format === 'square') {
+                orientation = 'portrait';
+                w = 45; 
+                h = 45; 
             }
 
             const margin = 0; 
@@ -263,7 +268,7 @@
 
             let baseUrl = format === 'tag' 
                 ? `{{ route('job_card_entries.print_label_tag', $labelData['id']) }}` 
-                : `{{ route('job_card_entries.print_label_sticker', $labelData['id']) }}`;
+                : (format === 'square' ? `{{ route('job_card_entries.print_label_square', $labelData['id']) }}` : `{{ route('job_card_entries.print_label_sticker', $labelData['id']) }}`);
 
             const printUrl = baseUrl + `?` + 
                 `size={{ urlencode($labelData['size']) }}&` +

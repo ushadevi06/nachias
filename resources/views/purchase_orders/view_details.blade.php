@@ -38,6 +38,10 @@
                             <div class="fw-bold text-primary">{{ $purchaseOrder->po_number }}</div>
                         </div>
                         <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">PO Date</div>
+                            <div class="fw-bold text-dark">{{ $purchaseOrder->po_date->format('d M, Y') }}</div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
                             <div class="fw-bold text-dark">
                                 {{ $purchaseOrder->supplier->name ?? 'N/A' }}
@@ -45,10 +49,6 @@
                                 <span class="text-primary small">({{ $purchaseOrder->supplier->code }})</span>
                                 @endif
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">PO Date</div>
-                            <div class="fw-bold text-dark">{{ $purchaseOrder->po_date->format('d M, Y') }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Due Date</div>
@@ -70,7 +70,7 @@
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Agent</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Commission Agent</div>
                             <div class="fw-bold text-dark">
                                 {{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}
                                 @if($purchaseOrder->purchaseCommissionAgent && $purchaseOrder->purchaseCommissionAgent->code)
@@ -287,13 +287,6 @@
                                 <span class="fw-bold text-danger">-
                                     ₹{{ number_format($purchaseOrder->discount_amount, 2) }}</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">Taxable Amount</span>
-                                <span
-                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount, 2) }}</span>
-                            </div>
-                            @endif
-                            
                             @if($purchaseOrder->commission > 0)
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small uppercase">Commission Amount
@@ -302,6 +295,13 @@
                                     ₹{{ number_format((($purchaseOrder->sub_total * $purchaseOrder->commission) / 100), 2) }}</span>
                             </div>
                             @endif
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Taxable Amount</span>
+                                <span
+                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount, 2) }}</span>
+                            </div>
+                            @endif
+                            
                             @if($purchaseOrder->other_state)
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small">IGST

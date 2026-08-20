@@ -96,7 +96,7 @@
                                     <div class="input-group">
                                         <div class="form-floating form-floating-outline" style="position: relative;">
                                             <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off" {{ $hasTasks ? 'readonly' : '' }}>
-                                            <label for="stock_entry_search">Type Stock Entry No or Material Name</label>
+                                            <label for="stock_entry_search">Type Stock Entry No or Material Name *</label>
                                         </div>
                                     </div>
                                     <div id="stock-entry-tags" class="mt-2 d-flex flex-wrap gap-1"></div>
@@ -417,7 +417,7 @@
                                             </div>
                                         @endif
                                         <label for="formFile" class="form-label">Reference Document</label>
-                                        <small class="text-muted d-block mt-1">Max file size: 5MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX, XLS, XLSX, CSV</small>
+                                        <small class="text-muted d-block mt-1">Max file size: 5MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX, XLS, XLSX</small>
                                         @error('attachment') <span class="text-danger">{{ $message }}</span> @enderror
                                     </div>
                                 </div>
@@ -596,7 +596,7 @@
                                                         @error('production_stages.' . $index . '.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
-                                                        <input type="number" name="production_stages[{{ $index }}][rate]" class="form-control stage-rate" value="{{ $stage['rate'] ?? '' }}" step="0.01" placeholder="0.00">
+                                                        <input type="number" name="production_stages[{{ $index }}][rate]" class="form-control stage-rate bg-light" value="{{ $stage['rate'] ?? '' }}" step="0.01" min="0" placeholder="0.00" readonly tabindex="-1">
                                                         @error('production_stages.' . $index . '.rate') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
@@ -664,7 +664,7 @@
                                                     @error('production_stages.0.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="production_stages[0][rate]" class="form-control stage-rate" value="" step="0.01" placeholder="0.00">
+                                                    <input type="number" name="production_stages[0][rate]" class="form-control stage-rate bg-light" value="" step="0.01" min="0" placeholder="0.00" readonly tabindex="-1">
                                                     @error('production_stages.0.rate') <span class="text-danger small">{{ $message }}</span> @enderror
                                                 </td>
                                                 <td>
@@ -1105,6 +1105,34 @@
 
 <script>
     $(document).ready(function() {
+        $(document).on('keydown keypress', 'input[type="number"], .stage-rate, .qty-input, .mtr-input, .lay-mark-table input[type="number"], .qty-direct-input, #cutting-size-table input, #article-qty-matrix input, #production-stages-table input', function(e) {
+            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
+                e.preventDefault();
+                return false;
+            }
+            if (e.which === 40 || e.key === 'ArrowDown') {
+                var val = parseFloat($(this).val()) || 0;
+                if (val <= 0) {
+                    $(this).val(0);
+                    $(this).trigger('change');
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+
+        $(document).on('input paste', 'input[type="number"], .stage-rate, .qty-input, .mtr-input, .lay-mark-table input[type="number"], .qty-direct-input, #cutting-size-table input, #article-qty-matrix input, #production-stages-table input:not(.issue-date):not(.deadline-date)', function() {
+            var el = this;
+            setTimeout(function() {
+                var val = $(el).val();
+                if (val !== '' && (parseFloat(val) < 0 || String(val).indexOf('-') !== -1 || String(val).indexOf('+') !== -1)) {
+                    var cleaned = String(val).replace(/[-+]/g, '');
+                    $(el).val(cleaned ? (parseFloat(cleaned) >= 0 ? cleaned : '0') : '0');
+                    $(el).trigger('change');
+                }
+            }, 0);
+        });
+
         const rawOldMatrix = @json(array_values(old('article_matrix', [])));
         const oldMatrix = rawOldMatrix;
         const rawExistingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails->values() : []);
@@ -2103,7 +2131,7 @@
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
                     }
-                    rowHtml += `<td><input type="number" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" data-art="${art}" value="${fsVal}" ${readonlyAttr} placeholder="0"></td>`;
+                    rowHtml += `<td><input type="number" min="0" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" data-art="${art}" value="${fsVal}" ${readonlyAttr} placeholder="0"></td>`;
                 });
 
                 activeHsSizes.forEach(s => {
@@ -2117,7 +2145,7 @@
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
                     }
-                    rowHtml += `<td><input type="number" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" data-art="${art}" value="${hsVal}" ${readonlyAttr} placeholder="0"></td>`;
+                    rowHtml += `<td><input type="number" min="0" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" data-art="${art}" value="${hsVal}" ${readonlyAttr} placeholder="0"></td>`;
 ;
                 });
 
@@ -3089,7 +3117,7 @@
                     }
 
                     vRow += `<td>
-                        <input type="number" class="form-control form-control-sm text-center fw-bold qty-direct-input dummy-input-${type}-summary-${s}" data-type="${type}" data-size="${s}" data-instance="${instanceId}" value="${finalVal}" placeholder="-">
+                        <input type="number" min="0" class="form-control form-control-sm text-center fw-bold qty-direct-input dummy-input-${type}-summary-${s}" data-type="${type}" data-size="${s}" data-instance="${instanceId}" value="${finalVal}" placeholder="-">
                     </td>`;
                 });
 
@@ -3178,12 +3206,17 @@
                 scrollTop: $el.offset().top - 150
             }, 500);
         }
-
+        
         $(document).on('input', '.qty-direct-input', function() {
+            var raw = $(this).val();
+            if (raw !== '' && (parseFloat(raw) < 0 || String(raw).indexOf('-') !== -1)) {
+                $(this).val(0);
+            }
             if (isSyncing) return;
             updateSleeveJson();
             syncMatrixWithMasterTable(true);
         });
+        
 
         function syncMatrixWithMasterTable(populateValues = true, reRenderFabric = true, targetType = null, targetSize = null) {
             if (isSyncing) return { fs: [], hs: [] };
@@ -3540,7 +3573,7 @@
                     </select>
                 </td>
                 <td>
-                    <input type="number" name="production_stages[${stageRowIndex}][rate]" class="form-control stage-rate" value="" step="0.01" placeholder="0.00">
+                    <input type="number" name="production_stages[${stageRowIndex}][rate]" class="form-control stage-rate bg-light" value="" step="0.01" min="0" placeholder="0.00" readonly tabindex="-1">
                 </td>
                 <td>
                     <input type="text" name="production_stages[${stageRowIndex}][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
@@ -3894,7 +3927,7 @@
         }
         
         $('#purchase_order_id, #brand_id, #service_provider_id, #fit_id, #patti_type_id, #collar_type_id, #cuff_type_id, #pocket_type_id, #bottom_cut_id, #season_id').on('change', function() {
-            debouncedUpdateItemName();
+            // debouncedUpdateItemName();
         });
 
         $(document).on('change', '#width', function() {
@@ -3902,9 +3935,30 @@
             $('.width-input').val(commonWidth).trigger('change');
         });
 
-        debouncedUpdateItemName();applyCanvasLogic();
+        // debouncedUpdateItemName();
+        applyCanvasLogic();
         
         setTimeout(applyCanvasLogic, 500);
+        $(document).on('keypress', '.stage-rate, #production-stages-table input[type="number"], .qty-input, .mtr-input, .lay-mark-table input[type="number"]', function (e) {
+            if (e.which === 45 || e.which === 43) {
+                e.preventDefault();
+            }
+        });
+        $(document).on('input paste keyup change', '.stage-rate, #production-stages-table input[type="number"], .qty-input, .mtr-input, .lay-mark-table input[type="number"]', function () {
+            var val = $(this).val();
+            if (val !== '' && (parseFloat(val) < 0 || String(val).indexOf('-') !== -1)) {
+                $(this).val(0);
+            }
+        });
+        $(document).on('keydown', '.stage-rate, #production-stages-table input[type="number"], .qty-input, .mtr-input, .lay-mark-table input[type="number"]', function (e) {
+            if (e.which === 40) { 
+                var val = parseFloat($(this).val()) || 0;
+                if (val <= 0) {
+                    $(this).val(0);
+                    e.preventDefault();
+                }
+            }
+        });
 
         @if(isset($isRestrictedEdit) && $isRestrictedEdit)
 

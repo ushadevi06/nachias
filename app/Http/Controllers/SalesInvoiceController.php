@@ -332,6 +332,11 @@ class SalesInvoiceController extends Controller
                 'attachment_file' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
                 'tran_doc_date' => 'nullable|date_format:d-m-Y',
                 'due_date' => 'nullable|date_format:d-m-Y',
+                'transporter_id' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
+                'vehicle_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
+                'tran_doc_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
+                'lr_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
+                'tran_doc_date' => 'nullable|date_format:d-m-Y',
             ], [
                 '*.required'      => 'This field is required.',
                 '*.unique'        => 'This field already exists.',

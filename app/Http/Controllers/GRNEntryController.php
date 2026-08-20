@@ -40,6 +40,9 @@ class GrnEntryController extends Controller
                 $search = $request->input('search')['value'];
                 $query->where(function ($q) use ($search) {
                     $q->where('grn_number', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%")
+                        ->orWhereRaw("DATE_FORMAT(grn_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                        ->orWhereRaw("DATE_FORMAT(supplier_invoice_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                         ->orWhereHas('purchaseInvoice', function ($q2) use ($search) {
                             $q2->where('invoice_no', 'like', "%{$search}%")
                                ->orWhere('po_reference', 'like', "%{$search}%")
@@ -50,6 +53,9 @@ class GrnEntryController extends Controller
                         ->orWhereHas('supplier', function ($q4) use ($search) {
                             $q4->where('name', 'like', "%{$search}%")
                                ->orWhere('code', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('grnEntryItems', function ($q5) use ($search) {
+                            $q5->where('quality_check_status', 'like', "%{$search}%");
                         });
                 });
             }
@@ -122,7 +128,7 @@ class GrnEntryController extends Controller
                 'data' => $data
             ]);
         }
-        $suppliers = \App\Models\Supplier::where('status', 'Active')->orderBy('name')->get();
+        $suppliers = \App\Models\Supplier::where('status', 'Active')->orderBy('id','desc')->get();
         return view('grn_entry.view', compact('suppliers'));
     }
 

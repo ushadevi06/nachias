@@ -904,7 +904,7 @@ $totalChunks = count($pages);
                                             @endif
                                         @endif
                                         @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Other Charges</td></tr>
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Courier Charge</td></tr>
                                         @endif
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Round Off</td></tr>
                                     </table>

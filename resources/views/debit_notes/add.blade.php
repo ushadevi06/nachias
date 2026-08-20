@@ -15,7 +15,7 @@
                         <div class="row g-4">
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" id="debit_note_no" name="debit_note_no" class="form-control" placeholder="Enter Debit Note No" value="{{ old('debit_note_no', $debitNote->debit_note_no ?? $nextDebitNoteNo) }}" {{ isset($debitNote) ? 'readonly' : '' }}>
+                                    <input type="text" id="debit_note_no" name="debit_note_no" class="form-control" placeholder="Enter Debit Note No" value="{{ old('debit_note_no', $debitNote->debit_note_no ?? $nextDebitNoteNo) }}" readonly>
                                     <label for="debit_note_no">Debit Note No <span class="text-danger">*</span></label>
                                 </div>
                                 @error('debit_note_no') <div class="text-danger">{{ $message }}</div> @enderror
@@ -59,7 +59,7 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="status" name="status" class="form-select">
+                                    <select id="status" name="status" class="form-select select2">
                                         <option value="Draft" {{ (old('status', $debitNote->status ?? 'Draft') == 'Draft') ? 'selected' : '' }} {{ (isset($debitNote) && $debitNote->status != 'Draft') ? 'disabled' : '' }}>Draft</option>
                                         <option value="Approved" {{ (old('status', $debitNote->status ?? '') == 'Approved') ? 'selected' : '' }}>Approved</option>
                                         <option value="Cancelled" {{ (old('status', $debitNote->status ?? '') == 'Cancelled') ? 'selected' : '' }}>Cancelled</option>
@@ -103,9 +103,10 @@
                                                   })->sum('quantity');
                                              $maxQty = $rejectedQty - $alreadyDebited;
 
-                                             $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['rawMaterial.storeCategory', 'purchaseOrderItem'])->find($invItemId);
+                                             $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['rawMaterial.storeCategory', 'purchaseOrderItem', 'purchaseInvoice'])->find($invItemId);
                                              $categoryName = $dbInvItem->rawMaterial->storeCategory->store_category_name ?? '-';
-                                             $supplierDesignName = $dbInvItem->purchaseOrderItem->supplier_design_name ?? '-';
+                                             $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                                             $supplierDesignName = $poItem->supplier_design_name ?? '-';
                                              $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->first();
                                              $artNo = $grnItem->art_no ?? '-';
                                             @endphp
@@ -129,9 +130,9 @@
                                                      {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
                                                  </td>
                                                  <td>
-                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item['quantity'] ?? 0 }}" step="0.01" data-max="{{ $maxQty }}">
-                                                     @error("items.$index.quantity")
-                                                         <div class="text-danger small mt-1">{{ $message }}</div>
+                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item['quantity'] ?? 0 }}" step="0.01" data-max="{{ $maxQty }}">
+                                                     @error('items.'.$index.'.quantity')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
                                                      @enderror
                                                      <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
                                                  </td>
@@ -151,8 +152,9 @@
                                                  $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
                                                  $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
                                                  $maxQty = $rejectedQty - $alreadyDebited;
-                                                 $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem'])->find($item->purchase_invoice_item_id);
-                                                 $supplierDesignName = $dbInvItem->purchaseOrderItem->supplier_design_name ?? '-';
+                                                 $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
+                                                 $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                                                 $supplierDesignName = $poItem->supplier_design_name ?? '-';
                                                  $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
                                                  $artNo = $grnItem->art_no ?? '-';
                                              @endphp
@@ -176,8 +178,8 @@
                                                      {{ $item->uom->uom_code ?? '-' }}
                                                  </td>
                                                  <td>
-                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item->quantity }}" step="0.01" data-max="{{ $maxQty }}">
-                                                     @error("items.$index.quantity")
+                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item->quantity }}" step="0.01" data-max="{{ $maxQty }}">
+                                                     @error('items.'.$index.'.quantity')
                                                          <div class="text-danger small mt-1">{{ $message }}</div>
                                                      @enderror
                                                      <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
@@ -248,10 +250,10 @@
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>Charge Name</th>
-                                        <th>Tax Type</th>
-                                        <th>Amount</th>
-                                        <th width="80px">Action</th>
+                                        <th>CHARGE NAME</th>
+                                        <th>TAX TYPE</th>
+                                        <th>AMOUNT</th>
+                                        <th>ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody id="added_charges_list">
@@ -303,9 +305,9 @@
                                                 {{ number_format($chargeAmount, 2) }}
                                                 <input type="hidden" name="charges[amount][]" value="{{ $chargeAmount }}">
                                             </td>
-                                            <td>
+                                            <td class="d-flex align-items-center">
                                                 <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
-                                                    <i class="ri ri-edit-line"></i>
+                                                    <i class="ri ri-pencil-line"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
                                                     <i class="ri ri-delete-bin-line"></i>
@@ -413,7 +415,7 @@
                                     <label class="text-muted">Discount:</label>
                                     <div class="text-end">
                                         <div class="d-flex gap-2 align-items-center justify-content-end">
-                                            <input type="number" name="discount_percent" id="discount_percent" value="{{ $discPercent }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01" min="0" max="100">
+                                            <input type="number" name="discount_percent" id="discount_percent" value="{{ $discPercent }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01" min="0">
                                             <span class="small">%</span>
                                             <input type="hidden" id="discount_amount" name="discount_amount" value="{{ $discAmt }}">
                                             <strong id="discount_amt_display" class="ms-2">₹{{ number_format($discAmt, 2) }}</strong>
@@ -430,14 +432,21 @@
                                         <span id="taxable_amount_display" class="fw-bold">₹{{ number_format($taxableAmt, 2) }}</span>
                                     </div>
                                 </div>
+                                <div id="negative_net_warning" class="alert alert-warning text-dark py-1 px-2 mb-1 mt-1 d-none" style="font-size: 12px;">
+                                    <i class="ri ri-error-warning-line me-1"></i>
+                                    <span id="negative_net_warning_text"></span>
+                                </div>
 
                                 <div id="igst_div" style="display: none;">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="text-muted">IGST:</label>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', ($debitNote && $debitNote->igst_percent > 0) ? $debitNote->igst_percent : ($debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
-                                            <span class="small">%</span>
-                                            <strong id="igst_amt" class="ms-2">₹0.00</strong>
+                                        <div class="text-end">
+                                            <div class="d-flex gap-2 align-items-center justify-content-end">
+                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', ($debitNote && $debitNote->igst_percent > 0) ? $debitNote->igst_percent : ($debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
+                                                <span class="small">%</span>
+                                                <strong id="igst_amt" class="ms-2">₹0.00</strong>
+                                            </div>
+                                            @error('igst_percent') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
                                 </div>
@@ -445,18 +454,24 @@
                                 <div id="cgst_sgst_div" style="display: none;">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="text-muted">CGST:</label>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', ($debitNote && $debitNote->cgst_percent > 0) ? $debitNote->cgst_percent : ($debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
-                                            <span class="small">%</span>
-                                            <strong id="cgst_amt" class="ms-2">₹0.00</strong>
+                                        <div class="text-end">
+                                            <div class="d-flex gap-2 align-items-center justify-content-end">
+                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', ($debitNote && $debitNote->cgst_percent > 0) ? $debitNote->cgst_percent : ($debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
+                                                <span class="small">%</span>
+                                                <strong id="cgst_amt" class="ms-2">₹0.00</strong>
+                                            </div>
+                                            @error('cgst_percent') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="text-muted">SGST:</label>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', ($debitNote && $debitNote->sgst_percent > 0) ? $debitNote->sgst_percent : ($debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
-                                            <span class="small">%</span>
-                                            <strong id="sgst_amt" class="ms-2">₹0.00</strong>
+                                        <div class="text-end">
+                                            <div class="d-flex gap-2 align-items-center justify-content-end">
+                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', ($debitNote && $debitNote->sgst_percent > 0) ? $debitNote->sgst_percent : ($debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
+                                                <span class="small">%</span>
+                                                <strong id="sgst_amt" class="ms-2">₹0.00</strong>
+                                            </div>
+                                            @error('sgst_percent') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
                                 </div>
@@ -479,16 +494,19 @@
 
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <label class="text-muted">Round Off:</label>
-                                    <div class="d-flex align-items-center">
-                                        <div class="form-check form-check-inline me-2 m-0 mt-1">
-                                            <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $debitNote->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
-                                            <label class="form-check-label small" for="round_off_add">Add</label>
+                                    <div class="text-end">
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <div class="form-check form-check-inline me-2 m-0 mt-1">
+                                                <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $debitNote->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
+                                                <label class="form-check-label small" for="round_off_add">Add</label>
+                                            </div>
+                                            <div class="form-check form-check-inline me-2 m-0 mt-1">
+                                                <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $debitNote->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
+                                                <label class="form-check-label small" for="round_off_less">Less</label>
+                                            </div>
+                                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $debitNote->round_off ?? '0.00') }}" autocomplete="off">
                                         </div>
-                                        <div class="form-check form-check-inline me-2 m-0 mt-1">
-                                            <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $debitNote->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
-                                            <label class="form-check-label small" for="round_off_less">Less</label>
-                                        </div>
-                                        <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $debitNote->round_off ?? '0.00') }}" autocomplete="off">
+                                        @error('round_off') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
 
@@ -564,9 +582,9 @@
                         ${chargeAmount.toFixed(2)}
                         <input type="hidden" name="charges[amount][]" value="${chargeAmount.toFixed(2)}">
                     </td>
-                    <td>
+                    <td class="d-flex align-items-center">
                         <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
-                            <i class="ri ri-edit-line"></i>
+                            <i class="ri ri-pencil-line"></i>
                         </button>
                         <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
                             <i class="ri ri-delete-bin-line"></i>
@@ -580,6 +598,7 @@
 
             $('#charges_select').val('').trigger('change');
             $('#charge_amount').val('');
+            $('#charge_tax_type').val('Pre-GST').trigger('change');
 
             calculateTotals();
             refreshChargeDropdownState();
@@ -595,8 +614,16 @@
         });
 
         $(document).on('click', '.edit-charge', function () {
+            let currentChargeId = $('#charges_select').val();
+            if (currentChargeId) {
+                $('#add_charge_btn').click();
+                if ($('#charges_select').val()) {
+                    return;
+                }
+            }
+
             let $row = $(this).closest('tr');
-            let chargeId = $row.data('charge-id');
+            let chargeId = $row.data('charge-id') || $row.attr('data-charge-id');
             let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
             let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Post-GST';
 
@@ -748,28 +775,27 @@
                 $('#pre_gst_charges_div').hide();
             }
 
-            let discountPercent = parseFloat($('#discount_percent').val()) || 0;
-            let discountError = $('.discount-error-msg');
-            
-            if (discountPercent < 0 || discountPercent > 100) {
-                discountError.text("Discount percentage must be between 0% and 100%.").show();
-                $('#discount_percent').addClass('is-invalid');
-            } else {
-                discountError.hide();
-                $('#discount_percent').removeClass('is-invalid');
-            }
 
+            let discountPercent = parseFloat($('#discount_percent').val()) || 0;
             let discountAmount = (subTotal + preGstTotal) * (discountPercent / 100);
             $('#discount_amount').val(discountAmount.toFixed(2));
             $('#discount_amt_display').text('₹' + discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
             let taxableAmount = (subTotal + preGstTotal) - discountAmount;
+
+            updateNegativeWarning(taxableAmount, subTotal, discountAmount);
+
             if (taxableAmount < 0) {
-                discountError.text("Discount cannot exceed the subtotal amount.").show();
-                $('#discount_percent').addClass('is-invalid');
+                taxableAmount = 0;
             }
+
             $('#taxable_amount').val(taxableAmount.toFixed(2));
             $('#taxable_amount_display').text('₹' + taxableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            if (taxableAmount <= 0 && subTotal > 0 && discountAmount > 0) {
+                $('#taxable_amount_display').addClass('text-danger');
+            } else {
+                $('#taxable_amount_display').removeClass('text-danger');
+            }
 
             $('#post_gst_total').val(postGstTotal.toFixed(2));
             $('#post_gst_total_display').text('₹' + postGstTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -821,10 +847,31 @@
             $('#grand_total_display').text('₹' + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         }
 
+        function updateNegativeWarning(taxableAmount, subTotal, discountAmount) {
+            if (taxableAmount <= 0 && subTotal > 0 && discountAmount > 0) {
+                let reasons = [];
+                if (discountAmount > 0) {
+                    reasons.push('Discount (₹' + discountAmount.toFixed(2) + ')');
+                }
+                let warningText = '';
+                if (taxableAmount < 0) {
+                    warningText = 'Taxable Total is negative (₹' + taxableAmount.toFixed(2) + '). ' + reasons.join(' + ') + ' exceeds Sub Total + Pre-GST Charges. Showing 0.00.';
+                } else {
+                    warningText = 'Taxable Total is 0.00. ' + reasons.join(' + ') + ' equals Sub Total + Pre-GST Charges. Tax and Grand Total will be 0.00.';
+                }
+                $('#negative_net_warning_text').text(warningText);
+                $('#negative_net_warning').removeClass('d-none');
+                $('button[type="submit"]').prop('disabled', true);
+            } else {
+                $('#negative_net_warning').addClass('d-none');
+                $('button[type="submit"]').prop('disabled', false);
+            }
+        }
+
         function refreshChargeDropdownState() {
             let selectedChargeIds = [];
             $('#added_charges_list tr').each(function () {
-                let id = $(this).data('charge-id');
+                let id = $(this).attr('data-charge-id') || $(this).data('charge-id') || $(this).find('input[name="charges[charge_id][]"]').val();
                 if (id) selectedChargeIds.push(id.toString());
             });
 
@@ -832,14 +879,17 @@
                 let optionId = $(this).val();
                 if (optionId) {
                     if (selectedChargeIds.includes(optionId.toString())) {
-                        $(this).prop('disabled', true);
+                        $(this).attr('disabled', 'disabled').prop('disabled', true);
                     } else {
-                        $(this).prop('disabled', false);
+                        $(this).removeAttr('disabled').prop('disabled', false);
                     }
                 }
             });
 
-            $('#charges_select').select2('destroy').select2({
+            if ($('#charges_select').hasClass('select2-hidden-accessible')) {
+                $('#charges_select').select2('destroy');
+            }
+            $('#charges_select').select2({
                 dropdownParent: $('#charges_select').closest('.card-body').length ? $('#charges_select').closest('.card-body') : $('body')
             });
         }
@@ -853,59 +903,39 @@
             $('#other_state_no').prop('checked', true);
         }
         $(document).on('input', '.item-qty', function () {
-            let qty = parseFloat($(this).val()) || 0;
-            let max = parseFloat($(this).attr('data-max')) || 0;
-            let errorMsg = $(this).closest('td').find('.qty-error-msg');
-            let parentRow = $(this).closest('tr');
-
-            if (qty > max) {
-                errorMsg.text('Quantity exceeds available rejected quantity (' + max + ')').show();
-                $(this).addClass('is-invalid');
-            } else {
-                errorMsg.hide();
-                $(this).removeClass('is-invalid');
-            }
             calculateTotals();
         });
 
         $(document).on('submit', '#debit_note_form', function (e) {
-            let discountPercent = parseFloat($('#discount_percent').val()) || 0;
-            let subTotal = parseFloat($('#sub_total').val()) || 0;
-            let preGstTotal = parseFloat($('#pre_gst_total').val()) || 0;
-            let discountAmount = (subTotal + preGstTotal) * (discountPercent / 100);
-            let taxableAmount = (subTotal + preGstTotal) - discountAmount;
+            let $form = $(this);
+            let resetBtn = function () {
+                $form.data('submitted', false);
+                let $btn = $form.find('button[type="submit"]');
+                $btn.prop('disabled', false).html('Submit');
+            };
 
-            if (discountPercent < 0 || discountPercent > 100) {
+            if ($('.item-checkbox:checked').length === 0) {
                 e.preventDefault();
+                resetBtn();
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Validation Error',
-                        text: 'Discount percentage must be between 0% and 100%.',
+                        text: 'Please select at least one item.',
                         confirmButtonColor: '#8c57ff'
                     });
                 } else {
-                    alert('Discount percentage must be between 0% and 100%.');
+                    alert('Please select at least one item.');
                 }
                 return false;
             }
 
-            if (taxableAmount < 0) {
+        });
+        $(document).on('keypress', '.item-qty, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent', function (e) {
+            if (e.which === 45 || e.which === 43) {
                 e.preventDefault();
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Validation Error',
-                        text: 'Discount cannot exceed the subtotal amount.',
-                        confirmButtonColor: '#8c57ff'
-                    });
-                } else {
-                    alert('Discount cannot exceed the subtotal amount.');
-                }
-                return false;
             }
         });
-
         toggleTaxDivs();
     });
 </script>

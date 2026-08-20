@@ -217,8 +217,8 @@ class RawMaterialController extends Controller
             return redirect('raw_materials')->with('success', $message);
         }
 
-        $storeCategories = StoreCategory::where('status', 'Active')->get();
-        $uoms = Uom::where('status', 'Active')->get();
+        $storeCategories = StoreCategory::where('status', 'Active')->orderBy('id','desc')->get();
+        $uoms = Uom::where('status', 'Active')->orderBy('id','desc')->get();
         
         $artNos = \App\Models\GrnEntryItem::whereNotNull('art_no')->where('art_no', '!=', '')->distinct()->orderBy('art_no', 'asc')->pluck('art_no');
             

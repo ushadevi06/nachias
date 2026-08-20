@@ -288,7 +288,7 @@
                                     {{-- Row 5 --}}
                                     <tr>
                                         <td class="fw-bold p-3" style="font-size: 0.9rem;">WIDTH</td>
-                                        <td class="p-3">{{ $jobCard->width ?: '-' }}</td>
+                                        <td class="p-3">{{ $jobCard->fabricSize->width ?? ($jobCard->width ?: '-') }}</td>
                                         <td class="fw-bold p-3 text-center">SIZE</td>
                                         <td colspan="3" class="p-0">
                                             <table class="table mb-0 job-card-table">
@@ -681,7 +681,7 @@
                                     <tr class="text-center">
                                         <td class="fw-bold bg-light">WIDTH</td>
                                         @foreach($chunk as $detail)
-                                            <td>{{ $detail->width ?: '-' }}</td>
+                                            <td>{{ $detail->fabricSize->width ?? ($detail->width ?: '-') }}</td>
                                         @endforeach
                                         @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>

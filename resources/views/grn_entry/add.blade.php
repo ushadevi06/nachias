@@ -58,7 +58,7 @@
                                         </div>
                                         <div class="col-md-6 col-xl-4">
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="supplier_invoice_date" id="sup_inv_date" autocomplete="off" class="form-control sup_inv_date @error('supplier_invoice_date') is-invalid @enderror" value="{{ old('supplier_invoice_date', $grn ? $grn->supplier_invoice_date->format('d-m-Y') : '') }}" />
+                                                <input type="text" name="supplier_invoice_date" id="sup_inv_date" autocomplete="off" class="form-control @error('supplier_invoice_date') is-invalid @enderror" value="{{ old('supplier_invoice_date', $grn ? $grn->supplier_invoice_date->format('d-m-Y') : '') }}" readonly />
                                                 <label>Supplier Invoice Date * </label>
                                             </div>
                                             @error('supplier_invoice_date')
@@ -236,7 +236,7 @@
                                                                     </div>
                                                                     <div class="field-group">
                                                                         <label>Received *:</label>
-                                                                        <input type="number" step="0.01" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error('items.' . $idx . '.qty_received') is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
+                                                                        <input type="number" step="0.01" min="0" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error('items.' . $idx . '.qty_received') is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
                                                                         <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
                                                                         @error("items.$idx.qty_received") <div class="text-danger small">{{ $message }}</div> @enderror
                                                                     </div>
@@ -447,6 +447,7 @@
                     }
                 });
 
+
                 if (storeCategoryId != 1) {
                     let currentArtNo = originalRow.find('.art-no-input').val();
                     let baseArtNo = currentArtNo.replace(/-[0-9]+$/, '');
@@ -461,8 +462,30 @@
                     });
                     newRow.find('.art-no-input').val(baseArtNo + '-' + (maxSuffix + 1));
                 }
-
+                if (storeCategoryId == 2) {
+                    let currentArtNo = originalRow.find('.art-no-input').val();
+                    if (currentArtNo) {
+                        let baseArtNo = currentArtNo.replace(/-[0-9]+$/, '');
+                        let maxSuffix = 0;
+                        groupRows.forEach(row => {
+                            let rowArtNo = row.find('.art-no-input').val();
+                            if (rowArtNo) {
+                                let match = rowArtNo.match(/-([0-9]+)$/);
+                                if (match) {
+                                    let suffix = parseInt(match[1]);
+                                    if (suffix > maxSuffix) maxSuffix = suffix;
+                                }
+                            }
+                        });
+                        newRow.find('.art-no-input').val(baseArtNo + '-' + (maxSuffix + 1));
+                    } else {
+                        newRow.find('.art-no-input').val('');
+                    }
+                } else {
+                    newRow.find('.art-no-input').val('');
+                }
                 newRow.insertAfter(lastRowInGroup);
+
                 initSelect2();
                 newRow.find('.fabric-type-cell select').val(selectedFabricTypeId).trigger('change.select2');
                 updateGroupBalances(piId);
@@ -565,7 +588,7 @@
                                         </div>
                                         <div class="field-group">
                                             <label>Received *:</label>
-                                            <input type="number" step="0.01" name="items[${idx}][qty_received]" value="0" class="qty-received form-control">
+                                            <input type="number" step="0.01" min="0" name="items[${idx}][qty_received]" value="0" class="qty-received form-control">
                                             <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
                                         </div>
                                         </div>
@@ -740,6 +763,12 @@
                 updateRowCalculations(row);
                 $('#variantModal').modal('hide');
             });
+            $(document).on('keypress', '.qty-received, .qty-accepted, .qty-rejected', function (e) {
+                if (e.which === 45 || e.which === 43) {
+                    e.preventDefault();
+                }
+            });
+
 
             $(document).on('input', '.qty-received, .qty-accepted, .qty-rejected, .rate-input', function() {
                 let row = $(this).closest('.item-row');
@@ -838,7 +867,7 @@
                 row.find('.row-selected-input').val(isChecked ? 1 : 0);
                 row.find('.qty-received').prop('readonly', !isChecked || row.find('.variants-data-container input').length > 0);
                 row.find('.qty-accepted').prop('readonly', !isChecked);
-                row.find('select').prop('disabled', !isChecked);
+                row.find('.status-cell select').prop('disabled', !isChecked);
                 row.find('input[type="file"]').prop('disabled', !isChecked);
                 let received = parseFloat(row.find('.qty-received').val()) || 0;
                 row.find('.btn-variants').prop('disabled', !isChecked || received <= 0);
@@ -849,7 +878,7 @@
                     row.find('.qty-rejected').val(0);
                     row.find('.qty-balanced').val((parseFloat(row.find('.qty-ordered').val()) - parseFloat(row.find('.qty-already-received').val())).toFixed(2));
                     row.find('.amount-input').val(0);
-                    row.find('select').val('').trigger('change').prop('disabled', true);
+                    row.find('.status-cell select').val('').trigger('change');
                     row.find('input[type="file"]').val('').prop('disabled', true);
                     row.find('.variants-data-container').empty();
                     row.find('.btn-variants').prop('disabled', true);
@@ -865,7 +894,7 @@
                 let isChecked = $(this).is(':checked');
                 row.find('.qty-received').prop('readonly', !isChecked || row.find('.variants-data-container input').length > 0);
                 row.find('.qty-accepted').prop('readonly', !isChecked);
-                row.find('select').prop('disabled', !isChecked);
+                row.find('.status-cell select').prop('disabled', !isChecked);
                 row.find('input[type="file"]').prop('disabled', !isChecked);
                 let received = parseFloat(row.find('.qty-received').val()) || 0;
                 row.find('.btn-variants').prop('disabled', !isChecked || received <= 0);

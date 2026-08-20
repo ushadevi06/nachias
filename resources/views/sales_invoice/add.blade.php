@@ -131,9 +131,7 @@
                             </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" min="1" step="1" class="form-control @error('no_of_box') is-invalid @enderror"
-                                        id="no_of_box" name="no_of_box" placeholder="No Of Box"
-                                        value="{{ old('no_of_box', isset($invoice) ? $invoice->no_of_box : '') }}">
+                                    <input type="number" min="0" step="1" class="form-control @error('no_of_box') is-invalid @enderror" id="no_of_box" name="no_of_box" placeholder="No Of Box" value="{{ old('no_of_box', isset($invoice) ? $invoice->no_of_box : '') }}">
                                     <label for="no_of_box">No of Box</label>
                                     @error('no_of_box')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -423,7 +421,7 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
+                                                    <input type="number" min="0" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
                                                     <label>Qty *</label>
                                                 </div>
                                                 <div class="qty-error text-danger small" style="display:none;"></div>
@@ -436,13 +434,13 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control mrp" name="items[{{ $index }}][mrp]" value="{{ $row->mrp ?? '' }}" placeholder="MRP">
+                                                    <input type="number" min="0" step="any" class="form-control mrp" name="items[{{ $index }}][mrp]" value="{{ $row->mrp ?? '' }}" placeholder="MRP">
                                                     <label>MRP</label>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price">
+                                                    <input type="number" min="0" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price">
                                                     <label>Price *</label>
                                                 </div>
                                                 @error("items.$index.rate")
@@ -579,7 +577,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" min="0.01" step="0.01">
+                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" min="0" step="0.01">
                                                     </div>
                                                     <div class="stock-info-wrapper mt-1">
                                                         <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format(max(0, $row->stock_qty ?? 0), 2) }}</span></small>
@@ -588,12 +586,12 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $row->mrp ?? '' }}">
+                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $row->mrp ?? '' }}" min="0">
                                                     </div>
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input open-rate" value="{{ $row->rate ?? '' }}" step="0.01">
+                                                        <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input open-rate" value="{{ $row->rate ?? '' }}" step="0.01" min="0">
                                                     </div>
                                                 </td>
                                                 <td>
@@ -675,7 +673,7 @@
 
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline mb-4">
-                                            <input type="number" step="any" class="form-control" id="other_charges" name="other_charges" placeholder="Courier Charge" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
+                                            <input type="number" step="any" min="0" class="form-control" id="other_charges" name="other_charges" placeholder="Courier Charge" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
                                             <label for="other_charges">Courier Charge</label>
                                         </div>
                                     </div>
@@ -913,7 +911,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">IGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
+                                                    <input type="number" min="0" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="igst_val">{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}</span>
@@ -926,7 +924,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">CGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
+                                                    <input type="number" min="0" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="cgst_val">{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}</span>
@@ -937,7 +935,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">SGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
+                                                    <input type="number" min="0" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="sgst_val">{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}</span>
@@ -953,7 +951,6 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="text-secondary fw-medium">Courier Charge:</span>
                                         <span class="fw-bold mb-0" id="other_charges_val">{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
-                                        <input type="hidden" name="other_charges" id="other_charges" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3" style="display: none !important;">
                                         <span class="text-secondary fw-medium">Post GST charges:</span>
@@ -1011,14 +1008,20 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="transporter_id" name="transporter_id" placeholder="Transporter GSTIN" value="{{ old('transporter_id', isset($invoice) ? $invoice->transporter_id : '') }}">
+                                    <input type="text" class="form-control @error('transporter_id') is-invalid @enderror" id="transporter_id" name="transporter_id" placeholder="Transporter GSTIN" value="{{ old('transporter_id', isset($invoice) ? $invoice->transporter_id : '') }}">
                                     <label for="transporter_id">Transporter GSTIN / ID</label>
+                                    @error('transporter_id')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="vehicle_no" name="vehicle_no" placeholder="Vehicle No" value="{{ old('vehicle_no', isset($invoice) ? $invoice->vehicle_no : '') }}">
+                                    <input type="text" class="form-control @error('vehicle_no') is-invalid @enderror" id="vehicle_no" name="vehicle_no" placeholder="Vehicle No" value="{{ old('vehicle_no', isset($invoice) ? $invoice->vehicle_no : '') }}">
                                     <label for="vehicle_no">Vehicle No</label>
+                                    @error('vehicle_no')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-3">
@@ -1049,8 +1052,11 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="tran_doc_no" name="tran_doc_no" placeholder="Transport Doc No / LR No" value="{{ old('tran_doc_no', isset($invoice) ? $invoice->tran_doc_no : (isset($invoice) ? $invoice->lr_no : '')) }}">
+                                    <input type="text" class="form-control @error('tran_doc_no') is-invalid @enderror" id="tran_doc_no" name="tran_doc_no" placeholder="Transport Doc No / LR No" value="{{ old('tran_doc_no', isset($invoice) ? $invoice->tran_doc_no : (isset($invoice) ? $invoice->lr_no : '')) }}">
                                     <label for="tran_doc_no">Transport Doc No / LR No</label>
+                                    @error('tran_doc_no')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-3">
@@ -1692,8 +1698,7 @@
             $('#discount_val').text('- ₹' + discount.toFixed(2));
             $('#discount').val(discount.toFixed(2));
 
-            // var preGstCharges = parseFloat($('#pre_gst_charges').val()) || 0;
-            var total = subTotal - discount; // + preGstCharges;
+            var total = subTotal - discount;
             $('#total_val').text(total.toFixed(2));
             $('#total').val(total.toFixed(2));
 
@@ -1730,11 +1735,11 @@
 
             $('#tax_amount_val').text(taxAmount.toFixed(2));
             $('#tax_amount').val(taxAmount.toFixed(2));
-
+    
             var otherCharges = parseFloat($('#other_charges').val()) || 0;
-            // var postGstCharges = parseFloat($('#post_gst_charges').val()) || 0;
+            $('#other_charges_val').text(otherCharges.toFixed(2));
 
-           var totalBeforeRoundOff = total + taxAmount + otherCharges; // + postGstCharges;
+           var totalBeforeRoundOff = total + taxAmount + otherCharges;
             $('#total_before_round_off').val(totalBeforeRoundOff.toFixed(2));
             
             var nearestWhole = Math.round(totalBeforeRoundOff);
@@ -1754,10 +1759,43 @@
             $('#grand_total_val').text(grandTotal.toFixed(2));
             $('#grand_total').val(grandTotal.toFixed(2));
         }
+        $(document).on('keypress', '.item-quantity, .item-rate, #charge_amount, #other_charges, .qty, .rate, .mrp, .mrp-input, #sales_discount, #box_discount_amount, #received_amount, #cgst_percent, #sgst_percent, #igst_percent, #no_of_box, .open-qty, .qty-input, .item-qty-input, .open-rate, .rate-input, .item-rate-input', function (e) {
+            if (e.which === 45 || e.which === 43) {
+                e.preventDefault();
+            }
+        });
+
+        $(document).on('keydown', '#other_charges, .item-quantity, .item-rate, #charge_amount, .qty, .rate, .mrp, .mrp-input, #sales_discount, #box_discount_amount, #received_amount, #cgst_percent, #sgst_percent, #igst_percent, #no_of_box', function (e) {
+            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
+                e.preventDefault();
+                return false;
+            }
+            if (e.which === 40 || e.key === 'ArrowDown') {
+                var val = parseFloat($(this).val()) || 0;
+                if (val <= 0) {
+                    $(this).val('0.00');
+                    $(this).trigger('input');
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+
+        $(document).on('input paste', '#other_charges, .item-quantity, .item-rate, #charge_amount, .qty, .rate, .mrp, .mrp-input, #sales_discount, #box_discount_amount, #received_amount,  #cgst_percent, #sgst_percent, #igst_percent, #no_of_box', function () {
+            var el = this;
+            setTimeout(function () {
+                var val = $(el).val();
+                if (val !== '' && (parseFloat(val) < 0 || String(val).indexOf('-') !== -1 || String(val).indexOf('+') !== -1)) {
+                    var cleaned = String(val).replace(/[-+]/g, '');
+                    $(el).val(cleaned ? (parseFloat(cleaned) >= 0 ? cleaned : '0.00') : '0.00');
+                    calculateTotals();
+                }
+            }, 0);
+        });
 
         window.calculateTotals = calculateTotals;
-
-        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #pre_gst_charges, #post_gst_charges, #received_amount', function() {
+        
+        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
             calculateTotals();
         });
 
@@ -2345,7 +2383,7 @@
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" data-original-qty="${qty}" min="0.01" step="0.01">
+                        <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" data-original-qty="${qty}" min="0" step="0.01">
                     </div>
                     <div class="stock-info-wrapper mt-1">
                         <small class="stock-label text-muted">Stock: <span class="available-stock-display">${Math.max(0, parseFloat(balance)).toFixed(2)}</span></small>
@@ -2354,12 +2392,12 @@
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[open_${index}][mrp]" class="form-control mrp-input" value="${mrp}" readonly tabindex="-1">
+                        <input type="number" name="items[open_${index}][mrp]" class="form-control mrp-input" value="${mrp}" min="0" tabindex="-1">
                     </div>
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[open_${index}][rate]" class="form-control rate-input open-rate" value="${price}" step="0.01">
+                        <input type="number" name="items[open_${index}][rate]" class="form-control rate-input open-rate" value="${price}" step="0.01" min="0">
                     </div>
                 </td>
                 <td>

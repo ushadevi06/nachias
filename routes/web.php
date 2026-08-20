@@ -580,6 +580,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/print-label/{id}', [JobCardEntryController::class, 'printLabel'])->name('job_card_entries.print_label');
     Route::get('job_card_entries/print-label-tag/{id}', [JobCardEntryController::class, 'printLabelTag'])->name('job_card_entries.print_label_tag');
     Route::get('job_card_entries/print-label-sticker/{id}', [JobCardEntryController::class, 'printLabelSticker'])->name('job_card_entries.print_label_sticker');
+    Route::get('job_card_entries/print-label-square/{id}', [JobCardEntryController::class, 'printLabelSquare'])->name('job_card_entries.print_label_square');
     Route::get('job_card_entries/get-sizes/{id}', [JobCardEntryController::class, 'getSizes'])->name('job_card_entries.get_sizes');
     Route::get('job_card_entries/barcode-matrix/{id}', [JobCardEntryController::class, 'barcodeMatrix'])->name('job_card_entries.barcode_matrix');
     Route::get('job_card_entries/barcode-preview/{id}', [JobCardEntryController::class, 'barcodePreview'])->name('job_card_entries.barcode_preview');

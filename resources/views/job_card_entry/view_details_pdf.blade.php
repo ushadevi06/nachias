@@ -360,7 +360,7 @@
         @endphp
         <tr>
             <td class="fw-bold" style="font-size:9px;">WIDTH</td>
-            <td class="text-start" style="font-size:10px;">{{ $jobCard->width ?: '-' }}</td>
+            <td class="text-start" style="font-size:10px;">{{ $jobCard->fabricSize->width ?? ($jobCard->width ?: '-') }}</td>
             <td class="text-center fw-bold bg-light" style="width: 8%;">SIZE</td>
             @foreach($allSizes as $s)
                 <td class="text-center fw-bold" style="width: {{ 32 / (count($allSizes) ?: 1) }}%;">{{ $s }}</td>
@@ -540,7 +540,7 @@
             <tr>
                 <td class="bg-light fw-bold">WIDTH</td>
                 @foreach($chunk as $detail)
-                    <td class="text-center">{{ $detail->width ?: '-' }}</td>
+                    <td class="text-center">{{ $detail->fabricSize->width ?? ($detail->width ?: '-') }}</td>
                 @endforeach
                 @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
             </tr>

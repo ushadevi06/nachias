@@ -110,6 +110,11 @@
                                                class="btn btn-info btn-sm">
                                                 <i class="ri ri-sticky-note-line me-1"></i> Sticker
                                             </a>
+                                            <a href="{{ route('job_card_entries.print_label_square', $issueItem->id) }}?size={{ urlencode($record['size']) }}&sleeve={{ urlencode($record['sleeve']) }}" 
+                                               target="_blank" 
+                                               class="btn btn-warning btn-sm">
+                                                <i class="ri ri-layout-grid-line me-1"></i> 45x45 STICKER
+                                            </a>
                                         </div>
                                     </td>
                                 </tr>

@@ -262,14 +262,6 @@
                         $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
                         if ($dbStyle) {
                             $styleName = $dbStyle->style_name;
-                        } elseif (strcasecmp($styleCode, 'CKD') === 0) {
-                            $styleName = 'CHECKED';
-                        } elseif (strcasecmp($styleCode, 'PLN') === 0 || strcasecmp($styleCode, 'PL') === 0) {
-                            $styleName = 'PLAIN';
-                        } elseif (strcasecmp($styleCode, 'PRT') === 0) {
-                            $styleName = 'PRINT';
-                        } elseif (strcasecmp($styleCode, 'STR') === 0 || strcasecmp($styleCode, 'STP') === 0) {
-                            $styleName = 'STRIPES';
                         }
                     }
                 }
@@ -539,7 +531,7 @@
         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
                 <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
-                    <strong>Remarks :</strong>
+                    <strong>Remarks :</strong> {{ $invoice->remarks ?? '' }}
                 </td>
             </tr>
             <tr>

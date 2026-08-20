@@ -230,6 +230,7 @@
                                                         @endphp
                                                         <div class="assignment-card assignment-row">
                                                             <div class="card-badge">#{{ $index + 1 }}</div>
+                                                            <input type="hidden" name="assignments[{{ $index }}][id]" value="{{ $assign->id ?? '' }}">
                                                             <div class="assignment-card-header">
                                                                 <h6 class="assignment-card-title">Assignment Details</h6>
                                                                 <button type="button" class="assignment-remove-btn remove-assignment-row">
@@ -285,11 +286,11 @@
                                                                 <div class="assignment-card-grid mb-3">
                                                                     <div class="form-group">
                                                                         <label>Hrs</label>
-                                                                        <input type="number" step="0.01" class="form-control total-hrs" name="assignments[{{ $index }}][total_hrs]" value="{{ $assign->total_hrs ?? '' }}" placeholder="0.00">
+                                                                        <input type="number" step="0.01" min="0" class="form-control total-hrs" name="assignments[{{ $index }}][total_hrs]" value="{{ $assign->total_hrs ?? '' }}" placeholder="0.00">
                                                                     </div>
                                                                     <div class="form-group">
                                                                         <label>Qty *</label>
-                                                                        <input type="number" step="1" class="form-control" name="assignments[{{ $index }}][issue_qty]" value="{{ $assign->issue_qty ?? '' }}" placeholder="Qty">
+                                                                        <input type="number" step="1" min="0" class="form-control" name="assignments[{{ $index }}][issue_qty]" value="{{ $assign->issue_qty ?? '' }}" placeholder="Qty">
                                                                         @error("assignments.$index.issue_qty") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
                                                                     </div>
                                                                 </div>
@@ -457,9 +458,11 @@
                                                                         </div>
                                                                     </div>
                                                                     <div class="d-flex align-items-center gap-2">
+                                                                        @if($assign->due_date)
                                                                         <span class="badge {{ $isOverdue ? 'bg-label-danger' : 'bg-label-primary' }} rounded-pill font-small">
                                                                             <i class="ri ri-calendar-todo-line me-1"></i>{{ $assign->due_date ? \Carbon\Carbon::parse($assign->due_date)->format('d-m-Y') : 'N/A' }}
                                                                         </span>
+                                                                        @endif
                                                                         <span class="badge bg-label-{{ $statusColor }} border-{{ $statusColor }} fw-bold row-status-badge font-small">{{ $assign->status }}</span>
                                                                         @if(auth()->user()->hasRole('QUALITY CHECKER') || auth()->user()->id == 1)
                                                                             <span class="badge bg-label-{{ $qcStatusColor }} border-{{ $qcStatusColor }} fw-bold row-qc-status-badge font-small">{{ $assign->qc_status ?? 'Pending' }}</span>
@@ -486,15 +489,15 @@
                                                                             </div>
                                                                             <div class="col-6">
                                                                                 <label class="form-label small fw-bold text-muted text-success">Completed Qty</label>
-                                                                                <input type="number" step="0.01" class="form-control form-control-sm border-success fw-bold row-completed-qty" name="assignments[{{ $index }}][completed_qty]" value="{{ $assign->completed_qty }}">
+                                                                                <input type="number" step="0.01" min="0" class="form-control form-control-sm border-success fw-bold row-completed-qty" name="assignments[{{ $index }}][completed_qty]" value="{{ $assign->completed_qty }}">
                                                                             </div>
                                                                             <div class="col-6">
                                                                                 <label class="form-label small fw-bold text-muted text-danger">Wastage Qty</label>
-                                                                                <input type="number" step="0.01" class="form-control form-control-sm border-danger fw-bold row-wastage-qty" name="assignments[{{ $index }}][wastage_qty]" value="{{ $assign->wastage_qty }}">
+                                                                                <input type="number" step="0.01" min="0"  class="form-control form-control-sm border-danger fw-bold row-wastage-qty" name="assignments[{{ $index }}][wastage_qty]" value="{{ $assign->wastage_qty }}">
                                                                             </div>
                                                                             <div class="col-6">
                                                                                 <label class="form-label small fw-bold text-muted text-warning">In Progress</label>
-                                                                                <input type="number" step="0.01" class="form-control form-control-sm border-warning bg-light fw-bold row-inprogress-qty" name="assignments[{{ $index }}][inprogress_qty]" value="{{ $assign->inprogress_qty }}" readonly tabindex="-1">
+                                                                                <input type="number" step="0.01" min="0" class="form-control form-control-sm border-warning bg-light fw-bold row-inprogress-qty" name="assignments[{{ $index }}][inprogress_qty]" value="{{ $assign->inprogress_qty }}" readonly tabindex="-1">
                                                                             </div>
                                                                             <div class="col-12">
                                                                                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -527,15 +530,15 @@
                                                                             <div class="row g-3">
                                                                                 <div class="col-6">
                                                                                     <label class="form-label small fw-bold text-muted">QC Checked</label>
-                                                                                    <input type="number" step="1" class="form-control form-control-sm border-info fw-bold row-qc-checked" name="assignments[{{ $index }}][qc_checked_qty]" value="{{ (int) ($assign->qc_checked_qty ?? 0) }}">
+                                                                                    <input type="number" step="1" min="0" class="form-control form-control-sm border-info fw-bold row-qc-checked" name="assignments[{{ $index }}][qc_checked_qty]" value="{{ (int) ($assign->qc_checked_qty ?? 0) }}">
                                                                                 </div>
                                                                                 <div class="col-6">
                                                                                     <label class="form-label small fw-bold text-muted">QC Passed</label>
-                                                                                    <input type="number" step="1" class="form-control form-control-sm border-info fw-bold row-qc-passed" name="assignments[{{ $index }}][qc_passed_qty]" value="{{ (int) ($assign->qc_passed_qty ?? 0) }}">
+                                                                                    <input type="number" step="1" min="0" class="form-control form-control-sm border-info fw-bold row-qc-passed" name="assignments[{{ $index }}][qc_passed_qty]" value="{{ (int) ($assign->qc_passed_qty ?? 0) }}">
                                                                                 </div>
                                                                                 <div class="col-6">
                                                                                     <label class="form-label small fw-bold text-muted">QC Rejected</label>
-                                                                                    <input type="number" step="1" class="form-control form-control-sm border-info fw-bold row-qc-rejected bg-light" name="assignments[{{ $index }}][qc_rejected_qty]" value="{{ (int) ($assign->qc_rejected_qty ?? 0) }}" readonly>
+                                                                                    <input type="number" step="1" min="0" class="form-control form-control-sm border-info fw-bold row-qc-rejected bg-light" name="assignments[{{ $index }}][qc_rejected_qty]" value="{{ (int) ($assign->qc_rejected_qty ?? 0) }}" readonly>
                                                                                 </div>
                                                                                 <div class="col-6">
                                                                                     <label class="form-label small fw-bold text-muted">Current QC Status</label>
@@ -623,7 +626,18 @@
                                         </div> --}}
                                         <div class="col-md-6">
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control @error('approved_by') is-invalid @enderror" name="approved_by" placeholder="Supervisor Name" value="{{ old('approved_by', $taskAdjustment->approved_by ?? '') }}">
+                                                <select class="select2 form-select @error('approved_by') is-invalid @enderror" name="approved_by" id="approved_by" data-placeholder="Select Supervisor">
+                                                    <option value="">Select Supervisor</option>
+                                                    @if(isset($supervisors) && $supervisors->count() > 0)
+                                                        @foreach($supervisors as $supervisor)
+                                                            <option value="{{ $supervisor->id }}" {{ old('approved_by', $taskAdjustment->approved_by ?? '') == $supervisor->id || old('approved_by', $taskAdjustment->approved_by ?? '') == $supervisor->name ? 'selected' : '' }}>
+                                                                {{ $supervisor->name }} {{ $supervisor->emp_id ? '('.$supervisor->emp_id.')' : '' }}
+                                                            </option>
+                                                        @endforeach
+                                                    @else
+                                                        <option value="" disabled>No Supervisors Available.</option>
+                                                    @endif
+                                                </select>
                                                 <label>Approved By *</label>
                                             </div>
                                             @error('approved_by') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
@@ -706,7 +720,7 @@
                                                                     </select>
                                                                 </td>
                                                                 <td>
-                                                                    <input type="number" step="0.01" class="form-control" name="items[{{ $index }}][qty]" placeholder="0.00" value="{{ $item['qty'] ?? '' }}">
+                                                                    <input type="number" step="0.01" min="0" class="form-control" name="items[{{ $index }}][qty]" placeholder="0.00" value="{{ $item['qty'] ?? '' }}">
                                                                 </td>
                                                                 <td>
                                                                     <input type="text" class="form-control" name="items[{{ $index }}][remarks]" placeholder="Remarks" value="{{ $item['remarks'] ?? '' }}">
@@ -886,11 +900,11 @@
                         <div class="assignment-card-grid mb-3">
                             <div class="form-group">
                                 <label>Hrs</label>
-                                <input type="number" step="0.01" class="form-control total-hrs" name="assignments[${assignmentIndex}][total_hrs]" value="${data.total_hrs || ''}" placeholder="0.00">
+                                <input type="number" step="0.01" min="0" class="form-control total-hrs" name="assignments[${assignmentIndex}][total_hrs]" value="${data.total_hrs || ''}" placeholder="0.00">
                             </div>
                             <div class="form-group">
                                 <label>Qty</label>
-                                <input type="number" step="1" class="form-control" name="assignments[${assignmentIndex}][issue_qty]" value="${data.issue_qty || ''}" placeholder="Qty">
+                                <input type="number" step="1" min="0" class="form-control" name="assignments[${assignmentIndex}][issue_qty]" value="${data.issue_qty || ''}" placeholder="Qty">
                             </div>
                         </div>
 
@@ -953,7 +967,7 @@
             });
 
             $(document).on('change', '#assignment-cards-container .services-select', function(e, isInit) {
-                if (isInit) return; // Prevent overwriting quantities on page load
+                if (isInit) return; 
                 var $row = $(this).closest('.assignment-row');
                 var serviceId = $(this).val();
                 
@@ -1110,7 +1124,6 @@
                     width: '100%', 
                     dropdownParent: $row.find('.services-select').parent()
                 }).on('select2:select', function(e) {
-                    // Trigger the document-level change event to run the balance auto-fill logic
                     $(this).trigger('change');
                 });
 
@@ -1121,7 +1134,6 @@
                     allowClear: false, 
                     width: '100%',
                     minimumResultsForSearch: Infinity
-                    // dropdownParent: $row.find('.status-select-row').parent() 
                 });
 
                 $row.find('.employee-select').each(function() {
@@ -1371,7 +1383,7 @@
                             </select>
                         </td>
                         <td>
-                            <input type="number" step="0.01" class="form-control" name="items[${rowIndex}][qty]" placeholder="0.00">
+                            <input type="number" step="0.01" min="0" class="form-control" name="items[${rowIndex}][qty]" placeholder="0.00">
                         </td>
                         <td>
                             <input type="text" class="form-control" name="items[${rowIndex}][remarks]" placeholder="Remarks">
@@ -1393,7 +1405,32 @@
 
                 rowIndex++;
             });
-
+            $(document).on('keydown keypress', '#assignment-cards-container input[type="number"], #adjustment_items_table input[type="number"], .status-update-row input[type="number"], .bulk-qty-input', function (e) {
+                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.which === 40 || e.key === 'ArrowDown') {
+                    var val = parseFloat($(this).val()) || 0;
+                    if (val <= 0) {
+                        $(this).val(0);
+                        $(this).trigger('input');
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+            $(document).on('input paste', '#assignment-cards-container input[type="number"], #adjustment_items_table input[type="number"], .status-update-row input[type="number"], .bulk-qty-input', function () {
+                var el = this;
+                setTimeout(function() {
+                    var val = $(el).val();
+                    if (val !== '' && (parseFloat(val) < 0 || String(val).indexOf('-') !== -1 || String(val).indexOf('+') !== -1)) {
+                        var cleaned = String(val).replace(/[-+]/g, '');
+                        $(el).val(cleaned ? (parseFloat(cleaned) >= 0 ? cleaned : '0') : '0');
+                        $(el).trigger('input');
+                    }
+                }, 0);
+            });
             $(document).on('click', '.remove-row', function() {
                 if ($('#adjustment_items_table tbody tr').length > 1) {
                     $(this).closest('tr').remove();
@@ -1692,23 +1729,23 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-success">Completed Qty</label>
-                            <input type="number" step="0.01" class="form-control border-success fw-bold bulk-qty-input" id="bulk_completed_qty" placeholder="e.g. 10">
+                            <input type="number" step="0.01" min="0" class="form-control border-success fw-bold bulk-qty-input" id="bulk_completed_qty" placeholder="e.g. 10">
                             <div class="invalid-feedback fw-bold extra-small"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-danger">Wastage Qty</label>
-                            <input type="number" step="0.01" class="form-control border-danger fw-bold bulk-qty-input" id="bulk_wastage_qty" placeholder="e.g. 0">
+                            <input type="number" step="0.01" min="0" class="form-control border-danger fw-bold bulk-qty-input" id="bulk_wastage_qty" placeholder="e.g. 0">
                             <div class="invalid-feedback fw-bold extra-small"></div>
                         </div>
                         @if(auth()->user()->hasRole('QUALITY CHECKER') || auth()->user()->id == 1)
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-info">QC Checked Qty</label>
-                            <input type="number" step="1" class="form-control border-info fw-bold bulk-qty-input" id="bulk_qc_checked" placeholder="e.g. 10">
+                            <input type="number" step="1" min="0" class="form-control border-info fw-bold bulk-qty-input" id="bulk_qc_checked" placeholder="e.g. 10">
                             <div class="invalid-feedback fw-bold extra-small"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-info">QC Passed Qty</label>
-                            <input type="number" step="1" class="form-control border-info fw-bold bulk-qty-input" id="bulk_qc_passed" placeholder="e.g. 10">
+                            <input type="number" step="1" min="0" class="form-control border-info fw-bold bulk-qty-input" id="bulk_qc_passed" placeholder="e.g. 10">
                             <div class="invalid-feedback fw-bold extra-small"></div>
                         </div>
                         @endif

@@ -130,7 +130,7 @@ class CreditNoteController extends Controller
                 'discount' => 'nullable|numeric|min:0',
                 'tax_amount' => 'required|numeric',
                 'other_charges' => 'nullable|numeric|min:0',
-                'round_off' => 'nullable|numeric',
+                'round_off' => 'nullable|numeric|min:0|max:99.99',
                 'round_off_type' => 'nullable|string|in:Add,Less',
                 'grand_total' => 'required|numeric',
                 'reference_document' => 'nullable|mimes:pdf,jpg,jpeg,png,webp,doc,docx|max:2048',
@@ -142,6 +142,8 @@ class CreditNoteController extends Controller
                 '*.unique' => 'This field already exists.',
                 '*.date' => 'Please enter a valid date.',
                 '*.numeric' => 'This field must be a number.',
+                'round_off.min' => 'Round off cannot be negative. Please enter 0 or a positive value.',
+                'round_off.max' => 'Round off amount cannot exceed 99.99.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
             ]);

@@ -51,7 +51,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
+                                    <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}" min="0">
                                     <label for="commission">Commission (%)</label>
                                 </div>
                                 <div id="commission-error" class="text-danger mt-1 small d-none"></div>
@@ -249,7 +249,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror" name="items[{{ $index }}][supplier_design_name]" value="{{ $item['supplier_design_name'] ?? '' }}">
+                                                    <input type="text" class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror" name="items[{{ $index }}][supplier_design_name]" value="{{ $item['supplier_design_name'] ?? '' }}" placeholder="Enter Supplier Design Name">
                                                     @error('items.' . $index . '.supplier_design_name')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -280,7 +280,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" value="{{ $item['quantity'] ?? '' }}">
+                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" value="{{ $item['quantity'] ?? '' }}" min="0">
                                                     @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -292,7 +292,7 @@
                                                     @enderror
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
-                                                    <input type="number" class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item['cgst_percent'] ?? 0 }}">
+                                                    <input type="number"  class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item['cgst_percent'] ?? 0 }}">
                                                     @error('items.' . $index . '.cgst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -302,12 +302,18 @@
                                                 </td>
                                                 <td class="td-gst td-sgst d-none">
                                                     <input type="number" class="form-control sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item['sgst_percent'] ?? 0 }}">
+                                                    @error('items.' . $index . '.sgst_percent')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td class="td-gst td-sgst d-none">
                                                     <input type="number" class="form-control sgst_amount text-end" name="items[{{ $index }}][sgst_amount]" step="0.01" min="0" value="{{ $item['sgst_amount'] ?? 0 }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-igst d-none">
                                                     <input type="number" class="form-control igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item['igst_percent'] ?? 0 }}">
+                                                    @error('items.' . $index . '.igst_percent')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td class="td-gst td-igst d-none">
                                                     <input type="number" class="form-control igst_amount text-end" name="items[{{ $index }}][igst_amount]" step="0.01" min="0" value="{{ $item['igst_amount'] ?? 0 }}" readonly>
@@ -412,7 +418,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror" name="items[{{ $index }}][supplier_design_name]" value="{{ $item->supplier_design_name }}">
+                                                    <input type="text" class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror" name="items[{{ $index }}][supplier_design_name]" value="{{ $item->supplier_design_name }}" placeholder="Enter Supplier Design Name">
                                                     @error('items.' . $index . '.supplier_design_name')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -440,7 +446,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" value="{{ $item->quantity }}">
+                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" min="0" value="{{ $item->quantity }}">
                                                     @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -453,18 +459,27 @@
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
                                                     <input type="number" class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item->cgst_percent }}">
+                                                    @error('items.' . $index . '.cgst_percent')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
                                                     <input type="number" class="form-control cgst_amount text-end" name="items[{{ $index }}][cgst_amount]" step="0.01" min="0" value="{{ $item->cgst_amount }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-sgst d-none">
                                                     <input type="number" class="form-control sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item->sgst_percent }}">
+                                                    @error('items.' . $index . '.sgst_percent')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td class="td-gst td-sgst d-none">
                                                     <input type="number" class="form-control sgst_amount text-end" name="items[{{ $index }}][sgst_amount]" step="0.01" min="0" value="{{ $item->sgst_amount }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-igst d-none">
                                                     <input type="number" class="form-control igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item->igst_percent }}">
+                                                    @error('items.' . $index . '.igst_percent')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td class="td-gst td-igst d-none">
                                                     <input type="number" class="form-control igst_amount text-end" name="items[{{ $index }}][igst_amount]" step="0.01" min="0" value="{{ $item->igst_amount }}" readonly>
@@ -584,7 +599,7 @@
                                                 <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
                                             </td>
                                             <td>
-                                                <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" placeholder="Enter Quantity">
+                                                <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" placeholder="Enter Quantity" min="0">
                                             </td>
                                             <td>
                                                 <input type="number" class="form-control rate" name="items[0][rate]" step="any" min="0" placeholder="Enter Rate">
@@ -736,7 +751,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">Discount:</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent" step="0.01" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent" step="0.01" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}" min="0">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -761,6 +776,10 @@
                                             <label for="taxable_amount" class="fw-medium">Net Amount (Before Tax):</label>
                                             <input type="text" id="taxable_amount" name="taxable_amount" class="form-control-plaintext text-end w-50 fw-bold" value="{{ old('taxable_amount', $purchaseOrder->taxable_amount ?? '') }}" readonly>
                                         </div>
+                                        <div id="negative_net_warning" class="alert alert-warning text-dark py-1 px-2 mb-1 d-none" style="font-size: 12px;">
+                                            <i class="ri ri-error-warning-line me-1"></i>
+                                            <span id="negative_net_warning_text"></span>
+                                        </div>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Other State:</label>
                                             <div>
@@ -779,7 +798,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="igst_percent" class="fw-medium">IGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}" min="0">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -799,7 +818,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="cgst_percent" class="fw-medium">CGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}" min="0">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -819,7 +838,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="sgst_percent" class="fw-medium">SGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}" min="0">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -881,6 +900,10 @@
         $(document).ready(function () {
             let itemIndex = Number($('#itemIndex').val());
             $(document).on('click', '.add_item', function () {
+                let selected = $('#supplier_id').find('option:selected');
+                let supplierCgst = parseFloat(selected.data('cgst')) || parseFloat("{{ $web_settings->cgst ?? 0 }}") || 0;
+                let supplierSgst = parseFloat(selected.data('sgst')) || parseFloat("{{ $web_settings->sgst ?? 0 }}") || 0;
+                let supplierIgst = parseFloat(selected.data('igst')) || parseFloat("{{ $web_settings->igst ?? 0 }}") || 0;
                 let rowHtml = `
                 <tr class="item-row">
                     <td>
@@ -952,31 +975,31 @@
                         <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
                     </td>
                     <td>
-                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" placeholder="Enter Quantity">
+                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" placeholder="Enter Quantity" min="0">
                     </td>
                     <td>
                         <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="any" min="0" placeholder="Enter Rate">
                     </td>
                     <td class="td-gst td-cgst d-none">
-                        <input type="number" class="form-control cgst_percent text-end" name="items[${itemIndex}][cgst_percent]" step="0.01" min="0" value="">
+                        <input type="number" class="form-control cgst_percent text-end" name="items[${itemIndex}][cgst_percent]" step="0.01" min="0" value="${supplierCgst}">
                     </td>
                     <td class="td-gst td-cgst d-none">
                         <input type="number" class="form-control cgst_amount text-end" name="items[${itemIndex}][cgst_amount]" step="0.01" min="0" value="" readonly>
                     </td>
                     <td class="td-gst td-sgst d-none">
-                        <input type="number" class="form-control sgst_percent text-end" name="items[${itemIndex}][sgst_percent]" step="0.01" min="0" value="">
+                        <input type="number" class="form-control sgst_percent text-end" name="items[${itemIndex}][sgst_percent]" step="0.01" min="0" value="${supplierSgst}">
                     </td>
                     <td class="td-gst td-sgst d-none">
                         <input type="number" class="form-control sgst_amount text-end" name="items[${itemIndex}][sgst_amount]" step="0.01" min="0" value="" readonly>
                     </td>
                     <td class="td-gst td-igst d-none">
-                        <input type="number" class="form-control igst_percent text-end" name="items[${itemIndex}][igst_percent]" step="0.01" min="0" value="">
+                        <input type="number" class="form-control igst_percent text-end" name="items[${itemIndex}][igst_percent]" step="0.01" min="0" value="${supplierIgst}">
                     </td>
                     <td class="td-gst td-igst d-none">
                         <input type="number" class="form-control igst_amount text-end" name="items[${itemIndex}][igst_amount]" step="0.01" min="0" value="" readonly>
                     </td>
                     <td>
-                        <input type="number" class="form-control amount text-end" name="items[${itemIndex}][amount]" step="0.01" min="0" placeholder="0.00">
+                        <input type="number" class="form-control amount" name="items[${itemIndex}][amount]" step="0.01" min="0" placeholder="0.00">
                     </td>
                     <td>
                         <textarea class="form-control remarks" name="items[${itemIndex}][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
@@ -1109,13 +1132,8 @@
                 let qty = parseFloat(row.find('.quantity').val()) || 0;
                 let rate = parseFloat(row.find('.rate').val()) || 0;
 
-                if (isAccessories) {
-                    if (qty > 0 && rate > 0) {
-                        row.find('.amount').val((qty * rate).toFixed(2));
-                    }
-                } else {
-                    row.find('.amount').val((qty * rate).toFixed(2));
-                }
+                let amountVal = (qty * rate).toFixed(2);
+                row.find('.amount').val(amountVal > 0 ? amountVal : '0.00');
                 calculateTotals();
             });
 
@@ -1136,12 +1154,12 @@
                 calculateTotals();
             });
 
-            $(document).on('keypress', '#discount_percent, #commission', function (e) {
+            $(document).on('keypress', '#discount_percent, #commission, #cgst_percent, #sgst_percent, #igst_percent, .cgst_percent, .sgst_percent, .igst_percent, .quantity, .rate', function (e) {
                 if (e.which === 45 || e.which === 43) {
                     e.preventDefault();
                 }
             });
-            $(document).on('paste', '#discount_percent, #commission', function (e) {
+            $(document).on('paste', '#discount_percent, #commission, #cgst_percent, #sgst_percent, #igst_percent, .cgst_percent, .sgst_percent, .igst_percent', function (e) {
                 let pasteData = e.originalEvent.clipboardData.getData('text');
                 if (parseFloat(pasteData) < 0) {
                     e.preventDefault();
@@ -1217,7 +1235,9 @@
                         if (otherState === 'yes') {
                             let itemIgstStr = $(this).find('.igst_percent').val();
                             let itemIgstPercent = itemIgstStr !== '' ? parseFloat(itemIgstStr) : orderIgst;
-                            $(this).find('.igst_percent').val(itemIgstPercent);
+                            if (itemIgstStr === '') {
+                                $(this).find('.igst_percent').val(orderIgst);
+                            }
                             let igstAmount = (amount * itemIgstPercent) / 100;
                             $(this).find('.igst_amount').val(igstAmount.toFixed(2));
                             itemsTaxTotal += igstAmount;
@@ -1226,8 +1246,12 @@
                             let itemSgstStr = $(this).find('.sgst_percent').val();
                             let itemCgstPercent = itemCgstStr !== '' ? parseFloat(itemCgstStr) : orderCgst;
                             let itemSgstPercent = itemSgstStr !== '' ? parseFloat(itemSgstStr) : orderSgst;
-                            $(this).find('.cgst_percent').val(itemCgstPercent);
-                            $(this).find('.sgst_percent').val(itemSgstPercent);
+                            if (itemCgstStr === '') {
+                                $(this).find('.cgst_percent').val(orderCgst);
+                            }
+                            if (itemSgstStr === '') {
+                                $(this).find('.sgst_percent').val(orderSgst);
+                            }
                             let cgstAmount = (amount * itemCgstPercent) / 100;
                             let sgstAmount = (amount * itemSgstPercent) / 100;
                             $(this).find('.cgst_amount').val(cgstAmount.toFixed(2));
@@ -1263,34 +1287,49 @@
 
                 $('#taxable_amount').val(displayTaxableAmount.toFixed(2));
 
+                // Show warning if net amount is negative
+                if (taxableAmount <= 0 && subTotal > 0 && (discountAmount > 0 || commissionAmount > 0)) {
+                    let reasons = [];
+                    if (discountAmount > 0 && commissionAmount > 0) {
+                        reasons.push('Discount (₹' + discountAmount.toFixed(2) + ')');
+                        reasons.push('Commission (₹' + commissionAmount.toFixed(2) + ')');
+                    } else if (discountAmount > 0) {
+                        reasons.push('Discount (₹' + discountAmount.toFixed(2) + ')');
+                    } else if (commissionAmount > 0) {
+                        reasons.push('Commission (₹' + commissionAmount.toFixed(2) + ')');
+                    }
+                    let warningText = '';
+                    if (taxableAmount < 0) {
+                        warningText = 'Net Amount is negative (₹' + taxableAmount.toFixed(2) + '). ' + reasons.join(' + ') + ' exceeds Sub Total (₹' + subTotal.toFixed(2) + '). Showing 0.00.';
+                    } else {
+                        warningText = 'Net Amount is 0.00. ' + reasons.join(' + ') + ' equals Sub Total (₹' + subTotal.toFixed(2) + '). Tax and Grand Total will be 0.00.';
+                    }
+                    $('#negative_net_warning_text').text(warningText);
+                    $('#negative_net_warning').removeClass('d-none');
+                    $('#taxable_amount').addClass('text-danger');
+                    $('button[type="submit"]').prop('disabled', true);
+                } else {
+                    $('#negative_net_warning').addClass('d-none');
+                    $('#taxable_amount').removeClass('text-danger');
+                    $('button[type="submit"]').prop('disabled', false);
+                }
+
                 let taxAmount = 0;
                 let cgstAmountDisplay = 0;
                 let sgstAmountDisplay = 0;
                 let igstAmountDisplay = 0;
                 
                 if (taxableAmount >= 0) {
-                    if (isAccessories) {
-                        taxAmount = itemsTaxTotal;
-                        if (otherState === 'yes') {
-                            igstAmountDisplay = itemsTaxTotal;
-                        } else {
-                            $('.item-row').each(function() {
-                                cgstAmountDisplay += parseFloat($(this).find('.cgst_amount').val()) || 0;
-                                sgstAmountDisplay += parseFloat($(this).find('.sgst_amount').val()) || 0;
-                            });
-                        }
+                    if (otherState === 'yes') {
+                        let igstPercent = parseFloat($('#igst_percent').val()) || 0;
+                        igstAmountDisplay = (displayTaxableAmount * igstPercent) / 100;
+                        taxAmount = igstAmountDisplay;
                     } else {
-                        if (otherState === 'yes') {
-                            let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                            igstAmountDisplay = (displayTaxableAmount * igstPercent) / 100;
-                            taxAmount = igstAmountDisplay;
-                        } else {
-                            let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
-                            let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-                            cgstAmountDisplay = (displayTaxableAmount * cgstPercent) / 100;
-                            sgstAmountDisplay = (displayTaxableAmount * sgstPercent) / 100;
-                            taxAmount = cgstAmountDisplay + sgstAmountDisplay;
-                        }
+                        let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
+                        let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
+                        cgstAmountDisplay = (displayTaxableAmount * cgstPercent) / 100;
+                        sgstAmountDisplay = (displayTaxableAmount * sgstPercent) / 100;
+                        taxAmount = cgstAmountDisplay + sgstAmountDisplay;
                     }
                 }
 
@@ -1398,7 +1437,21 @@
             });
 
             $(document).on('click', '.remove-existing-attachment', function () {
-                $(this).closest('.attachment-item').remove();
+                let $item = $(this).closest('.attachment-item');
+                if ($item.hasClass('new-attachment-preview')) {
+                    let fileName = $item.attr('title');
+                    let fileInput = document.getElementById('additional_attachments');
+                    if (fileInput && fileInput.files) {
+                        let dt = new DataTransfer();
+                        for (let i = 0; i < fileInput.files.length; i++) {
+                            if (fileInput.files[i].name !== fileName) {
+                                dt.items.add(fileInput.files[i]);
+                            }
+                        }
+                        fileInput.files = dt.files;
+                    }
+                }
+                $item.remove();
             });
 
             $(document).on('change', '.file-input', function () {
@@ -1509,6 +1562,38 @@
                 toggleTaxDivs();
                 calculateTotals();
             });
+
+            $('#purchase_commission_agent_id').on('change', function() {
+                if ($(this).val()) {
+                    $('#commission').prop('required', true);
+                    let label = $('label[for="commission"]');
+                    if (label.find('.text-danger').length === 0) {
+                        label.append('<span class="text-danger"> *</span>');
+                    }
+                } else {
+                    $('#commission').prop('required', false);
+                    $('label[for="commission"]').find('.text-danger').remove();
+                }
+            });
+            if ($('#purchase_commission_agent_id').length) {
+                $('#purchase_commission_agent_id').trigger('change');
+            }
+
+            $('#commission').on('input', function() {
+                if (parseFloat($(this).val()) > 0) {
+                    $('#purchase_commission_agent_id').prop('required', true);
+                    let label = $('label[for="purchase_commission_agent_id"]');
+                    if (label.find('.text-danger').length === 0) {
+                        label.append('<span class="text-danger"> *</span>');
+                    }
+                } else {
+                    $('#purchase_commission_agent_id').prop('required', false);
+                    $('label[for="purchase_commission_agent_id"]').find('.text-danger').remove();
+                }
+            });
+            if ($('#commission').length) {
+                $('#commission').trigger('input');
+            }
 
             initSelect2Fields();
             toggleTaxDivs();

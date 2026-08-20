@@ -160,19 +160,19 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 50px;" class="text-center">S.No</th>
-                                        <th style="width: 120px;">INVOICE NO</th>
+                                        <th style="width: 160px;">INVOICE NO</th>
                                         <th style="width: 220px;">ITEM NAME</th>
                                         <th style="width: 100px;">COLOR</th>
                                         <th style="width: 130px;">ART NO</th>
                                         <th style="width: 70px;">UOM</th>
                                         <th style="width: 90px;" class="text-center">SIZE</th>
-                                        <th style="width: 90px;" class="text-end">INV QTY</th>
-                                        <th style="width: 90px;" class="text-end">RET QTY</th>
-                                        <th style="width: 90px;" class="text-end">BAL QTY</th>
+                                        <th style="width: 110px;" class="text-end">INV QTY</th>
+                                        <th style="width: 110px;" class="text-end">RET QTY</th>
+                                        <th style="width: 110px;" class="text-end">BAL QTY</th>
                                         <th style="width: 100px;" class="text-center">RETURN QTY</th>
                                         <th style="width: 100px;" class="text-end">MRP</th>
                                         <th style="width: 100px;" class="text-end">PRICE</th>
-                                        <th style="width: 100px;" class="text-end">AMOUNT</th>
+                                        <th style="width: 150px;" class="text-end">AMOUNT</th>
                                         <th style="width: 70px;" class="text-center">ACTION</th>
                                     </tr>
                                 </thead>
@@ -208,15 +208,15 @@
                                     <div class="col-md-6 col-xl-3">
                                         <div class="form-floating form-floating-outline">
                                             <select id="charge_tax_type" class="form-select select2">
-                                                <option value="Pre-GST">Pre-GST</option>
-                                                <option value="Post-GST" selected>Post-GST</option>
+                                                <option value="Pre-GST" selected>Pre-GST (Taxable)</option>
+                                                <option value="Post-GST">Post-GST (Non-Taxable)</option>
                                             </select>
                                             <label for="charge_tax_type">Tax Type</label>
                                         </div>
                                     </div>
                                     <div class="col-md-6 col-xl-2">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="number" step="0.01" class="form-control" id="charge_amount" placeholder="0.00">
+                                            <input type="number" min="0" step="0.01" class="form-control" id="charge_amount" placeholder="0.00">
                                             <label for="charge_amount">Amount</label>
                                         </div>
                                     </div>
@@ -253,7 +253,8 @@
                                                             <input type="hidden" name="charges[amount][]" value="{{ number_format($chg->charge_amount, 2, '.', '') }}">
                                                         </td>
                                                         <td class="text-center">
-                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-charge"><i class="ri-delete-bin-line"></i></button>
+                                                            <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge"><i class="ri ri-pencil-line"></i></button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-charge"><i class="ri ri-delete-bin-line"></i></button>
                                                         </td>
                                                     </tr>
                                                 @endforeach
@@ -391,11 +392,11 @@
                                         <label class="fw-bold small mb-0">Other State?</label>
                                         <div class="d-flex gap-3">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_yes" value="yes" {{ (old('is_other_state', ($creditNote->other_state ?? false) == true) ? 'checked' : '') }} onclick="return false;">
+                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_yes" value="yes" {{ old('is_other_state', ($creditNote->other_state ?? false) ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
                                                 <label class="form-check-label small" for="state_yes">Yes</label>
                                             </div>
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_no" value="no" {{ (old('is_other_state', ($creditNote->other_state ?? false) == false) ? 'checked' : '') }} onclick="return false;">
+                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_no" value="no" {{ old('is_other_state', ($creditNote->other_state ?? false) ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
                                                 <label class="form-check-label small" for="state_no">No</label>
                                             </div>
                                         </div>
@@ -420,11 +421,11 @@
                                     </div>
                                 </div>
 
-                                <div id="cgst_row" class="{{ (old('is_other_state', ($creditNote->other_state ?? false) == true) ? 'd-none' : '') }}">
+                                <div id="cgst_row" class="{{ old('is_other_state', ($creditNote->other_state ?? false) ? 'yes' : 'no') == 'yes' ? 'd-none' : '' }}">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">CGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="cgst_percent" id="cgst_percent" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #e5e6e8;" value="{{ old('cgst_percent', $creditNote->cgst_percent ?? 9) }}" step="0.01">
+                                            <input type="number" min="0" name="cgst_percent" id="cgst_percent" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #e5e6e8;" value="{{ old('cgst_percent', $creditNote->cgst_percent ?? 9) }}" step="0.01">
                                             <span class="small">%</span>
                                             <span class="ms-2">₹<span id="cgst_amt_text">{{ number_format(old('cgst', $creditNote->cgst ?? 0), 2) }}</span></span>
                                             <input type="hidden" name="cgst_amt" id="cgst_amt" value="{{ old('cgst', $creditNote->cgst ?? 0) }}">
@@ -432,11 +433,11 @@
                                     </div>
                                 </div>
 
-                                <div id="sgst_row" class="{{ (old('is_other_state', ($creditNote->other_state ?? false) == true) ? 'd-none' : '') }}">
+                                <div id="sgst_row" class="{{ old('is_other_state', ($creditNote->other_state ?? false) ? 'yes' : 'no') == 'yes' ? 'd-none' : '' }}">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">SGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="sgst_percent" id="sgst_percent" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #e5e6e8;" value="{{ old('sgst_percent', $creditNote->sgst_percent ?? 9) }}" step="0.01">
+                                            <input type="number" min="0" name="sgst_percent" id="sgst_percent" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #e5e6e8;" value="{{ old('sgst_percent', $creditNote->sgst_percent ?? 9) }}" step="0.01">
                                             <span class="small">%</span>
                                             <span class="ms-2">₹<span id="sgst_amt_text">{{ number_format(old('sgst', $creditNote->sgst ?? 0), 2) }}</span></span>
                                             <input type="hidden" name="sgst_amt" id="sgst_amt" value="{{ old('sgst', $creditNote->sgst ?? 0) }}">
@@ -444,11 +445,11 @@
                                     </div>
                                 </div>
 
-                                <div id="igst_row" class="{{ (old('is_other_state', ($creditNote->other_state ?? false) == false) ? 'd-none' : '') }}">
+                                <div id="igst_row" class="{{ old('is_other_state', ($creditNote->other_state ?? false) ? 'yes' : 'no') == 'no' ? 'd-none' : '' }}">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">IGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="igst_percent" id="igst_percent" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #e5e6e8;" value="{{ old('igst_percent', $creditNote->igst_percent ?? 18) }}" step="0.01">
+                                            <input type="number" min="0" name="igst_percent" id="igst_percent" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #e5e6e8;" value="{{ old('igst_percent', $creditNote->igst_percent ?? 18) }}" step="0.01">
                                             <span class="small">%</span>
                                             <span class="ms-2">₹<span id="igst_amt_text">{{ number_format(old('igst', $creditNote->igst ?? 0), 2) }}</span></span>
                                             <input type="hidden" name="igst_amt" id="igst_amt" value="{{ old('igst', $creditNote->igst ?? 0) }}">
@@ -484,6 +485,9 @@
                                             <label class="form-check-label small" for="round_off_less">Less</label>
                                         </div>
                                         <input type="number" class="form-control form-control-sm text-end" style="width: 80px;" id="round_off" name="round_off" value="{{ old('round_off', $creditNote->round_off ?? 0) }}" step="0.01" min="0">
+                                        @error('round_off')
+                                            <div class="text-danger small text-end mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                 </div>
 
@@ -517,7 +521,33 @@
 
 <script>
 $(document).ready(function() {
-    // Initialize components
+    $(document).on('keypress keydown', '#charge_amount, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function (e) {
+        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
+            e.preventDefault();
+            return false;
+        }
+        if (e.which === 40 || e.key === 'ArrowDown') {
+            var val = parseFloat($(this).val()) || 0;
+            if (val <= 0) {
+                $(this).val('0.00');
+                $(this).trigger('input');
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+
+    $(document).on('input paste change keyup', '#charge_amount, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function () {
+        var el = this;
+        var val = $(el).val();
+        if (val !== '' && (parseFloat(val) < 0 || String(val).indexOf('-') !== -1 || String(val).indexOf('+') !== -1)) {
+            var cleaned = String(val).replace(/[-+]/g, '');
+            $(el).val(cleaned ? (parseFloat(cleaned) >= 0 ? cleaned : '0.00') : '0.00');
+            if (typeof calculateTotal === 'function') {
+                calculateTotal();
+            }
+        }
+    });
     $(".select2").select2();
     $('.flatpickr').flatpickr({
         dateFormat: "d-m-Y",
@@ -527,7 +557,6 @@ $(document).ready(function() {
     let creditNoteId = "{{ $creditNote->id ?? '' }}";
     let isEditing = creditNoteId !== "";
 
-    // 1. Customer Selection Mandatory check before Invoice
     $('#sales_invoice_ids').on('select2:opening', function(e) {
         let customerId = $('#customer_id').val();
         if (!customerId) {
@@ -540,7 +569,6 @@ $(document).ready(function() {
         }
     });
 
-    // 2. Load Customer's Invoices dynamically via AJAX
     $('#customer_id').on('change', function() {
         let customerId = $(this).val();
         if (!customerId) {
@@ -550,7 +578,6 @@ $(document).ready(function() {
             return;
         }
 
-        // Fetch customer specific details
         let customerStateId = $(this).find(':selected').data('state-id');
         let companyStateId = "{{ $web_settings->state_id ?? '' }}";
 
@@ -568,12 +595,10 @@ $(document).ready(function() {
             }
         }
 
-        // Autofill Zone
         let zoneId = $(this).find(':selected').data('zone-id');
         if (zoneId) {
             $('#zone_id').val(zoneId).trigger('change');
         } else {
-            // Fallback AJAX if data-zone-id is missing
             $.ajax({
                 url: "{{ url('get-customer-details') }}/" + customerId,
                 type: 'GET',
@@ -603,7 +628,6 @@ $(document).ready(function() {
         }
     });
 
-    // 3. Fetch Items from Selected Multi-Select Invoices
     $('#sales_invoice_ids').on('change', function() {
         let selectedInvoiceIds = $(this).val();
         if (!selectedInvoiceIds || selectedInvoiceIds.length === 0) {
@@ -622,13 +646,10 @@ $(document).ready(function() {
             type: 'GET',
             success: function(response) {
                 if (response.success) {
-                    // Store available items in global variable
                     window.availableInvoiceItems = response.items || [];
                     
-                    // Clear the rows first
                     $('#item-rows').html('');
                     
-                    // Keep old values if old items are stored
                     let oldItemsMap = {};
                     @if(old('items'))
                         @foreach(old('items') as $idx => $oldItm)
@@ -657,7 +678,6 @@ $(document).ready(function() {
                         $('#item-rows').html('<tr class="empty-row text-center"><td colspan="15">No items added. Use the search box above to scan or search items from selected invoices.</td></tr>');
                     }
                     
-                    // Populate tax rates
                     $('#igst_percent').val(response.igst_percent);
                     $('#cgst_percent').val(response.cgst_percent);
                     $('#sgst_percent').val(response.sgst_percent);
@@ -747,14 +767,11 @@ $(document).ready(function() {
                         style="background-color: #f8f9fa; min-width: 110px;">
                 </td>
                 <td>
-                    <div class="input-group input-group-merge input-group-sm" style="min-width: 130px;">
-                        <span class="input-group-text">₹</span>
-                        <input type="text" class="form-control form-control-sm text-end line_total" 
-                            value="${(returnQty * (item.rate || 0)).toFixed(2)}" 
-                            readonly 
-                            name="items[${index}][amount]" 
-                            style="background-color: #f8f9fa;">
-                    </div>
+                    <input type="text" class="form-control form-control-sm text-end line_total" 
+                        value="${(returnQty * (item.rate || 0)).toFixed(2)}" 
+                        readonly 
+                        name="items[${index}][amount]" 
+                        style="background-color: #f8f9fa; min-width: 150px;">
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-danger remove-item">
@@ -856,14 +873,18 @@ $(document).ready(function() {
         }
 
         var it = item.itemData;
-        var barcodeInfo = it.product_barcode ? ` | Barcode: ${it.product_barcode}` : '';
-        var sizeInfo = it.size ? ` | Size: ${it.size}` : '';
+        var codeInfo = (it.item_code && it.item_code !== '-') ? `Code: ${it.item_code}` : '';
+        var barcodeInfo = it.product_barcode ? `Barcode: ${it.product_barcode}` : '';
+        var sizeInfo = it.size ? `Size: ${it.size}` : '';
+        
+        var infoParts = [codeInfo, barcodeInfo, sizeInfo].filter(Boolean).join(' | ');
+
         return $("<li>")
             .append(`<div class="ui-menu-item-wrapper">
                 <span class="search-item-title">${item.label}</span>
                 <span class="search-item-balance">Bal Qty: ${parseFloat(it.balance_qty).toFixed(2)}</span>
                 <div class="search-item-info">
-                    Code: ${it.item_code || '-'} ${barcodeInfo} ${sizeInfo} | Rate: ₹${parseFloat(it.rate || it.mrp || 0).toFixed(2)}
+                    ${infoParts ? infoParts + ' | ' : ''}Rate: ₹${parseFloat(it.rate || it.mrp || 0).toFixed(2)}
                 </div>
             </div>`)
             .appendTo(ul);
@@ -1040,10 +1061,8 @@ $(document).ready(function() {
         $('#grand_total').val(grandTotal.toFixed(2));
     }
 
-    // Add event listener to discount_percent to recalculate total
-    $('#discount_percent').on('input', calculateTotal);
+    $(document).on('input change', '#discount_percent, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .round-off-type-radio', calculateTotal);
 
-    // --- Additional Charges Logic ---
     function refreshChargeDropdownState() {
         let selectedChargeIds = [];
         $('#added_charges_list tr').each(function () {
@@ -1066,7 +1085,8 @@ $(document).ready(function() {
             dropdownParent: $('#charges_select').closest('.card-body')
         });
     }
-
+    
+    
     $('#add_charge_btn').click(function () {
         let chargeId = $('#charges_select').val();
         let chargeText = $('#charges_select option:selected').text();
@@ -1109,9 +1129,8 @@ $(document).ready(function() {
                     <input type="hidden" name="charges[amount][]" value="${amount.toFixed(2)}">
                 </td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
-                        <i class="ri ri-delete-bin-line"></i>
-                    </button>
+                    <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge"><i class="ri ri-pencil-line"></i></button>
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge"><i class="ri ri-delete-bin-line"></i></button>
                 </td>
             </tr>
         `;
@@ -1135,7 +1154,32 @@ $(document).ready(function() {
         calculateTotal();
         refreshChargeDropdownState();
     });
+    $(document).on('click', '.edit-charge', function () {
+        let currentChargeId = $('#charges_select').val();
+        if (currentChargeId) {
+            $('#add_charge_btn').click();
+            if ($('#charges_select').val()) {
+                return;
+            }
+        }
 
+        let $row = $(this).closest('tr');
+        let chargeId = $row.data('charge-id') || $row.attr('data-charge-id');
+        let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
+        let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Pre-GST';
+
+        $('#charges_select').val(chargeId).trigger('change');
+        $('#charge_amount').val(amount.toFixed(2));
+        $('#charge_tax_type').val(taxType).trigger('change');
+
+        $row.remove();
+
+        if ($('#added_charges_list tr').length === 0) {
+            $('#charges_table').addClass('d-none');
+        }
+        calculateTotal();
+        refreshChargeDropdownState();
+    });
     // Run on initial load to set select state for editing
     refreshChargeDropdownState();
 
