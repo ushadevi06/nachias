@@ -111,12 +111,14 @@ class PurchaseOrderController extends Controller
 
 
                 $statusDropdown = '
-                <div class="form-floating form-floating-outline">
-                    <select class="form-select po-status-change" data-id="' . $po->id . '" data-previous-status="' . $po->status . '" ' . ($po->status === 'Received' ? 'disabled' : '') . '>
-                        ' . $statusOptions . '
-                    </select>
-                </div>
-                <div class="status_msg_' . $po->id . ' mt-1"></div>';
+                <div class="position-relative">
+                    <div class="form-floating form-floating-outline">
+                        <select class="form-select po-status-change" data-id="' . $po->id . '" data-previous-status="' . $po->status . '" ' . ($po->status === 'Received' ? 'disabled' : '') . '>
+                            ' . $statusOptions . '
+                        </select>
+                    </div>
+                    <div class="status_msg_' . $po->id . ' position-absolute w-100" style="z-index: 50; top: 100%; left: 0;"></div>
+                </div>';
 
                 $action = '<div class="d-inline-block text-nowrap">';
 
@@ -197,8 +199,22 @@ class PurchaseOrderController extends Controller
             $rules = [
                 'po_number' => ['required', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:purchase_orders,po_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'po_date' => 'required|date_format:d-m-Y',
-                'purchase_commission_agent_id' => 'required_with:commission|nullable|exists:purchase_commission_agents,id',
-                'commission' => 'required_with:purchase_commission_agent_id|nullable|numeric|min:0|max:100',
+                'purchase_commission_agent_id' => [
+                    'nullable',
+                    'exists:purchase_commission_agents,id',
+                    \Illuminate\Validation\Rule::requiredIf(function () use ($request) {
+                        return (float) $request->commission > 0;
+                    })
+                ],
+                'commission' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                    'max:100',
+                    \Illuminate\Validation\Rule::requiredIf(function () use ($request) {
+                        return !empty($request->purchase_commission_agent_id);
+                    })
+                ],
                 'supplier_id' => 'required|exists:suppliers,id',
                 'reference_no' => 'required|string|min:3|max:100',
                 'reference_date' => 'required|date_format:d-m-Y',
@@ -251,8 +267,8 @@ class PurchaseOrderController extends Controller
                 '*.numeric' => 'This field must be a valid number.',
                 'commission.min' => 'Commission cannot be negative. Please enter 0 to 100.',
                 'commission.max' => 'Commission percentage cannot exceed 100%.',
-                'commission.required_with' => 'Commission is required when Purchase Commission Agent is selected.',
-                'purchase_commission_agent_id.required_with' => 'Purchase Commission Agent is required when Commission is provided.',
+                'commission.required_if' => 'Commission is required when Purchase Commission Agent is selected.',
+                'purchase_commission_agent_id.required_if' => 'Purchase Commission Agent is required when Commission is greater than 0.',
                 'igst_percent.min' => 'IGST cannot be negative. Please enter 0 to 100.',
                 'igst_percent.max' => 'IGST percentage cannot exceed 100%.',
                 'cgst_percent.min' => 'CGST cannot be negative. Please enter 0 to 100.',

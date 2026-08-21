@@ -364,7 +364,7 @@ class SalesInvoiceController extends Controller
             try {
                 $this->validateStockAvailability($request->items, $id);
             } catch (\Exception $e) {
-                return back()->withInput()->withErrors(['error' => $e->getMessage()]);
+                return back()->withInput()->with('stock_alert', $e->getMessage());
             }
 
             DB::beginTransaction();

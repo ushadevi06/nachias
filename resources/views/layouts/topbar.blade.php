@@ -723,7 +723,7 @@ $isSuper = $user->id == 1;
                                                 </li>
                                             @endif
 
-                                            @if($isEmployeeUser)
+                                            @if($isEmployeeUser || $user->can('my-attendance-report'))
                                                 <li class="menu-item {{ request()->is('employee_attendance*') ? 'active' : '' }}">
                                                     <a href="{{ url('employee_attendance') }}" class="menu-link">
                                                         <div>Employee Attendance</div>

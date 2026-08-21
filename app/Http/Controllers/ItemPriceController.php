@@ -409,6 +409,26 @@ class ItemPriceController extends Controller
 
         $artNos = array_values(array_unique(array_merge($artNos1, $artNos2)));
 
+        $parts = explode('-', $itemCode);
+        if (count($parts) >= 1) {
+            $brandCode = trim($parts[0]);
+            if ($brandCode !== '') {
+                $brand = \DB::table('brands')->where('code', $brandCode)->first();
+                if ($brand) {
+                    $artNos3 = \DB::table('job_card_fabric_details')
+                        ->join('job_card_entries', 'job_card_fabric_details.job_card_entry_id', '=', 'job_card_entries.id')
+                        ->where('job_card_entries.brand_id', $brand->id)
+                        ->whereNotNull('job_card_fabric_details.art_no')
+                        ->where('job_card_fabric_details.art_no', '!=', '')
+                        ->distinct()
+                        ->pluck('job_card_fabric_details.art_no')
+                        ->toArray();
+                    
+                    $artNos = array_values(array_unique(array_merge($artNos, $artNos3)));
+                }
+            }
+        }
+
         return response()->json(['art_nos' => $artNos]);
     }
 
@@ -476,6 +496,50 @@ class ItemPriceController extends Controller
                     'code'  => $item->finished_item_code,
                     'name'  => $item->item_name ?? ''
                 ];
+        }
+
+        }
+
+        // Dynamic Job Card Item Suggestions (Brand-Style Combinations)
+        if (strlen($term) >= 2) {
+            $brands = DB::table('brands')->whereNull('deleted_at')->where('status', 'Active')->get(['code', 'brand_name']);
+            $styles = DB::table('styles')->whereNull('deleted_at')->where('status', 'Active')->get(['code', 'style_name']);
+            
+            foreach ($brands as $brand) {
+                if (empty($brand->code)) continue;
+                
+                foreach ($styles as $style) {
+                    if (empty($style->code)) continue;
+                    
+                    $baseCode = $brand->code . '-' . $style->code;
+                    
+                    // If the combination starts with the search term
+                    if (stripos($baseCode, trim($term)) === 0) {
+                        $codeFS = $baseCode . '-FS';
+                        $codeHS = $baseCode . '-HS';
+                        $baseName = trim($brand->brand_name . ' ' . $style->style_name);
+                        
+                        if (!in_array($codeFS, $seenCodes)) {
+                            $seenCodes[] = $codeFS;
+                            $formattedResults[] = [
+                                'id'    => '',
+                                'text'  => $codeFS . ' - ' . $baseName . ' F/S (New)',
+                                'code'  => $codeFS,
+                                'name'  => $baseName . ' F/S'
+                            ];
+                        }
+                        
+                        if (!in_array($codeHS, $seenCodes)) {
+                            $seenCodes[] = $codeHS;
+                            $formattedResults[] = [
+                                'id'    => '',
+                                'text'  => $codeHS . ' - ' . $baseName . ' H/S (New)',
+                                'code'  => $codeHS,
+                                'name'  => $baseName . ' H/S'
+                            ];
+                        }
+                    }
+                }
             }
         }
 

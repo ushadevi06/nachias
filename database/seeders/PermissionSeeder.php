@@ -102,7 +102,7 @@ class PermissionSeeder extends Seeder
             'manage-payments' => ['create', 'edit', 'delete', 'view', 'view_details'],
 
             /* Payroll */
-            'attendance' => ['edit', 'view', 'view_details'],
+            'attendance' => ['edit', 'view', 'view_details','my-attendance-report'],
             'manage-leaves' => ['create', 'edit', 'view', 'view_details'],
             'overtime' => ['edit', 'view', 'view_details'],
             'monthly-payroll' => ['create', 'edit', 'view', 'view_details'],

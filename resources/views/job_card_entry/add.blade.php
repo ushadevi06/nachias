@@ -627,10 +627,12 @@
                                                             } else {
                                                                 $previousTaskAssigned = true;
                                                             }
-                                                            $canAssignCurrentStage = $previousTaskAssigned && !$hasTask;
+                                                            $canAssignCurrentStage = $hasIssuedItems && $previousTaskAssigned && !$hasTask;
                                                             $buttonText = $hasTask ? 'Assigned Task (Task: ' . $taskNo . ')' : 'Assign Task';
 
-                                                            if (!$previousTaskAssigned) {
+                                                            if (!$hasIssuedItems && !$hasTask) {
+                                                                $buttonTitle = 'Materials not yet issued';
+                                                            } elseif (!$previousTaskAssigned) {
                                                                 $buttonTitle = 'Previous stage task not assigned';
                                                             } elseif ($hasTask) {
                                                                 $buttonTitle = "Task already assigned (Status: $taskStatus)";
@@ -2458,7 +2460,31 @@
             updateQuantityRowVisibility();
         });
 
+        function updateLayMarkSleeveOptions() {
+            let hasFS = sleeveInstances.some(i => i.type === 'fs');
+            let hasHS = sleeveInstances.some(i => i.type === 'hs');
+            
+            // If neither is present, fallback to F/S as default
+            if (!hasFS && !hasHS) {
+                hasFS = true;
+            }
+
+            $('.sleeve-input').each(function() {
+                let currentVal = $(this).val();
+                $(this).empty();
+                if(hasFS) $(this).append('<option value="F/S">F/S</option>');
+                if(hasHS) $(this).append('<option value="H/S">H/S</option>');
+                
+                if(currentVal && $(this).find(`option[value="${currentVal}"]`).length) {
+                    $(this).val(currentVal);
+                } else {
+                    $(this).trigger('change');
+                }
+            });
+        }
+
         function renderSleeveInstanceList() {
+            updateLayMarkSleeveOptions();
             const $list = $('#sleeve-instance-list');
             const $msg = $('#no-sleeve-msg');
             $list.empty();
@@ -2915,6 +2941,7 @@
                 $tbody.append(sleeveQtyRow + '</tr>');
             }
             $('.select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
+            if (typeof updateLayMarkSleeveOptions === 'function') updateLayMarkSleeveOptions();
         }
 
         $(document).on('click', '.add-lay-mark-btn', function() {
@@ -2980,6 +3007,7 @@
             $table.append(rowHtml);
             $table.find('tr:last-child .select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
             updateLayMarkRowNumbers($table);
+            if (typeof updateLayMarkSleeveOptions === 'function') updateLayMarkSleeveOptions();
             calculateMatrixFromLayMarks();
         }
 
@@ -3582,7 +3610,7 @@
                     <input type="text" name="production_stages[${stageRowIndex}][deadline_date]" class="form-control deadline-date" value="" placeholder="Enter Deadline Date">
                 </td>
                 <td>
-                    <input type="text" name="production_stages[${stageRowIndex}][remarks]" class="form-control" placeholder="Enter Remarks">
+                    <textarea name="production_stages[${stageRowIndex}][remarks]" class="form-control" placeholder="Enter Remarks"></textarea>
                 </td>
                 <td>
                     <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
@@ -3601,8 +3629,52 @@
             const config = typeof flatpickrConfig !== 'undefined' ? flatpickrConfig : { dateFormat: 'd-m-Y', allowInput: true };
             $('#production-stages-table tbody tr:last .issue-date, #production-stages-table tbody tr:last .deadline-date').flatpickr(config);
 
+            if (typeof updateProviderSelectOptions === 'function') updateProviderSelectOptions();
             stageRowIndex++;
         });
+
+        function updateProviderSelectOptions() {
+            let selectedCombinations = [];
+            $('#production-stages-table tbody tr').each(function() {
+                let stageId = $(this).find('.stage-select').val();
+                let providerId = $(this).find('.provider-select').val();
+                if(stageId && providerId) {
+                    selectedCombinations.push({ stageId: stageId, providerId: providerId, row: this });
+                }
+            });
+
+            $('#production-stages-table tbody tr').each(function() {
+                let currentRow = this;
+                let currentStageId = $(this).find('.stage-select').val();
+                let $providerSelect = $(this).find('.provider-select');
+                let currentProviderId = $providerSelect.val();
+
+                $providerSelect.find('option').each(function() {
+                    let optionValue = $(this).val();
+                    if(!optionValue) return;
+
+                    let isUsedElsewhere = selectedCombinations.some(comb => 
+                        comb.row !== currentRow && 
+                        comb.stageId === currentStageId && 
+                        comb.providerId === optionValue
+                    );
+
+                    if(isUsedElsewhere) {
+                        $(this).prop('disabled', true);
+                    } else {
+                        $(this).prop('disabled', false);
+                    }
+                });
+
+                if ($providerSelect.hasClass('select2-hidden-accessible')) {
+                    $providerSelect.select2('destroy').select2({
+                        dropdownParent: $providerSelect.parent(),
+                        placeholder: $providerSelect.data('placeholder'),
+                        width: '100%'
+                    });
+                }
+            });
+        }
 
         $(document).on('change', '.stage-select', function() {
             const $row = $(this).closest('tr');
@@ -3613,15 +3685,24 @@
             }
 
             $row.find('.issue-date').trigger('change');
+            updateProviderSelectOptions();
+        });
+
+        $(document).on('change', '.provider-select', function() {
+            updateProviderSelectOptions();
         });
 
         $(document).on('click', '.remove-stage-row', function() {
             if ($('#production-stages-table tbody tr').length > 1) {
                 $(this).closest('tr').remove();
+                updateProviderSelectOptions();
             } else {
                 alert('At least one row is required.');
             }
         });
+        
+        // Initial call
+        setTimeout(updateProviderSelectOptions, 500);
 
         const operationStagesData = @json($operationStages->keyBy('id'));
 
@@ -3685,7 +3766,12 @@
             const currentManualUsed = {};
             $wrapper.find('.item-used-input').each(function() {
                 const art = $(this).data('art');
-                if (art) currentManualUsed[art] = $(this).val();
+                const val = parseFloat($(this).val() || 0).toFixed(2);
+                const currentTotal = parseFloat($(this).closest('tr').find('.stock-total-qty-hidden').val() || 0).toFixed(2);
+                
+                if (art && val !== currentTotal) {
+                    currentManualUsed[art] = $(this).val();
+                }
             });
 
             $fabricTbody.empty();

@@ -164,18 +164,23 @@
                         if (response.success === false || response.rate_missing) {
                             $select.val(previousStatus).trigger('change.select2');
                             let errorMsg = response.message || 'Update failed';
-                            let msg = '<span class="text-danger" style="font-size:11px; display:block; line-height:1.2; max-width:150px;"><i class="ri ri-alert-line"></i> ' + errorMsg + '</span>';
-                            $('.status_msg_' + id).html(msg).fadeIn().delay(4000).fadeOut();
+                            let msg = '<span class="text-danger" style="font-size:10px; display:block; line-height:1.2; white-space:normal; word-break:break-word; width:100%; max-width:130px; margin-top:4px; text-align:left;"><i class="ri ri-alert-line"></i> ' + errorMsg + '</span>';
+                            $('.status_msg_' + id).html(msg).fadeIn();
+                            setTimeout(function() {
+                                $('.status_msg_' + id).fadeOut(function() {
+                                    $(this).empty();
+                                });
+                            }, 4000);
                             return;
                         }
                         $select.data('previous-status', status);
-                        let msg = '<span class="text-success" style="font-size:12px;"><i class="ri ri-check-line"></i> Status Changed</span>';
+                        let msg = '<div class="text-success bg-white border border-success rounded shadow p-1 mt-1" style="font-size:11px; text-align:center;"><i class="ri ri-check-line"></i> Status Changed</div>';
                         $('.status_msg_' + id).html(msg).fadeIn().delay(2000).fadeOut();
                         table.ajax.reload(null, false);
                     },
                     error: function () {
                         $select.val(previousStatus).trigger('change.select2');
-                        let msg = '<span class="text-danger" style="font-size:12px;">Update failed</span>';
+                        let msg = '<div class="text-danger bg-white border border-danger rounded shadow p-1 mt-1" style="font-size:11px; text-align:center;"><i class="ri ri-alert-line"></i> Update failed</div>';
                         $('.status_msg_' + id).html(msg).fadeIn().delay(2000).fadeOut();
                     }
                 });

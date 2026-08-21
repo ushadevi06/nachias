@@ -96,6 +96,18 @@
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Store</div>
                             <div class="fw-bold text-dark">{{ $salesOrder->store->store_type_name ?? '-' }}</div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Request Date</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->request_date ? \Carbon\Carbon::parse($salesOrder->request_date)->format('d M, Y') : '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Delivery Date</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->delivery_date ? \Carbon\Carbon::parse($salesOrder->delivery_date)->format('d M, Y') : '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Customer PO Ref</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->customer_po_ref ?? '-' }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -325,7 +337,7 @@
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->terms_conditions ?? '-' }}</p>
                                 </div> --}}
                                 <div class="col-12 mt-3">
-                                    <div class="text-muted text-uppercase small fw-bold mb-1">Internal Remarks</div>
+                                    <div class="text-muted text-uppercase small fw-bold mb-1">Internal Notes</div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->internal_remarks ?? '-' }}</p>
                                 </div>
                                 <div class="col-12 mt-3">

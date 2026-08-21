@@ -6,6 +6,16 @@
         <div class="col-lg-12">
             <div class="col-lg-12">
                 @include('flash_messages')
+                
+                @if(session('stock_alert'))
+                    <div class="alert alert-danger alert-dismissible py-2 px-3 d-flex align-items-center mb-3 shadow-sm border-danger" role="alert">
+                        <i class="ri-error-warning-line fs-4 me-3 text-danger"></i>
+                        <div>
+                            <strong class="text-danger">Stock Alert:</strong> {{ session('stock_alert') }}
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
             </div>
             <form action="{{ isset($invoice) ? url('sales_invoices/add/' . $invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data" novalidate>
                 @csrf
@@ -687,7 +697,7 @@
 
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="file" class="form-control" id="signature_file" name="signature_file" accept="image/*">
+                                            <input type="file" class="form-control" id="signature_file" name="signature_file" accept=".jpg, .jpeg, .png">
                                             <label for="signature_file">Authorized Signature / Stamp Upload</label>
                                             @if(isset($invoice) && $invoice->signature_file)
                                                 @php
@@ -715,12 +725,12 @@
 
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="file" class="form-control" id="attachment_file" name="attachment_file">
+                                            <input type="file" class="form-control" id="attachment_file" name="attachment_file" accept = ".pdf, .doc, .docx, .jpg, .jpeg, .png">
                                             <label for="attachment_file">Attachments</label>
                                             @if(isset($invoice) && $invoice->attachment_file)
                                                 @php
                                                     $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
-                                                    $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                    $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'pdf']);
                                                     $attUrl = asset($invoice->attachment_file);
                                                 @endphp
                                                 <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">

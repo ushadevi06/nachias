@@ -925,6 +925,12 @@ class JobCardEntryController extends Controller
             }
         }
 
+        foreach ($jobCard->fabricDetails as $detail) {
+            if ($detail->fs_qty > 0 || $detail->hs_qty > 0 || $detail->quantities->sum('qty_fs') > 0 || $detail->quantities->sum('qty_hs') > 0) {
+                $artCategoryMap[trim($detail->art_no)] = 1;
+            }
+        }
+
         return ['artMaterialMap' => $artMaterialMap, 'artCategoryMap' => $artCategoryMap];
     }
 
@@ -1168,11 +1174,9 @@ class JobCardEntryController extends Controller
                                 $remainingToDeduct = round($remainingToDeduct - $take, 4);
                             }
 
-                            /* 
                             if ($remainingToDeduct > 0.001) {
                                 throw new \Exception("Insufficient stock for Art No: $artNo. Shortage: " . $remainingToDeduct);
                             }
-                            */
                             $actualDeducted = round($totalToDeduct - $remainingToDeduct, 4);
                             $unitPrice = ($actualDeducted > 0) ? ($weightedCost / $actualDeducted) : 0;
                         }
@@ -1296,6 +1300,8 @@ class JobCardEntryController extends Controller
                             $style = $jobCard->item->style ?? null;
                         }
 
+                        $missingPrices = [];
+
                         foreach ($matrixQuantities as $mq) {
                             $sizeCode = is_numeric($mq->size) ? str_pad($mq->size, 2, '0', STR_PAD_LEFT) : '00';
 
@@ -1310,13 +1316,33 @@ class JobCardEntryController extends Controller
 
                             // Create/Update for Full Sleeve (F/S)
                             if ($mq->qty_fs > 0) {
+                                $itemCodeFS = implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'FS'], function($v) { return $v !== ''; }));
+                                $itemNameFS = trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' F/S');
+                                
+                                $priceExistsFS = \App\Models\ItemPrice::where('status', 'Active')
+                                    ->where('finished_item_code', $itemCodeFS)
+                                    ->where('art_no', $artNo)
+                                    ->where(function($q) use ($mq) {
+                                        $q->where('size', $mq->size)->orWhereNull('size')->orWhere('size', '');
+                                    })
+                                    ->whereDate('effective_from', '<=', now())
+                                    ->exists();
+                                
+                                if (!$priceExistsFS) {
+                                    $missingPrices[] = [
+                                        'item_name' => $itemNameFS,
+                                        'finished_item_code' => $itemCodeFS,
+                                        'art_no' => $artNo
+                                    ];
+                                }
+
                                 BarcodeMaster::updateOrCreate(
                                     ['barcode_no' => $barcodeFS],
                                     [
                                         'job_card_entry_id' => $jobCard->id,
-                                        'item_code' => implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'FS'], function($v) { return $v !== ''; })),
+                                        'item_code' => $itemCodeFS,
                                         'art_no' => $artNo,
-                                        'item_name' => trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' F/S'),
+                                        'item_name' => $itemNameFS,
                                         'sleeve_type' => 'F/S',
                                         'size' => $mq->size,
                                         'quantity' => $mq->qty_fs,
@@ -1331,13 +1357,33 @@ class JobCardEntryController extends Controller
 
                             // Create/Update for Half Sleeve (H/S)
                             if ($mq->qty_hs > 0) {
+                                $itemCodeHS = implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'HS'], function($v) { return $v !== ''; }));
+                                $itemNameHS = trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' H/S');
+
+                                $priceExistsHS = \App\Models\ItemPrice::where('status', 'Active')
+                                    ->where('finished_item_code', $itemCodeHS)
+                                    ->where('art_no', $artNo)
+                                    ->where(function($q) use ($mq) {
+                                        $q->where('size', $mq->size)->orWhereNull('size')->orWhere('size', '');
+                                    })
+                                    ->whereDate('effective_from', '<=', now())
+                                    ->exists();
+
+                                if (!$priceExistsHS) {
+                                    $missingPrices[] = [
+                                        'item_name' => $itemNameHS,
+                                        'finished_item_code' => $itemCodeHS,
+                                        'art_no' => $artNo
+                                    ];
+                                }
+
                                 BarcodeMaster::updateOrCreate(
                                     ['barcode_no' => $barcodeHS],
                                     [
                                         'job_card_entry_id' => $jobCard->id,
-                                        'item_code' => implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'HS'], function($v) { return $v !== ''; })),
+                                        'item_code' => $itemCodeHS,
                                         'art_no' => $artNo,
-                                        'item_name' => trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' H/S'),
+                                        'item_name' => $itemNameHS,
                                         'sleeve_type' => 'H/S',
                                         'size' => $mq->size,
                                         'quantity' => $mq->qty_hs,
@@ -1349,6 +1395,19 @@ class JobCardEntryController extends Controller
                                     ]
                                 );
                             }
+                        }
+
+                        if (!empty($missingPrices)) {
+                            DB::rollBack();
+                            if ($request->ajax()) {
+                                return response()->json([
+                                    'success' => false,
+                                    'error_type' => 'missing_prices',
+                                    'missing_prices' => array_values(array_unique($missingPrices, SORT_REGULAR)),
+                                    'message' => 'Missing pricing for generated items.'
+                                ]);
+                            }
+                            return back()->with('danger', 'Missing pricing for generated items.');
                         }
 
                         $updatedItems[$matrixId] = [
@@ -2571,7 +2630,11 @@ class JobCardEntryController extends Controller
         $request->merge(['format' => 'sticker']);
         return $this->printLabel($id, $request);
     }
-
+    public function printLabelSquare($id, Request $request)
+    {
+        $request->merge(['format' => 'square']);
+        return $this->printLabel($id, $request);
+    }
     public function printLabel($id, Request $request)
     {
         $issueItem = JobCardIssueItem::with([
@@ -2591,6 +2654,9 @@ class JobCardEntryController extends Controller
         if ($format === 'sticker') {
             $width = $request->width ?? 70;
             $height = $request->height ?? 50;
+		} elseif ($format === 'square') {
+            $width = $request->width ?? 45;
+            $height = $request->height ?? 45;
         } else {
             $width = $request->width ?? 45;
             $height = $request->height ?? 85;
@@ -2821,7 +2887,7 @@ class JobCardEntryController extends Controller
 
         $labelData = count($labels) > 0 ? $labels[0] : [];
 
-        $viewName = ($format === 'tag') ? 'labels.print_tag' : 'labels.print_sticker';
+        $viewName = ($format === 'square') ? 'labels.print_square_sticker' : (($format === 'tag') ? 'labels.print_tag' : 'labels.print_sticker');
         return view($viewName, compact('labelData', 'labels', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order', 'format'));
     }
 

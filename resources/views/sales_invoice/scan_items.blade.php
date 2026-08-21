@@ -312,7 +312,43 @@
         </div>
     </div>
 </div>
+<link rel="stylesheet" href="{{ url('assets/css/jquery-ui.css') }}">
 <style>
+    .ui-autocomplete {
+        z-index: 10000 !important;
+        max-height: 300px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        border: 1px solid #e0e2ef;
+    }
+    .ui-menu-item {
+        border-bottom: 1px solid #f0f1f8;
+    }
+    .ui-menu-item:last-child {
+        border-bottom: none;
+    }
+    .ui-menu-item .ui-menu-item-wrapper {
+        padding: 10px 15px !important;
+        transition: all 0.2s;
+    }
+    .ui-menu-item .ui-menu-item-wrapper.ui-state-active {
+        background-color: #f4f5fb !important;
+        color: var(--bs-primary) !important;
+        border: none !important;
+        margin: 0 !important;
+    }
+    .search-item-title {
+        font-weight: 700;
+        color: #323452;
+        margin-bottom: 2px;
+        display: block;
+    }
+    .search-item-info {
+        font-size: 12px;
+        color: #6d6f89;
+    }
     .stat-card {
         border: 1px solid #dee2e6;
         border-radius: 8px;
@@ -333,6 +369,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
@@ -371,73 +408,171 @@
         }
 
         updateStats();
+        function processScannedBarcode(rawSku) {
+            if (!rawSku || rawSku.trim() === '') return;
+            let sku = rawSku.split('|')[0].trim();
+            
+            $('#barcode_input').val('');
+            $('#scan_alert').hide();
+            
+            let rows = $('#items_table tbody tr[data-sku="'+sku+'"]');
+            if(rows.length > 0) {
+                let pendingRow = null;
+                let fullyScanned = true;
+
+                rows.each(function() {
+                    let r = parseInt($(this).attr('data-req'));
+                    let s = parseInt($(this).attr('data-scan'));
+                    if (s < r) {
+                        pendingRow = $(this);
+                        fullyScanned = false;
+                        return false; // Break the each loop
+                    }
+                });
+
+                if(pendingRow) {
+                    let row = pendingRow;
+                    let req = parseInt(row.attr('data-req'));
+                    let scan = parseInt(row.attr('data-scan'));
+                    let iname = row.attr('data-item-name');
+                    let isize = row.attr('data-size');
+                    let icolor = row.attr('data-color');
+                    
+                    scan++;
+                    row.attr('data-scan', scan);
+                    row.find('.scan-val').text(scan);
+                    row.find('.rem-val').text(req - scan);
+                    
+                    if(scan >= req) {
+                        row.find('.status-cell').html('<span class="badge bg-success">Completed</span>');
+                    } else {
+                        row.find('.status-cell').html('<span class="badge bg-warning text-dark">In Progress</span>');
+                    }
+                    
+                    updateStats();
+                    
+                    let shortName = iname.split(' ')[0] + ' ' + (iname.split(' ')[1] || '');
+                    $('#scan_alert').removeClass('alert-danger').addClass('alert-success').html('<i class="ri-check-line me-1"></i> <strong>Success:</strong> Scanned ' + shortName + ' (Size ' + isize + ')').show();
+                    
+                    setTimeout(function() {
+                        $('#scan_alert').fadeOut('fast', function() {
+                            $(this).removeClass('alert-success');
+                        });
+                    }, 2500);
+                    
+                    playBeep(800, 0.2);
+                    
+                    saveProgress();
+                } else if(fullyScanned) {
+                    $('#scan_alert').removeClass('alert-success').addClass('alert-danger').html('<strong>Error:</strong> Required quantity already scanned for ' + sku).show();
+                    playBeep(150, 0.3, 'sawtooth');
+                }
+            } else {
+                $('#scan_alert').removeClass('alert-success').addClass('alert-danger').html('<strong>Error:</strong> Barcode not found in this Sales Invoice').show();
+                playBeep(150, 0.3, 'sawtooth');
+            }
+        }
+
+        function getInvoiceItems() {
+            let list = [];
+            $('.item-row').each(function() {
+                let row = $(this);
+                let sku = String(row.attr('data-sku') || row.find('td:nth-child(3)').text() || '').trim();
+                let artNo = String(row.attr('data-art-no') || row.find('td:nth-child(2)').text() || '').trim();
+                if (artNo === '-') artNo = '';
+                let itemName = String(row.attr('data-item-name') || '').trim();
+                let size = String(row.attr('data-size') || '').trim();
+                let color = String(row.attr('data-color') || '').trim();
+                let req = parseInt(row.attr('data-req')) || 0;
+                let scan = parseInt(row.attr('data-scan')) || 0;
+                let rem = Math.max(0, req - scan);
+
+                let label = itemName;
+                if (size && size !== '-') label += ' | Size: ' + size;
+                if (sku && sku !== '-') label += ' | SKU: ' + sku;
+
+                list.push({
+                    id: sku || artNo,
+                    label: label,
+                    value: sku || artNo,
+                    sku: sku,
+                    art_no: artNo,
+                    item_name: itemName,
+                    size: size,
+                    color: color,
+                    balance: rem,
+                    req: req,
+                    scan: scan
+                });
+            });
+            return list;
+        }
+
+        $('#barcode_input').autocomplete({
+            source: function(request, response) {
+                let term = (request.term || '').trim().toLowerCase();
+                if (!term) {
+                    response([]);
+                    return;
+                }
+
+                let invoiceItems = getInvoiceItems();
+
+                let matched = invoiceItems.filter(function(it) {
+                    let s = it.sku.toLowerCase();
+                    let a = it.art_no.toLowerCase();
+                    let n = it.item_name.toLowerCase();
+                    let sz = it.size.toLowerCase();
+                    let c = it.color.toLowerCase();
+                    return s.includes(term) || a.includes(term) || n.includes(term) || sz.includes(term) || c.includes(term);
+                });
+
+                if (matched.length === 0) {
+                    response([{
+                        label: 'Barcode not found in this Invoice',
+                        value: '',
+                        noResult: true
+                    }]);
+                    return;
+                }
+
+                response(matched);
+            },
+            minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+            },
+            select: function(event, ui) {
+                event.preventDefault();
+                if (ui.item && !ui.item.noResult) {
+                    processScannedBarcode(ui.item.sku || ui.item.value);
+                }
+                $(this).val('').focus();
+                return false;
+            }
+        }).autocomplete("instance")._renderItem = function(ul, item) {
+            if (item.noResult) {
+                return $("<li>")
+                    .append(`<div class="ui-menu-item-wrapper text-danger fw-bold">Barcode not found</div>`)
+                    .appendTo(ul);
+            }
+
+            let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
+            return $("<li>")
+                .append(`<div class="ui-menu-item-wrapper">
+                    <span class="search-item-title">${item.label}</span>
+                    <div class="search-item-info">
+                        Art No: ${item.art_no || '-'} ${skuInfo}
+                    </div>
+                </div>`)
+                .appendTo(ul);
+        };
         
         $('#barcode_input').on('keypress', function(e) {
             if(e.which == 13) {
                 let rawSku = $(this).val().trim();
                 if(rawSku === '') return;
-                
-                let sku = rawSku.split('|')[0].trim();
-                
-                $(this).val('');
-                $('#scan_alert').hide();
-                
-                let rows = $('#items_table tbody tr[data-sku="'+sku+'"]');
-                if(rows.length > 0) {
-                    let pendingRow = null;
-                    let fullyScanned = true;
-
-                    rows.each(function() {
-                        let r = parseInt($(this).attr('data-req'));
-                        let s = parseInt($(this).attr('data-scan'));
-                        if (s < r) {
-                            pendingRow = $(this);
-                            fullyScanned = false;
-                            return false; // Break the each loop
-                        }
-                    });
-
-                    if(pendingRow) {
-                        let row = pendingRow;
-                        let req = parseInt(row.attr('data-req'));
-                        let scan = parseInt(row.attr('data-scan'));
-                        let iname = row.attr('data-item-name');
-                        let isize = row.attr('data-size');
-                        let icolor = row.attr('data-color');
-                        
-                        scan++;
-                        row.attr('data-scan', scan);
-                        row.find('.scan-val').text(scan);
-                        row.find('.rem-val').text(req - scan);
-                        
-                        if(scan >= req) {
-                            row.find('.status-cell').html('<span class="badge bg-success">Completed</span>');
-                        } else {
-                            row.find('.status-cell').html('<span class="badge bg-warning text-dark">In Progress</span>');
-                        }
-                        
-                        updateStats();
-                        
-                        let shortName = iname.split(' ')[0] + ' ' + (iname.split(' ')[1] || '');
-                        $('#scan_alert').removeClass('alert-danger').addClass('alert-success').html('<i class="ri-check-line me-1"></i> <strong>Success:</strong> Scanned ' + shortName + ' (Size ' + isize + ')').show();
-                        
-                        setTimeout(function() {
-                            $('#scan_alert').fadeOut('fast', function() {
-                                $(this).removeClass('alert-success');
-                            });
-                        }, 2500);
-                        
-                        playBeep(800, 0.2);
-                        
-                        saveProgress();
-                    } else if(fullyScanned) {
-                        $('#scan_alert').removeClass('alert-success').addClass('alert-danger').html('<strong>Error:</strong> Required quantity already scanned for ' + sku).show();
-                        playBeep(150, 0.3, 'sawtooth');
-                    }
-                } else {
-                    $('#scan_alert').removeClass('alert-success').addClass('alert-danger').html('<strong>Error:</strong> Barcode not found in this Sales Invoice').show();
-                    playBeep(150, 0.3, 'sawtooth');
-                }
+                processScannedBarcode(rawSku);
             }
         });
         
@@ -525,7 +660,6 @@
             } catch(err) {}
         }
         
-        // Keep focus, but ignore clicks on camera scanner elements
         $(document).on('click', function(e) {
             if(!$(e.target).closest('input, button, a, .scan-history-list, #reader').length) {
                 if(!isCameraOpen) {
@@ -534,13 +668,12 @@
             }
         });
 
-        // Camera scanning logic
         let html5QrCode = null;
         let isCameraOpen = false;
 
         $('#btn_camera_scan').click(function() {
             if (isCameraOpen && html5QrCode) {
-                // Stop scanning
+
                 html5QrCode.stop().then((ignore) => {
                     $('#reader').hide();
                     isCameraOpen = false;

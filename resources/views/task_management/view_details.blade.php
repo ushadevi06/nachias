@@ -140,6 +140,9 @@
                                                                     <div class="small text-muted">{{ $asgn->service->service_name ?? 'N/A' }} 
                                                                         @if($asgn->assignee && $asgn->assignee->emp_id) <span class="ms-1 border-start ps-1">(ID: {{ $asgn->assignee->emp_id }})</span> @endif
                                                                     </div>
+                                                                    @if(!empty($asgn->remarks))
+                                                                        <div class="small text-info mt-1" style="font-size: 0.75rem;"><i class="ri-message-2-line align-middle"></i> <strong>Remarks:</strong> {{ $asgn->remarks }}</div>
+                                                                    @endif
                                                                 </div>
                                                             </div>
                                                         </td>

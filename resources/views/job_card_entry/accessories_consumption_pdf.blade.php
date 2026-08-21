@@ -133,6 +133,7 @@
                 $totalQtyBalance = 0;
                 $totalCost = 0;
             @endphp
+            @if($issueItems->count() > 0)
             @foreach($issueItems as $index => $item)
                 @php
                     $artNo = $item->art_no;
@@ -165,7 +166,13 @@
                     <td class="text-end">{{ number_format($costPerPc, 2) }}</td>
                 </tr>
             @endforeach
+            @else
+                <tr>
+                    <td colspan="12" class="text-center" style="padding: 20px; font-style: italic; color: #777;">No accessories consumption records found.</td>
+                </tr>
+            @endif
         </tbody>
+        @if(count($issueItems) > 0)
         <tfoot>
             <tr class="footer-row">
                 <td colspan="3" class="text-end">Total</td>
@@ -180,6 +187,7 @@
                 <td class="text-end">{{ $jobCard->grand_total_qty > 0 ? number_format($totalCost / $jobCard->grand_total_qty, 2) : '-' }}</td>
             </tr>
         </tfoot>
+        @endif
     </table>
 </body>
 </html>

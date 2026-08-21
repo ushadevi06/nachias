@@ -591,6 +591,8 @@ $(document).ready(function() {
         $('#std-cons-warning').remove();
         $('#qty-issued-warning').remove();
         $('#qty-used-required-warning').remove();
+        $('#modal-ajax-error').remove();
+        $('#modal_qty_used').removeClass('is-invalid');
         $('#modal_qty_used').removeClass('is-invalid');
 
         if (qtyUsed > qtyIssue) {
@@ -644,6 +646,7 @@ $(document).ready(function() {
     $('#modal_qty_used, #modal_qty_issue, #modal_qty_adjusted, #modal_qty_wastage, #modal_unit_price').on('input', function() { calculateAll(); });
 
     $('#updateItemData').on('click', function() {
+        $('#modal-ajax-error').remove();
         if (currentRow) {
             const matrixId = $('#modal_row_index').val();
             const adj = $('#modal_qty_adjusted').val();
@@ -763,21 +766,7 @@ $(document).ready(function() {
                                 $('#summary-price-fs').text(parseFloat(response.total_price).toLocaleString(undefined, {minimumFractionDigits: 2}));
                             }
 
-                            if (response.missing_prices && response.missing_prices.length > 0) {
-                              let messageHtml = '';
-                              response.missing_prices.forEach(function(missing) {
-                                  messageHtml += `<li><b>${missing.item_name}</b> (Code: ${missing.finished_item_code}, Art: ${missing.art_no})</li>`;
-                              });
-                              $('#modalMissingPricesList').html(messageHtml);
-                              
-                              $('#editItemModal').modal('hide');
-                              
-                              setTimeout(function() {
-                                  $('#missingPricesModal').modal('show');
-                              }, 500);
-                          } else {
-                              $('#editItemModal').modal('hide');
-                          }
+                          $('#editItemModal').modal('hide');
                         }
 
                         const editBtn = currentRow.find('.edit-item-btn');
@@ -804,12 +793,25 @@ $(document).ready(function() {
                             showConfirmButton: false
                         });
                     } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: response.message || 'Failed to update item',
-                            confirmButtonColor: '#d33'
-                        });
+                        if (response.error_type === 'missing_prices' && response.missing_prices && response.missing_prices.length > 0) {
+                            let messageHtml = '';
+                            response.missing_prices.forEach(function(missing) {
+                                messageHtml += `<li><b>${missing.item_name}</b> (Code: ${missing.finished_item_code}, Art: ${missing.art_no})</li>`;
+                            });
+                            $('#modalMissingPricesList').html(messageHtml);
+                            $('#editItemModal').modal('hide');
+                            
+                            setTimeout(function() {
+                                $('#missingPricesModal').modal('show');
+                            }, 500);
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message || 'Failed to update item',
+                                confirmButtonColor: '#d33'
+                            });
+                        }
                     }
                 },
                 error: function(xhr) {
@@ -821,13 +823,9 @@ $(document).ready(function() {
                         errorMessage = xhr.statusText;
                     }
                     
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error Updating Item',
-                        text: errorMessage,
-                        confirmButtonColor: '#d33',
-                        footer: xhr.status ? `Error Code: ${xhr.status}` : ''
-                    });
+                    $('#modal-ajax-error').remove();
+                    $('#modal_qty_used').addClass('is-invalid');
+                    $('#modal_qty_used').closest('.form-floating').after(`<div id="modal-ajax-error" class="text-danger mt-1 small fw-bold"><i class="ri-error-warning-line me-1"></i>${errorMessage}</div>`);
                 },
                 complete: function() {
                     btn.prop('disabled', false).html(originalText);

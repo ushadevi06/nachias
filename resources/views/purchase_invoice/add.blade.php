@@ -78,6 +78,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="purchase_commission_agent_name" placeholder="Commission Agent" readonly value="{{ old('purchase_commission_agent_name', $invoice->purchaseCommissionAgent->name ?? '') }}">
+                                    <input type="hidden" name="purchase_commission_agent_name" id="purchase_commission_agent_name_hidden" value="{{ old('purchase_commission_agent_name', $invoice->purchaseCommissionAgent->name ?? '') }}">
                                     <label for="purchase_commission_agent_name">Purchase Commission Agent</label>
                                 </div>
                             </div>
@@ -979,6 +980,7 @@
                             $('#commission_value').text('0.00');
                             $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
                             $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
+                            $('#purchase_commission_agent_name_hidden').val(response.purchase_commission_agent_name);
                             $('#agent_commission_percentage').val(response.agent_commission_percentage);
 
                             if (response.round_off) {

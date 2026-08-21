@@ -1855,21 +1855,25 @@
             });
 
             function validateForm() {
-                var isValid = true;
-                var errorMsg = "";
+                var isFormValid = true;
 
                 $('.status-update-row').each(function() {
                     var row = $(this);
+                    row.find('.row-validation-error').remove(); // Clear previous error
+
                     var assignedQty = parseFloat(row.find('.row-assigned-qty').text()) || 0;
                     var completedQty = parseFloat(row.find('.row-completed-qty').val()) || 0;
                     var wastageQty = parseFloat(row.find('.row-wastage-qty').val()) || 0;
+
+                    var isValid = true;
+                    var errorMsg = "";
 
                     if ((completedQty + wastageQty) > assignedQty) {
                         isValid = false;
                         errorMsg = "Completed and Wastage quantity for an employee cannot exceed Assigned quantity.";
                     }
 
-                    if (row.find('.row-qc-checked').length > 0) {
+                    if (row.find('.row-qc-checked').length > 0 && isValid) {
                         var qcChecked = parseFloat(row.find('.row-qc-checked').val()) || 0;
                         var qcPassed = parseFloat(row.find('.row-qc-passed').val()) || 0;
                         var qcRejected = parseFloat(row.find('.row-qc-rejected').val()) || 0;
@@ -1879,27 +1883,30 @@
                             errorMsg = "QC Checked quantity cannot exceed Completed quantity.";
                         }
 
-                        if (Math.abs((qcPassed + qcRejected) - qcChecked) > 0.01) {
+                        if (Math.abs((qcPassed + qcRejected) - qcChecked) > 0.01 && isValid) {
                             isValid = false;
                             errorMsg = "QC Passed + Rejected must equal QC Checked.";
                         }
                     }
+
+                    if (!isValid) {
+                        isFormValid = false;
+                        row.find('.row.g-4').first().prepend('<div class="col-12 row-validation-error"><div class="alert alert-danger p-2 mb-0 fw-bold small"><i class="ri ri-error-warning-line me-1"></i>' + errorMsg + '</div></div>');
+                    }
                 });
 
                 var submitBtn = $('#content-receive button[type="submit"]');
-                if (!isValid) {
+                if (!isFormValid) {
                     submitBtn.attr('disabled', true);
-                    if ($('#validation-error-msg').length === 0) {
-                        submitBtn.parent().prepend('<div id="validation-error-msg" class="text-danger small mb-2 fw-bold">' + errorMsg + '</div>');
-                    } else {
-                        $('#validation-error-msg').text(errorMsg);
+                    if ($('#common-validation-error').length === 0) {
+                        submitBtn.parent().prepend('<div id="common-validation-error" class="text-danger small mb-2 fw-bold">Please fix the errors in the employee assignments above.</div>');
                     }
                 } else {
                     submitBtn.attr('disabled', false);
-                    $('#validation-error-msg').remove();
+                    $('#common-validation-error').remove();
                 }
 
-                return { valid: isValid, message: errorMsg };
+                return { valid: isFormValid };
             }
 
             $('.status-update-row').each(function() {

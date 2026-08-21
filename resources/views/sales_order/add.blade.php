@@ -17,7 +17,7 @@
                         <div class="row g-4">
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('so_no') is-invalid @enderror" id="so_no" name="so_no" placeholder="SO Number" value="{{ old('so_no', $salesOrder->so_no ?? $nextSoNumber ?? '') }}">
+                                    <input type="text" class="form-control @error('so_no') is-invalid @enderror" id="so_no" name="so_no" placeholder="SO Number" value="{{ old('so_no', $salesOrder->so_no ?? $nextSoNumber ?? '') }}" readonly>
                                     <label for="so_no">SO Number <span class="text-danger">*</span></label>
                                 </div>
                                 @error('so_no')<div class="text-danger mt-1">{{ $message }}</div>@enderror
@@ -316,7 +316,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0" step="0.01">
+                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0">
                                                         <div class="stock-info-wrapper mt-1">
                                                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
                                                             <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
@@ -424,7 +424,7 @@
                                                                 $availableStock = $sQuery->sum('qty_in') - $sQuery->sum('qty_out');
                                                             }
                                                         @endphp
-                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0" step="0.01">
+                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0">
                                                         <div class="stock-info-wrapper mt-1">
                                                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format($availableStock, 2) }}</span></small>
                                                             <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
@@ -502,7 +502,7 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0" step="0.01">
+                                                <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0">
                                                 <div class="stock-info-wrapper mt-1">
                                                     <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
                                                     <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
@@ -703,37 +703,47 @@
                                         @enderror
                                     </div>
                                     <div class="col-md-12">
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="file" class="form-control @error('attachment.*') is-invalid @enderror" id="attachment" name="attachment[]" multiple>
-                                            <label for="attachment">Attachments</label>
-                                        </div>
-                                        <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                        @if($salesOrder && $salesOrder->attachment)
-                                        <div class="mt-2 d-flex flex-wrap gap-3">
-                                            @foreach(explode(',', $salesOrder->attachment) as $file)
-                                                @php
-                                                    $ext = pathinfo($file, PATHINFO_EXTENSION);
-                                                    $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                    $fileUrl = url('uploads/so/' . $salesOrder->id . '/' . $file);
-                                                @endphp
-                                                <div class="p-1 border rounded bg-light shadow-sm d-flex align-items-center position-relative">
-                                                    <input type="hidden" name="existing_attachments[]" value="{{ $file }}">
-                                                    @if($isImage)
-                                                        <img src="{{ $fileUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" width="45" height="45" style="object-fit: cover;" alt="Attachment">
-                                                    @else
-                                                        <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
-                                                            @if(strtolower($ext) == 'pdf')
-                                                                <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
+                                        <div class="form-floating form-floating-outline text-black">
+                                            <input type="file" class="form-control @error('attachment.*') is-invalid @enderror" id="attachment" name="attachment[]" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
+                                            <label for="attachment">Attachments (Max 5)</label>
+                                            @error('attachment')
+                                                <div class="text-danger mt-1 small">{{ $message }}</div>
+                                            @enderror
+                                            @error('attachment.*')
+                                                <div class="text-danger mt-1 small">{{ $message }}</div>
+                                            @enderror
+                                            <div id="attachment-list" class="mt-3 d-flex flex-wrap gap-3">
+                                                @if($salesOrder && $salesOrder->attachment)
+                                                    @php
+                                                        $attachments = is_array($salesOrder->attachment) ? $salesOrder->attachment : explode(',', $salesOrder->attachment);
+                                                    @endphp
+                                                    @foreach($attachments as $file)
+                                                        @php
+                                                            $file = trim($file);
+                                                            if (!$file) continue;
+                                                            $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                                                            $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                            $fileUrl = url('uploads/so/' . $salesOrder->id . '/' . $file);
+                                                        @endphp
+                                                        <div class="attachment-item position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="{{ $file }}">
+                                                            @if($isImage)
+                                                                <img src="{{ $fileUrl }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" alt="Attachment">
                                                             @else
-                                                                <i class="ri ri-file-text-fill text-primary fs-3"></i>
+                                                                <a href="{{ $fileUrl }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                                    <i class="ri ri-file-text-line fs-2"></i>
+                                                                    <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                </a>
                                                             @endif
-                                                        </a>
-                                                    @endif
-                                                </div>
-                                            @endforeach
+                                                            <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center remove-existing-attachment" style="width: 20px; height: 20px; border: 2px solid white; line-height: 1;">
+                                                                <i class="ri ri-close-line fs-6"></i>
+                                                            </button>
+                                                            <input type="hidden" name="existing_attachments[]" value="{{ $file }}">
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                            </div>
+                                            <small class="text-muted d-block mt-2">Max file size: 2MB per file. Supported: JPG, PNG, WEBP, PDF, DOC, DOCX</small>
                                         </div>
-                                        @endif
-                                        @error('attachment.*')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                                     </div>
                                 </div>
                             </div>
@@ -815,9 +825,12 @@
                                         <div class="igst-field {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">IGST:</label>
-                                                <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $salesOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
-                                                    <span class="input-group-text px-1">%</span>
+                                                <div class="d-flex align-items-center justify-content-end">
+                                                    <div class="input-group input-group-sm me-3" style="width:100px;">
+                                                        <input type="number" class="form-control form-control-sm text-end px-1" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $salesOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
+                                                        <span class="input-group-text px-1">%</span>
+                                                    </div>
+                                                    <span id="igst_amount_display" class="fw-medium" style="width: 80px; text-align: right;">0.00</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -827,9 +840,12 @@
                                         <div class="cgst-field {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">CGST:</label>
-                                                <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100" value="{{ old('cgst_percent', $salesOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
-                                                    <span class="input-group-text px-1">%</span>
+                                                <div class="d-flex align-items-center justify-content-end">
+                                                    <div class="input-group input-group-sm me-3" style="width:100px;">
+                                                        <input type="number" class="form-control form-control-sm text-end px-1" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100" value="{{ old('cgst_percent', $salesOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
+                                                        <span class="input-group-text px-1">%</span>
+                                                    </div>
+                                                    <span id="cgst_amount_display" class="fw-medium" style="width: 80px; text-align: right;">0.00</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -839,9 +855,12 @@
                                         <div class="sgst-field {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">SGST:</label>
-                                                <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100" value="{{ old('sgst_percent', $salesOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
-                                                    <span class="input-group-text px-1">%</span>
+                                                <div class="d-flex align-items-center justify-content-end">
+                                                    <div class="input-group input-group-sm me-3" style="width:100px;">
+                                                        <input type="number" class="form-control form-control-sm text-end px-1" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100" value="{{ old('sgst_percent', $salesOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
+                                                        <span class="input-group-text px-1">%</span>
+                                                    </div>
+                                                    <span id="sgst_amount_display" class="fw-medium" style="width: 80px; text-align: right;">0.00</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1051,7 +1070,7 @@ $(document).ready(function () {
                     <div class="form-floating form-floating-outline">
                         <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="" autocomplete="off">
                         <input type="hidden" name="items[${itemIndex}][stock_item_key]" class="stock-item-select" value="">
-                        <label>Search Stock Item (Code/SKU) *</label>
+                        <label>Stock Item *</label>
                     </div>
                     <input type="hidden" name="items[${itemIndex}][item_id]" value="">
                     <input type="hidden" name="items[${itemIndex}][brand_cat_id]" value="">
@@ -1092,7 +1111,7 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" min="0" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
+                        <input type="number" min="0" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0">
                         <div class="stock-info-wrapper mt-1">
                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
                             <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
@@ -1297,7 +1316,7 @@ $(document).ready(function () {
     function handleGlobalItemSelection(res) {
         let $existing = $('.item-row').filter(function() {
             return $(this).find('.sku-input').val() == (res.sku || '') &&
-				$(this).find('.size-select').val() == res.size &&
+				$(this).find('.size-input').val() == res.size &&
 				$(this).find('.color-input').val() == (res.api_color || res.color_name || '') &&
 				$(this).find('.sleeve-input').val() == (res.sleeve_type || '') &&
                 $(this).find('.art-no-input').val() == (res.art_no || '') &&
@@ -1509,7 +1528,7 @@ $(document).ready(function () {
         $row.find('.qty-input').trigger('input');
     }
 
-    $(document).on('change', '.size-select, .color-input', function() {
+    $(document).on('change', '.size-input, .color-input', function() {
         updateStockAndRate($(this).closest('.item-row'));
     });
 
@@ -1596,20 +1615,43 @@ $(document).ready(function () {
         const taxableAmount = subTotal - discountAmount + preGstCharges;
         $('#taxable_amount').val(taxableAmount.toFixed(2));
 
+        let taxAmount = 0;
         let taxPercent = 0;
         const isOtherState = $('input[name="other_state"]:checked').val() === 'yes';
-        
+
         if (isOtherState) {
             $('.igst-field').removeClass('d-none');
             $('.cgst-field, .sgst-field').addClass('d-none');
             taxPercent = parseFloat($('#igst_percent').val()) || 0;
+            
+            let igstAmt = (taxableAmount * taxPercent) / 100;
+            let igstAmtRounded = parseFloat(igstAmt.toFixed(2));
+            
+            $('#igst_amount_display').text(igstAmtRounded.toFixed(2));
+            $('#cgst_amount_display').text('0.00');
+            $('#sgst_amount_display').text('0.00');
+            
+            taxAmount = igstAmtRounded;
         } else {
             $('.igst-field').addClass('d-none');
             $('.cgst-field, .sgst-field').removeClass('d-none');
-            taxPercent = (parseFloat($('#cgst_percent').val()) || 0) + (parseFloat($('#sgst_percent').val()) || 0);
+            let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
+            let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
+            taxPercent = cgstPercent + sgstPercent;
+            
+            let cgstAmt = (taxableAmount * cgstPercent) / 100;
+            let sgstAmt = (taxableAmount * sgstPercent) / 100;
+            
+            let cgstAmtRounded = parseFloat(cgstAmt.toFixed(2));
+            let sgstAmtRounded = parseFloat(sgstAmt.toFixed(2));
+            
+            $('#cgst_amount_display').text(cgstAmtRounded.toFixed(2));
+            $('#sgst_amount_display').text(sgstAmtRounded.toFixed(2));
+            $('#igst_amount_display').text('0.00');
+            
+            taxAmount = cgstAmtRounded + sgstAmtRounded;
         }
 
-        const taxAmount = (taxableAmount * taxPercent) / 100;
         $('#tax_amount').val(taxAmount.toFixed(2));
         
         let finalTotal = taxableAmount + taxAmount + postGstCharges;
@@ -1812,12 +1854,20 @@ $(document).ready(function () {
 
         $('#charges_select').val('').trigger('change');
         $('#charge_amount').val('');
+        $('#charge_tax_type').val('Pre-GST').trigger('change');
 
         calculateTotals();
         refreshChargeDropdownState();
     });
 
     $(document).on('click', '.edit-charge', function () {
+        let currentChargeId = $('#charges_select').val();
+        if (currentChargeId) {
+            $('#add_charge_btn').click();
+            if ($('#charges_select').val()) {
+                return; 
+            }
+        }
         let $row = $(this).closest('tr');
         let chargeId = $row.data('charge-id');
         let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
@@ -1967,7 +2017,92 @@ $(document).ready(function () {
             });
         }
     });
+     let soAttachmentDataTransfer = new DataTransfer();
 
+    $(document).on('click', '.remove-existing-attachment', function () {
+        let $item = $(this).closest('.attachment-item');
+        if ($item.hasClass('new-attachment-preview')) {
+            let fileName = $item.attr('title');
+            let fileInput = document.getElementById('attachment');
+            let newDt = new DataTransfer();
+            for (let i = 0; i < soAttachmentDataTransfer.files.length; i++) {
+                if (soAttachmentDataTransfer.files[i].name !== fileName) {
+                    newDt.items.add(soAttachmentDataTransfer.files[i]);
+                }
+            }
+            soAttachmentDataTransfer = newDt;
+            if (fileInput) fileInput.files = soAttachmentDataTransfer.files;
+        }
+        $item.remove();
+    });
+
+    $('#attachment').on('change', function () {
+        let existingServerCount = $('.attachment-item:not(.new-attachment-preview)').length;
+        let currentNewCount = soAttachmentDataTransfer.files.length;
+        let newlySelectedFiles = Array.from(this.files);
+
+        // Filter duplicates
+        let filesToAdd = [];
+        for (let file of newlySelectedFiles) {
+            let duplicate = false;
+            for (let i = 0; i < soAttachmentDataTransfer.files.length; i++) {
+                if (soAttachmentDataTransfer.files[i].name === file.name && soAttachmentDataTransfer.files[i].size === file.size) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) {
+                filesToAdd.push(file);
+            }
+        }
+
+        if (existingServerCount + currentNewCount + filesToAdd.length > 5) {
+            alert('You can only upload a maximum of 5 attachments in total.');
+            this.files = soAttachmentDataTransfer.files;
+            return;
+        }
+
+        filesToAdd.forEach((file) => {
+            soAttachmentDataTransfer.items.add(file);
+            const reader = new FileReader();
+            const isImage = file.type.startsWith('image/');
+            const extension = file.name.split('.').pop().toUpperCase();
+            const fileUrl = URL.createObjectURL(file);
+
+            const previewId = `so-preview-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+            const previewHtml = `<div id="${previewId}" class="attachment-item new-attachment-preview position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="${file.name}">
+                                    <div class="d-flex align-items-center justify-content-center h-100 p-2">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    </div>
+                                </div>`;
+
+            $('#attachment-list').append(previewHtml);
+
+            if (isImage) {
+                reader.onload = function (e) {
+                    $(`#${previewId}`).html(`
+                        <img src="${e.target.result}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="${e.target.result}" alt="Preview">
+                        <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center remove-existing-attachment" style="width: 20px; height: 20px; border: 2px solid white; line-height: 1;">
+                            <i class="ri ri-close-line fs-6"></i>
+                        </button>
+                    `);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                $(`#${previewId}`).html(`
+                    <a href="${fileUrl}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                        <i class="ri ri-file-text-line fs-2"></i>
+                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">${extension}</span>
+                    </a>
+                    <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center remove-existing-attachment" style="width: 20px; height: 20px; border: 2px solid white; line-height: 1;">
+                        <i class="ri ri-close-line fs-6"></i>
+                    </button>
+                `);
+            }
+        });
+
+        this.files = soAttachmentDataTransfer.files;
+    });
 });
 </script>
 @endsection

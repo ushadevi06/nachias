@@ -320,7 +320,7 @@
 
             $('#consumptionModal').modal('show');
         });
-
+        
         function calculateRowValues(row) {
             var scanQty = parseFloat(row.find('.scan-qty').val()) || 0;
             var orderedQty = parseFloat(row.find('.ordered-qty').val()) || 0;
@@ -449,7 +449,12 @@
                 return false;
             }
         });
-
+        $(document).on('keypress', '.scan-qty', function (e) {
+            if (e.which === 45 || e.which === 43) {
+                e.preventDefault();
+            }
+        });
+        
         if ($('#job_card_id').val()) {
             $('#job_card_id').trigger('change');
         }
