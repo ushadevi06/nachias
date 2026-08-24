@@ -438,17 +438,22 @@ class ItemPriceController extends Controller
         
         $results1 = DB::table('stock_entry_items')
             ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
+            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
+            ->leftJoin('styles', 'items.style_id', '=', 'styles.id')
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
             ->where(function ($query) use ($term) {
                 $query->where('stock_entry_items.finished_item_code', 'LIKE', "%{$term}%")
                     ->orWhere('items.name', 'LIKE', "%{$term}%")
+                    ->orWhere('brands.brand_name', 'LIKE', "%{$term}%")
                     ->orWhere('stock_entry_items.art_no', 'LIKE', "%{$term}%");
             })
             ->select(
                 'stock_entry_items.item_id',
                 'stock_entry_items.finished_item_code',
-                'items.name as item_name'
+                'items.name as item_name',
+                'brands.brand_name',
+                'styles.style_name'
             )
             ->distinct()
             ->get();
@@ -472,11 +477,17 @@ class ItemPriceController extends Controller
         foreach ($results1 as $item) {
             if (!in_array($item->finished_item_code, $seenCodes)) {
                 $seenCodes[] = $item->finished_item_code;
+                
+                $finalName = trim(($item->brand_name ?? '') . ' ' . ($item->style_name ?? ''));
+                if (empty($finalName)) {
+                    $finalName = $item->item_name ?? '';
+                }
+
                 $formattedResults[] = [
                     'id'    => $item->item_id,
-                    'text'  => $item->finished_item_code . ($item->item_name ? ' - ' . $item->item_name : ''),
+                    'text'  => $item->finished_item_code . ($finalName ? ' - ' . $finalName : ''),
                     'code'  => $item->finished_item_code,
-                    'name'  => $item->item_name ?? ''
+                    'name'  => $finalName
                 ];
             }
         }
@@ -512,12 +523,12 @@ class ItemPriceController extends Controller
                     if (empty($style->code)) continue;
                     
                     $baseCode = $brand->code . '-' . $style->code;
+                    $baseName = trim($brand->brand_name . ' ' . $style->style_name);
                     
-                    // If the combination starts with the search term
-                    if (stripos($baseCode, trim($term)) === 0) {
+                    // If the combination contains the search term in code or name
+                    if (stripos($baseCode, trim($term)) !== false || stripos($baseName, trim($term)) !== false) {
                         $codeFS = $baseCode . '-FS';
                         $codeHS = $baseCode . '-HS';
-                        $baseName = trim($brand->brand_name . ' ' . $style->style_name);
                         
                         if (!in_array($codeFS, $seenCodes)) {
                             $seenCodes[] = $codeFS;

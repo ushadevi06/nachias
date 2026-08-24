@@ -79,6 +79,7 @@
                 },
                 success: function(response) {
                     $msg.html('<span class="text-success small">Updated Successfully!</span>').fadeIn().delay(1000).fadeOut();
+                    table.ajax.reload(null, false);
                 }
             });
         });

@@ -438,13 +438,13 @@
                         <div class="row g-4">
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline mb-3">
-                                    <input type="number" step="0.01" id="modal_qty_issue" class="form-control bg-white fw-bold">
+                                    <input type="number" step="0.01" id="modal_qty_issue" class="form-control bg-white fw-bold" readonly>
                                     <label>Issued</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline mb-3">
-                                    <input type="number" step="0.01" id="modal_qty_used" class="form-control border-primary" placeholder="Used">
+                                    <input type="number" step="0.01" id="modal_qty_used" class="form-control border-primary" placeholder="Used" min="0">
                                     <label>Used</label>
                                 </div>
                             </div>
@@ -507,7 +507,7 @@ $(document).ready(function() {
     let currentRow;
     const fsMeter = {{ $jobCard->sleeveMeters->where('sleeve_type', 'Full Sleeve')->first()->meter ?? 0 }};
     const hsMeter = {{ $jobCard->sleeveMeters->where('sleeve_type', 'Half Sleeve')->first()->meter ?? 0 }};
-
+    
     $(document).on('click', '.edit-item-btn', function() {
         const button = $(this);
         currentRow = button.closest('tr');
@@ -831,6 +831,11 @@ $(document).ready(function() {
                     btn.prop('disabled', false).html(originalText);
                 }
             });
+        }
+    });
+     $(document).on('keypress', '#modal_qty_used, #modal_qty_wastage, #modal_qty_adjusted', function (e) {
+        if (e.which === 45 || e.which === 43) {
+            e.preventDefault();
         }
     });
 });

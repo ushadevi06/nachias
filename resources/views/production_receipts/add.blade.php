@@ -168,7 +168,6 @@
                     <table class="table table-hover align-middle">
                         <thead class="bg-light text-uppercase text-xs fw-bold text-muted">
                             <tr>
-                                <th class="ps-3 border-0">Batch Usage</th>
                                 <th class="border-0">Material (Art No)</th>
                                 <th class="border-0">UOM</th>
                                 <th class="text-end border-0">Rate</th>
@@ -180,7 +179,7 @@
                         </tbody>
                         <tfoot class="border-top bg-light">
                             <tr>
-                                <th colspan="5" class="text-end pe-3 py-3 fs-6">Grand Total (Per Shirt) <br>Estimate Cost </th>
+                                <th colspan="4" class="text-end pe-3 py-3 fs-6">Grand Total (Per Shirt) <br>Estimate Cost </th>
                                 <th class="text-end pe-3 py-3 fs-6 text-primary" id="consumption-footer-total">₹0.00</th>
                             </tr>
                         </tfoot>
@@ -269,11 +268,7 @@
                            '<div class="card-body p-3 d-flex justify-content-between align-items-center">' +
                            '<div><small class="text-uppercase text-muted fw-bold d-block mb-1">Item Details</small>' + 
                            '<span class="fw-bold text-dark fs-6">' + item.item_code + '</span> <span class="badge bg-white text-dark shadow-sm ms-2">' + item.size_variant + '</span>' +
-                           '</div>' +
-                           '<div class="text-end">' +
-                           '<small class="text-uppercase text-muted fw-bold d-block mb-1">Batch Qty</small>' +
-                           '<span class="fs-4 fw-bolder text-primary">' + parseFloat(item.scan_qty || 0).toFixed(2) + '</span>' +
-                           '</div>' +
+                           '</div>'  +
                            '</div></div>';
             $('#consumption-info').html(infoHtml);
 
@@ -296,7 +291,6 @@
                     '<div class="text-muted small mt-1" style="font-size: 0.75rem;">' + (detail.source || 'Standard') + '</div>';
 
                 tbody.append('<tr>' +
-                    '<td class="ps-3"><span class="badge bg-label-success">' + batchUsage.toFixed(2) + '</span></td>' +
                     '<td>' +
                         '<div class="d-flex align-items-center">' +
                             '<span class="badge bg-label-primary p-2 me-2 rounded"><i class="icon-base ri ri-shirt-line"></i></span>' +

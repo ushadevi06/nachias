@@ -104,15 +104,25 @@
                             <div class="col-lg-12">
                                 <h6>Order Details:</h6>
                             </div>
-
+                            
                             <div class="col-md-4">
                                 <label class="detail-title text-muted">Invoice No:</label>
                                 <div class="fw-bold text-primary fs-5">{{ $invoice->inv_no }}</div>
                             </div>
-
+                            
                             <div class="col-md-4">
                                 <label class="detail-title text-muted">Invoice Date:</label>
                                 <div class="text-dark fw-semibold">{{ $invoice->inv_date->format('d-M-Y') }}</div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="detail-title text-muted">Brand:</label>
+                                <div class="text-dark fw-semibold">
+                                    {{ $invoice->brand ? $invoice->brand->brand_name : '-' }}
+                                    @if($invoice->brand && $invoice->brand->code)
+                                        <span class="text-muted fw-normal">({{ $invoice->brand->code }})</span>
+                                    @endif
+                                </div>
                             </div>
 
                             <div class="col-md-4">
@@ -124,6 +134,32 @@
                             <div class="col-md-4">
                                 <label class="detail-title">Linked SO No:</label>
                                 <div class="text-muted">{{ $invoice->salesOrder ? $invoice->salesOrder->so_no : '-' }}</div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="detail-title">Delivery Address:</label>
+                                <div class="text-muted">{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address ?? '-'))) !!}</div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="detail-title">Remarks:</label>
+                                <div class="text-muted">{{ $invoice->remarks ?? '-' }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Store:</label>
+                                <div class="text-muted">{{ $invoice->store ? $invoice->store->store_type_name : '-' }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Sales Executive:</label>
+                                <div class="text-muted">
+                                    @if($invoice->salesAgent)
+                                        {{ $invoice->salesAgent->name }}{{ $invoice->salesAgent->code ? '(' . $invoice->salesAgent->code . ')' : '' }}
+                                    @else
+                                        -
+                                    @endif
+                                </div>
                             </div>
 
                             <div class="col-md-4">
@@ -137,17 +173,8 @@
                             </div>
 
                             <div class="col-md-4">
-                                <label class="detail-title">Delivery Address:</label>
-                                <div class="text-muted">{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address ?? '-'))) !!}</div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="detail-title">Remarks:</label>
-                                <div class="text-muted">{{ $invoice->remarks ?? '-' }}</div>
-                            </div>
-                            <div class="col-md-4">
                                 <label class="detail-title">No of Box:</label>
-                                <div class="text-muted">{{ $invoice->no_of_box ?: 1 }}</div>
+                                <div class="text-muted">{{ $invoice->no_of_box ?: "-" }}</div>
                             </div>
 
                             <div class="col-md-4">
@@ -374,7 +401,13 @@
                                             @endif --}}
                                             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                                                 <label class="detail-title">Total:</label>
-                                                <div class="text-muted fw-bold">₹{{ number_format($invoice->total, 2) }}
+                                                <div class="text-muted fw-bold">
+                                                    @if($invoice->total < 0)
+                                                        <span class="text-danger">₹0.00</span>
+                                                        <div class="small text-danger mt-1"><i class="ri-error-warning-line"></i> Negative net amount</div>
+                                                    @else
+                                                        ₹{{ number_format($invoice->total, 2) }}
+                                                    @endif
                                                 </div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-3">
@@ -476,7 +509,7 @@
                                                     @php
                                                         $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
                                                         $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                        $sigUrl = asset($invoice->signature_file);
+                                                        $sigUrl = asset('uploads/sales_invoices/signatures/' . $invoice->signature_file);
                                                     @endphp
                                                     <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
                                                         @if($isSigImage)
@@ -502,7 +535,7 @@
                                                     @php
                                                         $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
                                                         $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                        $attUrl = asset($invoice->attachment_file);
+                                                        $attUrl = asset('uploads/sales_invoices/attachments/' . $invoice->attachment_file);
                                                     @endphp
                                                     <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
                                                         @if($isAttImage)

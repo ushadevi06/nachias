@@ -33,7 +33,7 @@
                             <div class="col-lg-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control flatpickr" id="note_date" name="note_date" placeholder="Enter Date" value="{{ old('note_date', isset($creditNote) ? $creditNote->note_date->format('d-m-Y') : date('d-m-Y')) }}">
-                                    <label for="note_date">Date *</label>
+                                    <label for="note_date">Credit Note Date *</label>
                                     @error('note_date') <small class="text-danger">{{ $message }}</small> @enderror
                                 </div>
                             </div>
@@ -205,6 +205,12 @@
                                             <label for="charges_select">Select Charge</label>
                                         </div>
                                     </div>
+                                    <div class="col-md-6 col-xl-2">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="number" min="0" step="0.01" class="form-control" id="charge_amount" placeholder="0.00">
+                                            <label for="charge_amount">Amount</label>
+                                        </div>
+                                    </div>
                                     <div class="col-md-6 col-xl-3">
                                         <div class="form-floating form-floating-outline">
                                             <select id="charge_tax_type" class="form-select select2">
@@ -212,12 +218,6 @@
                                                 <option value="Post-GST">Post-GST (Non-Taxable)</option>
                                             </select>
                                             <label for="charge_tax_type">Tax Type</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-xl-2">
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="number" min="0" step="0.01" class="form-control" id="charge_amount" placeholder="0.00">
-                                            <label for="charge_amount">Amount</label>
                                         </div>
                                     </div>
                                     <div class="col-md-6 col-xl-2 d-flex align-items-center">
@@ -401,6 +401,9 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div id="negative_net_warning" class="alert alert-warning text-dark d-none mt-3" style="font-size: 12px; padding: 10px;">
                                 </div>
 
                                 <div class="d-flex justify-content-between mb-3">
@@ -681,6 +684,7 @@ $(document).ready(function() {
                     $('#igst_percent').val(response.igst_percent);
                     $('#cgst_percent').val(response.cgst_percent);
                     $('#sgst_percent').val(response.sgst_percent);
+                    $('#discount_percent').val(response.discount_percent || 0);
                     
                     calculateTotal();
                 }
@@ -1021,6 +1025,25 @@ $(document).ready(function() {
 
         // Taxable Amount = Subtotal - Discount + Pre-GST charges
         let taxableAmount = subTotal - discountAmount + preGstCharges;
+
+        if (taxableAmount <= 0 && subTotal > 0 && discountAmount > 0) {
+            let warningText = '';
+            if (taxableAmount < 0) {
+                warningText = 'Taxable Total is negative (₹' + taxableAmount.toFixed(2) + '). Discount (₹' + discountAmount.toFixed(2) + ') exceeds Sub Total + Pre-GST Charges. Showing 0.00.';
+                $('#sub_total_text').addClass('text-danger');
+                $('button[type="submit"]').prop('disabled', true);
+            } else {
+                warningText = 'Taxable Total is 0.00. Discount (₹' + discountAmount.toFixed(2) + ') equals Sub Total + Pre-GST Charges. Tax and Grand Total will be 0.00.';
+                $('#sub_total_text').removeClass('text-danger');
+                $('button[type="submit"]').prop('disabled', false);
+            }
+            $('#negative_net_warning').text(warningText).removeClass('d-none');
+            taxableAmount = 0;
+        } else {
+            $('#negative_net_warning').addClass('d-none');
+            $('#sub_total_text').removeClass('text-danger');
+            $('button[type="submit"]').prop('disabled', false);
+        }
 
         let cgst = 0, sgst = 0, igst = 0;
         let taxAmt = 0;

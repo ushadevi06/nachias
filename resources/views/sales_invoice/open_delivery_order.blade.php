@@ -532,7 +532,7 @@
         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
                 <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
-                    <strong>Remarks :</strong>
+                    <strong>Remarks : </strong> {{ $invoice->remarks ?? '' }}
                 </td>
             </tr>
             <tr>
@@ -565,11 +565,6 @@
     </script>
 </body>
 </html>
-                $y = 110;
-                
-                $pdf->text($x, $y, $text, $font, $size);
-            ');
-        }
     </script>
 </body>
 </html>

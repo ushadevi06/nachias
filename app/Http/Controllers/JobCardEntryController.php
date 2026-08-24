@@ -1081,15 +1081,15 @@ class JobCardEntryController extends Controller
                         $qtyUsed = floatval($itemData['qty_used'] ?? 0);
                         $qtyAdjusted = floatval($itemData['qty_adjusted'] ?? 0);
                         $qtyWastage = floatval($itemData['qty_wastage'] ?? 0);
-                        $totalToDeduct = $qtyIssue;
-                        $totalIssuedFabric += $qtyIssue;
+                        $totalToDeduct = $qtyUsed + $qtyWastage;
+                        $totalIssuedFabric += $totalToDeduct;
 
                         $existingItem = $existingItems->first(function ($item) use ($matrixId) {
                             return $item->job_card_article_matrix_id == $matrixId;
                         });
 
                         if ($existingItem) {
-                            $oldQtyToDeduct = floatval($existingItem->qty_issue ?? 0);
+                            $oldQtyToDeduct = floatval($existingItem->qty_used ?? 0) + floatval($existingItem->qty_wastage ?? 0);
                             if ($oldQtyToDeduct > 0) {
                                 $qtyToRevert = $oldQtyToDeduct;
 
@@ -1314,7 +1314,6 @@ class JobCardEntryController extends Controller
                                 $barcodeHS = 'BC' . $numericBase . $formattedSuffix . $sizeCode . '02';
                             }
 
-                            // Create/Update for Full Sleeve (F/S)
                             if ($mq->qty_fs > 0) {
                                 $itemCodeFS = implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'FS'], function($v) { return $v !== ''; }));
                                 $itemNameFS = trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' F/S');

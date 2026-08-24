@@ -4,6 +4,9 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            @include('flash_messages')
+        </div>
+        <div class="col-lg-12">
             <form id="debit_note_form" action="{{ url('debit_notes/add/' . ($debitNote->id ?? '')) }}" method="POST" class="common-form"
                 enctype="multipart/form-data" autocomplete="off">
                 @csrf
@@ -605,12 +608,26 @@
         });
 
         $(document).on('click', '.remove-charge', function () {
-            $(this).closest('tr').remove();
-            if ($('#added_charges_list tr').length === 0) {
-                $('#charges_table').addClass('d-none');
-            }
-            calculateTotals();
-            refreshChargeDropdownState();
+            let $row = $(this).closest('tr');
+            
+            Swal.fire({
+                title: "Are you sure?",
+                text: "Do you really want to delete this charge?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#8c57ff",
+                cancelButtonColor: "#ff4c51",
+                confirmButtonText: "Yes, delete it!"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $row.remove();
+                    if ($('#added_charges_list tr').length === 0) {
+                        $('#charges_table').addClass('d-none');
+                    }
+                    calculateTotals();
+                    refreshChargeDropdownState();
+                }
+            });
         });
 
         $(document).on('click', '.edit-charge', function () {

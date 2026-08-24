@@ -117,7 +117,6 @@ class SalesInvoice extends Model
             return '';
         }
         
-        // Split by newlines first to preserve line breaks
         $lines = preg_split('/\r\n|\r|\n/', $address);
         $cleanedLines = [];
         $seenWords = [];
@@ -134,12 +133,10 @@ class SalesInvoice extends Model
                 
                 $lowerPart = strtolower($part);
                 
-                // Check if this exact part was already seen in this line or previous lines
                 if (in_array($lowerPart, $seenWords)) {
                     continue;
                 }
                 
-                // If the part is a single word (e.g. "Madurai" or "Tamilnadu"), check if it's already contained in any previously added part/line
                 $alreadyContained = false;
                 if (preg_match('/^[a-zA-Z0-9]+$/', $part)) {
                     foreach ($seenWords as $seen) {
@@ -154,9 +151,7 @@ class SalesInvoice extends Model
                     continue;
                 }
                 
-                // Add to cleaned parts of current line
                 $cleanedParts[] = $part;
-                // Add to seen list
                 $seenWords[] = $lowerPart;
             }
             
@@ -166,5 +161,9 @@ class SalesInvoice extends Model
         }
         
         return implode("\n", $cleanedLines);
+    }
+    public function store()
+    {
+        return $this->belongsTo(StoreType::class, 'store_id');
     }
 }

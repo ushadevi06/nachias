@@ -33,7 +33,15 @@ class CreditNoteController extends Controller
                 $status = '<select class="form-select status-dropdown" data-id="' . $note->id . '">';
                 foreach ($status_options as $option) {
                     $selected = ($note->status == $option) ? 'selected' : '';
-                    $status .= '<option value="' . $option . '" ' . $selected . '>' . $option . '</option>';
+                    $disabled = '';
+                    if ($note->status == 'Approved') {
+                        if ($option == 'Draft' || $option == 'Cancelled') {
+                            $disabled = 'disabled';
+                        }
+                    } elseif ($note->status != 'Draft' && $option == 'Draft') {
+                        $disabled = 'disabled';
+                    }
+                    $status .= '<option value="' . $option . '" ' . $selected . ' ' . $disabled . '>' . $option . '</option>';
                 }
                 $status .= '</select>';
                 $status .= '<div class="status_msg_' . $note->id . '"></div>';
@@ -53,12 +61,12 @@ class CreditNoteController extends Controller
                 $eInvoiceBtn = '';
 
                 if ($note->einvoice_status == 'generated') {
-                    $eInvoiceBtn = '<button type="button" class="btn btn-danger einvoice-cancel-btn" data-id="' . $note->id . '" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
+                    $eInvoiceBtn = '<button type="button" class="btn btn-danger einvoice-cancel-btn" data-id="' . $note->id . '" title="Cancel E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
                 } else {
                     if ($multiSalesInvoices) {
-                        $eInvoiceBtn = '<button type="button" class="btn btn-info text-white" disabled style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
+                        $eInvoiceBtn = '<button type="button" class="btn btn-info text-white" disabled  title="E-Invoice generation is allowed only for Credit Notes linked to a single Sales Invoice." style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
                     } else {
-                        $eInvoiceBtn = '<button type="button" class="btn btn-info text-white einvoice-generate-btn" data-id="' . $note->id . '" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
+                        $eInvoiceBtn = '<button type="button" class="btn btn-info text-white einvoice-generate-btn" data-id="' . $note->id . '" title="Generate E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
                     }
                 }
 
@@ -415,6 +423,7 @@ class CreditNoteController extends Controller
             'igst_percent' => $firstInvoice->igst_percent,
             'cgst_percent' => $firstInvoice->cgst_percent,
             'sgst_percent' => $firstInvoice->sgst_percent,
+            'discount_percent' => $firstInvoice->sales_discount > 0 ? $firstInvoice->sales_discount : $firstInvoice->discount_percent,
         ]);
     }
 

@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'View GRN Entry #' . $grn->grn_number . ' - ' . env('WEBSITE_NAME'))
+@section('title', 'View GRN Entry - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
@@ -32,21 +32,29 @@
                 <div class="card-body p-4">
                     <div class="row g-4 text-break">
                         <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">GRN No</div>
+                            <div class="fw-bold text-dark">{{ $grn->grn_number ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">GRN Date</div>
+                            <div class="fw-bold text-dark">{{ $grn->grn_date->format('d M, Y') }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">PO Invoice No</div>
+                            <div class="fw-bold text-dark">{{ $grn->purchaseInvoice->invoice_no ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
                             <div class="fw-bold text-dark">
-                                {{ $grn->supplier->name ?? 'N/A' }}
+                                {{ $grn->supplier->name ?? '-' }}
                                 @if($grn->supplier && $grn->supplier->code)
                                     <span class="text-primary small">({{ $grn->supplier->code }})</span>
                                 @endif
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">PO Invoice No</div>
-                            <div class="fw-bold text-dark">{{ $grn->purchaseInvoice->invoice_no ?? 'N/A' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">GRN Date</div>
-                            <div class="fw-bold text-dark">{{ $grn->grn_date->format('d M, Y') }}</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier Invoice Date</div>
+                            <div class="fw-bold text-dark">{{ $grn->supplier_invoice_date->format('d M, Y') }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
@@ -62,11 +70,6 @@
                                 @endphp
                                 <span class="badge {{ $statusBadgeClass }} px-3 py-2">{{ $grn->status }}</span>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier Invoice Date</div>
-                            <div class="fw-bold text-dark">{{ $grn->supplier_invoice_date->format('d M, Y') }}</div>
                         </div>
                     </div>
                 </div>
@@ -84,15 +87,22 @@
                                 <tr>
                                     <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="60">S.No</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Fabric Type</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">QC Status</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold">Item Image</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Art No</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Width</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">UOM</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Style</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Color</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Width</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Supplier Design Name</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Art No</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Location</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">UOM</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Quantity</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Store Location</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Ord Qty</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Inv Qty</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rec Qty</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Acc Qty</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rej Qty</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Bal Qty</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Total Amount</th>
                                 </tr>
@@ -155,8 +165,10 @@
                                                 <small class="text-primary fw-medium">({{ $rawMaterialCode }})</small>
                                             @endif
                                             <div class="small text-muted mt-1">[{{ $brandName }}]</div>
-                                            <div class="small text-muted">{{ $item->fabricType->fabric_type ?? '' }}</div>
-                                            <span class="badge {{ $qcBadgeClass }} x-small" style="font-size: 10px;">{{ $item->quality_check_status ?? 'N/A' }}</span>
+                                        </td>
+                                        <td class="text-center small fw-bold">{{ $item->fabricType->fabric_type ?? '-' }}</td>
+                                        <td class="text-center">
+                                            <span class="badge {{ $qcBadgeClass }} x-small" style="font-size: 10px;">{{ $item->quality_check_status ?? '-' }}</span>
                                         </td>
                                         <td class="text-center">
                                             @if($item->image)
@@ -165,6 +177,9 @@
                                                 <span class="text-muted small">No Image</span>
                                             @endif
                                         </td>
+                                        <td class="text-center small fw-bold">{{ $item->art_no ?? '-' }}</td>
+                                        <td class="text-center small fw-bold">{{ $widthVal }}</td>
+                                        <td class="text-center small fw-bold">{{ $uomCode }}</td>
                                         <td class="text-center small fw-bold">{{ $styleName }}</td>
                                         <td class="text-center">
                                             <div class="small fw-bold">{{ $colorName }}</div>
@@ -174,12 +189,14 @@
                                                 </button>
                                             @endif
                                         </td>
-                                        <td class="text-center small fw-bold">{{ $widthVal }}</td>
                                         <td class="text-center small fw-bold">{{ $supplierDesignName }}</td>
-                                        <td class="text-center small fw-bold">{{ $item->art_no ?? '-' }}</td>
                                         <td class="text-center small">{{ $locationName }}</td>
-                                        <td class="text-center small fw-bold">{{ $uomCode }}</td>
-                                        <td class="text-end fw-bold text-dark pe-4">{{ number_format($item->qty_received, 2) }}</td>
+                                        <td class="text-end small">{{ number_format($item->qty_ordered ?? 0, 2) }}</td>
+                                        <td class="text-end small">{{ number_format($item->purchaseInvoiceItem->quantity ?? 0, 2) }}</td>
+                                        <td class="text-end fw-bold text-dark">{{ number_format($item->qty_received ?? 0, 2) }}</td>
+                                        <td class="text-end fw-bold text-success">{{ number_format($item->qty_accepted ?? 0, 2) }}</td>
+                                        <td class="text-end fw-bold text-danger">{{ number_format($item->qty_rejected ?? 0, 2) }}</td>
+                                        <td class="text-end fw-bold text-warning">{{ number_format($item->qty_balanced ?? 0, 2) }}</td>
                                         <td class="text-end small">₹{{ number_format($item->rate, 2) }}</td>
                                         <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
                                     </tr>
@@ -268,7 +285,7 @@
                                         @foreach($item->variants as $variant)
                                             <tr>
                                                 <td>{{ $loop->iteration }}</td>
-                                                <td>{{ $variant->color->color_name ?? 'N/A' }}</td>
+                                                <td>{{ $variant->color->color_name ?? '-' }}</td>
                                                 <td>{{ number_format($variant->qty_received, 2) }}</td>
                                             </tr>
                                         @endforeach

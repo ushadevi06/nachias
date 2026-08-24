@@ -687,7 +687,7 @@
                                                 @php
                                                     $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
                                                     $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png']);
-                                                    $sigUrl = asset($invoice->signature_file);
+                                                    $sigUrl = asset('uploads/sales_invoices/signatures/' . $invoice->signature_file);
                                                 @endphp
                                                 <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                     @if($isSigImage)
@@ -715,7 +715,7 @@
                                                 @php
                                                     $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
                                                     $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                    $attUrl = asset($invoice->attachment_file);
+                                                    $attUrl = asset('uploads/sales_invoices/attachments/' . $invoice->attachment_file);
                                                 @endphp
                                                 <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                     @if($isAttImage)

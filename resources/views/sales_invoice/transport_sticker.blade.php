@@ -285,7 +285,7 @@
             </div>
             <div class="stat-box">
                 <div class="stat-label">BOXES</div>
-                <div class="stat-value orange">{{ $boxCount }}</div>
+                <div class="stat-value orange">{{ $invoice->no_of_box ?: '-' }}</div>
             </div>
         </div>
 

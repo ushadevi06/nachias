@@ -37,7 +37,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="purchase_commission_agent_id" name="purchase_commission_agent_id"
-                                        class="select2 form-select @error('purchase_commission_agent_id') is-invalid @enderror">
+                                        class="select2 form-select @error('purchase_commission_agent_id') is-invalid @enderror" data-placeholder="Select Purchase Commission Agent">
                                         <option value="" {{ old('purchase_commission_agent_id', $purchaseOrder->purchase_commission_agent_id ?? '') == '' ? 'selected' : '' }}>Select Purchase Commission Agent</option>
                                         @foreach($purchaseCommissionAgents as $agent)
                                             <option value="{{ $agent->id }}" {{ old('purchase_commission_agent_id', $purchaseOrder->purchase_commission_agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }} ({{ $agent->code }})</option>
@@ -623,7 +623,7 @@
                                                 <input type="number" class="form-control igst_amount text-end" name="items[0][igst_amount]" step="0.01" min="0" value="" readonly>
                                             </td>
                                             <td>
-                                                <input type="number" class="form-control amount" name="items[0][amount]" step="0.01" min="0" placeholder="0.00">
+                                                <input type="number" class="form-control amount" name="items[0][amount]" step="0.01" min="0" placeholder="Amount">
                                             </td>
                                             <td>
                                                 <textarea class="form-control remarks" name="items[0][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
@@ -1011,7 +1011,7 @@
                         <input type="number" class="form-control igst_amount text-end" name="items[${itemIndex}][igst_amount]" step="0.01" min="0" value="" readonly>
                     </td>
                     <td>
-                        <input type="number" class="form-control amount" name="items[${itemIndex}][amount]" step="0.01" min="0" placeholder="0.00">
+                        <input type="number" class="form-control amount" name="items[${itemIndex}][amount]" step="0.01" min="0" placeholder="Amount">
                     </td>
                     <td>
                         <textarea class="form-control remarks" name="items[${itemIndex}][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
@@ -1145,14 +1145,13 @@
                 let rate = parseFloat(row.find('.rate').val()) || 0;
 
                 let amountVal = (qty * rate).toFixed(2);
-                row.find('.amount').val(amountVal > 0 ? amountVal : '0.00');
+                row.find('.amount').val(amountVal > 0 ? amountVal : '');
                 calculateTotals();
             });
 
             $(document).on('input', '.amount', function () {
                 let row = $(this).closest('tr');
-                let isAccessories = $('#store_type_id').val() == 2;
-                if (!isAccessories) return;
+
 
                 let amount = parseFloat($(this).val()) || 0;
                 let qty = parseFloat(row.find('.quantity').val()) || 0;
@@ -1236,12 +1235,15 @@
                     let rate = parseFloat($(this).find('.rate').val()) || 0;
                     let amount;
 
-                    if (isAccessories) {
-                        amount = parseFloat($(this).find('.amount').val()) || 0;
-                    } else {
-                        amount = qty * rate;
-                        $(this).find('.amount').val(amount.toFixed(2));
-                    }
+                    // if (isAccessories) {
+                    //     amount = parseFloat($(this).find('.amount').val()) || 0;
+                    // } else {
+                    //     amount = qty * rate;
+                    //     $(this).find('.amount').val(amount > 0 ? amount.toFixed(2) : '');
+                    // }
+                    
+                    amount = qty * rate;
+                    $(this).find('.amount').val(amount > 0 ? amount.toFixed(2) : '');
                     
                     if (isAccessories) {
                         if (otherState === 'yes') {

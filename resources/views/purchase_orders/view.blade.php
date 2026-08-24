@@ -164,7 +164,7 @@
                         if (response.success === false || response.rate_missing) {
                             $select.val(previousStatus).trigger('change.select2');
                             let errorMsg = response.message || 'Update failed';
-                            let msg = '<span class="text-danger" style="font-size:10px; display:block; line-height:1.2; white-space:normal; word-break:break-word; width:100%; max-width:130px; margin-top:4px; text-align:left;"><i class="ri ri-alert-line"></i> ' + errorMsg + '</span>';
+                            let msg = '<div class="text-danger small mt-1" style="font-size:10.5px; line-height:1.25; white-space:normal !important; width:100%; max-width:145px; word-break:break-word;"><i class="ri ri-alert-line me-1"></i> ' + errorMsg + '</div>';
                             $('.status_msg_' + id).html(msg).fadeIn();
                             setTimeout(function() {
                                 $('.status_msg_' + id).fadeOut(function() {

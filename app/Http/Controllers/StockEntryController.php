@@ -491,7 +491,8 @@ class StockEntryController extends Controller
             'grnEntryItems.purchaseInvoiceItem.rawMaterial.storeCategory',
             'grnEntryItems.storeLocation',
             'grnEntryItems.purchaseInvoiceItem.uom',
-            'grnEntryItems.stockEntryItems'
+            'grnEntryItems.stockEntryItems',
+            'grnEntryItems.purchaseInvoiceItem.brand'
         ])->findOrFail($grn_entry_id);
 
         $items = $grnEntry->grnEntryItems
@@ -518,6 +519,10 @@ class StockEntryController extends Controller
 
                 $rate = $piItem ? $piItem->rate : ($item->rate ?? 0);
 
+                $brand = $piItem && $piItem->brand ? $piItem->brand : null;
+                $brandName = $brand ? $brand->brand_name . ' (' . $brand->code . ')' : '-';
+                $artNo = $item->art_no ?? '-';
+
                 return [
                     'id' => $item->id,
                     'grn_entry_item_id' => $item->id,
@@ -533,6 +538,8 @@ class StockEntryController extends Controller
                     'qty_accepted' => $item->qty_accepted - $item->stockEntryItems->where('stock_entry_id', '!=', $stockEntryId)->sum('qty_in'),
                     'rate' => $rate,
                     'fabric_type_id' => $item->fabric_type_id,
+                    'art_no' => $artNo,
+                    'brand_name' => $brandName,
                 ];
             });
 

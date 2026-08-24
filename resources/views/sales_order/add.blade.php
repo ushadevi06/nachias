@@ -269,7 +269,7 @@
                                             <tr class="item-row">
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $item['stock_item_key'] ?? '' }}" autocomplete="off">
+                                                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $item['stock_item_key'] ?? '' }}" autocomplete="off" readonly>
                                                         <input type="hidden" name="items[{{ $index }}][stock_item_key]" class="stock-item-select" value="{{ $item['stock_item_key'] ?? '' }}">
                                                         <label>Stock Item*</label>
                                                     </div>
@@ -296,7 +296,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input @error("items.$index.art_no") is-invalid @enderror" placeholder="Art No" value="{{ $item['art_no'] ?? '' }}">
+                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input @error("items.$index.art_no") is-invalid @enderror" placeholder="Art No" value="{{ $item['art_no'] ?? '' }}" readonly>
                                                     </div>
                                                     @error("items.$index.art_no")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                                 </td>
@@ -459,7 +459,7 @@
                                     <tr class="item-row">
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="" autocomplete="off">
+                                                <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="" autocomplete="off" readonly>
                                                 <input type="hidden" name="items[0][stock_item_key]" class="stock-item-select" value="">
                                                 <label>Stock Item*</label>
                                             </div>
@@ -484,7 +484,7 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[0][art_no]" class="form-control art-no-input" placeholder="Art No">
+                                                <input type="text" name="items[0][art_no]" class="form-control art-no-input" placeholder="Art No" readonly>
                                             </div>
                                         </td>
                                         <td>
@@ -641,7 +641,7 @@
                                                 <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
                                                     <i class="ri ri-pencil-line"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge" {{ isset($salesOrder) ? 'disabled' : '' }}>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
                                                     <i class="ri ri-delete-bin-line"></i>
                                                 </button>
                                             </td>
@@ -808,6 +808,10 @@
                                         <div class="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
                                             <label class="fw-medium">Net Amount (Before Tax):</label>
                                             <input type="text" id="taxable_amount" name="taxable_amount" class="form-control-plaintext text-end w-50 fw-bold" value="{{ old('taxable_amount', $salesOrder->taxable_amount ?? '0.00') }}" readonly>
+                                        </div>
+                                        <div id="negative_net_warning" class="alert alert-warning text-dark py-1 px-2 mb-1 mt-1 d-none" style="font-size: 12px;">
+                                            <i class="ri-information-line me-1" style="font-size: 14px;"></i> 
+                                            <span id="negative_net_warning_text"></span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Other State:</label>
@@ -1068,7 +1072,7 @@ $(document).ready(function () {
             <tr class="item-row">
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="" autocomplete="off">
+                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="" autocomplete="off" readonly>
                         <input type="hidden" name="items[${itemIndex}][stock_item_key]" class="stock-item-select" value="">
                         <label>Stock Item *</label>
                     </div>
@@ -1093,7 +1097,7 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="text" name="items[${itemIndex}][art_no]" class="form-control art-no-input" placeholder="Art No">
+                        <input type="text" name="items[${itemIndex}][art_no]" class="form-control art-no-input" placeholder="Art No" readonly>
                     </div>
                 </td>
                 <td>
@@ -1614,7 +1618,25 @@ $(document).ready(function () {
 
         const taxableAmount = subTotal - discountAmount + preGstCharges;
         $('#taxable_amount').val(taxableAmount.toFixed(2));
+        
+        if (taxableAmount <= 0 && subTotal > 0 && discountAmount > 0) {
+            let warningText = '';
+            if (taxableAmount < 0) {
+                warningText = 'Taxable Total is negative (₹' + taxableAmount.toFixed(2) + '). Discount (₹' + discountAmount.toFixed(2) + ') exceeds Sub Total + Pre-GST Charges. Showing 0.00.';
+            } else {
+                warningText = 'Taxable Total is 0.00. Discount (₹' + discountAmount.toFixed(2) + ') equals Sub Total + Pre-GST Charges. Tax and Grand Total will be 0.00.';
+            }
+            $('#negative_net_warning_text').text(warningText);
+            $('#negative_net_warning').removeClass('d-none');
+            $('#total_amount').addClass('text-danger');
+            $('button[type="submit"]').prop('disabled', true);
+        } else {
+            $('#negative_net_warning').addClass('d-none');
+            $('#total_amount').removeClass('text-danger');
+            $('button[type="submit"]').prop('disabled', false);
+        }
 
+        let effectiveTaxable = Math.max(0, taxableAmount);
         let taxAmount = 0;
         let taxPercent = 0;
         const isOtherState = $('input[name="other_state"]:checked').val() === 'yes';
@@ -1624,7 +1646,7 @@ $(document).ready(function () {
             $('.cgst-field, .sgst-field').addClass('d-none');
             taxPercent = parseFloat($('#igst_percent').val()) || 0;
             
-            let igstAmt = (taxableAmount * taxPercent) / 100;
+            let igstAmt = (effectiveTaxable * taxPercent) / 100;
             let igstAmtRounded = parseFloat(igstAmt.toFixed(2));
             
             $('#igst_amount_display').text(igstAmtRounded.toFixed(2));
@@ -1639,8 +1661,8 @@ $(document).ready(function () {
             let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
             taxPercent = cgstPercent + sgstPercent;
             
-            let cgstAmt = (taxableAmount * cgstPercent) / 100;
-            let sgstAmt = (taxableAmount * sgstPercent) / 100;
+            let cgstAmt = (effectiveTaxable * cgstPercent) / 100;
+            let sgstAmt = (effectiveTaxable * sgstPercent) / 100;
             
             let cgstAmtRounded = parseFloat(cgstAmt.toFixed(2));
             let sgstAmtRounded = parseFloat(sgstAmt.toFixed(2));
@@ -1654,7 +1676,7 @@ $(document).ready(function () {
 
         $('#tax_amount').val(taxAmount.toFixed(2));
         
-        let finalTotal = taxableAmount + taxAmount + postGstCharges;
+        let finalTotal = effectiveTaxable + taxAmount + postGstCharges;
         
         // if ($('#freight_type').val() === 'Paid') {
         //     finalTotal += parseFloat($('#freight_amount').val()) || 0;

@@ -52,6 +52,14 @@
                 <div class="card-body p-4">
                     <div class="row g-4">
                         <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Credit Note No</div>
+                            <div class="fw-bold text-primary">{{ $creditNote->note_no }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Credit Note Date</div>
+                            <div class="fw-bold text-dark">{{ $creditNote->note_date->format('d M, Y') }}</div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Customer</div>
                             <div class="fw-bold text-dark">
                                 {{ $creditNote->customer ? $creditNote->customer->name : 'N/A' }}
@@ -71,12 +79,12 @@
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Issue Date</div>
-                            <div class="fw-bold text-dark">{{ $creditNote->note_date->format('d M, Y') }}</div>
-                        </div>
-                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Reason</div>
                             <div class="fw-bold text-dark">{{ $creditNote->reason ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Fault</div>
+                            <div class="fw-bold text-dark">{{ $creditNote->fault ?? '-' }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Zone</div>
@@ -139,20 +147,30 @@
                     <h5 class="mb-0 fw-bold text-dark">Item Details</h5>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light">
+                    <div class="table-responsive p-1">
+                        <table class="table table-bordered table-hover align-middle text-nowrap mb-0" id="itemTable">
+                            <thead class="table-light">
                                 <tr>
-                                    <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="80">S.No</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold">Item Description</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Quantity</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Total Amount</th>
+                                    <th style="width: 50px;" class="text-center">S.No</th>
+                                    <th style="width: 160px;">INVOICE NO</th>
+                                    <th style="width: 220px;">ITEM NAME</th>
+                                    <th style="width: 100px;">COLOR</th>
+                                    <th style="width: 130px;">ART NO</th>
+                                    <th style="width: 70px;">UOM</th>
+                                    <th style="width: 90px;" class="text-center">SIZE</th>
+                                    <th style="width: 110px;" class="text-end">INV QTY</th>
+                                    <th style="width: 110px;" class="text-end">RET QTY</th>
+                                    <th style="width: 110px;" class="text-end">BAL QTY</th>
+                                    <th style="width: 110px;" class="text-center">RETURN QTY</th>
+                                    <th style="width: 110px;" class="text-end">MRP</th>
+                                    <th style="width: 110px;" class="text-end">PRICE</th>
+                                    <th style="width: 150px;" class="text-end">AMOUNT</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @if($creditNote->items->isEmpty())
                                     <tr>
-                                        <td colspan="5" class="text-center py-5 text-muted">
+                                        <td colspan="14" class="text-center py-5 text-muted">
                                             <i class="ri-information-line fs-3 d-block mb-2"></i>
                                             No items found for this credit note
                                         </td>
@@ -161,101 +179,93 @@
                                     @foreach($creditNote->items as $index => $item)
                                         @php
                                             $invoiceItem = $item->salesInvoiceItem;
+                                            $invoiceNo = $invoiceItem && $invoiceItem->salesInvoice ? $invoiceItem->salesInvoice->inv_no : '-';
 
-                                            // Item name
-                                            $itemName = 'N/A';
-                                            $styleName = '';
+                                            $itemName = '-';
                                             if ($invoiceItem) {
-                                                if ($invoiceItem->stockEntryItem) {
-                                                    $styleName = $invoiceItem->stockEntryItem->style ? $invoiceItem->stockEntryItem->style->style_name : '';
+                                                if ($invoiceItem->stockEntryItem && $invoiceItem->stockEntryItem->finished_item_code) {
                                                     $itemName = $invoiceItem->stockEntryItem->finished_item_code;
                                                 } elseif ($invoiceItem->item) {
-                                                    $styleName = $invoiceItem->item->style ? $invoiceItem->item->style->style_name : '';
                                                     $itemName = $invoiceItem->item->name;
                                                 }
                                             }
 
-                                            // Brand/Category
-                                            $brandName = '';
-                                            if ($invoiceItem && $invoiceItem->brandCategory) {
-                                                $brandName = $invoiceItem->brandCategory->name;
-                                            } else if ($invoiceItem && $invoiceItem->stockEntryItem) {
-                                                if ($invoiceItem->stockEntryItem->brand) {
-                                                    $brandName = $invoiceItem->stockEntryItem->brand->brand_name;
-                                                } else if ($invoiceItem->stockEntryItem->finished_item_code) {
-                                                    $parts = explode('-', $invoiceItem->stockEntryItem->finished_item_code);
-                                                    if (count($parts) > 0) {
-                                                        $brand = \App\Models\Brand::where('code', $parts[0])->first();
-                                                        if ($brand) {
-                                                            $brandName = $brand->brand_name;
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                            $productBarcode = $invoiceItem ? $invoiceItem->sku : '';
+                                            $colorName = $invoiceItem ? ($invoiceItem->api_color ?: ($invoiceItem->color ? $invoiceItem->color->color_name : '-')) : '-';
 
-                                            $fullItemName = trim(trim($brandName) . ' ' . trim($styleName));
-                                            if (!$fullItemName) {
-                                                $fullItemName = $itemName;
-                                            }
-
-                                            // Item code
-                                            $itemCode = $invoiceItem && $invoiceItem->sku ? $invoiceItem->sku : '';
-
-                                            // Sleeve
-                                            $sleeveFull = '';
-                                            if ($invoiceItem && $invoiceItem->sleeve_type) {
-                                                $st = strtolower(trim($invoiceItem->sleeve_type));
-                                                if ($st == 'full' || $st == 'f/s' || $st == 'fs') {
-                                                    $sleeveFull = ' FULL SLEEVE';
-                                                } elseif ($st == 'half' || $st == 'h/s' || $st == 'hs') {
-                                                    $sleeveFull = ' HALF SLEEVE';
-                                                } else {
-                                                    $sleeveFull = ' ' . strtoupper(trim($invoiceItem->sleeve_type));
-                                                }
-                                            }
-
-                                            // UOM
-                                            $uomCode = $invoiceItem && $invoiceItem->uom ? $invoiceItem->uom->uom_code : 'PCS';
-
-                                            // Color
-                                            $colorName = $invoiceItem ? $invoiceItem->api_color : '';
-
-                                            // Size
-                                            $sizeName = '';
+                                            $displayArtNo = '-';
                                             if ($invoiceItem) {
-                                                $sizeName = $invoiceItem->sizeRatio ? $invoiceItem->sizeRatio->size : $invoiceItem->size;
+                                                $displayArtNo = $invoiceItem->stockEntryItem ? ($invoiceItem->stockEntryItem->art_no ?: $invoiceItem->art_no) : ($invoiceItem->art_no ?: '-');
                                             }
 
-                                            // Art No
-                                            $artNo = $invoiceItem ? $invoiceItem->art_no : '';
+                                            $uomCode = 'PCS';
+                                            if ($invoiceItem) {
+                                                if ($invoiceItem->stockEntryItem) {
+                                                    $soItem = \App\Models\SalesOrderItem::where('stock_entry_item_id', $invoiceItem->stock_entry_item_id)->first();
+                                                    if ($soItem && $soItem->uom_id) {
+                                                        $uomCode = $soItem->uom_id;
+                                                    }
+                                                } elseif ($invoiceItem->uom_id) {
+                                                    $uomCode = $invoiceItem->uom_id;
+                                                } elseif ($invoiceItem->uom) {
+                                                    $uomCode = $invoiceItem->uom->uom_code;
+                                                }
+                                            }
+
+                                            $sizeName = '-';
+                                            if ($invoiceItem) {
+                                                $sizeName = $invoiceItem->sizeRatio ? $invoiceItem->sizeRatio->size : ($invoiceItem->size ?: '-');
+                                            }
+
+                                            $invQty = $invoiceItem ? $invoiceItem->quantity : 0;
+
+                                            $alreadyReturned = 0;
+                                            if ($invoiceItem) {
+                                                $alreadyReturned = \DB::table('credit_note_items')
+                                                    ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
+                                                    ->where('credit_note_items.sales_invoice_item_id', $invoiceItem->id)
+                                                    ->whereNull('credit_notes.deleted_at')
+                                                    ->whereNull('credit_note_items.deleted_at')
+                                                    ->whereIn('credit_notes.status', ['Draft', 'Approved'])
+                                                    ->where('credit_notes.id', '!=', $creditNote->id)
+                                                    ->sum('credit_note_items.quantity');
+                                            }
+
+                                            $balQty = max(0, $invQty - $alreadyReturned);
+                                            $mrp = $item->mrp ?? ($invoiceItem->mrp ?? 0);
+                                            $rate = $item->rate ?? ($invoiceItem->rate ?? 0);
+                                            $amount = $item->amount ?? ($item->quantity * $rate);
                                         @endphp
                                         <tr>
-                                            <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
+                                            <td class="text-center fw-semibold">{{ $index + 1 }}</td>
                                             <td>
-                                                <div class="fw-bold text-dark">
-                                                    {{ trim($fullItemName . $sleeveFull) }}
-                                                </div>
-                                                @if($itemCode)
-                                                    <small class="text-primary fw-medium">{{ $itemCode }}</small>
-                                                @endif
-                                                @if($colorName)
-                                                    <small class="text-muted"> | Color: {{ $colorName }}</small>
-                                                @endif
-                                                @if($artNo && $artNo != '-')
-                                                    <small class="text-muted"> | Art No: {{ $artNo }}</small>
-                                                @endif
-                                                @if($sizeName)
-                                                    <small class="text-muted"> | Size: {{ $sizeName }}</small>
+                                                <span class="fw-semibold text-primary">{{ $invoiceNo }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="d-block fw-bold" style="font-size: 13px;">{{ $itemName }}</span>
+                                                @if($productBarcode)
+                                                    <small class="text-muted"><i class="ri-barcode-line"></i> {{ $productBarcode }}</small>
                                                 @endif
                                             </td>
+                                            <td>{{ $colorName }}</td>
+                                            <td>{{ $displayArtNo }}</td>
+                                            <td>{{ $uomCode }}</td>
                                             <td class="text-center">
-                                                <span class="badge bg-light text-dark px-3 py-2 fw-medium">
-                                                    {{ number_format($item->quantity, 2) }} {{ $uomCode }}
+                                                <span class="badge bg-light text-dark px-2 py-1 border">{{ $sizeName }}</span>
+                                            </td>
+                                            <td class="text-end fw-semibold">{{ number_format($invQty, 2) }}</td>
+                                            <td class="text-end text-warning fw-semibold">{{ number_format($alreadyReturned, 2) }}</td>
+                                            <td class="text-end text-success fw-bold">{{ number_format($balQty, 2) }}</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary-subtle text-primary px-3 py-2 fw-bold fs-6">
+                                                    {{ number_format($item->quantity, 2) }}
                                                 </span>
                                             </td>
-                                            <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format($mrp, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format($rate, 2) }}</td>
+                                            <td class="text-end fw-bold text-dark">₹{{ number_format($amount, 2) }}</td>
                                         </tr>
-                                        @endforeach
+                                    @endforeach
                                 @endif
                             </tbody>
                         </table>

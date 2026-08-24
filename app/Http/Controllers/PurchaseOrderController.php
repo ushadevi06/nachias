@@ -111,14 +111,15 @@ class PurchaseOrderController extends Controller
 
 
                 $statusDropdown = '
-                <div class="position-relative">
-                    <div class="form-floating form-floating-outline">
-                        <select class="form-select po-status-change" data-id="' . $po->id . '" data-previous-status="' . $po->status . '" ' . ($po->status === 'Received' ? 'disabled' : '') . '>
-                            ' . $statusOptions . '
-                        </select>
-                    </div>
-                    <div class="status_msg_' . $po->id . ' position-absolute w-100" style="z-index: 50; top: 100%; left: 0;"></div>
-                </div>';
+                    <div style="max-width: 145px; white-space: normal !important;">
+                        <div class="form-floating form-floating-outline">
+                            <select class="form-select po-status-change" data-id="' . $po->id . '" data-previous-status="' . $po->status . '" ' . ($po->status === 'Received' ? 'disabled' : '') . '>
+                                ' . $statusOptions . '
+                            </select>
+                        </div>
+                        <div class="status_msg_' . $po->id . '" style="white-space: normal !important;"></div>
+                    </div>';
+
 
                 $action = '<div class="d-inline-block text-nowrap">';
 

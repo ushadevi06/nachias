@@ -372,13 +372,20 @@
         e.stopPropagation();
     });
 
-    $(document).on('click', '.kanban-tasks-item-dropdown .dropdown-item', function (e) {
-        e.preventDefault();
+    $(document).on('click auxclick', '.kanban-tasks-item-dropdown .dropdown-item', function (e) {
         e.stopPropagation();
         const url = $(this).attr('href');
-        if (url && url !== 'javascript:void(0)') {
-            window.location.href = url;
+        if (!url || url === 'javascript:void(0)') {
+            e.preventDefault();
+            return;
         }
+        if (e.ctrlKey || e.metaKey || e.which === 2 || e.button === 1) {
+            e.preventDefault();
+            window.open(url, '_blank');
+            return;
+        }
+        e.preventDefault();
+        window.location.href = url;
     });
 
     $(document).on('click', '.change-task-status', function (e) {

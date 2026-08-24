@@ -63,6 +63,8 @@
                                             <tr>
                                                 <th>Material Category</th>
                                                 <th>Material</th>
+                                                <th>Art No</th>
+                                                <th>Brand</th>
                                                 <th style="width: 150px;">UOM</th>
                                                 <th style="width: 250px;">Qty In</th>
                                                 <th style="width: 150px;">Price</th>
@@ -191,6 +193,8 @@
                                         ${item.store_category_name}
                                     </td>
                                     <td>${item.raw_material_name}</td>
+                                    <td>${item.art_no}</td>
+                                    <td>${item.brand_name}</td>
                                     <td>${item.uom_name}</td>
                                     <td>
                                         <input type="number" name="items[${index}][qty_in]" class="form-control form-control-sm item-qty" value="${qtyIn}" step="0.01" placeholder="Max: ${item.qty_accepted}">

@@ -102,6 +102,7 @@
         $(document).on('change', '.status-dropdown', function() {
             let debitNoteId = $(this).data('id');
             let status = $(this).val();
+            let $select = $(this);
             let statusMsg = $('.status_msg_' + debitNoteId);
             
             $.ajax({
@@ -115,10 +116,12 @@
                     if (response.success) {
                         let msg = '<span class="text-success">Status Changed</span>';
                         $('.status_msg_' + debitNoteId).html(msg).fadeIn().delay(1200).fadeOut();
-
-                        if (status !== 'Draft') {
-                            $(this).find('option[value="Draft"]').prop('disabled', true);
+                        if (status === 'Approved') {
+                            $select.find('option[value="Draft"], option[value="Cancelled"]').prop('disabled', true);
+                        } else if (status !== 'Draft') {
+                            $select.find('option[value="Draft"]').prop('disabled', true);
                         }
+                        table.ajax.reload(null, false);
                     } else {
                         alert('Status update failed');
                     }

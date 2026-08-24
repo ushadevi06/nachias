@@ -8,9 +8,9 @@
                 <h4>Suppliers</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create suppliers'))
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importModal">
+                    {{-- <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
-                    </button>
+                    </button> --}}
                     <a href="{{ url('suppliers/add') }}" class="btn btn-primary">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                     </a>

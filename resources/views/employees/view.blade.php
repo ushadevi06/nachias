@@ -9,10 +9,10 @@
                 <h4 class="mb-0">Employees</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create employees'))
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                    {{-- <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
                         data-bs-target="#importModal">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
-                    </button>
+                    </button> --}}
                     <a class="btn btn-outline-success" href="{{ url('employees/export-excel') }}">
                         <i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Export
                     </a>

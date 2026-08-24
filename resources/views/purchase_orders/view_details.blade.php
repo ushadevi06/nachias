@@ -42,6 +42,19 @@
                             <div class="fw-bold text-dark">{{ $purchaseOrder->po_date->format('d M, Y') }}</div>
                         </div>
                         <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Commission Agent</div>
+                            <div class="fw-bold text-dark">
+                                {{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}
+                                @if($purchaseOrder->purchaseCommissionAgent && $purchaseOrder->purchaseCommissionAgent->code)
+                                <span class="text-primary small">({{ $purchaseOrder->purchaseCommissionAgent->code }})</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Commission (%)</div>
+                            <div class="fw-bold text-dark">{{ number_format($purchaseOrder->commission, 2) }}%</div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
                             <div class="fw-bold text-dark">
                                 {{ $purchaseOrder->supplier->name ?? 'N/A' }}
@@ -51,8 +64,28 @@
                             </div>
                         </div>
                         <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Reference No</div>
+                            <div class="fw-bold text-dark text-break">{{ $purchaseOrder->reference_no ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Reference / Order Date</div>
+                            <div class="fw-bold text-dark">{{ $purchaseOrder->reference_date ? $purchaseOrder->reference_date->format('d M, Y') : '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Due Date</div>
                             <div class="fw-bold text-dark">{{ $purchaseOrder->due_date->format('d M, Y') }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Store Type</div>
+                            <div class="fw-bold text-dark">{{ $purchaseOrder->storeType->store_type_name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Order Type</div>
+                            <div class="fw-bold text-dark text-break">{{ strtoupper($purchaseOrder->order_type ?? '-') }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Payment Terms</div>
+                            <div class="fw-bold text-dark text-break">{{ $purchaseOrder->payment_terms ?? '-' }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
@@ -69,31 +102,6 @@
                                     class="badge {{ $statusColors[$purchaseOrder->status] ?? 'bg-secondary' }} px-3 py-2 text-uppercase small">{{ $purchaseOrder->status }}</span>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Commission Agent</div>
-                            <div class="fw-bold text-dark">
-                                {{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}
-                                @if($purchaseOrder->purchaseCommissionAgent && $purchaseOrder->purchaseCommissionAgent->code)
-                                <span class="text-primary small">({{ $purchaseOrder->purchaseCommissionAgent->code }})</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Commission (%)</div>
-                            <div class="fw-bold text-dark">{{ number_format($purchaseOrder->commission, 2) }}%</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Store Type</div>
-                            <div class="fw-bold text-dark">{{ $purchaseOrder->storeType->store_type_name ?? '-' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Reference No</div>
-                            <div class="fw-bold text-dark text-break">{{ $purchaseOrder->reference_no ?? '-' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Order Type</div>
-                            <div class="fw-bold text-dark text-break">{{ strtoupper($purchaseOrder->order_type ?? '-') }}</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -108,14 +116,14 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light">
                                 <tr>
-                                    <th class="ps-4 text-uppercase small fw-bold">Sr.#</th>
+                                    <th class="ps-4 text-uppercase small fw-bold">#</th>
                                     <th class="text-uppercase small fw-bold">Store Category</th>
                                     <th class="text-uppercase small fw-bold">Brand</th>
                                     <th class="text-uppercase small fw-bold" style="min-width: 150px;">Raw Material</th>
                                     <th class="text-uppercase small fw-bold">Style</th>
-                                    <th class="text-uppercase small fw-bold">Width</th>
+                                    <th class="text-uppercase small fw-bold">Fabric Width</th>
                                     <th class="text-uppercase small fw-bold">Fabric Type</th>
-                                    <th class="text-uppercase small fw-bold">Supplier Design</th>
+                                    <th class="text-uppercase small fw-bold">Supplier Design Name</th>
                                     <th class="text-uppercase small fw-bold">Color</th>
                                     <th class="text-center text-uppercase small fw-bold">UOM</th>
                                     <th class="text-center text-uppercase small fw-bold">Qty</th>

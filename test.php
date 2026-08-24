@@ -1,0 +1,1 @@
+<?php require 'vendor/autoload.php'; $app = require_once 'bootstrap/app.php'; $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class); $kernel->bootstrap(); print_r(DB::table('items')->select('name', 'code')->take(5)->get()->toArray());

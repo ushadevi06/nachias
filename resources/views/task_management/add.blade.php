@@ -1898,9 +1898,6 @@
                 var submitBtn = $('#content-receive button[type="submit"]');
                 if (!isFormValid) {
                     submitBtn.attr('disabled', true);
-                    if ($('#common-validation-error').length === 0) {
-                        submitBtn.parent().prepend('<div id="common-validation-error" class="text-danger small mb-2 fw-bold">Please fix the errors in the employee assignments above.</div>');
-                    }
                 } else {
                     submitBtn.attr('disabled', false);
                     $('#common-validation-error').remove();

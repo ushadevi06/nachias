@@ -142,6 +142,8 @@
             ordering: true,
             info: true,
             lengthChange: true,
+            serverSide: true,
+            processing: true,
             ajax: {
                 url: "{{ url('sales_invoices') }}",
                 data: function(d) {

@@ -119,9 +119,40 @@ class SalesInvoiceController extends Controller
                 }
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->search['value'])) {
+                $search = $request->search['value'];
+                $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);
+
+                $query->where(function ($q) use ($search, $numericSearch) {
+                    $q->where('inv_no', 'like', "%{$search}%")
+                      ->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                      ->orWhere('sub_total', 'like', "%{$numericSearch}%")
+                      ->orWhere('discount', 'like', "%{$numericSearch}%")
+                      ->orWhere('grand_total', 'like', "%{$numericSearch}%")
+                      ->orWhere('invoice_status', 'like', "%{$search}%")
+                      ->orWhere('delivery_status', 'like', "%{$search}%")
+                      ->orWhereRaw("(sub_total - COALESCE(discount, 0)) LIKE ?", ["%{$numericSearch}%"])
+                      ->orWhereHas('customer', function($q2) use ($search) {
+                          $q2->where('name', 'like', "%{$search}%")
+                             ->orWhere('code', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('salesOrder', function($q3) use ($search) {
+                          $q3->where('so_no', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            if ($request->has('start') && $request->has('length') && $request->length != '-1') {
+                $query->skip($request->start)->take($request->length);
+            }
+
             $invoices = $query->get();
             $data = [];
-            $count = 1;
+            $count = $request->has('start') ? $request->start + 1 : 1;
 
             foreach ($invoices as $inv) {
                 $statusOptions = '';
@@ -213,7 +244,12 @@ class SalesInvoiceController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->draw),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         $customers = Customer::all();
@@ -324,6 +360,12 @@ class SalesInvoiceController extends Controller
                 'items.*.rate' => 'required|numeric|min:0.01',
                 'items.*.mrp' => 'required|numeric|min:0',
                 'no_of_box' => 'nullable|integer|min:1',
+                'cgst_percent' => 'nullable|numeric|min:0|max:100',
+                'cgst_amount' => 'nullable|numeric|min:0',
+                'sgst_percent' => 'nullable|numeric|min:0|max:100',
+                'sgst_amount' => 'nullable|numeric|min:0',
+                'igst_percent' => 'nullable|numeric|min:0|max:100',
+                'igst_amount' => 'nullable|numeric|min:0',
                 'hsn_sac' => 'required|string|max:50',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
@@ -345,6 +387,12 @@ class SalesInvoiceController extends Controller
                 '*.numeric'       => 'This field must be a number.',
                 '*.regex'         => 'This field is an invalid format.',
                 '*.not_regex'     => 'This field is an invalid format.',
+                'igst_percent.min' => 'IGST cannot be negative. Please enter 0 or a positive value.',
+                'igst_percent.max' => 'IGST percentage cannot exceed 100%.',
+                'cgst_percent.min' => 'CGST cannot be negative. Please enter 0 or a positive value.',
+                'cgst_percent.max' => 'CGST percentage cannot exceed 100%.',
+                'sgst_percent.min' => 'SGST cannot be negative. Please enter 0 or a positive value.',
+                'sgst_percent.max' => 'SGST percentage cannot exceed 100%.',
                 'sales_discount.max'   => 'Sales discount percentage cannot exceed 100%.',
                 'sales_discount.min'   => 'Sales discount percentage cannot be negative.',
                 'discount_percent.max' => 'Discount percentage cannot exceed 100%.',
@@ -396,6 +444,12 @@ class SalesInvoiceController extends Controller
                 $invoiceData['so_id'] = $request->so_ids[0] ?? null;
 
                 if ($request->hasFile('signature_file')) {
+                    if (!empty($invoice->signature_file)) {
+                        $oldFile = public_path('uploads/sales_invoices/signatures/' . $invoice->signature_file);
+                        if (file_exists($oldFile)) {
+                            unlink($oldFile);
+                        }
+                    }
                     $dir = public_path('uploads/sales_invoices/signatures');
                     if (!file_exists($dir)) {
                         mkdir($dir, 0755, true);
@@ -403,10 +457,16 @@ class SalesInvoiceController extends Controller
                     $file = $request->file('signature_file');
                     $fileName = time() . '_sig_' . $file->getClientOriginalName();
                     $file->move($dir, $fileName);
-                    $invoiceData['signature_file'] = 'uploads/sales_invoices/signatures/' . $fileName;
+                    $invoiceData['signature_file'] = $fileName;
                 }
 
-                if ($request->hasFile('attachment_file')) {
+                if ($request->hasFile('attachment_file'))   {
+                    if (!empty($invoice->attachment_file)) {
+                        $oldFile = public_path('uploads/sales_invoices/attachments/' . $invoice->attachment_file);
+                        if (file_exists($oldFile)) {
+                            unlink($oldFile);
+                        }
+                    }
                     $dir = public_path('uploads/sales_invoices/attachments');
                     if (!file_exists($dir)) {
                         mkdir($dir, 0755, true);
@@ -414,7 +474,7 @@ class SalesInvoiceController extends Controller
                     $file = $request->file('attachment_file');
                     $fileName = time() . '_att_' . $file->getClientOriginalName();
                     $file->move($dir, $fileName);
-                    $invoiceData['attachment_file'] = 'uploads/sales_invoices/attachments/' . $fileName;
+                    $invoiceData['attachment_file'] = $fileName;
                 }
                 //new 
                 $calculatedSubTotal = 0;
@@ -579,7 +639,7 @@ class SalesInvoiceController extends Controller
 
                 $invoice->load(['items', 'customer.city', 'customer.place']);
                 $totalPcs = (int) $invoice->items->sum('quantity');
-                $boxCount = (int) ($invoice->no_of_box ?: 1);
+                $boxCount = !empty($invoice->no_of_box) ? (int) $invoice->no_of_box : '-';
                 
                 $customerName = $invoice->customer->name ?? 'N/A';
                 $customerAddress = implode(', ', array_filter([$invoice->customer->address_line_1 ?? '', $invoice->customer->address_line_2 ?? '', $invoice->customer->address_line_3 ?? '']));
@@ -2468,10 +2528,38 @@ class SalesInvoiceController extends Controller
                     $query->whereDate('inv_date', $startDate);
                 }
             }
+            $totalRecords = $query->count();
 
+            if ($request->has('search') && !empty($request->search['value'])) {
+                $search = $request->search['value'];
+                $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);
+
+                $query->where(function ($q) use ($search, $numericSearch) {
+                    $q->where('inv_no', 'like', "%{$search}%")
+                      ->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                      ->orWhere('sub_total', 'like', "%{$numericSearch}%")
+                      ->orWhere('discount', 'like', "%{$numericSearch}%")
+                      ->orWhere('grand_total', 'like', "%{$numericSearch}%")
+                      ->orWhere('invoice_status', 'like', "%{$search}%")
+                      ->orWhere('delivery_status', 'like', "%{$search}%")
+                      ->orWhereRaw("(sub_total - COALESCE(discount, 0)) LIKE ?", ["%{$numericSearch}%"])
+                      ->orWhereHas('customer', function($q2) use ($search) {
+                          $q2->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('brand', function($q3) use ($search) {
+                          $q3->where('brand_name', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            if ($request->has('start') && $request->has('length') && $request->length != -1) {
+                $query->skip($request->start)->take($request->length);
+            }
             $invoices = $query->get();
             $data = [];
-            $count = 1;
+            $count = $request->has('start') ? $request->start + 1 : 1;
 
             foreach ($invoices as $inv) {
                 $data[] = [
@@ -2486,7 +2574,12 @@ class SalesInvoiceController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->draw),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords, 
+                'data' => $data
+            ]);
         }
 
         $customers = Customer::orderBy('name')->get();

@@ -74,7 +74,14 @@ class DebitNoteController extends Controller
                 $status = '<select class="form-select status-dropdown" data-id="' . $note->id . '">';
                 foreach ($status_options as $option) {
                     $selected = ($note->status == $option) ? 'selected' : '';
-                    $disabled = ($option == 'Draft' && $note->status != 'Draft') ? 'disabled' : '';
+                    $disabled = '';
+                    if ($note->status == 'Approved') {
+                        if ($option == 'Draft' || $option == 'Cancelled') {
+                            $disabled = 'disabled';
+                        }
+                    } elseif ($note->status != 'Draft' && $option == 'Draft') {
+                        $disabled = 'disabled';
+                    }
                     $status .= '<option value="' . $option . '" ' . $selected . ' ' . $disabled . '>' . $option . '</option>';
                 }
                 $status .= '</select>';

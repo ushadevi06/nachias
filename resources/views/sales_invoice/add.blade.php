@@ -141,7 +141,7 @@
                             </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" min="0" step="1" class="form-control @error('no_of_box') is-invalid @enderror" id="no_of_box" name="no_of_box" placeholder="No Of Box" value="{{ old('no_of_box', isset($invoice) ? $invoice->no_of_box : '') }}">
+                                    <input type="number" min="0" step="1" class="form-control @error('no_of_box') is-invalid @enderror" id="no_of_box" name="no_of_box" placeholder="No Of Box" value="{{ old('no_of_box', isset($invoice) ? $invoice->no_of_box : '1') }}">
                                     <label for="no_of_box">No of Box</label>
                                     @error('no_of_box')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -489,6 +489,7 @@
                         <h5 class="mb-0 text-primary">Open Order Item Details</h5>
                     </div>
                     <div class="card-body">
+                        @if(!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
                         <div class="row mb-4">
                             <div class="col-md-6 text-center">
                                 <div class="input-group mb-2 mx-auto">
@@ -509,6 +510,7 @@
                                 <small class="text-muted">Tip: Scan a barcode or type item code to quickly add it to the open order.</small>
                             </div>
                         </div>
+                        @endif
                         <div class="table-responsive text-nowrap">
                             <table class="table table-bordered align-middle" id="open-order-item-rows">
                                 <thead class="table-light">
@@ -587,7 +589,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" min="0" step="0.01">
+                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" min="0">
                                                     </div>
                                                     <div class="stock-info-wrapper mt-1">
                                                         <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format(max(0, $row->stock_qty ?? 0), 2) }}</span></small>
@@ -639,7 +641,7 @@
                                         <div class="form-floating form-floating-outline">
                                             <select name="invoice_status" id="invoice_status" class="form-select select2 @error('invoice_status') is-invalid @enderror" data-placeholder="Select Invoice Status">
                                                 <option value="">Select Invoice Status</option>
-                                                <option value="Draft" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                                <option value="Draft" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Draft' ? 'selected' : '' }} selected>Draft</option>
                                                 <option value="Unpaid/Credit" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Unpaid/Credit' ? 'selected' : '' }}>Unpaid/Credit</option>
                                                 <option value="Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Paid' ? 'selected' : '' }}>Paid</option>
                                                 <option value="Partially Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
@@ -703,7 +705,7 @@
                                                 @php
                                                     $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
                                                     $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png']);
-                                                    $sigUrl = asset($invoice->signature_file);
+                                                    $sigUrl = asset('uploads/sales_invoices/signatures/' . $invoice->signature_file);
                                                 @endphp
                                                 <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                     @if($isSigImage)
@@ -730,8 +732,8 @@
                                             @if(isset($invoice) && $invoice->attachment_file)
                                                 @php
                                                     $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
-                                                    $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'pdf']);
-                                                    $attUrl = asset($invoice->attachment_file);
+                                                    $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png']);
+                                                    $attUrl = asset('uploads/sales_invoices/attachments/' . $invoice->attachment_file);
                                                 @endphp
                                                 <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                     @if($isAttImage)
@@ -893,6 +895,8 @@
                                         <span class="fw-bold mb-0" id="pre_gst_charges_val">{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="pre_gst_charges" id="pre_gst_charges" value="{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div id="negative_net_warning" class="alert alert-warning text-dark d-none mt-3" style="font-size: 12px; padding: 10px;">
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <span class="text-secondary fw-medium">Net Amount (Before Tax):</span>
                                         <span class="fw-bold h5 mb-0" id="total_val">{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}</span>
@@ -927,6 +931,7 @@
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="igst_val">{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}</span>
                                                 <input type="hidden" name="igst" id="igst" value="{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}">
                                             </div>
+                                            <span class="text-danger text-end mt-1 small">{{ $errors->first('igst_percent') ?: $errors->first('igst_amount') }}</span>
                                         </div>
                                     </div>
                                     <div id="cgst_sgst_section">
@@ -940,6 +945,7 @@
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="cgst_val">{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}</span>
                                                 <input type="hidden" name="cgst" id="cgst" value="{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}">
                                             </div>
+                                            <span class="text-danger text-end mt-1 small">{{ $errors->first('cgst_percent') ?: $errors->first('cgst_amount') }}</span>
                                         </div>
                                         <div class="row g-2 align-items-center mb-3">
                                             <div class="col-4"><span class="text-secondary fw-medium">SGST</span></div>
@@ -951,6 +957,7 @@
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="sgst_val">{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}</span>
                                                 <input type="hidden" name="sgst" id="sgst" value="{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}">
                                             </div>
+                                            <span class="text-danger text-end mt-1 small">{{ $errors->first('sgst_percent') ?: $errors->first('sgst_amount') }}</span>
                                         </div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center py-2 border-top border-bottom mb-3">
@@ -1427,6 +1434,7 @@
             }
         }
 
+        if ($('#barcode_scanner').length) {
         $('#barcode_scanner').autocomplete({
             source: function (request, response) {
                 if (!window.availableSOItems || window.availableSOItems.length === 0) {
@@ -1509,16 +1517,31 @@
             var it = item.itemData;
             var skuInfo = it.sku ? ` | SKU: ${it.sku}` : '';
             var sizeInfo = it.size_name ? ` | Size: ${it.size_name}` : (it.size_id ? ` | Size: ${it.size_id}` : '');
-            return $("<li>")
+            
+            let stockQty = parseFloat(it.stock_qty) || 0;
+            let outOfStock = stockQty <= 0;
+            let stockHtml = outOfStock 
+                ? `<span class="search-item-balance text-center text-danger fw-bold">SO Qty: ${parseFloat(it.qty).toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance text-center">SO Qty: ${parseFloat(it.qty).toFixed(2)}<br>Stock: ${stockQty.toFixed(2)}</span>`;
+
+            let $li = $("<li>")
                 .append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
-                    <span class="search-item-balance">SO Qty: ${parseFloat(it.qty).toFixed(2)}</span>
+                    ${stockHtml}
                     <div class="search-item-info">
                         Art No: ${it.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(it.rate || it.mrp || 0).toFixed(2)}
                     </div>
-                </div>`)
-                .appendTo(ul);
+                </div>`);
+
+            if (outOfStock) {
+                $li.addClass('ui-state-disabled');
+                $li.css('opacity', '0.6');
+                item.disabled = true;
+            }
+
+            return $li.appendTo(ul);
         };
+        }
 
         $('#barcode_scanner').on('keypress', function(e) {
             if (e.which == 13) {
@@ -1709,6 +1732,26 @@
             $('#discount').val(discount.toFixed(2));
 
             var total = subTotal - discount;
+
+            if (total <= 0 && subTotal > 0 && discount > 0) {
+                let warningText = '';
+                if (total < 0) {
+                    warningText = 'Net Amount is negative (₹' + total.toFixed(2) + '). Discount (₹' + discount.toFixed(2) + ') exceeds Sub Total. Showing 0.00.';
+                    $('#total_val').addClass('text-danger fw-bold');
+                    $('button[type="submit"]').prop('disabled', true);
+                } else {
+                    warningText = 'Net Amount is 0.00. Discount (₹' + discount.toFixed(2) + ') equals Sub Total. Tax and Grand Total will be 0.00.';
+                    $('#total_val').removeClass('text-danger fw-bold');
+                    $('button[type="submit"]').prop('disabled', false);
+                }
+                $('#negative_net_warning').text(warningText).removeClass('d-none');
+                total = 0;
+            } else {
+                $('#negative_net_warning').addClass('d-none');
+                $('#total_val').removeClass('text-danger fw-bold');
+                $('button[type="submit"]').prop('disabled', false);
+            }
+
             $('#total_val').text(total.toFixed(2));
             $('#total').val(total.toFixed(2));
 
@@ -2172,6 +2215,7 @@
             $('#open_order_section').toggle();
         });
 
+        if ($('#open_order_barcode_scanner').length) {
         $('#open_order_barcode_scanner').autocomplete({
             source: function(request, response) {
                 let codeToSearch = request.term;
@@ -2256,8 +2300,8 @@
 
             let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
             let stockHtml = outOfStock 
-                ? `<span class="search-item-balance text-danger fw-bold">Stock: ${balance.toFixed(2)}<br>OUT OF STOCK</span>`
-                : `<span class="search-item-balance">Stock: ${balance.toFixed(2)}</span>`;
+                ? `<span class="search-item-balance text-center text-danger fw-bold">Stock: ${balance.toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance text-center">Stock: ${balance.toFixed(2)}</span>`;
 
             let $li = $("<li>").append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
@@ -2274,6 +2318,7 @@
             }
             return $li;
         };
+        }
 
         $('#open_order_barcode_scanner').on('keypress', function(e) {
             if (e.which === 13) {
@@ -2393,7 +2438,7 @@
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" data-original-qty="${qty}" min="0" step="0.01">
+                        <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" data-original-qty="${qty}" min="0">
                     </div>
                     <div class="stock-info-wrapper mt-1">
                         <small class="stock-label text-muted">Stock: <span class="available-stock-display">${Math.max(0, parseFloat(balance)).toFixed(2)}</span></small>
@@ -2621,19 +2666,17 @@
             updateInvoiceNo();
         }
 
-        // Lock fields once e-invoice is generated
+        // Lock fields once e-invoice is generated or order is dispatched
         $(function() {
-            if (window.einvoiceStatus === 'generated') {
+            if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                 $('form.common-form input, form.common-form select, form.common-form textarea').each(function() {
                     var $el = $(this);
                     var nameAttr = $el.attr('name');
                     
-                    // Keep PDF display checkboxes editable
                     if (nameAttr === 'show_fields[]' || nameAttr === 'delivery_show_fields[]') {
                         return;
                     }
                     
-                    // Keep token, method, submit buttons enabled
                     if ($el.attr('type') === 'hidden' && (nameAttr === '_token' || nameAttr === '_method')) {
                         return;
                     }
@@ -2641,7 +2684,6 @@
                         return;
                     }
                     
-                    // Disable select elements and checkboxes/radios/files/dates
                     if ($el.is('select')) {
                         $el.prop('disabled', true);
                         if ($el.hasClass('select2-hidden-accessible')) {

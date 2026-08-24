@@ -1240,7 +1240,7 @@
         if(!$('#reference_no').val()) {
             syncReferenceNo();
         }
-
+    
         function calculateNoOfDays() {
             const issueVal = $('input[name="issue_date"]').val();
             const deliveryVal = $('input[name="delivery_date"]').val();
@@ -3739,7 +3739,7 @@
             }
         });
 
-
+        
         $(document).on('click', '.assign-task-btn', function() {
             let $row = $(this).closest('tr');
             let stageId = $row.find('.stage-select').val();

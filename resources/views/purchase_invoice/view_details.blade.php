@@ -35,6 +35,14 @@
                     <div class="card-body p-4">
                         <div class="row g-4 text-break">
                             <div class="col-md-3">
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Invoice No</div>
+                                <div class="fw-bold text-primary">{{ $invoice->invoice_no }}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Invoice Date</div>
+                                <div class="fw-bold text-dark">{{ $invoice->invoice_date ? $invoice->invoice_date->format('d M, Y') : '-' }}</div>
+                            </div>
+                            <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
                                 <div class="fw-bold text-dark">
                                     {{ $invoice->supplier->name ?? 'N/A' }}
@@ -46,25 +54,6 @@
                             <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Order No</div>
                                 <div class="fw-bold text-dark">{{ $invoice->po_reference ?? '-' }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Invoice Date</div>
-                                <div class="fw-bold text-dark">{{ $invoice->invoice_date->format('d M, Y') }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
-                                <div>
-                                    @php
-                                        $statusClass = match ($invoice->invoice_status) {
-                                            'Paid' => 'bg-success',
-                                            'Unpaid/Credit' => 'bg-warning',
-                                            'Partially Paid' => 'bg-info',
-                                            'Draft' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $statusClass }} px-3 py-2">{{ $invoice->invoice_status }}</span>
-                                </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Commission Agent</div>
@@ -90,6 +79,10 @@
                                 </div>
                             </div>
                             <div class="col-md-3 mt-3">
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Eway Bill No.</div>
+                                <div class="fw-bold text-dark">{{ $invoice->eway_billno ?? '-' }}</div>
+                            </div>
+                            <div class="col-md-3 mt-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Indent No. & Date</div>
                                 <div class="fw-bold text-dark">
                                     {{ $invoice->indent_no ?? '-' }}
@@ -98,9 +91,20 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="col-md-3 mt-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Eway Bill No.</div>
-                                <div class="fw-bold text-dark">{{ $invoice->eway_billno ?? '-' }}</div>
+                            <div class="col-md-3">
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
+                                <div>
+                                    @php
+                                        $statusClass = match ($invoice->invoice_status) {
+                                            'Paid' => 'bg-success',
+                                            'Unpaid/Credit' => 'bg-warning',
+                                            'Partially Paid' => 'bg-info',
+                                            'Draft' => 'bg-secondary',
+                                            default => 'bg-secondary'
+                                        };
+                                    @endphp
+                                    <span class="badge {{ $statusClass }} px-3 py-2">{{ $invoice->invoice_status }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

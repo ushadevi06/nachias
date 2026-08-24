@@ -36,7 +36,37 @@
                     </div>
                 </div>
                 <div class="card-body p-4">
-                    <div class="row g-4 text-break">
+                    <div class="row g-4 text-break">           
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">SO No</div>
+                            <div class="fw-bold text-primary">{{ $salesOrder->so_no }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">SO Date</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->so_date->format('d M, Y') }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Order Type</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->order_type }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Request Date</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->request_date ? \Carbon\Carbon::parse($salesOrder->request_date)->format('d M, Y') : '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Delivery Date</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->delivery_date ? \Carbon\Carbon::parse($salesOrder->delivery_date)->format('d M, Y') : '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Season</div>
+                            <div class="fw-bold text-dark">
+                                @if($salesOrder->season)
+                                    {{ $salesOrder->season->name }} <span class="text-primary small">({{ $salesOrder->season->season_code }}) </span>
+                                @else
+                                    -
+                                @endif
+                            </div>
+                        </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Customer</div>
                             <div class="fw-bold text-dark">
@@ -49,12 +79,25 @@
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">SO Date</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->so_date->format('d M, Y') }}</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Customer PO Ref</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->customer_po_ref ?? '-' }}</div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Order Type</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->order_type }}</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Store</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->store->store_type_name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Zone</div>
+                            <div class="fw-bold text-dark">{{ $salesOrder->zone->zone_name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Executive</div>
+                            <div class="fw-bold text-dark">
+                                {{ $salesOrder->salesAgent->name ?? '-' }}
+                                @if($salesOrder->salesAgent && $salesOrder->salesAgent->code)
+                                    <span class="text-primary small">({{ $salesOrder->salesAgent->code }})</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
@@ -68,45 +111,6 @@
                                 @endphp
                                 <span class="badge {{ $statusColors[$salesOrder->status] ?? 'bg-secondary' }} px-3 py-2">{{ $salesOrder->status }}</span>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Season</div>
-                            <div class="fw-bold text-dark">
-                                @if($salesOrder->season)
-                                    {{ $salesOrder->season->name }} <span class="text-primary small">({{ $salesOrder->season->season_code }}) </span>
-                                @else
-                                    -
-                                @endif
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Executive</div>
-                            <div class="fw-bold text-dark">
-                                {{ $salesOrder->salesAgent->name ?? '-' }}
-                                @if($salesOrder->salesAgent && $salesOrder->salesAgent->code)
-                                    <span class="text-primary small">({{ $salesOrder->salesAgent->code }})</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Zone</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->zone->zone_name ?? '-' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Store</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->store->store_type_name ?? '-' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Request Date</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->request_date ? \Carbon\Carbon::parse($salesOrder->request_date)->format('d M, Y') : '-' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Delivery Date</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->delivery_date ? \Carbon\Carbon::parse($salesOrder->delivery_date)->format('d M, Y') : '-' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Customer PO Ref</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->customer_po_ref ?? '-' }}</div>
                         </div>
                     </div>
                 </div>
@@ -362,10 +366,6 @@
                                                 <div class="p-2 border rounded bg-white shadow-sm d-flex align-items-center mb-2">
                                                     @if($isImg)
                                                         <img src="{{ $url }}" class="rounded cursor-pointer view-image border" data-image="{{ $url }}" width="60" height="60" style="object-fit: cover;" alt="Attachment">
-                                                        <div class="ms-3">
-                                                            <div class="fw-bold text-dark small text-uppercase">Image</div>
-                                                            <div class="text-muted small" style="font-size: 10px;">Click to zoom</div>
-                                                        </div>
                                                     @else
                                                         <a href="{{ $url }}" target="_blank" class="text-decoration-none d-flex align-items-center">
                                                             @if(strtolower($ext) == 'pdf')

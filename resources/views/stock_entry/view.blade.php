@@ -7,11 +7,11 @@
             <div class="table-header-box d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Stock Entry</h4>
                 <div class="d-flex gap-2">
-                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials') || auth()->user()->can('create stock-entry-finished-goods'))
+                    {{-- @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials') || auth()->user()->can('create stock-entry-finished-goods'))
                     <button type="button" class="btn btn-secondary" id="import-stock-btn" data-bs-toggle="modal" data-bs-target="#importModal" style="display: none;">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                     </button>
-                    @endif
+                    @endif --}}
                     @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods'))
                     <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success" id="export-finished-goods-btn" style="display: none;">
                         <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export 

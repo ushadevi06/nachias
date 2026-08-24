@@ -35590,6 +35590,7 @@ margin-bottom: 0 !important;
     padding: 12px 15px !important;
     border-bottom: 1px solid #f5f5f5;
     cursor: pointer;
+    position: relative;
 }
 .ui-menu-item-wrapper.ui-state-active {
     background-color: #f0eaff !important;
@@ -35598,7 +35599,7 @@ margin-bottom: 0 !important;
     margin: 0 !important;
 }
 .search-item-title { font-weight: 600; color: #444; display: block; margin-bottom: 2px; }
-.search-item-balance { float: right; color: #28a745; font-weight: bold; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; }
+.search-item-balance { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #28a745; font-weight: bold; background: #e8f5e9; padding: 4px 10px; border-radius: 4px; font-size: 0.85em; text-align: center; }
 .search-item-info { font-size: 0.85em; color: #888; }
 .split-row {
     border-left: 4px solid #00cfe8 !important;

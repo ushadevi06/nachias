@@ -23,12 +23,40 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
+                            <label class="form-label fw-bold">Job Card No</label>
+                            <p>{{ $receipt->jobCard->job_card_no ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Receipt Date</label>
                             <p>{{ date('d-m-Y', strtotime($receipt->receipt_date)) }}</p>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold">Job Card No</label>
-                            <p>{{ $receipt->jobCard->job_card_no ?? '-' }}</p>
+                            <label class="form-label fw-bold">Brand</label>
+                            <p>{{ $receipt->jobCard->brand->brand_name ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Doc Date</label>
+                            <p>{{ date('d-m-Y', strtotime($receipt->doc_date)) }}</p>
+                        </div> 
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Responsible Person(Employee)</label>
+                            <p>{{ $receipt->employee->employee_name ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Plant</label>
+                            <p>{{ $receipt->plant->plant_name ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Order Due Date</label>
+                            <p>{{ $receipt->order_due_date ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Store</label>
+                            <p>{{ $receipt->storeType->store_type_name ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Location</label>
+                            <p>{{ $receipt->storeLocation->store_location ?? '-' }}</p>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Status</label>
@@ -41,16 +69,8 @@
                             </p>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold">Brand</label>
-                            <p>{{ $receipt->jobCard->brand->brand_name ?? '-' }}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Store</label>
-                            <p>{{ $receipt->storeType->store_type_name ?? '-' }}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Location</label>
-                            <p>{{ $receipt->storeLocation->store_location ?? '-' }}</p>
+                            <label class="form-label fw-bold">Remarks</label>
+                            <p>{{ $receipt->remark ?? '-' }}</p>
                         </div>
                     </div>
                 </div>

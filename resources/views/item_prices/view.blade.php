@@ -10,11 +10,11 @@
                     <a class="btn btn-outline-success" href="{{ url('item_prices/export-excel') }}">
                         <i class="icon-base ri ri-file-excel-line"></i> Export
                     </a>
-                    @if(auth()->id() == 1 || auth()->user()->can('create item-prices'))
+                    {{-- @if(auth()->id() == 1 || auth()->user()->can('create item-prices'))
                     <button type="button" class="btn btn-secondary" id="btn-item-prices-import" data-bs-toggle="modal" data-bs-target="#importItemPricesModal">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                     </button>
-                    @endif
+                    @endif --}}
                     @if(auth()->id() == 1 || auth()->user()->can('create item-prices'))
                     <a class="btn btn-primary" href="{{ url('item_prices/add') }}">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add

@@ -7,12 +7,12 @@
             <div class="table-header-box">
                 <h4>Raw Materials</h4>
                 <div class="d-flex gap-2">
-                    @if(auth()->id() == 1 || auth()->user()->can('create raw-materials'))
+                    {{-- @if(auth()->id() == 1 || auth()->user()->can('create raw-materials'))
                     <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
                         data-bs-target="#importModal">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                     </button>
-                    @endif
+                    @endif --}}
                     @if(auth()->id() == 1 || auth()->user()->can('create raw-materials'))
                     <a class="btn btn-primary" href="{{ url('raw_materials/add') }}">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add

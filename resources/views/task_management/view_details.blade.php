@@ -105,7 +105,8 @@
                                                 <thead class="table-light extra-small text-center align-middle" style="position: sticky; top: 0; z-index: 10;">
                                                     <tr style="background-color: #f8f9fa;">
                                                         <th rowspan="2" class="text-start border-end shadow-sm" style="position: sticky; left: 0; top: 0; z-index: 11; background-color: #f8f9fa; min-width: 250px;">Employee & Service</th>
-                                                        <th rowspan="2" class="border-end">Timeline</th>
+                                                        <th rowspan="2" class="border-end">Stage Start & End Date</th>
+                                                        <th rowspan="2" class="border-end">Hrs</th>
                                                         <th rowspan="2" class="border-end">Status</th>
                                                         <th colspan="5" class="border-start border-end bg-primary bg-opacity-10 text-primary">Production Details</th>
                                                         <th colspan="4" class="border-end bg-info bg-opacity-10 text-info">QC Tracking</th>
@@ -147,8 +148,11 @@
                                                             </div>
                                                         </td>
                                                         <td class="border-end text-nowrap">
-                                                            <div class="small">I: {{ $asgn->issue_date ? $asgn->issue_date->format('d-m-Y') : '—' }}</div>
-                                                            <div class="small text-danger">D: {{ $asgn->due_date ? $asgn->due_date->format('d-m-Y') : '—' }}</div>
+                                                            <div class="small text-success">Start: {{ $asgn->issue_date ? $asgn->issue_date->format('d-m-Y') : '—' }}</div>
+                                                            <div class="small text-danger">End: {{ $asgn->due_date ? $asgn->due_date->format('d-m-Y') : '—' }}</div>
+                                                        </td>
+                                                        <td class="border-end text-center fw-bold">
+                                                            {{ $asgn->total_hrs ?? '-' }}
                                                         </td>
                                                         <td class="border-end">
                                                             <span class="badge bg-label-primary">{{ $asgn->status }}</span>

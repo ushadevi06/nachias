@@ -35,7 +35,7 @@ class SalesOrderController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id', 'desc');
+            $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id','desc');
 
             if (!empty($request->customer_id)) {
                 $query->where('customer_id', $request->customer_id);
@@ -58,9 +58,60 @@ class SalesOrderController extends Controller
                 }
             }
 
+            if ($request->has('search') && !empty($request->search['value'])) {
+                $search = $request->search['value'];
+                $numericSearch = str_replace(['₹', ','], '', $search);
+
+                $query->where(function($q) use ($search, $numericSearch) {
+                    $q->where('so_no', 'like', "%{$search}%")
+                      ->orWhere('order_no', 'like', "%{$search}%")
+                      ->orWhere('customer_po_ref', 'like', "%{$search}%")
+                      ->orWhere('total_qty', 'like', "%{$numericSearch}%")
+                      ->orWhere('total_amount', 'like', "%{$numericSearch}%")
+                      ->orWhereRaw("DATE_FORMAT(so_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                      ->orWhereHas('customer', function($cq) use ($search) {
+                          $cq->where('name', 'like', "%{$search}%")
+                             ->orWhere('code', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('salesAgent', function($sq) use ($search) {
+                          $sq->where('name', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            $totalRecords = $query->count();
+
+            // Ordering
+            if ($request->has('order')) {
+                $orderColumnIndex = $request->order[0]['column'];
+                $orderDirection = $request->order[0]['dir'];
+                
+                $columns = ['id', 'so_no', 'so_date', 'customer_id', 'customer_po_ref', 'total_qty', 'sales_agent_id', 'status', 'total_amount'];
+                
+                if (isset($columns[$orderColumnIndex])) {
+                    if (in_array($columns[$orderColumnIndex], ['customer_id', 'sales_agent_id'])) {
+                        $query->orderBy('id', 'desc'); // Fallback for related models
+                    } else {
+                        $query->orderBy($columns[$orderColumnIndex], $orderDirection);
+                    }
+                } else {
+                    $query->orderBy('id', 'desc');
+                }
+            } else {
+                $query->orderBy('id', 'desc');
+            }
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+            
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $salesOrders = $query->get();
             $data = [];
-            $count = 1;
+            $count = $start + 1;
 
             foreach ($salesOrders as $so) {
                 $statusOptions = '';
@@ -123,7 +174,12 @@ class SalesOrderController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => SalesOrder::count(),
+                'recordsFiltered' => $totalRecords,
+                'data' => $data
+            ]);
         }
 
         return view('sales_order.view');

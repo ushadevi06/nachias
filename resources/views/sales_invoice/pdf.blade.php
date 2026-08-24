@@ -840,7 +840,6 @@ $totalChunks = count($pages);
                                                     A/C No. : {{ $setting->account_no ?? '' }}<br>
                                                     Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}<br><br>
                                                     <strong>CASH DISCOUNT IS VALID ONLY ON PAYMENTS RECEIVED WITHIN 30 DAYS AND ONLY ON THE TAXABLE VALUE</strong><br>
-                                                    {!! $invoice->notes ?? '' !!}
                                                 </div>
                                             </td>
                                             <td style="width: {{ ($w_5_6 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; text-align: center; border: none;">

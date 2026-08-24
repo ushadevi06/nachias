@@ -33,25 +33,42 @@
                 <div class="card-body p-4">
                     <div class="row g-4">
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
-                            <div class="fw-bold text-dark">
-                                {{ $debitNote->supplier->name ?? 'N/A' }}
-                                @if($debitNote->supplier && $debitNote->supplier->supplier_code)
-                                    <span class="text-primary small">({{ $debitNote->supplier->supplier_code }})</span>
-                                @endif
-                            </div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Debit Note No</div>
+                            <div class="fw-bold text-dark">{{ $debitNote->debit_note_no ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Debit Note Date</div>
+                            <div class="fw-bold text-dark">{{ $debitNote->debit_note_date->format('d M, Y') }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Invoice</div>
                             <div class="fw-bold text-dark">{{ $debitNote->purchaseInvoice->invoice_no ?? '-' }}</div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Issue Date</div>
-                            <div class="fw-bold text-dark">{{ $debitNote->debit_note_date->format('d M, Y') }}</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
+                            <div class="fw-bold text-dark">
+                                {{ $debitNote->supplier->name ?? '-' }}
+                                @if($debitNote->supplier && $debitNote->supplier->supplier_code)
+                                    <span class="text-primary small">({{ $debitNote->supplier->supplier_code }})</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Reason</div>
                             <div class="fw-bold text-dark">{{ $debitNote->reason ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
+                            <div>
+                                @php
+                                    $statusColors = [
+                                        'Draft' => 'bg-secondary',
+                                        'Approved' => 'bg-success',
+                                        'Cancelled' => 'bg-danger',
+                                    ];
+                                @endphp
+                                <span class="badge {{ $statusColors[$debitNote->status] ?? 'bg-secondary' }} px-3 py-2 text-uppercase small">{{ $debitNote->status }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -96,7 +113,7 @@
                                     <tr>
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
                                         <td>
-                                            <div class="fw-bold text-dark">{{ $item->rawMaterial->name ?? 'N/A' }}</div>
+                                            <div class="fw-bold text-dark">{{ $item->rawMaterial->name ?? '-' }}</div>
                                             @if($item->rawMaterial && $item->rawMaterial->material_code)
                                                 <small class="text-primary fw-medium">{{ $item->rawMaterial->material_code }}</small>
                                             @endif

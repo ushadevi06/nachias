@@ -30,7 +30,7 @@
                                     <select name="customer_id" id="filter_customer" class="form-select select2"
                                         data-placeholder="Select Customer">
                                         <option value="">Select Customer</option>
-                                        @foreach(\App\Models\Customer::active()->orderBy('name')->get() as $c)
+                                        @foreach(\App\Models\Customer::active()->orderBy('id', 'desc')->get() as $c)
                                             <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->code }})</option>
                                         @endforeach
                                     </select>
@@ -91,6 +91,8 @@
                 ordering: true,
                 info: true,
                 lengthChange: true,
+                processing: true,
+                serverSide: true,
                 ajax: {
                     url: "{{ url('sales_orders') }}",
                     data: function (d) {
