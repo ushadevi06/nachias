@@ -65,6 +65,7 @@ class LogController extends Controller
                     'user_name' => $log->user->name ?? 'System',
                     'module' => ucwords(str_replace(['_', '-'], ' ', $log->module)),
                     'action_type' => $actionDisplay,
+                    'description' => $log->description ?: ucwords(str_replace(['_', '-'], ' ', $log->module)) . ' ' . ucwords(str_replace('_', ' ', $log->action_type)) . ' by ' . ($log->user->name ?? 'System'),
                     'action' => '<div class="d-flex align-items-center"><button class="btn btn-view" onclick="viewLogDetails(' . $log->id . ')"><i class="icon-base ri ri-eye-line"></i></button></div>',
                 ];
             }

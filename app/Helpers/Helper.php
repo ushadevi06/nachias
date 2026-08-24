@@ -20,6 +20,27 @@ if (!function_exists('createdByName')) {
 if (!function_exists('addLog')) {
     function addLog($action, $module, $table, $recordId, $oldData = null, $newData = null, $description = null)
     {
+        if (empty($description)) {
+            $actionWord = ucwords(str_replace('_', ' ', $action));
+            $moduleWord = ucwords(str_replace(['_', '-'], ' ', $module));
+            $userName = createdByName(auth()->id());
+            
+            $recordIdentifier = "#{$recordId}";
+            if ($table && $recordId) {
+                try {
+                    $record = \Illuminate\Support\Facades\DB::table($table)->find($recordId);
+                    if ($record) {
+                        if (isset($record->order_no)) $recordIdentifier = $record->order_no;
+                        elseif (isset($record->inv_no)) $recordIdentifier = $record->inv_no;
+                        elseif (isset($record->name)) $recordIdentifier = $record->name;
+                        elseif (isset($record->job_card_no)) $recordIdentifier = $record->job_card_no;
+                    }
+                } catch (\Exception $e) {}
+            }
+            
+            $description = "{$moduleWord} {$recordIdentifier} {$actionWord} by {$userName}";
+        }
+
         \App\Models\Log::create([
             'user_id'     => auth()->id(),
             'action_type' => $action,

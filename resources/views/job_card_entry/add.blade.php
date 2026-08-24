@@ -1278,9 +1278,31 @@
             $('#no_of_days').val(diff);
         }
 
-        $('input[name="issue_date"]').on('change input', calculateNoOfDays);
+        $('input[name="issue_date"]').on('change input', function() {
+            calculateNoOfDays();
+            const issueVal = $(this).val();
+            const deliveryInput = document.querySelector('input[name="delivery_date"]');
+            if (issueVal && deliveryInput && deliveryInput._flatpickr) {
+                const parseDMY = (str) => {
+                    const parts = str.split('-');
+                    if (parts.length !== 3) return null;
+                    const date = new Date(parts[2], parts[1] - 1, parts[0]);
+                    return Number.isNaN(date.getTime()) ? null : date;
+                };
+                const minDate = parseDMY(issueVal);
+                if(minDate) {
+                    deliveryInput._flatpickr.set('minDate', minDate);
+                }
+            }
+        });
+
         $('input[name="delivery_date"]').on('change input', calculateNoOfDays);
         calculateNoOfDays();
+
+        // Initialize minDate if issue_date has an initial value
+        setTimeout(() => {
+            $('input[name="issue_date"]').trigger('change');
+        }, 100);
 
         function performStockCheck(isRecheck = false) {
             const form = $('form.common-form');
@@ -3710,6 +3732,18 @@
             let $row = $(this).closest('tr');
             let stageId = $row.find('.stage-select').val();
             let issueDateStr = $(this).val();
+            let $deadlineInput = $row.find('.deadline-date');
+
+            if (issueDateStr) {
+                let parts = issueDateStr.split('-');
+                if (parts.length === 3 && $deadlineInput.length && $deadlineInput[0]._flatpickr) {
+                    let issueDateObjForMin = new Date(parts[2], parts[1] - 1, parts[0]);
+                    if (!Number.isNaN(issueDateObjForMin.getTime())) {
+                        $deadlineInput[0]._flatpickr.set('minDate', issueDateObjForMin);
+                    }
+                }
+            }
+
             if (stageId && issueDateStr) {
                 let stageData = operationStagesData[stageId];
                 if (stageData && stageData.working_days) {
@@ -3723,7 +3757,6 @@
                         let y = issueDateObj.getFullYear();
 
                         let deadlineDateStr = d + '-' + m + '-' + y;
-                        let $deadlineInput = $row.find('.deadline-date');
                         $deadlineInput.val(deadlineDateStr);
                         if ($deadlineInput[0]._flatpickr) {
                             $deadlineInput[0]._flatpickr.setDate(deadlineDateStr, true);

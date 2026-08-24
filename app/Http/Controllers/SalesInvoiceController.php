@@ -653,6 +653,11 @@ class SalesInvoiceController extends Controller
                     $invoice->load('items');
                 }
 
+                $invoice->refresh();
+                if (function_exists('addLog')) {
+                    addLog($id ? 'update' : 'create', 'Sales Invoice', 'sales_invoices', $invoice->id, $id ? $existingInvoice->toArray() : null, $invoice->toArray());
+                }
+
                 DB::commit();
                 
                 $msg = $id ? 'Sale Invoice updated successfully' : 'Sale Invoice created successfully';

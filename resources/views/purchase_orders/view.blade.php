@@ -23,6 +23,15 @@
                                 <div class="col-lg-12">
                                     <h5>Filter</h5>
                                 </div>
+                                <div class="col-md-4 col-lg-3 store_type">
+                                    <select name="store_type_id" id="store_type_id" class="form-select select2"
+                                        data-placeholder="Select Store Type">
+                                        <option value="">Select Store Type</option>
+                                        @foreach ($storeTypes as $storeType)
+                                            <option value="{{ $storeType->id }}">{{ $storeType->store_type_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                                 <div class="col-md-4 col-lg-3 status">
                                     <select name="status" id="status" class="form-select select2"
                                         data-placeholder="Select Status">
@@ -86,6 +95,7 @@
                 ajax: {
                     url: "{{ url('purchase_orders') }}",
                     data: function (d) {
+                        d.store_type_id = $('#store_type_id').val();
                         d.status = $('#status').val();
                         d.po_date_range = $('#po_date_range').val();
                     }
@@ -144,6 +154,7 @@
             $('#resetBtn').click(function () {
                 $('#status').val('').trigger('change');
                 $('#po_date_range').val('');
+                $('#store_type_id').val('').trigger('change');
                 table.ajax.reload();
             });
 

@@ -423,6 +423,10 @@ class OrderaxeService
                 'total_amount' => $grandTotal,
             ]);
 
+            if (function_exists('addLog')) {
+                addLog('create', 'Sale Order', 'sales_orders', $salesOrder->id, null, $salesOrder->toArray(), "Sale Order #{$salesOrder->so_no} created from Orderaxe sync");
+            }
+
             DB::commit();
             return 'synced';
 

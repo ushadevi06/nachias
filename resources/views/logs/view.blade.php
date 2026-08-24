@@ -17,6 +17,7 @@
                                     <th>Action Type</th>
                                     <th>Employee</th>
                                     <th>Module</th>
+                                    <th>Description</th>
                                     <th>Date & Time</th>
                                     <th>Action</th>
                                 </tr>
@@ -119,6 +120,9 @@
                 },
                 {
                     data: 'module'
+                },
+                {
+                    data: 'description'
                 },
                 {
                     data: 'created_at'
