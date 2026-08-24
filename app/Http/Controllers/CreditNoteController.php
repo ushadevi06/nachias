@@ -603,6 +603,10 @@ class CreditNoteController extends Controller
         $result = $eInvoiceService->generateCreditNoteEInvoice($creditNote);
 
         if ($result['success']) {
+            if (function_exists('addLog')) {
+                $creditNote->refresh();
+                addLog('generate_einvoice', 'Credit Note E-Invoice Generated', 'credit_notes', $creditNote->id, null, $creditNote->toArray());
+            }
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],
@@ -619,6 +623,7 @@ class CreditNoteController extends Controller
     public function cancelEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $creditNote = CreditNote::findOrFail($id);
+        $oldData = $creditNote->toArray();
         
         $cancelReason = $request->input('cancel_reason', '2');
         $cancelRemarks = $request->input('cancel_remarks', 'Data Entry Mistake');
@@ -626,6 +631,10 @@ class CreditNoteController extends Controller
         $result = $eInvoiceService->cancelCreditNoteEInvoice($creditNote, $cancelReason, $cancelRemarks);
 
         if ($result['success']) {
+            if (function_exists('addLog')) {
+                $creditNote->refresh();
+                addLog('cancel_einvoice', 'Credit Note E-Invoice Cancelled', 'credit_notes', $creditNote->id, $oldData, $creditNote->toArray());
+            }
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],

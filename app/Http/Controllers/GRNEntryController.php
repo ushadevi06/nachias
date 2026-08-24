@@ -301,6 +301,13 @@ class GrnEntryController extends Controller
 
                     $imagePath = $itemData['old_image'] ?? null;
                     if ($request->hasFile("items.$idx.item_image")) {
+                        if ($id && !empty($itemData['old_image'])) {
+                            $oldPath = public_path('uploads/grn_items/' . $itemData['old_image']);
+                            if (file_exists($oldPath)) {
+                                @unlink($oldPath);
+                            }
+                        }
+
                         $file = $request->file("items.$idx.item_image");
                         $filename = 'grn_item_' . time() . '_' . $idx . '.' . $file->getClientOriginalExtension();
                         $uploadPath = public_path('uploads/grn_items');

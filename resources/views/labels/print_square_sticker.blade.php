@@ -154,7 +154,7 @@
                         <tr><td class="td-lbl">Design</td><td class="td-col">:</td><td class="td-val">{{ $labelData['design'] ?? '-' }}</td></tr>
                         <tr><td class="td-lbl">Size</td><td class="td-col">:</td><td class="td-val">{{ $labelData['size'] ?? '-' }}</td></tr>
                         <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
-                        <tr><td class="td-lbl">MRP</td><td class="td-col">:</td><td class="td-val">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</td></tr>
+                        <tr><td class="td-lbl">MRP</td><td class="td-col">:</td><td class="td-val">₹ {{ number_format((float) ($labelData['raw_price'] ?? str_replace(',', '', $labelData['price'] ?? 0)), 2) }}</td></tr>
                         <tr><td colspan="3" class="td-lbl" style="padding-top: 1.5mm;"><strong>{{ $labelData['lot_no'] ?? '' }}</strong></td></tr>
                     </table>
                 </div>

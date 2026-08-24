@@ -200,29 +200,21 @@
                     return typeof i === 'string' ? i.replace(/[\₹,]/g, '') * 1 : typeof i === 'number' ? i : 0;
                 };
 
-                let currentFilteredData = api.rows({ search: 'applied' }).data().toArray();
+                let json = api.ajax.json();
+                
+                if (json) {
+                    let totalQty = json.overallTotalQty || 0;
+                    let subTotal = json.overallSubTotal || 0;
+                    let totalDiscount = json.overallDiscount || 0;
+                    let totalTaxable = json.overallTaxable || 0;
+                    let grandTotal = json.overallGrandTotal || 0;
 
-                let totalItems = 0;
-                let totalQty = 0;
-                let subTotal = 0;
-                let totalDiscount = 0;
-                let totalTaxable = 0;
-                let grandTotal = 0;
-
-                currentFilteredData.forEach(function (rowData) {
-                    totalItems += intVal(rowData.total_items);
-                    totalQty += intVal(rowData.total_qty);
-                    subTotal += intVal(rowData.raw_sub_total);
-                    totalDiscount += intVal(rowData.raw_discount);
-                    totalTaxable += intVal(rowData.raw_taxable_value);
-                    grandTotal += intVal(rowData.raw_grand_total);
-                });
-
-                $('#footer-total-qty').html(totalQty);
-                $('#footer-sub-total').html('₹' + subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                $('#footer-discount').html('₹' + totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                $('#footer-taxable-value').html('₹' + totalTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                $('#footer-grand-total').html('₹' + grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                    $('#footer-total-qty').html(totalQty);
+                    $('#footer-sub-total').html('₹' + subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                    $('#footer-discount').html('₹' + totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                    $('#footer-taxable-value').html('₹' + totalTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                    $('#footer-grand-total').html('₹' + grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                }
             }
         });
         $('#inv_date_range').flatpickr({

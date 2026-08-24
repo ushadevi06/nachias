@@ -2833,6 +2833,11 @@ class JobCardEntryController extends Controller
             }
             $mrpPrice = $priceRecord ? $priceRecord->selling_price : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
 
+            $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');
+            $customItemName = trim("$brandName $styleName $sleeveShort");
+            $sleeveCodeClean = str_replace('/', '', $sleeveShort);
+            $customItemCode = implode('-', array_filter([$brandCode, $styleCode, $sleeveCodeClean]));
+
             $labelData = [
                 'company_name' => $settings->company_name ?? 'NACHIAS',
                 'company_email' => $settings->email ?? 'info@nachias.com',
@@ -2844,6 +2849,8 @@ class JobCardEntryController extends Controller
                 'opening_time' => $settings->opening_time ? date('h A', strtotime($settings->opening_time)) : '10 AM',
                 'closing_time' => $settings->closing_time ? date('h A', strtotime($settings->closing_time)) : '6 PM',
                 'product_name' => $jobCard->item->name ?? 'SHIRTS',
+                'item_name_full' => $customItemName,
+                'item_code' => $customItemCode,
                 'brand_name' => $jobCard->brand->brand_name ?? '-',
                 'design' => $artNo,
                 'color' => $colorName,
@@ -2852,16 +2859,12 @@ class JobCardEntryController extends Controller
                 'sleeve' => $sleeveText,
                 'fit' => $jobCard->fit->fit_name ?? 'Tailor Fit',
                 'price' => number_format($mrpPrice, 2),
+                'raw_price' => $mrpPrice,
                 'mfg_date' => date('F Y'),
                 'lot_no' => $jobCard->job_card_no,
                 'sku' => $barcodeNo,
                 'quantity' => '1 ' . ($record['size'] !== 'Bulk' ? 'Number' : ($issueItem->rawMaterial->uom->uom_code ?? ''))
             ];
-
-            $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');
-            $customItemName = trim("$brandName $styleName $sleeveShort");
-            $sleeveCodeClean = str_replace('/', '', $sleeveShort);
-            $customItemCode = implode('-', array_filter([$brandCode, $styleCode, $sleeveCodeClean]));
 
             BarcodeMaster::updateOrCreate(
                 ['barcode_no' => $barcodeNo],

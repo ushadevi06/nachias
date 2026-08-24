@@ -367,6 +367,13 @@ class StockEntryController extends Controller
                 ];
 
                 if ($request->hasFile('reference_document')) {
+                    if ($id && !empty($stockEntry->reference_document)) {
+                        $oldPath = public_path('uploads/stock_entries/' . $stockEntry->reference_document);
+                        if (file_exists($oldPath)) {
+                            @unlink($oldPath);
+                        }
+                    }
+
                     $file = $request->file('reference_document');
                     $filename = 'stock_ref_' . time() . '.' . $file->getClientOriginalExtension();
                     $uploadPath = public_path('uploads/stock_entries');

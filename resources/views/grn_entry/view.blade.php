@@ -44,7 +44,7 @@
                         </div>
                     </div>
                     <div class="card-datatable">
-                        <table class="table" id="grn-table">
+                        <table class="table nowrap w-100" id="grn-table">
                             <thead>
                                 <tr>
                                     <th>#</th>

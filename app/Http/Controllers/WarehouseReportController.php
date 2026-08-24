@@ -16,6 +16,12 @@ use Illuminate\Support\Facades\DB;
 
 class WarehouseReportController extends Controller
 {
+    public function brandwiseStockDetails($id)
+    {
+        $brand = Brand::find($id);
+        return view('reports.warehouse_report.brandwise_stock_details', compact('id', 'brand'));
+    }
+
     public function index(Request $request)
     {
         $brands = Brand::where('status', 'Active')->get();

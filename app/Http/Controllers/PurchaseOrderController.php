@@ -30,6 +30,9 @@ class PurchaseOrderController extends Controller
         }
         if ($request->ajax()) {
             $query = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType'])->orderBy('id', 'desc');
+            if (!empty($request->supplier_id)) {
+                $query->where('supplier_id', $request->supplier_id);
+            }
             if (!empty($request->store_type_id)) {
                 $query->where('store_type_id', $request->store_type_id);
             }
@@ -171,8 +174,9 @@ class PurchaseOrderController extends Controller
                 'data' => $data
             ]);
         }
-        $storeTypes = StoreType::active()->get();
-        return view('purchase_orders.view', compact('storeTypes'));
+        $storeTypes = StoreType::active()->orderBy('id','desc')->get();
+        $suppliers = Supplier::active()->orderBy('id','desc')->get();
+        return view('purchase_orders.view', compact('storeTypes','suppliers'));
     }
 
     public function add($id = null)

@@ -730,6 +730,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Warehouse Report */
     Route::get('warehouse_reports', [WarehouseReportController::class, 'index']);
+    Route::get('warehouse_reports/brandwise_stock_details/{id}', [WarehouseReportController::class, 'brandwiseStockDetails']);
 
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);

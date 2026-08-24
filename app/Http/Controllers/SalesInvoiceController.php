@@ -145,6 +145,15 @@ class SalesInvoiceController extends Controller
             }
 
             $filteredRecords = $query->count();
+            
+            $overallSubTotal = (float)$query->sum('sub_total');
+            $overallDiscount = (float)$query->sum('discount');
+            $overallTaxable = $overallSubTotal - $overallDiscount;
+            $overallGrandTotal = (float)$query->sum('grand_total');
+
+            $overallTotalQty = (float)(clone $query)
+                ->join('sales_invoice_items', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
+                ->sum('sales_invoice_items.quantity');
 
             if ($request->has('start') && $request->has('length') && $request->length != '-1') {
                 $query->skip($request->start)->take($request->length);
@@ -248,7 +257,12 @@ class SalesInvoiceController extends Controller
                 'draw' => intval($request->draw),
                 'recordsTotal' => $totalRecords,
                 'recordsFiltered' => $filteredRecords,
-                'data' => $data
+                'data' => $data,
+                'overallTotalQty' => $overallTotalQty ?? 0,
+                'overallSubTotal' => $overallSubTotal ?? 0,
+                'overallDiscount' => $overallDiscount ?? 0,
+                'overallTaxable' => $overallTaxable ?? 0,
+                'overallGrandTotal' => $overallGrandTotal ?? 0,
             ]);
         }
 
@@ -1565,6 +1579,13 @@ class SalesInvoiceController extends Controller
                                    . "</ul>";
             }
         }
+        if ($result['success']) {
+            if (function_exists('addLog')) {
+                $invoice->refresh();
+                addLog('generate_einvoice', 'Sales Invoice E-Invoice Generated', 'sales_invoices', $invoice->id, null, $invoice->toArray());
+            }
+        }
+
         return response()->json($result);
     }
 
@@ -1580,6 +1601,13 @@ class SalesInvoiceController extends Controller
         }
 
         $result = $eInvoiceService->generateEWayBill($invoice, $request->all());
+
+        if ($result['success']) {
+            if (function_exists('addLog')) {
+                $invoice->refresh();
+                addLog('generate_ewaybill', 'Sales Invoice E-Way Bill Generated', 'sales_invoices', $invoice->id, null, $invoice->toArray());
+            }
+        }
 
         return response()->json($result);
     }

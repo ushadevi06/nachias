@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ItemPricesExport;
 use App\Imports\ItemPricesImport;
+use Illuminate\Validation\Rule;
 
 class ItemPriceController extends Controller
 {
@@ -169,7 +170,22 @@ class ItemPriceController extends Controller
             }
 
             $rules = [
-                'finished_item_code' => 'required|string',
+                'finished_item_code' => [
+                    'required',
+                    'string',
+                    Rule::unique('item_prices', 'finished_item_code')
+                        ->where(function ($query) use ($request) {
+                            $query->whereNull('deleted_at');
+                            if (!empty($request->art_no)) {
+                                $query->where('art_no', $request->art_no);
+                            } else {
+                                $query->where(function ($q) {
+                                    $q->whereNull('art_no')->orWhere('art_no', '');
+                                });
+                            }
+                        })
+                        ->ignore($price ? $price->finished_item_code : null, 'finished_item_code'),
+                ],
                 'art_no'             => 'nullable|string',
                 'selling_price'      => 'required|numeric|min:0',
                 'effective_from'     => 'required|date_format:d-m-Y',

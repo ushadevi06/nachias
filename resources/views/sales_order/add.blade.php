@@ -131,13 +131,13 @@
                         <div class="row g-4">
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control" id="billing_address" name="billing_address" placeholder="Billing Address" style="height: 100px;">{{ old('billing_address', $salesOrder->billing_address ?? '') }}</textarea>
+                                    <textarea class="form-control" id="billing_address" name="billing_address" placeholder="Billing Address" style="height: 100px;" readonly>{{ old('billing_address', $salesOrder->billing_address ?? '') }}</textarea>
                                     <label for="billing_address">Billing Address</label>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control" id="shipping_address" name="shipping_address" placeholder="Shipping Address" style="height: 100px;">{{ old('shipping_address', $salesOrder->shipping_address ?? '') }}</textarea>
+                                    <textarea class="form-control" id="shipping_address" name="shipping_address" placeholder="Shipping Address" style="height: 100px;" readonly>{{ old('shipping_address', $salesOrder->shipping_address ?? '') }}</textarea>
                                     <label for="shipping_address">Shipping Address</label>
                                 </div>
                             </div>
