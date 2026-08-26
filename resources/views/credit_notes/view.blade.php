@@ -17,6 +17,38 @@
             </div>
             <div class="card mt-3">
                 <div class="card-body">
+                    <div class="filter-box mb-4">
+                        <div class="row g-3">
+                            <div class="col-lg-12">
+                                <h5>Filter</h5>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select name="customer_id" id="customer_id" class="form-select select2" data-placeholder="Select Customer">
+                                        <option value="">Select Customer</option>
+                                        @foreach($customers as $customer)
+                                            <option value="{{ $customer->id }}">{{ $customer->name }} ({{ $customer->code }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <select name="status" id="status" class="form-select select2" data-placeholder="Select Status">
+                                    <option value="">Select Status</option>
+                                    <option value="Draft">Draft</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <input type="text" id="note_date_range" class="form-control" placeholder="Select Note Date Range">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" id="filterBtn" class="btn btn-primary">Filter</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="card-datatable table-responsive">
                         <table class="table" id="creditNoteTable">
                             <thead>
@@ -52,7 +84,16 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            ajax: "{{ url('credit_notes') }}",
+            serverSide: true,
+            processing: true,
+            ajax: {
+                url: "{{ url('credit_notes') }}",
+                data: function(d) {
+                    d.status = $('#status').val();
+                    d.customer_id = $('#customer_id').val();
+                    d.note_date_range = $('#note_date_range').val();
+                }
+            },
             columns: [
                 { data: 'DT_RowIndex' },
                 { data: 'note_no' },
@@ -63,6 +104,22 @@
                 { data: 'status' },
                 { data: 'action', orderable: false, searchable: false },
             ]
+        });
+
+        $('#note_date_range').flatpickr({
+            mode: "range",
+            dateFormat: "d-m-Y"
+        });
+
+        $('#filterBtn').click(function() {
+            table.ajax.reload();
+        });
+
+        $('#resetBtn').click(function() {
+            $('#customer_id').val('').trigger('change');
+            $('#status').val('').trigger('change');
+            $('#note_date_range').val('');
+            table.ajax.reload();
         });
 
         $(document).on('change', '.status-dropdown', function() {

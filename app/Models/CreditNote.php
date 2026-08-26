@@ -39,6 +39,7 @@ class CreditNote extends Model
         'remarks',
         'reference_doc',
         'status',
+        'is_stock_updated',
         'show_fields',
         'created_by',
         'updated_by',

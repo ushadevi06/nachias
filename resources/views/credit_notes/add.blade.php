@@ -129,7 +129,7 @@
                             <input type="hidden" name="status" value="{{ old('status', $creditNote->status ?? 'Draft') }}">
                             <div class="col-lg-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control" name="reason_detail" id="reason_detail" placeholder="Enter reason details" style="height: 100px;">{{ old('reason_detail', $creditNote->reason_detail ?? '') }}</textarea>
+                                    <textarea class="form-control" name="reason_detail" id="reason_detail" placeholder="Enter reason detail" style="height: 100px;">{{ old('reason_detail', $creditNote->reason_detail ?? '') }}</textarea>
                                     <label for="reason_detail">Reason Detail</label>
                                     @error('reason_detail') <small class="text-danger">{{ $message }}</small> @enderror
                                 </div>
@@ -161,7 +161,8 @@
                                     <tr>
                                         <th style="width: 50px;" class="text-center">S.No</th>
                                         <th style="width: 160px;">INVOICE NO</th>
-                                        <th style="width: 220px;">ITEM NAME</th>
+                                        <th style="width: 70px;" class="text-center add-to-inv-col">ADD TO INV</th>
+                                        <th style="width: 320px;">ITEM NAME</th>
                                         <th style="width: 100px;">COLOR</th>
                                         <th style="width: 130px;">ART NO</th>
                                         <th style="width: 70px;">UOM</th>
@@ -169,7 +170,7 @@
                                         <th style="width: 110px;" class="text-end">INV QTY</th>
                                         <th style="width: 110px;" class="text-end">RET QTY</th>
                                         <th style="width: 110px;" class="text-end">BAL QTY</th>
-                                        <th style="width: 100px;" class="text-center">RETURN QTY</th>
+                                        <th style="width: 110px;" class="text-center">RETURN QTY</th>
                                         <th style="width: 100px;" class="text-end">MRP</th>
                                         <th style="width: 100px;" class="text-end">PRICE</th>
                                         <th style="width: 150px;" class="text-end">AMOUNT</th>
@@ -178,7 +179,7 @@
                                 </thead>
                                 <tbody id="item-rows">
                                     <tr class="empty-row text-center">
-                                        <td colspan="15">Select Customer and then Invoices to load items</td>
+                                        <td colspan="16">Select Customer and then Invoices to load items</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -225,7 +226,7 @@
                                     </div>
                                 </div>
 
-                                <div class="table-responsive mt-3 {{ (isset($creditNoteCharges) && $creditNoteCharges->count() > 0) ? '' : 'd-none' }}" id="charges_table">
+                                <div class="table-responsive mt-3 {{ (old('charges') || (isset($creditNoteCharges) && $creditNoteCharges->count() > 0)) ? '' : 'd-none' }}" id="charges_table">
                                     <table class="table table-sm table-bordered">
                                         <thead>
                                             <tr>
@@ -236,7 +237,29 @@
                                             </tr>
                                         </thead>
                                         <tbody id="added_charges_list">
-                                            @if(isset($creditNoteCharges))
+                                            @if(old('charges'))
+                                                @foreach(old('charges')['charge_id'] ?? [] as $index => $chargeId)
+                                                    <tr class="charge-row" data-charge-id="{{ $chargeId }}" data-tax-type="{{ old('charges')['tax_type'][$index] ?? '' }}">
+                                                        <td>
+                                                            {{ old('charges')['name'][$index] ?? '' }}
+                                                            <input type="hidden" name="charges[charge_id][]" value="{{ $chargeId }}">
+                                                            <input type="hidden" name="charges[name][]" value="{{ old('charges')['name'][$index] ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            {{ old('charges')['tax_type'][$index] ?? '' }}
+                                                            <input type="hidden" name="charges[tax_type][]" value="{{ old('charges')['tax_type'][$index] ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            {{ old('charges')['amount'][$index] ?? '0.00' }}
+                                                            <input type="hidden" name="charges[amount][]" value="{{ old('charges')['amount'][$index] ?? '0.00' }}">
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <button type="button" class="btn btn-outline-success btn-sm edit-charge"><i class="ri ri-pencil-line"></i></button>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm remove-charge"><i class="ri ri-delete-bin-line"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            @elseif(isset($creditNoteCharges))
                                                 @foreach($creditNoteCharges as $chg)
                                                     <tr class="charge-row" data-charge-id="{{ $chg->charge_id }}" data-tax-type="{{ $chg->tax_type }}">
                                                         <td>
@@ -576,7 +599,7 @@ $(document).ready(function() {
         let customerId = $(this).val();
         if (!customerId) {
             $('#sales_invoice_ids').val([]).trigger('change').html('');
-            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="15">Select Customer and then Invoices to load items</td></tr>');
+            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">Select Customer and then Invoices to load items</td></tr>');
             $('#zone_id').val('').trigger('change');
             return;
         }
@@ -624,7 +647,7 @@ $(document).ready(function() {
                             options += `<option value="${inv.id}">${inv.inv_no} (${moment(inv.inv_date).format('DD-MM-YYYY')})</option>`;
                         });
                         $('#sales_invoice_ids').html(options).val([]).trigger('change');
-                        $('#item-rows').html('<tr class="empty-row text-center"><td colspan="15">Invoices loaded. Select invoice(s) to fetch items.</td></tr>');
+                        $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">Invoices loaded. Select invoice(s) to fetch items.</td></tr>');
                     }
                 }
             });
@@ -634,7 +657,7 @@ $(document).ready(function() {
     $('#sales_invoice_ids').on('change', function() {
         let selectedInvoiceIds = $(this).val();
         if (!selectedInvoiceIds || selectedInvoiceIds.length === 0) {
-            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="15">Select Invoice(s) to load items</td></tr>');
+            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">Select Invoice(s) to load items</td></tr>');
             calculateTotal();
             return;
         }
@@ -657,13 +680,15 @@ $(document).ready(function() {
                     @if(old('items'))
                         @foreach(old('items') as $idx => $oldItm)
                             oldItemsMap["{{ $oldItm['sales_invoice_item_id'] }}"] = {
-                                qty: "{{ $oldItm['quantity'] }}"
+                                qty: "{{ $oldItm['quantity'] }}",
+                                addToInv: {{ isset($oldItm['add_to_inventory']) ? 1 : 0 }}
                             };
                         @endforeach
                     @elseif(isset($creditNote))
                         @foreach($creditNote->items as $noteItem)
                             oldItemsMap["{{ $noteItem->sales_invoice_item_id }}"] = {
-                                qty: "{{ $noteItem->quantity }}"
+                                qty: "{{ $noteItem->quantity }}",
+                                addToInv: {{ $noteItem->add_to_inventory ? 1 : 0 }}
                             };
                         @endforeach
                     @endif
@@ -672,15 +697,19 @@ $(document).ready(function() {
                     response.items.forEach((item) => {
                         if (oldItemsMap[item.id]) {
                             let returnQty = oldItemsMap[item.id].qty;
-                            addInvoiceItem(item, returnQty);
+                            let addToInv = oldItemsMap[item.id].addToInv == 1;
+                            addInvoiceItem(item, returnQty, addToInv);
                             hasPrepopulated = true;
                         }
                     });
 
                     if (!hasPrepopulated) {
-                        $('#item-rows').html('<tr class="empty-row text-center"><td colspan="15">No items added. Use the search box above to scan or search items from selected invoices.</td></tr>');
+                        $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">No items added. Use the search box above to scan or search items from selected invoices.</td></tr>');
                     }
-                    
+                    if (response.agent_id && !$('#agent_id').val()) {
+                        $('#agent_id').val(response.agent_id).trigger('change');
+                    }
+
                     $('#igst_percent').val(response.igst_percent);
                     $('#cgst_percent').val(response.cgst_percent);
                     $('#sgst_percent').val(response.sgst_percent);
@@ -693,7 +722,7 @@ $(document).ready(function() {
     });
 
     // Helper to add item to table
-    window.addInvoiceItem = function(item, initialQty = 1) {
+    window.addInvoiceItem = function(item, initialQty = 1, isAddedToInventory = true) {
         // Check if item is already in the table
         let existingRow = $(`.item-row[data-item-id="${item.id}"]`);
         if (existingRow.length > 0) {
@@ -720,6 +749,11 @@ $(document).ready(function() {
                 <td>
                     <span class="fw-semibold text-primary">${item.invoice_no}</span>
                 </td>
+                <td class="text-center add-to-inv-col" ${$('#reason').val() === 'Damage' ? 'style="display:none;"' : ''}>
+                    <div class="form-check d-flex justify-content-center m-0">
+                        <input class="form-check-input add-to-inv-checkbox" type="checkbox" name="items[${index}][add_to_inventory]" value="1" ${($('#reason').val() !== 'Damage' && isAddedToInventory) ? 'checked' : ''}>
+                    </div>
+                </td>
                 <td>
                     <input type="hidden" name="items[${index}][brand_category_id]" value="${item.brand_category_id || ''}">
                     <input type="hidden" name="items[${index}][sales_invoice_item_id]" value="${item.id}">
@@ -743,7 +777,7 @@ $(document).ready(function() {
                     <span>${item.uom_code || '-'}</span>
                 </td>
                 <td class="text-center">
-                    <input type="text" class="form-control form-control-sm text-center" name="items[${index}][size]" value="${item.size_name || item.size || ''}" readonly style="background-color: #f8f9fa;">
+                    <input type="text" class="form-control form-control-sm text-center" name="items[${index}][size]" value="${item.size_name || item.size || ''}" readonly style="background-color: #f8f9fa; min-width:65px;">
                 </td>
                 <td class="text-end fw-semibold">${item.invoice_qty}</td>
                 <td class="text-end text-warning fw-semibold">${item.returned_qty}</td>
@@ -751,23 +785,21 @@ $(document).ready(function() {
                 <td>
                     <input type="number" class="form-control form-control-sm text-center qty" 
                         name="items[${index}][quantity]" 
-                        value="${returnQty}" 
-                        step="0.01" min="0" 
+                        value="${returnQty}" min="0" 
                         max="${item.balance_qty}" 
+                        style="min-width: 110px;"
                         ${item.balance_qty <= 0 ? 'disabled' : ''}>
                 </td>
                 <td class="text-end">
                     <input type="number" class="form-control form-control-sm text-end mrp" 
                         name="items[${index}][mrp]" 
-                        value="${item.mrp || 0}" 
-                        step="0.01" readonly 
+                        value="${item.mrp || 0}" readonly 
                         style="background-color: #f8f9fa; min-width: 110px;">
                 </td>
                 <td class="text-end">
                     <input type="number" class="form-control form-control-sm text-end rate" 
                         name="items[${index}][rate]" 
-                        value="${item.rate || 0}" 
-                        step="0.01" readonly 
+                        value="${item.rate || 0}"  readonly 
                         style="background-color: #f8f9fa; min-width: 110px;">
                 </td>
                 <td>
@@ -809,13 +841,26 @@ $(document).ready(function() {
         $(this).closest('tr').remove();
         updateSerialNumbers();
         if ($('#item-rows .item-row').length === 0) {
-            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="15">No items added. Use the search box above to scan or search items from selected invoices.</td></tr>');
+            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">No items added. Use the search box above to scan or search items from selected invoices.</td></tr>');
         }
         calculateTotal();
     });
 
     // Run trigger on page load if editing or has old values
     if (isEditing || $('#sales_invoice_ids').val()) {
+    @if(isset($creditNote) && $creditNote->einvoice_status === 'generated')
+    setTimeout(function() {
+        $('input, select, textarea').not('[name="show_fields[]"]').prop('disabled', true);
+        $('.select2').prop('disabled', true).trigger('change');
+        $('#submitBtn').prop('disabled', false);
+        $('.edit-charge, .remove-charge, .delete-btn').hide();
+        $('#barcode_scanner').closest('.col-lg-12').hide();
+        $('#charges_select').closest('.row').hide();
+        $('th:contains("ACTION"), th:contains("Action"), td:last-child').hide();
+
+        $('<div class="alert alert-info border-0 shadow-sm mt-3"><i class="ri-information-line me-2"></i>E-Invoice is generated. You can only update the <strong>"Show in Credit Note PDF"</strong> settings.</div>').insertBefore('.card:first');
+    }, 500);
+    @endif
         $('#sales_invoice_ids').trigger('change');
     }
 
@@ -830,12 +875,14 @@ $(document).ready(function() {
             var matches = window.availableInvoiceItems.filter(function (item) {
                 return (item.product_barcode && String(item.product_barcode).toLowerCase().includes(term)) ||
                     (item.item_code && String(item.item_code).toLowerCase().includes(term)) ||
+                    (item.art_no && String(item.art_no).toLowerCase().includes(term)) ||
                     (item.item_name && String(item.item_name).toLowerCase().includes(term));
             });
 
             var formatted = matches.map(function (item) {
                 var label = (item.item_name || '');
                 if (item.invoice_no) label += ' [Inv: ' + item.invoice_no + ']';
+                if (item.art_no && item.art_no !== '-') label += ' | Art: ' + item.art_no;
                 if (item.product_barcode) label += ' | Barcode: ' + item.product_barcode;
                 if (item.size) label += ' | Size: ' + item.size;
 
@@ -878,10 +925,11 @@ $(document).ready(function() {
 
         var it = item.itemData;
         var codeInfo = (it.item_code && it.item_code !== '-') ? `Code: ${it.item_code}` : '';
+        var artInfo = (it.art_no && it.art_no !== '-') ? `Art: ${it.art_no}` : '';
         var barcodeInfo = it.product_barcode ? `Barcode: ${it.product_barcode}` : '';
         var sizeInfo = it.size ? `Size: ${it.size}` : '';
         
-        var infoParts = [codeInfo, barcodeInfo, sizeInfo].filter(Boolean).join(' | ');
+        var infoParts = [codeInfo, artInfo, barcodeInfo, sizeInfo].filter(Boolean).join(' | ');
 
         return $("<li>")
             .append(`<div class="ui-menu-item-wrapper">
@@ -1264,7 +1312,6 @@ $(document).ready(function() {
         }
     });
 
-    // Reason -> Fault Mapping
     const faultMapping = {
         'Invoice Mistake': 'Warehouse Fault',
         'Unorder PCS': 'Executive Fault',
@@ -1273,6 +1320,7 @@ $(document).ready(function() {
         'Damage': 'Company Fault'
     };
 
+    let previousReason = $('#reason').val();
     $('#reason').on('change', function() {
         let reason = $(this).val();
         if (reason && faultMapping[reason]) {
@@ -1280,7 +1328,19 @@ $(document).ready(function() {
         } else {
             $('#fault').val('');
         }
+
+        if (reason === 'Damage') {
+            $('.add-to-inv-col').hide();
+            $('.add-to-inv-checkbox').prop('checked', false);
+        } else {
+            $('.add-to-inv-col').show();
+            if (previousReason === 'Damage') {
+                $('.add-to-inv-checkbox').prop('checked', true);
+            }
+        }
+        previousReason = reason;
     });
+
 
     if ($('#reason').val()) {
         $('#reason').trigger('change');

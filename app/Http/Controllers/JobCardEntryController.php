@@ -1489,7 +1489,7 @@ class JobCardEntryController extends Controller
                 }
 
                 if ($isCanvas && $item->rawMaterial->store_category_id != 2) {
-                    continue; // Skip non-accessories for Canvas Accessories brand
+                    continue;
                 }
 
                 $name = $item->rawMaterial->name;
@@ -1768,15 +1768,12 @@ class JobCardEntryController extends Controller
             } elseif ($rawMaterial && $rawMaterial->uom) {
                 $uomCode = $rawMaterial->uom->uom_code;
             }
-
-            // Always use qty_in - qty_out (real remaining stock)
             $netQty = $items->sum(function ($item) {
                 return ($item->qty_in ?? 0) - ($item->qty_out ?? 0);
             });
 
             $alreadyIssued = (float) ($issuedQtys[$artNo] ?? 0);
 
-            // Saved snapshot from fabricDetails (for edit mode)
             $savedDetail = $savedFabricDetails->get($artNo);
             $savedStockTotalQty = $savedDetail ? $savedDetail->stock_total_qty : null;
             $savedMtr = $savedDetail ? $savedDetail->mtr : null;

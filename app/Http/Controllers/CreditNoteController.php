@@ -24,9 +24,63 @@ class CreditNoteController extends Controller
                 $query->where('customer_id', $request->customer_id);
             }
 
+            if (!empty($request->status)) {
+                $query->where('status', $request->status);
+            }
+
+            if (!empty($request->note_date_range)) {
+                $dates = explode(' to ', $request->note_date_range);
+                if (count($dates) == 2) {
+                    $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                    $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
+                    $query->whereBetween('note_date', [$startDate, $endDate]);
+                } elseif (count($dates) == 1) {
+                    $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                    $query->whereDate('note_date', $startDate);
+                }
+            }
+
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->search['value'])) {
+                $search = $request->search['value'];
+                $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);
+
+                $matchingInvoiceIds = \App\Models\SalesInvoice::where('inv_no', 'like', "%{$search}%")->pluck('id')->toArray();
+
+                $query->where(function ($q) use ($search, $numericSearch, $matchingInvoiceIds) {
+                    $q->where('note_no', 'like', "%{$search}%")
+                      ->orWhereRaw("DATE_FORMAT(note_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                      ->orWhere('grand_total', 'like', "%{$numericSearch}%")
+                      ->orWhere('status', 'like', "%{$search}%")
+                      ->orWhereHas('customer', function($q2) use ($search) {
+                          $q2->where('name', 'like', "%{$search}%")
+                             ->orWhere('code', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('salesInvoice', function($q3) use ($search) {
+                          $q3->where('inv_no', 'like', "%{$search}%");
+                      });
+
+                    if (!empty($matchingInvoiceIds)) {
+                        $q->orWhere(function ($q4) use ($matchingInvoiceIds) {
+                            foreach ($matchingInvoiceIds as $invId) {
+                                $q4->orWhereJsonContains('sales_invoice_ids', (string)$invId)
+                                   ->orWhereJsonContains('sales_invoice_ids', (int)$invId);
+                            }
+                        });
+                    }
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            if ($request->has('start') && $request->has('length') && $request->length != '-1') {
+                $query->skip($request->start)->take($request->length);
+            }
+
             $creditNotes = $query->get();
             $data = [];
-            $count = 1;
+            $count = $request->has('start') ? intval($request->start) + 1 : 1;
 
             foreach ($creditNotes as $note) {
                 $status_options = ['Draft', 'Approved', 'Cancelled'];
@@ -50,7 +104,7 @@ class CreditNoteController extends Controller
                 if(auth()->id() == 1 || auth()->user()->can('view_details credit-notes')) {
                     $action .= '<a href="' . url('credit_notes/view/' . $note->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if($note->status != 'Approved' && (auth()->id() == 1 || auth()->user()->can('edit credit-notes'))) {
+                if(auth()->id() == 1 || auth()->user()->can('edit credit-notes')) {
                     $action .= '<a href="' . url('credit_notes/add/' . $note->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 // if(auth()->id() == 1 || auth()->user()->can('delete credit-notes')) {
@@ -92,12 +146,17 @@ class CreditNoteController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->draw),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         $customers = Customer::whereHas('salesInvoices', function($q) {
             $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
-        })->get();
+        })->orderBy('id', 'desc')->get();
         return view('credit_notes.view', compact('customers'));
     }
 
@@ -116,12 +175,17 @@ class CreditNoteController extends Controller
         $creditNote = null;
         if ($id) {
             $creditNote = CreditNote::with('items.item', 'items.uom', 'items.brandCategory', 'charges')->findOrFail($id);
-            
-            if ($creditNote->status === 'Approved') {
-                return redirect('credit_notes')->with('error', 'This Credit Note cannot be edited.');
-            }
         }
         if ($request->isMethod('POST')) {
+            if ($creditNote && $creditNote->einvoice_status === 'generated') {
+                $request->validate([
+                    'show_fields' => 'nullable|array',
+                ]);
+                $creditNote->show_fields = $request->show_fields ?? [];
+                $creditNote->save();
+                return redirect('credit_notes')->with('success', 'Credit Note PDF settings updated successfully.');
+            }
+
             $request->validate([
                 'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'note_date' => 'required|date_format:d-m-Y',
@@ -264,6 +328,7 @@ class CreditNoteController extends Controller
                             'mrp' => $item['mrp'] ?? 0,
                             'rate' => $item['rate'] ?? 0,
                             'amount' => $item['amount'] ?? 0,
+                            'add_to_inventory' => isset($item['add_to_inventory']) ? 1 : 0,
                         ]);
                     }
                 }
@@ -284,6 +349,8 @@ class CreditNoteController extends Controller
                         ]);
                     }
                 }
+
+                $this->handleStockReversal($creditNote, $id ? $oldData['status'] : null, $creditNote->status);
 
                 DB::commit();
                 return redirect(url('credit_notes'))->with('success', $msg);
@@ -363,27 +430,43 @@ class CreditNoteController extends Controller
         $firstInvoice = $invoices->first();
         $items = [];
 
+        $salesInvoiceItemIds = $invoices->flatMap->items->pluck('id')->toArray();
+        $stockEntryItemIds = $invoices->flatMap->items->pluck('stock_entry_item_id')->filter()->unique()->toArray();
+
+        // 1. Bulk query for Already Returned quantities
+        $returnedQuantities = DB::table('credit_note_items')
+            ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
+            ->whereIn('credit_note_items.sales_invoice_item_id', $salesInvoiceItemIds)
+            ->whereNull('credit_notes.deleted_at')
+            ->whereNull('credit_note_items.deleted_at')
+            ->whereIn('credit_notes.status', ['Draft', 'Approved'])
+            ->when($currentCreditNoteId, function ($q) use ($currentCreditNoteId) {
+                return $q->where('credit_notes.id', '!=', $currentCreditNoteId);
+            })
+            ->groupBy('credit_note_items.sales_invoice_item_id')
+            ->select('credit_note_items.sales_invoice_item_id', DB::raw('SUM(credit_note_items.quantity) as total_returned'))
+            ->pluck('total_returned', 'sales_invoice_item_id')
+            ->toArray();
+
+        // 2. Bulk query for Sales Order UOM
+        $soItemsUom = [];
+        if (!empty($stockEntryItemIds)) {
+            $soItemsUom = \App\Models\SalesOrderItem::whereIn('stock_entry_item_id', $stockEntryItemIds)
+                ->whereNotNull('uom_id')
+                ->pluck('uom_id', 'stock_entry_item_id')
+                ->toArray();
+        }
+
         foreach ($invoices as $invoice) {
             foreach ($invoice->items as $item) {
-                $alreadyReturned = DB::table('credit_note_items')
-                    ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
-                    ->where('credit_note_items.sales_invoice_item_id', $item->id)
-                    ->whereNull('credit_notes.deleted_at')
-                    ->whereNull('credit_note_items.deleted_at')
-                    ->whereIn('credit_notes.status', ['Draft', 'Approved'])
-                    ->when($currentCreditNoteId, function ($q) use ($currentCreditNoteId) {
-                        return $q->where('credit_notes.id', '!=', $currentCreditNoteId);
-                    })
-                    ->sum('credit_note_items.quantity');
-
+                $alreadyReturned = $returnedQuantities[$item->id] ?? 0;
                 $balanceQty = max(0, $item->quantity - $alreadyReturned);
+                
                 $uomCode = 'PCS';
-                if ($item->stockEntryItem) {
-                    $soItem = \App\Models\SalesOrderItem::where('stock_entry_item_id', $item->stock_entry_item_id)->first();
-                    if ($soItem && $soItem->uom_id) {
-                        $uomCode = $soItem->uom_id;
-                    }
+                if ($item->stock_entry_item_id && isset($soItemsUom[$item->stock_entry_item_id])) {
+                    $uomCode = $soItemsUom[$item->stock_entry_item_id];
                 }
+
                 $items[] = [
                     'id' => $item->id,
                     'invoice_id' => $invoice->id,
@@ -394,11 +477,9 @@ class CreditNoteController extends Controller
                     'product_barcode' => $item->sku ?? '-',
                     'brand_category_id' => $item->brand_id,
                     'brand_category_name' => $item->brandCategory ? $item->brandCategory->name : '-',
-
                     'color_id' => $item->color_id,
-                    'color_name' => $item->color ? $item->color->color_name : '-',
+                    'color_name' => !empty($item->api_color) ? $item->api_color : ($item->color ? $item->color->color_name : '-'),
                     'art_no' => $item->art_no ?? '-',
-                    
                     'size' => $item->size,
                     'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
                     'uom_id'              => $uomCode,  
@@ -418,6 +499,7 @@ class CreditNoteController extends Controller
             'success' => true,
             'customer_id' => $firstInvoice->customer_id,
             'customer_name' => $firstInvoice->customer ? $firstInvoice->customer->name : '-',
+            'agent_id' => $firstInvoice->agent_id,
             'items' => $items,
             'other_state' => $firstInvoice->other_state ? 'yes' : 'no',
             'igst_percent' => $firstInvoice->igst_percent,
@@ -444,10 +526,14 @@ class CreditNoteController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
-        $note = CreditNote::findOrFail($id);
+        $note = CreditNote::with('items')->findOrFail($id);
         $oldData = $note->toArray();
+        $oldStatus = $note->status;
         $note->status = $request->status;
         $note->save();
+        
+        $this->handleStockReversal($note, $oldStatus, $note->status);
+        
         addLog('update_status', 'Credit Note Status', 'credit_notes', $id, $oldData, $note->fresh()->toArray());
 
         return response()->json([
@@ -575,7 +661,6 @@ class CreditNoteController extends Controller
             'totalInWords' => $totalInWords,
             'salesInvoices' => $salesInvoices
         ];
-        // return view('credit_notes.credit_note_pdf', $data);
         $pdf = Pdf::loadView('credit_notes.credit_note_pdf', $data);
         $pdf->setPaper('A4', 'portrait');
 
@@ -646,5 +731,41 @@ class CreditNoteController extends Controller
             'success' => false,
             'message' => $result['message']
         ], 400);
+    }
+
+    private function handleStockReversal($creditNote, $oldStatus, $newStatus)
+    {
+        if ($oldStatus === $newStatus) {
+            return;
+        }
+
+        if ($newStatus === 'Approved' && !$creditNote->is_stock_updated) {
+            foreach ($creditNote->items as $item) {
+                if ($item->add_to_inventory) {
+                    $salesInvoiceItem = \App\Models\SalesInvoiceItem::find($item->sales_invoice_item_id);
+                    if ($salesInvoiceItem && $salesInvoiceItem->stock_entry_item_id) {
+                        $oldQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
+                        \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->decrement('qty_out', $item->quantity);
+                        $newQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
+                    }
+                }
+            }
+            $creditNote->is_stock_updated = 1;
+            $creditNote->save();
+        } elseif ($oldStatus === 'Approved' && $newStatus !== 'Approved' && $creditNote->is_stock_updated) {
+            foreach ($creditNote->items as $item) {
+                if ($item->add_to_inventory) {
+                    $salesInvoiceItem = \App\Models\SalesInvoiceItem::find($item->sales_invoice_item_id);
+                    if ($salesInvoiceItem && $salesInvoiceItem->stock_entry_item_id) {
+                        $oldQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
+                        \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->increment('qty_out', $item->quantity);
+                        $newQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
+                        \Log::info("CreditNote {$creditNote->id} Un-Approved - Stock incremented for StockEntryItem ID: {$salesInvoiceItem->stock_entry_item_id}. Old qty_out: {$oldQtyOut}, Increment: {$item->quantity}, New qty_out: {$newQtyOut}");
+                    }
+                }
+            }
+            $creditNote->is_stock_updated = 0;
+            $creditNote->save();
+        }
     }
 }

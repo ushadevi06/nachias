@@ -23,25 +23,32 @@ class ItemPriceController extends Controller
         }
 
         if ($request->ajax()) {
+            $latestIds = DB::table('item_prices')
+                ->select(DB::raw('MAX(id) as id'))
+                ->whereNull('deleted_at')
+                ->groupBy('finished_item_code', 'art_no');
+
             $prices = DB::table('item_prices')
+                ->joinSub($latestIds, 'latest', function($join) {
+                    $join->on('item_prices.id', '=', 'latest.id');
+                })
                 ->leftJoin(DB::raw('(SELECT finished_item_code, MAX(item_id) as item_id FROM stock_entry_items WHERE deleted_at IS NULL GROUP BY finished_item_code) as sei'), 'item_prices.finished_item_code', '=', 'sei.finished_item_code')
                 ->leftJoin('items', 'sei.item_id', '=', 'items.id')
                 ->leftJoin(DB::raw('(SELECT item_code, MAX(item_name) as item_name FROM barcode_masters GROUP BY item_code) as bm'), 'item_prices.finished_item_code', '=', 'bm.item_code')
                 ->whereNull('item_prices.deleted_at')
                 ->select(
-                    DB::raw('MAX(item_prices.id) as id'),
+                    'item_prices.id',
                     'item_prices.finished_item_code',
                     'item_prices.art_no',
-                    DB::raw('MIN(item_prices.selling_price) as min_selling_price'),
-                    DB::raw('MAX(item_prices.selling_price) as max_selling_price'),
-                    DB::raw('MIN(item_prices.unit_price) as min_unit_price'),
-                    DB::raw('MAX(item_prices.unit_price) as max_unit_price'),
-                    DB::raw('MAX(item_prices.effective_from) as effective_from'),
-                    DB::raw('MAX(item_prices.status) as status'),
+                    'item_prices.selling_price as min_selling_price',
+                    'item_prices.selling_price as max_selling_price',
+                    'item_prices.unit_price as min_unit_price',
+                    'item_prices.unit_price as max_unit_price',
+                    'item_prices.effective_from',
+                    'item_prices.status',
                     DB::raw('COALESCE(items.name, bm.item_name, "-") as item_display_name')
                 )
-                ->groupBy('item_prices.finished_item_code', 'item_prices.art_no', 'items.name', 'bm.item_name')
-                ->orderBy('id', 'desc')
+                ->orderBy('item_prices.id', 'desc')
                 ->get();
 
             $data = [];
@@ -527,7 +534,6 @@ class ItemPriceController extends Controller
 
         }
 
-        // Dynamic Job Card Item Suggestions (Brand-Style Combinations)
         if (strlen($term) >= 2) {
             $brands = DB::table('brands')->whereNull('deleted_at')->where('status', 'Active')->get(['code', 'brand_name']);
             $styles = DB::table('styles')->whereNull('deleted_at')->where('status', 'Active')->get(['code', 'style_name']);
@@ -541,7 +547,6 @@ class ItemPriceController extends Controller
                     $baseCode = $brand->code . '-' . $style->code;
                     $baseName = trim($brand->brand_name . ' ' . $style->style_name);
                     
-                    // If the combination contains the search term in code or name
                     if (stripos($baseCode, trim($term)) !== false || stripos($baseName, trim($term)) !== false) {
                         $codeFS = $baseCode . '-FS';
                         $codeHS = $baseCode . '-HS';

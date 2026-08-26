@@ -138,7 +138,7 @@
         .details-table td {
             padding: 0.6mm 0;
             vertical-align: middle;
-            font-size: 6.5pt;
+            font-size: 6.7pt;
             line-height: 1.20;
             font-weight: 600;
             color: #000000;
@@ -156,12 +156,12 @@
         
         .sticker-qr {
             position: absolute;
-            right: 24mm;
+            right: 23mm;
             top: 6mm;
         }
         .sticker-qr img, .sticker-qr svg {
-            width: 10mm;
-            height: 10mm;
+            width: 11mm;
+            height: 11mm;
         }
         
         .size-wrapper {
@@ -267,18 +267,17 @@
                                 <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
                                 <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
                                 <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ $labelData['fit'] ?? 'Tailor Fit' }}</td></tr>
-                                <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
                                 <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
                                 <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
                                 <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
                             </table>
                             <div class="sticker-qr">
-                                {!! QrCode::size(40)->generate($qrString) !!}
+                                {!! QrCode::size(60)->generate($qrString) !!}
                             </div>
                         </div>
                         <div class="art-no-box">
                             <span class="fw-bold" style="font-size: 8pt; margin-right: 1mm; color: #000000;">Art No :</span>
-                            <span class="font-bebas" style="font-size: 13pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</span>
+                            <span class="font-bebas" style="font-size: 13.5pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</span>
                         </div>
                     </div>
                     
@@ -291,7 +290,10 @@
                             <div class="lot-vertical">Lot, {{ $labelData['lot_no'] ?? '' }}</div>
                         </div>
                         
-                        <div class="mrp-section" style="margin-top: auto;">
+                        <div style="margin-top: auto; width: 100%; text-align: left; padding-left: 0mm;">
+                            <span class="fw-bold" style="font-size: 7.5pt; color: #000;">Sleeve: <span style="font-size: 11pt;">{{ $sText }}</span></span>
+                        </div>
+                        <div class="mrp-section" style="margin-top: 1mm;">
                             <div class="fw-bold" style="font-size: 4pt; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 4pt;">(inclusive of all taxes)</span></div>
                             <div class="fw-bold" style="font-size: 11pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
                             <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 4pt;">MADE IN INDIA WITH PRIDE</div>

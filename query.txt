@@ -1,32 +1,5 @@
+ALTER TABLE `credit_notes`
+    ADD COLUMN `is_stock_updated` TINYINT(1) NOT NULL DEFAULT 0 AFTER `status`;
 
-
-ALTER TABLE `sales_invoices`
-ADD COLUMN `cancellation_date` DATETIME NULL,
-ADD COLUMN `cancel_reason` VARCHAR(255) NULL,
-ADD COLUMN `cancel_remarks` VARCHAR(255) NULL,
-ADD COLUMN `cancelled_by` BIGINT UNSIGNED NULL,
-ADD COLUMN `stock_reverted` TINYINT(1) NOT NULL DEFAULT 0;
-
-ALTER TABLE `settings`
-ADD COLUMN `upi_id` VARCHAR(255) NULL AFTER `account_no`;
-
-ALTER TABLE `billings`
-ADD COLUMN `billing_name` VARCHAR(255) NULL AFTER `id`;
-
-ALTER TABLE sales_invoices
-ADD COLUMN pre_gst_charges DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER sub_total,
-ADD COLUMN post_gst_charges DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER other_charges;
-
-
-
-ALTER TABLE `debit_notes`
-    ADD COLUMN `discount_percent` DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER `sub_total`,
-    ADD COLUMN `discount_amount` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `discount_percent`,
-    ADD COLUMN `taxable_amount` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `discount_amount`;
-
-
-ALTER TABLE store_categories
-DROP INDEX store_categories_code_unique;
-
-ALTER TABLE sales_orders
-ADD CONSTRAINT sales_orders_order_no_unique UNIQUE (order_no);
+ALTER TABLE `credit_note_items`
+    ADD COLUMN `add_to_inventory` TINYINT(1) NOT NULL DEFAULT 1 AFTER `amount`;

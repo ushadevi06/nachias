@@ -275,7 +275,7 @@
 
             <!-- Summary Section -->
             <div class="row g-4 justify-content-between">
-                <div class="col-lg-6" style="max-height:200px;">
+                <div class="col-lg-6">
                     @if($creditNote->remarks || $creditNote->reference_doc)
                     <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; background-color: #fcfcfc;">
                         <div class="card-body p-4">

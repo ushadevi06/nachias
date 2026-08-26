@@ -2666,7 +2666,6 @@
             updateInvoiceNo();
         }
 
-        // Lock fields once e-invoice is generated or order is dispatched
         $(function() {
             if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                 $('form.common-form input, form.common-form select, form.common-form textarea').each(function() {

@@ -17,6 +17,7 @@ class CreditNoteItem extends Model
         'mrp',
         'rate',
         'amount',
+        'add_to_inventory',
     ];
 
     public function creditNote()

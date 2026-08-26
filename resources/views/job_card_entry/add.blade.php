@@ -1299,7 +1299,6 @@
         $('input[name="delivery_date"]').on('change input', calculateNoOfDays);
         calculateNoOfDays();
 
-        // Initialize minDate if issue_date has an initial value
         setTimeout(() => {
             $('input[name="issue_date"]').trigger('change');
         }, 100);
