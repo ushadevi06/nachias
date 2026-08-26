@@ -1,5 +1,5 @@
 <div class="card-datatable">
-    <table class="datatables-products table table-hover">
+    <table class="datatables-products table table-hover" id="stockInwardTable">
         <thead>
             <tr>
                 <th>GRN No</th>
@@ -10,24 +10,38 @@
             </tr>
         </thead>
         <tbody>
-            @if($stockInward && $stockInward->count() > 0)
-                @foreach($stockInward as $data)
-                <tr>
-                    <td><strong>{{ $data->grn_number }}</strong></td>
-                    <td>{{ $data->supplier->name ?? 'N/A' }}</td>
-                    <td>{{ $data->grn_date->format('d-M-Y') }}</td>
-                    <td class="text-center">{{ number_format($data->total_qty, 2) }}</td>
-                    <td class="text-center">
-                        @php
-                            $badgeClass = 'bg-label-info';
-                            if ($data->status == 'Completed') $badgeClass = 'bg-label-success';
-                            elseif ($data->status == 'Draft') $badgeClass = 'bg-label-warning';
-                        @endphp
-                        <span class="badge {{ $badgeClass }} rounded-pill">{{ $data->status }}</span>
-                    </td>
-                </tr>
-                @endforeach
-            @endif
         </tbody>
     </table>
 </div>
+
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable.isDataTable('#stockInwardTable')) {
+        $('#stockInwardTable').DataTable().destroy();
+    }
+    $('#stockInwardTable').DataTable({
+        processing: true,
+        autoWidth: false,
+        serverSide: true,
+        ajax: {
+            url: "{{ url('warehouse_reports/ajax/stock-inward') }}",
+            data: function (d) {
+                d.from_date = $('.start_date').val();
+                d.to_date = $('.end_date').val();
+                d.brand_id = $('select[name="brand_id"]').val();
+                d.store_id = $('select[name="store_id"]').val();
+            }
+        },
+        columns: [
+            { data: 'date', name: 'date', className: 'text-center' },
+            { data: 'grn_no', name: 'grn_no', className: 'text-center' },
+            { data: 'supplier', name: 'supplier' },
+            { data: 'qty', name: 'qty', className: 'text-center' },
+            { data: 'status', name: 'status', className: 'text-center', orderable: false }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
+    });
+});
+</script>

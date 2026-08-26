@@ -1,5 +1,5 @@
 <div class="card-datatable">
-    <table class="datatables-products table table-hover">
+    <table class="datatables-products table table-hover" id="regularDiscountTable">
         <thead>
             <tr>
                 <th>Period</th>
@@ -10,15 +10,38 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($regularDiscount as $data)
-            <tr>
-                <td>{{ $data->period }}</td>
-                <td class="text-end">₹{{ number_format($data->regular_sales, 2) }}</td>
-                <td class="text-end text-danger">₹{{ number_format($data->discount_sales, 2) }}</td>
-                <td class="text-center">{{ number_format($data->discount_pc, 1) }}%</td>
-                <td class="text-end fw-bold">₹{{ number_format($data->net_revenue, 2) }}</td>
-            </tr>
-            @endforeach
         </tbody>
     </table>
 </div>
+
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable.isDataTable('#regularDiscountTable')) {
+        $('#regularDiscountTable').DataTable().destroy();
+    }
+    $('#regularDiscountTable').DataTable({
+        processing: true,
+        autoWidth: false,
+        serverSide: true,
+        ajax: {
+            url: "{{ url('warehouse_reports/ajax/regular-discount') }}",
+            data: function (d) {
+                d.from_date = $('.start_date').val();
+                d.to_date = $('.end_date').val();
+                d.brand_id = $('select[name="brand_id"]').val();
+                d.store_id = $('select[name="store_id"]').val();
+            }
+        },
+        columns: [
+            { data: 'period', name: 'period', className: 'text-center' },
+            { data: 'regular_sales', name: 'regular_sales', className: 'text-end' },
+            { data: 'discount_sales', name: 'discount_sales', className: 'text-end' },
+            { data: 'discount_pc', name: 'discount_pc', className: 'text-center', orderable: false },
+            { data: 'net_revenue', name: 'net_revenue', className: 'text-end' }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
+    });
+});
+</script>

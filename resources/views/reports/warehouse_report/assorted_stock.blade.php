@@ -1,5 +1,5 @@
 <div class="card-datatable">
-    <table class="datatables-products table table-hover">
+    <table class="datatables-products table table-hover" id="assortedStockTable">
         <thead>
             <tr>
                 <th>Store</th>
@@ -9,16 +9,37 @@
             </tr>
         </thead>
         <tbody>
-            @if($assortedStock && $assortedStock->count() > 0)
-                @foreach($assortedStock as $stock)
-                <tr>
-                    <td>{{ $stock->store }}</td>
-                    <td><strong>{{ $stock->item_name }}</strong></td>
-                    <td>{{ $stock->size ?: '-' }}</td>
-                    <td class="text-center fw-bold text-primary">{{ number_format($stock->stock_qty, 0) }}</td>
-                </tr>
-                @endforeach
-            @endif
         </tbody>
     </table>
 </div>
+
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable.isDataTable('#assortedStockTable')) {
+        $('#assortedStockTable').DataTable().destroy();
+    }
+    $('#assortedStockTable').DataTable({
+        processing: true,
+        autoWidth: false,
+        serverSide: true,
+        ajax: {
+            url: "{{ url('warehouse_reports/ajax/assorted-stock') }}",
+            data: function (d) {
+                d.from_date = $('.start_date').val();
+                d.to_date = $('.end_date').val();
+                d.brand_id = $('select[name="brand_id"]').val();
+                d.store_id = $('select[name="store_id"]').val();
+            }
+        },
+        columns: [
+            { data: 'store', name: 'store' },
+            { data: 'item_name', name: 'item_name' },
+            { data: 'size', name: 'size', className: 'text-center' },
+            { data: 'stock_qty', name: 'stock_qty', className: 'text-center' }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
+    });
+});
+</script>

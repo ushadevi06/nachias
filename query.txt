@@ -1,5 +1,11 @@
-ALTER TABLE `credit_notes`
-    ADD COLUMN `is_stock_updated` TINYINT(1) NOT NULL DEFAULT 0 AFTER `status`;
-
-ALTER TABLE `credit_note_items`
-    ADD COLUMN `add_to_inventory` TINYINT(1) NOT NULL DEFAULT 1 AFTER `amount`;
+UPDATE stock_entry_items 
+SET brand_id = (
+    SELECT id 
+    FROM brands 
+    WHERE stock_entry_items.art_no LIKE CONCAT(brands.code, '%') 
+       OR stock_entry_items.finished_item_code LIKE CONCAT(brands.code, '%')
+    ORDER BY LENGTH(brands.code) DESC
+    LIMIT 1
+)
+WHERE stock_type = 'finished_goods' 
+AND brand_id IS NULL;

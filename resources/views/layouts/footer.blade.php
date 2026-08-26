@@ -53,6 +53,9 @@
 <script>
     $(document).ready(function() {
         $('.datatables-products').each(function() {
+            if ($.fn.DataTable.isDataTable(this)) {
+                return; // Skip already initialized tables
+            }
             var $tbl = $(this);
             var isDespatch = $tbl.closest('#despatch-report').length > 0;
 

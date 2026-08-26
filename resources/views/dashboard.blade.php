@@ -20,6 +20,8 @@
             <div class="section-indicator bg-primary me-2"></div>
             <h5 class="fw-bold mb-0">Sales & Order Dashboard</h5>
         </div>
+
+        
         <div class="row g-3">
             <div class="col-md-3 col-lg-3">
                 <div class="card kpi-widget border-0 shadow-sm border-start border-primary border-4">
@@ -134,13 +136,31 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-warning border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Missed Order Revenue</p>
+                                <h4 class="mb-0 fw-bold text-warning">₹{{ number_format($year_missed_value, 2) }}</h4>
+                                <span class="text-muted small">{{ number_format($year_missed_qty) }} Items Pending</span>
+                            </div>
+                            <div class="kpi-icon bg-light-warning">
+                                <i class="ri ri-money-dollar-circle-line text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    @include('reports.sales_summary_kpi')
     @endif
 
 	<!-- SECTION 2: ATTENDANCE DASHBOARD -->
     @if(auth()->id() == 1 || auth()->user()->can('view-attendance dashboard'))
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 mt-3">
         <div class="d-flex align-items-center mb-2">
             <div class="section-indicator bg-secondary me-2"></div>
             <h5 class="fw-bold mb-0">Employee's Attendance Dashboard</h5>

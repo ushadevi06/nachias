@@ -2434,6 +2434,10 @@ class SalesInvoiceController extends Controller
             $stockQuery->where('size', $item->size);
         }
 
+        if (!empty($item->art_no)) {
+            $stockQuery->where('art_no', $item->art_no);
+        }
+
         if (!empty($item->sleeve_type)) {
             $sleeveUpper = strtoupper(trim($item->sleeve_type));
             if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {

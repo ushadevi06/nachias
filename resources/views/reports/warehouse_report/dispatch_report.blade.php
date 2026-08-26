@@ -1,5 +1,5 @@
 <div class="card-datatable">
-    <table class="datatables-products table table-hover">
+    <table class="datatables-products table table-hover" id="dispatchReportTable">
         <thead>
             <tr>
                 <th>Dispatch Date</th>
@@ -12,27 +12,40 @@
             </tr>
         </thead>
         <tbody>
-            @if($dispatchReport && count($dispatchReport) > 0)
-                @foreach($dispatchReport as $data)
-                <tr>
-                    <td>{{ $data->so_date->format('d-m-Y') }}</td>
-                    <td><strong>{{ $data->so_no }}</strong></td>
-                    <td>{{ $data->customer->name ?? 'N/A' }}</td>
-                    <td>{{ $data->customer->city->city_name ?? 'N/A' }}</td>
-                    <td>
-                        @php
-                            $invoice = $data->salesInvoices->first();
-                            $transporter = $invoice->transporter_name ?? ($data->transporter_name ?? ($data->dispatch_through ?? 'N/A'));
-                        @endphp
-                        {{ $transporter }}
-                    </td>
-                    <td>{{ $data->salesInvoices->first()?->lr_no ?? ($data->lr_no ?? 'N/A') }}</td>
-                    <td class="text-center">
-                        <span class="badge bg-label-success">{{ $data->status }}</span>
-                    </td>
-                </tr>
-                @endforeach
-            @endif
         </tbody>
     </table>
 </div>
+
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable.isDataTable('#dispatchReportTable')) {
+        $('#dispatchReportTable').DataTable().destroy();
+    }
+    $('#dispatchReportTable').DataTable({
+        processing: true,
+        autoWidth: false,
+        serverSide: true,
+        ajax: {
+            url: "{{ url('warehouse_reports/ajax/dispatch-report') }}",
+            data: function (d) {
+                d.from_date = $('.start_date').val();
+                d.to_date = $('.end_date').val();
+                d.brand_id = $('select[name="brand_id"]').val();
+                d.store_id = $('select[name="store_id"]').val();
+            }
+        },
+        columns: [
+            { data: 'date', name: 'date', className: 'text-nowrap text-center' },
+            { data: 'so_no', name: 'so_no', className: 'text-center' },
+            { data: 'customer', name: 'customer' },
+            { data: 'destination', name: 'destination', className: 'text-center' },
+            { data: 'qty', name: 'qty', className: 'text-center' },
+            { data: 'invoices', name: 'invoices', className: 'text-center', orderable: false },
+            { data: 'status', name: 'status', className: 'text-center', orderable: false }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
+    });
+});
+</script>

@@ -31,18 +31,167 @@ class HomeController extends Controller
         $yearStart = Carbon::now()->startOfYear();
 
         /*  Sales & Order Dashboard */
-        $sales_today = SalesInvoice::whereDate('inv_date', $today)->sum('grand_total');
-        $sales_month = SalesInvoice::whereBetween('inv_date', [$monthStart, Carbon::now()])->sum('grand_total');
-        $sales_year = SalesInvoice::whereBetween('inv_date', [$yearStart, Carbon::now()])->sum('grand_total');
+        $sales_today = SalesInvoice::whereDate('inv_date', $today)->whereNull('deleted_at')->sum('grand_total');
+        $sales_month = SalesInvoice::whereBetween('inv_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->sum('grand_total');
+        $sales_year = SalesInvoice::whereBetween('inv_date', [$yearStart, Carbon::now()])->whereNull('deleted_at')->sum('grand_total');
 
-        $sales_count_today = SalesInvoice::whereDate('inv_date', $today)->count();
-        $sales_count_month = SalesInvoice::whereBetween('inv_date', [$monthStart, Carbon::now()])->count();
-        $sales_count_year = SalesInvoice::whereBetween('inv_date', [$yearStart, Carbon::now()])->count();
+        $sales_count_today = SalesInvoice::whereDate('inv_date', $today)->whereNull('deleted_at')->count();
+        $sales_count_month = SalesInvoice::whereBetween('inv_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->count();
+        $sales_count_year = SalesInvoice::whereBetween('inv_date', [$yearStart, Carbon::now()])->whereNull('deleted_at')->count();
 
-        $orders_today = SalesOrder::whereDate('so_date', $today)->count();
-        $orders_month = SalesOrder::whereBetween('so_date', [$monthStart, Carbon::now()])->count();
+        $orders_today = SalesOrder::whereDate('so_date', $today)->whereNull('deleted_at')->count();
+        $orders_month = SalesOrder::whereBetween('so_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->count();
         $total_stock = StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
-        $urgent_orders = SalesOrder::where('status', 'Pending')->count();
+        $urgent_orders = SalesOrder::where('status', 'Pending')->whereNull('deleted_at')->count();
+
+        /* Sales Report Matrix (Sales, Sales Return, Net Sales) */
+        // Today Sales
+        $today_sales_qty = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereDate('sales_invoices.inv_date', $today)
+            ->whereNull('sales_invoices.deleted_at')
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->sum('sales_invoice_items.quantity');
+
+        $today_sales_wot = DB::table('sales_invoices')
+            ->whereDate('inv_date', $today)
+            ->whereNull('deleted_at')
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+
+        // Today Sales Return (Credit Notes)
+        $today_return_qty = DB::table('credit_note_items')
+            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
+            ->whereDate('credit_notes.note_date', $today)
+            ->whereNull('credit_notes.deleted_at')
+            ->whereNull('credit_note_items.deleted_at')
+            ->sum('credit_note_items.quantity');
+
+        $today_return_wot = DB::table('credit_notes')
+            ->whereDate('note_date', $today)
+            ->whereNull('deleted_at')
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+
+        $today_net_qty = max(0, $today_sales_qty - $today_return_qty);
+        $today_net_wot = max(0, $today_sales_wot - $today_return_wot);
+
+        // Monthly Sales
+        $month_sales_qty = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereBetween('sales_invoices.inv_date', [$monthStart, Carbon::now()])
+            ->whereNull('sales_invoices.deleted_at')
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->sum('sales_invoice_items.quantity');
+
+        $month_sales_wot = DB::table('sales_invoices')
+            ->whereBetween('inv_date', [$monthStart, Carbon::now()])
+            ->whereNull('deleted_at')
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+
+        // Monthly Sales Return
+        $month_return_qty = DB::table('credit_note_items')
+            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
+            ->whereBetween('credit_notes.note_date', [$monthStart, Carbon::now()])
+            ->whereNull('credit_notes.deleted_at')
+            ->whereNull('credit_note_items.deleted_at')
+            ->sum('credit_note_items.quantity');
+
+        $month_return_wot = DB::table('credit_notes')
+            ->whereBetween('note_date', [$monthStart, Carbon::now()])
+            ->whereNull('deleted_at')
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+
+        $month_net_qty = max(0, $month_sales_qty - $month_return_qty);
+        $month_net_wot = max(0, $month_sales_wot - $month_return_wot);
+
+        // Yearly Sales
+        $year_sales_qty = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereBetween('sales_invoices.inv_date', [$yearStart, Carbon::now()])
+            ->whereNull('sales_invoices.deleted_at')
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->sum('sales_invoice_items.quantity');
+
+        $year_sales_wot = DB::table('sales_invoices')
+            ->whereBetween('inv_date', [$yearStart, Carbon::now()])
+            ->whereNull('deleted_at')
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+
+        // Yearly Sales Return
+        $year_return_qty = DB::table('credit_note_items')
+            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
+            ->whereBetween('credit_notes.note_date', [$yearStart, Carbon::now()])
+            ->whereNull('credit_notes.deleted_at')
+            ->whereNull('credit_note_items.deleted_at')
+            ->sum('credit_note_items.quantity');
+
+        $year_return_wot = DB::table('credit_notes')
+            ->whereBetween('note_date', [$yearStart, Carbon::now()])
+            ->whereNull('deleted_at')
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+
+        $year_net_qty = max(0, $year_sales_qty - $year_return_qty);
+        $year_net_wot = max(0, $year_sales_wot - $year_return_wot);
+
+        /* Missed Sales (Lost Sales Revenue) Computation */
+        $soTotals = DB::table('sales_order_items')
+            ->join('sales_orders', 'sales_order_items.sale_order_id', '=', 'sales_orders.id')
+            ->whereNull('sales_orders.deleted_at')
+            ->whereNull('sales_order_items.deleted_at')
+            ->select(
+                'sales_orders.id as so_id',
+                'sales_orders.so_date',
+                DB::raw('SUM(sales_order_items.qty) as ordered_qty'),
+                DB::raw('SUM(sales_order_items.amount) as ordered_value')
+            )
+            ->groupBy('sales_orders.id', 'sales_orders.so_date')
+            ->get();
+
+        $soInvoiceTotals = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereNull('sales_invoices.deleted_at')
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->select(
+                'sales_invoices.so_id',
+                DB::raw('SUM(sales_invoice_items.quantity) as invoiced_qty'),
+                DB::raw('SUM(sales_invoice_items.amount) as invoiced_value')
+            )
+            ->groupBy('sales_invoices.so_id')
+            ->get();
+
+        $soInvoiceQtyTotals = $soInvoiceTotals->pluck('invoiced_qty', 'so_id');
+        $soInvoiceValTotals = $soInvoiceTotals->pluck('invoiced_value', 'so_id');
+
+        $today_missed_qty = 0; $today_missed_value = 0;
+        $month_missed_qty = 0; $month_missed_value = 0;
+        $year_missed_qty = 0; $year_missed_value = 0;
+
+        foreach ($soTotals as $so) {
+            $invQty = floatval($soInvoiceQtyTotals[$so->so_id] ?? 0);
+            $invVal = floatval($soInvoiceValTotals[$so->so_id] ?? 0);
+
+            $ordQty = floatval($so->ordered_qty ?? 0);
+            $ordVal = floatval($so->ordered_value ?? 0);
+
+            $lostQty = max(0, $ordQty - $invQty);
+            $lostVal = max(0, $ordVal - $invVal);
+
+            if ($lostQty > 0 || $ordQty > $invQty) {
+                $soDate = Carbon::parse($so->so_date);
+
+                if ($soDate->isToday()) {
+                    $today_missed_qty += $lostQty;
+                    $today_missed_value += $lostVal;
+                }
+                if ($soDate->gte($monthStart)) {
+                    $month_missed_qty += $lostQty;
+                    $month_missed_value += $lostVal;
+                }
+                if ($soDate->gte($yearStart)) {
+                    $year_missed_qty += $lostQty;
+                    $year_missed_value += $lostVal;
+                }
+            }
+        }
 
         /*  Employee Attendance Dashboard */
         $total_emp = User::where('status', 'Active')->where('id', '!=', 1)->count();
@@ -367,7 +516,13 @@ class HomeController extends Controller
             ->groupBy('operation_stages.id', 'operation_stages.operation_stage_name')
             ->get();
 
-        return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'total_emp', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today', 'dbDevices', 'attendance_chart_data'));
+        return view('dashboard', compact(
+            'sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'total_emp', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today', 'dbDevices', 'attendance_chart_data',
+            'today_sales_qty', 'today_sales_wot', 'today_return_qty', 'today_return_wot', 'today_net_qty', 'today_net_wot',
+            'month_sales_qty', 'month_sales_wot', 'month_return_qty', 'month_return_wot', 'month_net_qty', 'month_net_wot',
+            'year_sales_qty', 'year_sales_wot', 'year_return_qty', 'year_return_wot', 'year_net_qty', 'year_net_wot',
+            'today_missed_qty', 'today_missed_value', 'month_missed_qty', 'month_missed_value', 'year_missed_qty', 'year_missed_value'
+        ));
     }
 
     public function getServiceWipDetails(Request $request)

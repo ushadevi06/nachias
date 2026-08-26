@@ -729,8 +729,15 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_marketing_reports', [SalesMarketingReportController::class, 'index']);
 
     /* Warehouse Report */
+    Route::get('reports', [ReportController::class, 'index']);
     Route::get('warehouse_reports', [WarehouseReportController::class, 'index']);
+    Route::get('warehouse_reports/ajax/{type}', [WarehouseReportController::class, 'ajaxReportData']);
     Route::get('warehouse_reports/brandwise_stock_details/{id}', [WarehouseReportController::class, 'brandwiseStockDetails']);
+    Route::get('warehouse_reports/brandwise_styles', [WarehouseReportController::class, 'getBrandwiseStyles']);
+    Route::get('warehouse_reports/brandwise_art_nos', [WarehouseReportController::class, 'getBrandwiseArtNos']);
+    Route::get('warehouse_reports/urgent_order_details/{id}', [WarehouseReportController::class, 'getUrgentOrderDetails']);
+    Route::get('warehouse_reports/brandwise_lost_sales_orders', [WarehouseReportController::class, 'getBrandwiseLostSalesOrders']);
+    Route::get('warehouse_reports/brandwise_completion_art_nos', [WarehouseReportController::class, 'getBrandwiseCompletionArtNos']);
 
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);

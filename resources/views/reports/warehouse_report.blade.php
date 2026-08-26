@@ -79,6 +79,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#order-dispatch" type="button" role="tab">Order vs Dispatch</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#urgent-orders" type="button" role="tab"><i class="ri-fire-line me-1 text-danger"></i>Urgent Orders</button>
+                </li>
                 {{-- <li class="nav-item" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sales-return" type="button" role="tab">Sales Return</button>
                 </li>
@@ -94,6 +97,12 @@
                 <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#discount" type="button" role="tab">Regular/Discount</button>
                 </li>
+                <li class="nav-item d-none d-xl-block" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brandwise-lost-sales" type="button" role="tab">Brandwise Lost Sales</button>
+                </li>
+                <li class="nav-item d-none d-xl-block" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brandwise-completion" type="button" role="tab">Brandwise Completion</button>
+                </li>
                 {{-- <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#priority" type="button" role="tab">Priority Stock</button>
                 </li>
@@ -107,6 +116,7 @@
                         <li><a class="dropdown-item" href="#dispatch" data-bs-toggle="tab">Dispatch Report</a></li>
                         <li><a class="dropdown-item" href="#inward" data-bs-toggle="tab">Stock Inward</a></li>
                         <li><a class="dropdown-item" href="#discount" data-bs-toggle="tab">Regular/Discount</a></li>
+                        <li><a class="dropdown-item" href="#brandwise-lost-sales" data-bs-toggle="tab">Brandwise Lost Sales</a></li>
                         <li><a class="dropdown-item" href="#priority" data-bs-toggle="tab">Priority Stock</a></li>
                         <li><a class="dropdown-item" href="#damage" data-bs-toggle="tab">Damage Sales</a></li>
                     </ul>
@@ -114,6 +124,46 @@
             </ul>
         </div>
         <div class="card-body py-4">
+            <style>
+                /* DataTables loading overlay for all tabs */
+                div.dataTables_wrapper div.dataTables_processing {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(255, 255, 255, 0.92);
+                    border-radius: 12px;
+                    padding: 20px 32px;
+                    box-shadow: 0 4px 24px rgba(105, 108, 255, 0.15);
+                    z-index: 100;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #696cff;
+                    min-width: 160px;
+                    justify-content: center;
+                }
+                div.dataTables_wrapper div.dataTables_processing::before {
+                    content: '';
+                    display: inline-block;
+                    width: 20px;
+                    height: 20px;
+                    border: 3px solid rgba(105, 108, 255, 0.2);
+                    border-top-color: #696cff;
+                    border-radius: 50%;
+                    animation: dt-spin 0.7s linear infinite;
+                    flex-shrink: 0;
+                }
+                @keyframes dt-spin {
+                    to { transform: rotate(360deg); }
+                }
+                /* Make the tab pane relative so spinner is positioned correctly */
+                .tab-pane {
+                    position: relative;
+                }
+            </style>
             <div class="tab-content">
                 <!-- 1. Brandwise Sales Report -->
                 <div class="tab-pane fade show active" id="brand-sales" role="tabpanel">
@@ -133,6 +183,11 @@
                 <!-- 4. Order (vs) Dispatch Report -->
                 <div class="tab-pane fade" id="order-dispatch" role="tabpanel">
                     @include('reports.warehouse_report.order_vs_dispatch')
+                </div>
+
+                <!-- Urgent Orders Monitor -->
+                <div class="tab-pane fade" id="urgent-orders" role="tabpanel">
+                    @include('reports.warehouse_report.urgent_orders')
                 </div>
 
                 <!-- 5. Sales Return Report -->
@@ -158,6 +213,16 @@
                 <!-- 9. Regular Sales & Discount Sales Report -->
                 <div class="tab-pane fade" id="discount" role="tabpanel">
                     @include('reports.warehouse_report.regular_discount')
+                </div>
+
+                <!-- 12. Brandwise Lost Sales Report -->
+                <div class="tab-pane fade" id="brandwise-lost-sales" role="tabpanel">
+                    @include('reports.warehouse_report.brandwise_lost_sales')
+                </div>
+
+                <!-- 13. Brandwise Completion Report -->
+                <div class="tab-pane fade" id="brandwise-completion" role="tabpanel">
+                    @include('reports.warehouse_report.brandwise_completion')
                 </div>
 
                 <!-- 10. Priority Stock Report (Above 90 Days) -->
@@ -242,6 +307,13 @@
 
 @section('scripts')
 <script>
+// Set global DataTables defaults for all tables on this page
+$.extend(true, $.fn.dataTable.defaults, {
+    language: {
+        processing: 'Loading...',
+    }
+});
+
 $(document).ready(function() {
     $('#warehouseReportForm').on('submit', function(e) {
         e.preventDefault();
@@ -264,6 +336,18 @@ $(document).ready(function() {
                         targetTab.html(html);
                     }
                 });
+
+                // Reset Brandwise Stock to root level if drilled down
+                if (typeof isRootLevel !== 'undefined' && !isRootLevel && typeof renderBrandLevel === 'function') {
+                    renderBrandLevel();
+                } else {
+                    // Reload all active datatables
+                    $('.datatables-products').each(function() {
+                        if ($.fn.DataTable.isDataTable(this)) {
+                            $(this).DataTable().ajax.reload(null, false);
+                        }
+                    });
+                }
                 
                 if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
                     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -291,6 +375,21 @@ $(document).ready(function() {
     });
     $('#btn-print').on('click', function() {
         $('.tab-pane.active .datatables-products').DataTable().button('.buttons-print').trigger();
+    });
+
+    // Fix DataTables column width in hidden tabs when they become visible
+    $('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var targetId = $(e.target).attr('data-bs-target') || $(e.target).attr('href');
+        if (targetId) {
+            var $table = $(targetId).find('.datatables-products');
+            if ($table.length > 0) {
+                $table.each(function() {
+                    if ($.fn.DataTable.isDataTable(this)) {
+                        $(this).DataTable().columns.adjust().responsive.recalc();
+                    }
+                });
+            }
+        }
     });
 });
 </script>

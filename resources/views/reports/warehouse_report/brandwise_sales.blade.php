@@ -1,5 +1,5 @@
 <div class="card-datatable">
-    <table class="datatables-products table table-hover">
+    <table class="datatables-products table table-hover" id="brandwiseSalesTable">
         <thead>
             <tr>
                 <th>Brand</th>
@@ -10,20 +10,36 @@
             </tr>
         </thead>
         <tbody>
-            @if($brandwiseSales && $brandwiseSales->count() > 0)
-                @foreach($brandwiseSales as $sale)
-                    <tr>
-                        <td><strong>{{ $sale->brand ?? '-' }}</strong></td>
-                        <!-- <td>{{ $sale->category ?? '-' }}</td> -->
-                        <td class="text-center">{{ number_format($sale->sold_qty, 0) }}</td>
-                        <td class="text-end fw-bold">₹{{ number_format($sale->sales_value, 2) }}</td>
-                        <td class="text-center {{ $sale->trend >= 0 ? 'text-success' : 'text-danger' }}">
-                            <i class="ri {{ $sale->trend >= 0 ? 'ri-arrow-up-line' : 'ri-arrow-down-line' }} me-1"></i>
-                            {{ number_format(abs($sale->trend), 1) }}%
-                        </td>
-                    </tr>
-                @endforeach
-            @endif
         </tbody>
     </table>
 </div>
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable.isDataTable('#brandwiseSalesTable')) {
+        $('#brandwiseSalesTable').DataTable().destroy();
+    }
+    $('#brandwiseSalesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        autoWidth: false,
+        ajax: {
+            url: "{{ url('warehouse_reports/ajax/brandwise-sales') }}",
+            data: function (d) {
+                d.from_date = $('.start_date').val();
+                d.to_date = $('.end_date').val();
+                d.brand_id = $('select[name="brand_id"]').val();
+                d.store_id = $('select[name="store_id"]').val();
+            }
+        },
+        columns: [
+            { data: 'brand', name: 'brand', width: '45%' },
+            { data: 'sold_qty', name: 'sold_qty', className: 'text-center', width: '20%' },
+            { data: 'sales_value', name: 'sales_value', className: 'text-end', width: '20%' },
+            { data: 'trend', name: 'trend', className: 'text-center', orderable: false, width: '15%' }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
+    });
+});
+</script>
