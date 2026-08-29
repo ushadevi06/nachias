@@ -14,17 +14,32 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class RawMaterialStockExport implements FromCollection, WithHeadings, WithMapping, WithTitle, WithStyles
 {
     protected $count = 0;
+    protected $filters;
+
+    public function __construct(array $filters = [])
+    {
+        $this->filters = $filters;
+    }
 
     public function collection()
     {
+        $filters = $this->filters;
+
         return StockEntryItem::with([
             'stockEntry.grnEntry',
             'rawMaterial.storeCategory',
             'storeCategory',
             'storeLocation',
             'uom'
-        ])->whereHas('stockEntry', function($q) {
+        ])->whereHas('stockEntry', function($q) use ($filters) {
             $q->where('entry_type', 'Raw Material');
+
+            if (!empty($filters['date'])) {
+                try {
+                    $stockDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['date'])->format('Y-m-d');
+                    $q->whereDate('stock_date', $stockDate);
+                } catch (\Exception $e) {}
+            }
         })->orderBy('id', 'desc')->get();
     }
 

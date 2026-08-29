@@ -87,12 +87,11 @@
 </div>
 
 <script>
-$(document).ready(function() {
+window.initUrgentOrdersTable = function() {
     if ($.fn.DataTable.isDataTable('#urgentOrdersTable')) {
-        $('#urgentOrdersTable').DataTable().destroy();
+        $('#urgentOrdersTable').DataTable().clear().destroy();
     }
-
-    var urgentTable = $('#urgentOrdersTable').DataTable({
+    $('#urgentOrdersTable').DataTable({
         processing: true,
         autoWidth: false,
         serverSide: true,
@@ -106,81 +105,83 @@ $(document).ready(function() {
             }
         },
         columns: [
-            { data: 'so_no', name: 'so_no' },
+            { data: 'so_no', name: 'so_no', className: 'text-center' },
             { data: 'customer', name: 'customer' },
             { data: 'order_date', name: 'order_date', className: 'text-center' },
-            { data: 'days_pending', name: 'days_pending', className: 'text-center' },
-            { data: 'delivery_date', name: 'delivery_date', className: 'text-center' },
-            { data: 'brands', name: 'brands' },
+            { data: 'days_pending', name: 'days_pending', className: 'text-center', orderable: false },
+            { data: 'delivery_date', name: 'delivery_date', className: 'text-center', orderable: false },
+            { data: 'brands', name: 'brands', orderable: false },
             { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center' },
-            { data: 'action', name: 'action', className: 'text-center', orderable: false, searchable: false }
+            { data: 'action', name: 'action', className: 'text-center', orderable: false }
         ],
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
+};
+function initUrgentOrdersTable() {
+    window.initUrgentOrdersTable();
+}
 
-    // Handle View Items Click
-    $(document).on('click', '.view-urgent-details', function() {
-        var soId = $(this).data('id');
-        var $btn = $(this);
-        var originalHtml = $btn.html();
+if ($('#urgent-orders').hasClass('active')) {
+    window.initUrgentOrdersTable();
+}
 
-        $btn.html('<span class="spinner-border spinner-border-sm me-1"></span> Loading...').prop('disabled', true);
+$(document).on('click', '.view-urgent-order-details', function(e) {
+    e.preventDefault();
+    var soId = $(this).data('so-id');
+    var $btn = $(this);
+    var originalHtml = $btn.html();
 
-        $.ajax({
-            url: "{{ url('warehouse_reports/urgent_order_details') }}/" + soId,
-            type: "GET",
-            dataType: "json",
-            success: function(response) {
-                if (response.status) {
-                    $('#modalSoNo').text(response.so_no);
-                    $('#modalFullOrderLink').attr('href', "{{ url('sales_orders/view') }}/" + soId);
-                    if (response.orderaxe_ref_id) {
-                        $('#modalOrderaxeRef').html('<span class="badge bg-label-info mt-1">Ref: ' + response.orderaxe_ref_id + '</span>');
-                    } else {
-                        $('#modalOrderaxeRef').empty();
-                    }
-                    $('#modalCustomer').text(response.customer_name);
-                    $('#modalSoDate').text(response.so_date);
-                    $('#modalDeliveryDate').text(response.delivery_date);
+    $btn.html('<span class="spinner-border spinner-border-sm"></span>').prop('disabled', true);
 
-                    var rowsHtml = '';
-                    if (response.items && response.items.length > 0) {
-                        $.each(response.items, function(idx, item) {
-                            rowsHtml += '<tr>' +
-                                '<td>' + (idx + 1) + '</td>' +
-                                '<td><strong>' + item.art_no + '</strong></td>' +
-                                '<td>' + item.item_name + '</td>' +
-                                '<td><span class="badge bg-label-primary">' + item.brand_name + '</span></td>' +
-                                '<td>' + item.size + '</td>' +
-                                '<td>' + item.color + '</td>' +
-                                '<td class="text-center fw-bold">' + item.ordered_qty + '</td>' +
-                                '<td class="text-center text-primary fw-bold">' + item.dispatched_qty + '</td>' +
-                                '<td class="text-center text-danger fw-bold">' + item.pending_qty + '</td>' +
-                                '<td class="text-center fw-bold">' + item.wh_stock + '</td>' +
-                                '<td class="text-center">' + item.stock_status + '</td>' +
-                                '</tr>';
-                        });
-                    } else {
-                        rowsHtml = '<tr><td colspan="11" class="text-center py-3 text-muted">No items found for this order.</td></tr>';
-                    }
+    $.ajax({
+        url: "{{ url('sales-orders') }}/" + soId + "/details-json",
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.status) {
+                $('#modalSoNo').text(response.order.so_no);
+                $('#modalCustomer').text(response.order.customer);
+                $('#modalSoDate').text(response.order.so_date);
+                $('#modalDeliveryDate').text(response.order.delivery_date);
+                $('#modalFullOrderLink').attr('href', "{{ url('sales-orders') }}/" + soId);
 
-                    $('#urgentOrderItemsBody').html(rowsHtml);
-                    var modalEl = document.getElementById('urgentOrderDetailsModal');
-                    var modal = new bootstrap.Modal(modalEl);
-                    modal.show();
+                var rowsHtml = '';
+                if (response.items && response.items.length > 0) {
+                    $.each(response.items, function(idx, item) {
+                        rowsHtml += '<tr>' +
+                            '<td>' + (idx + 1) + '</td>' +
+                            '<td><strong>' + item.art_no + '</strong></td>' +
+                            '<td>' + item.item_name + '</td>' +
+                            '<td><span class="badge bg-label-primary">' + item.brand_name + '</span></td>' +
+                            '<td>' + item.size + '</td>' +
+                            '<td>' + item.color + '</td>' +
+                            '<td class="text-center fw-bold">' + item.ordered_qty + '</td>' +
+                            '<td class="text-center text-primary fw-bold">' + item.dispatched_qty + '</td>' +
+                            '<td class="text-center text-danger fw-bold">' + item.pending_qty + '</td>' +
+                            '<td class="text-center fw-bold">' + item.wh_stock + '</td>' +
+                            '<td class="text-center">' + item.stock_status + '</td>' +
+                            '</tr>';
+                    });
                 } else {
-                    alert(response.message || 'Failed to load details.');
+                    rowsHtml = '<tr><td colspan="11" class="text-center py-3 text-muted">No items found for this order.</td></tr>';
                 }
-            },
-            error: function() {
-                alert('An error occurred while loading order details.');
-            },
-            complete: function() {
-                $btn.html(originalHtml).prop('disabled', false);
+
+                $('#urgentOrderItemsBody').html(rowsHtml);
+                var modalEl = document.getElementById('urgentOrderDetailsModal');
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            } else {
+                alert(response.message || 'Failed to load details.');
             }
-        });
+        },
+        error: function() {
+            alert('An error occurred while loading order details.');
+        },
+        complete: function() {
+            $btn.html(originalHtml).prop('disabled', false);
+        }
     });
 });
 </script>

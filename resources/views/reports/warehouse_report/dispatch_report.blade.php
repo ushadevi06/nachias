@@ -17,9 +17,9 @@
 </div>
 
 <script>
-$(document).ready(function() {
+window.initDispatchReportTable = function() {
     if ($.fn.DataTable.isDataTable('#dispatchReportTable')) {
-        $('#dispatchReportTable').DataTable().destroy();
+        $('#dispatchReportTable').DataTable().clear().destroy();
     }
     $('#dispatchReportTable').DataTable({
         processing: true,
@@ -47,5 +47,12 @@ $(document).ready(function() {
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
-});
+};
+function initDispatchReportTable() {
+    window.initDispatchReportTable();
+}
+
+if ($('#dispatch').hasClass('active') || $('#dispatch-report').hasClass('active')) {
+    window.initDispatchReportTable();
+}
 </script>

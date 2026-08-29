@@ -727,6 +727,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Sales & Marketing Report */
     Route::get('sales_marketing_reports', [SalesMarketingReportController::class, 'index']);
+    Route::get('sales_marketing_reports/ajax/{type}', [SalesMarketingReportController::class, 'ajaxReportData']);
 
     /* Warehouse Report */
     Route::get('reports', [ReportController::class, 'index']);
@@ -737,7 +738,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('warehouse_reports/brandwise_art_nos', [WarehouseReportController::class, 'getBrandwiseArtNos']);
     Route::get('warehouse_reports/urgent_order_details/{id}', [WarehouseReportController::class, 'getUrgentOrderDetails']);
     Route::get('warehouse_reports/brandwise_lost_sales_orders', [WarehouseReportController::class, 'getBrandwiseLostSalesOrders']);
-    Route::get('warehouse_reports/brandwise_completion_art_nos', [WarehouseReportController::class, 'getBrandwiseCompletionArtNos']);
+    Route::get('warehouse_reports/brandwise_completion_art_nos', [WarehouseReportController::class, 'getOrderProcessingTimeArtNos']);
+    Route::get('warehouse_reports/brandwise_completion_orders', [WarehouseReportController::class, 'getBrandwiseCompletionOrders']);
+    Route::get('warehouse_reports/order_processing_time_art_nos', [WarehouseReportController::class, 'getOrderProcessingTimeArtNos']);
+    Route::get('warehouse_reports/stock_inward_sales_details', [WarehouseReportController::class, 'getStockInwardSalesDetails']);
 
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);

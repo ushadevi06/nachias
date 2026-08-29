@@ -317,6 +317,7 @@ class SalesInvoiceController extends Controller
         }
 
         if ($request->isMethod('post')) {
+            
             $selectedBrandId = $request->brand_id;
             if ($selectedBrandId && $request->inv_date) {
                 try {
@@ -456,6 +457,13 @@ class SalesInvoiceController extends Controller
                 $invoiceData['other_state'] = $request->other_state == 'yes';
                 $invoiceData['so_ids'] = json_encode($request->so_ids);
                 $invoiceData['so_id'] = $request->so_ids[0] ?? null;
+
+                $invoiceData3['show_fields'] = $request->show_fields ?? [];
+                $invoiceData3['delivery_show_fields'] = $request->delivery_show_fields ?? [];
+                $invoiceData3['other_state'] = $request->other_state == 'yes';
+                $invoiceData3['so_ids'] = json_encode($request->so_ids);
+                $invoiceData3['so_id'] = $request->so_ids[0] ?? null;
+                Log::info('invoiceData3', [$invoiceData3]);
 
                 if ($request->hasFile('signature_file')) {
                     if (!empty($invoice->signature_file)) {
@@ -627,16 +635,27 @@ class SalesInvoiceController extends Controller
                         }
                     }
 
+                    $itemQty = (float)($item['quantity'] ?? 0);
+                    $itemMrp = (float)($item['mrp'] ?? 0);
+                    $itemRate = (float)($item['rate'] ?? 0);
+                    if ($itemRate <= 0 && $itemMrp > 0) {
+                        $itemRate = $itemMrp;
+                    }
+                    if ($itemMrp <= 0 && $itemRate > 0) {
+                        $itemMrp = $itemRate;
+                    }
+                    $itemAmount = !empty($item['amount']) && (float)$item['amount'] > 0 ? (float)$item['amount'] : ($itemQty * $itemRate);
+
                     SalesInvoiceItem::updateOrCreate(
-                        ['id' => $item['id'] ?? null],
+                        ['id' => !empty($item['id']) ? $item['id'] : null],
                         [
                             'sales_invoice_id' => $invoiceId,
                             'sku' => $item['sku'] ?? null,
                             'uom_id' => $item['uom_id'] ?? null,
-                            'quantity' => $item['quantity'] ?? 0,
-                            'rate' => $item['rate'] ?? 0,
-                            'mrp' => $item['mrp'] ?? 0,
-                            'amount' => $item['amount'] ?? 0,
+                            'quantity' => $itemQty,
+                            'rate' => $itemRate,
+                            'mrp' => $itemMrp,
+                            'amount' => $itemAmount,
                             'hsn_sac' => $item['hsn_sac'] ?? null,
                             'art_no' => $item['art_no'] ?? null,
                             'size' => $item['size'] ?? null,

@@ -16,9 +16,9 @@
 </div>
 
 <script>
-$(document).ready(function() {
+window.initOrderVsDispatchTable = function() {
     if ($.fn.DataTable.isDataTable('#orderVsDispatchTable')) {
-        $('#orderVsDispatchTable').DataTable().destroy();
+        $('#orderVsDispatchTable').DataTable().clear().destroy();
     }
     $('#orderVsDispatchTable').DataTable({
         processing: true,
@@ -45,5 +45,12 @@ $(document).ready(function() {
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
-});
+};
+function initOrderVsDispatchTable() {
+    window.initOrderVsDispatchTable();
+}
+
+if ($('#order-dispatch').hasClass('active') || $('#order-vs-dispatch').hasClass('active')) {
+    window.initOrderVsDispatchTable();
+}
 </script>

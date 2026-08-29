@@ -14,9 +14,9 @@
 </div>
 
 <script>
-$(document).ready(function() {
+window.initAssortedStockTable = function() {
     if ($.fn.DataTable.isDataTable('#assortedStockTable')) {
-        $('#assortedStockTable').DataTable().destroy();
+        $('#assortedStockTable').DataTable().clear().destroy();
     }
     $('#assortedStockTable').DataTable({
         processing: true,
@@ -41,5 +41,12 @@ $(document).ready(function() {
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
-});
+};
+function initAssortedStockTable() {
+    window.initAssortedStockTable();
+}
+
+if ($('#assorted-stock').hasClass('active')) {
+    window.initAssortedStockTable();
+}
 </script>

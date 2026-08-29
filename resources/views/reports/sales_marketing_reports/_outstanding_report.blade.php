@@ -1,5 +1,5 @@
-<div class="card-datatable">
-    <table class="datatables-products table table-hover">
+<div class="card-datatable table-responsive">
+    <table class="datatables-products table table-hover" id="outstandingReportTable">
         <thead class="bg-light">
             <tr>
                 <th>Zone</th>

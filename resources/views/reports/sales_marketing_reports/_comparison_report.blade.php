@@ -1,5 +1,5 @@
-<div class="card-datatable">
-    <table class="datatables-products table table-hover">
+<div class="card-datatable table-responsive">
+    <table class="datatables-products table table-hover" id="comparisonReportTable">
         <thead class="bg-light">
             <tr>
                 <th>Month</th>
@@ -17,9 +17,9 @@
                 <td class="text-end fw-bold text-primary">₹{{ number_format($data['curr_year_sales'], 2) }}</td>
                 <td class="text-center">
                     @if($data['growth_pc'] > 0)
-                        <span class="text-success fw-bold"><i class="ti ti-arrow-up"></i> {{ number_format($data['growth_pc'], 1) }}%</span>
+                        <span class="text-success fw-bold"><i class="ri ri-arrow-up"></i> {{ number_format($data['growth_pc'], 1) }}%</span>
                     @elseif($data['growth_pc'] < 0)
-                        <span class="text-danger fw-bold"><i class="ti ti-arrow-down"></i> {{ number_format(abs($data['growth_pc']), 1) }}%</span>
+                        <span class="text-danger fw-bold"><i class="ri ri-arrow-down"></i> {{ number_format(abs($data['growth_pc']), 1) }}%</span>
                     @else
                         <span class="text-muted small">0%</span>
                     @endif

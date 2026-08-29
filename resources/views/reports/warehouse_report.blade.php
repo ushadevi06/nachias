@@ -55,9 +55,9 @@
                     <button type="submit" class="btn btn-primary w-100 rounded-pill">
                         <i class="ri ri-search-line me-1"></i> Search
                     </button>
-                    <a href="{{ url('warehouse_reports') }}" class="btn btn-outline-light w-100 rounded-pill border">
+                    <button type="button" id="btn-reset-report" class="btn btn-outline-light w-100 rounded-pill border">
                         <i class="ri ri-refresh-line me-1"></i> Reset
-                    </a>
+                    </button>
                 </div>
             </form>
         </div>
@@ -101,17 +101,19 @@
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brandwise-lost-sales" type="button" role="tab">Brandwise Lost Sales</button>
                 </li>
                 <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brandwise-completion" type="button" role="tab">Brandwise Completion</button>
-                </li>
-                {{-- <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#priority" type="button" role="tab">Priority Stock</button>
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#order-processing-time" type="button" role="tab">Order Processing Time Report</button>
                 </li>
                 <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#damage" type="button" role="tab">Damage Sales</button>
-                </li> --}}
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#stock-inward-sales" type="button" role="tab">Stock Inward & Sales</button>
+                </li>
+                <li class="nav-item d-none d-xl-block" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brandwise-completion" type="button" role="tab">Brandwise Completion</button>
+                </li>
                 <li class="nav-item dropdown d-xl-none">
                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">More</a>
                     <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#stock-inward-sales" data-bs-toggle="tab">Stock Inward & Sales</a></li>
+                        <li><a class="dropdown-item" href="#order-processing-time" data-bs-toggle="tab">Order Processing Time Report</a></li>
                         <li><a class="dropdown-item" href="#white-dhoti" data-bs-toggle="tab">White & Dhoti</a></li>
                         <li><a class="dropdown-item" href="#dispatch" data-bs-toggle="tab">Dispatch Report</a></li>
                         <li><a class="dropdown-item" href="#inward" data-bs-toggle="tab">Stock Inward</a></li>
@@ -220,7 +222,17 @@
                     @include('reports.warehouse_report.brandwise_lost_sales')
                 </div>
 
-                <!-- 13. Brandwise Completion Report -->
+                <!-- 13. Order Processing Time Report -->
+                <div class="tab-pane fade" id="order-processing-time" role="tabpanel">
+                    @include('reports.warehouse_report.order_processing_time')
+                </div>
+
+                <!-- Stock Inward & Sales Report -->
+                <div class="tab-pane fade" id="stock-inward-sales" role="tabpanel">
+                    @include('reports.warehouse_report.stock_inward_sales')
+                </div>
+
+                <!-- Brandwise Completion Report -->
                 <div class="tab-pane fade" id="brandwise-completion" role="tabpanel">
                     @include('reports.warehouse_report.brandwise_completion')
                 </div>
@@ -296,7 +308,6 @@
         border-bottom: 1px solid #f1f5f9;
     }
 
-    /* Badge Customization */
     .badge.bg-label-success { background: #dcfce7; color: #166534; }
     .badge.bg-label-warning { background: #fef9c3; color: #854d0e; }
     .badge.bg-label-danger { background: #fee2e2; color: #991b1b; }
@@ -307,7 +318,6 @@
 
 @section('scripts')
 <script>
-// Set global DataTables defaults for all tables on this page
 $.extend(true, $.fn.dataTable.defaults, {
     language: {
         processing: 'Loading...',
@@ -324,10 +334,14 @@ $(document).ready(function() {
         submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...').prop('disabled', true);
         $('.tab-content').css('opacity', '0.6');
 
+        let activeTabId = $('.tab-pane.active').attr('id') || 'brand-sales';
+        let formData = form.serializeArray();
+        formData.push({ name: 'active_tab', value: activeTabId });
+
         $.ajax({
             url: form.attr('action'),
             method: 'GET',
-            data: form.serialize(),
+            data: $.param(formData),
             dataType: 'json',
             success: function(response) {
                 $.each(response, function(tabId, html) {
@@ -337,18 +351,49 @@ $(document).ready(function() {
                     }
                 });
 
-                // Reset Brandwise Stock to root level if drilled down
-                if (typeof isRootLevel !== 'undefined' && !isRootLevel && typeof renderBrandLevel === 'function') {
-                    renderBrandLevel();
-                } else {
-                    // Reload all active datatables
-                    $('.datatables-products').each(function() {
-                        if ($.fn.DataTable.isDataTable(this)) {
-                            $(this).DataTable().ajax.reload(null, false);
-                        }
-                    });
+                switch (activeTabId) {
+                    case 'brand-stock':
+                    case 'brandwise-stock':
+                        if (typeof initBrandwiseStockTable === 'function') initBrandwiseStockTable();
+                        break;
+                    case 'assorted-stock':
+                        if (typeof initAssortedStockTable === 'function') initAssortedStockTable();
+                        break;
+                    case 'order-dispatch':
+                    case 'order-vs-dispatch':
+                        if (typeof initOrderVsDispatchTable === 'function') initOrderVsDispatchTable();
+                        break;
+                    case 'urgent-orders':
+                        if (typeof initUrgentOrdersTable === 'function') initUrgentOrdersTable();
+                        break;
+                    case 'dispatch':
+                    case 'dispatch-report':
+                        if (typeof initDispatchReportTable === 'function') initDispatchReportTable();
+                        break;
+                    case 'inward':
+                    case 'stock-inward':
+                        if (typeof initStockInwardTable === 'function') initStockInwardTable();
+                        break;
+                    case 'discount':
+                    case 'regular-discount':
+                        if (typeof initRegularDiscountTable === 'function') initRegularDiscountTable();
+                        break;
+                    case 'brandwise-lost-sales':
+                        if (typeof initBrandwiseLostSalesTable === 'function') initBrandwiseLostSalesTable();
+                        break;
+                    case 'order-processing-time':
+                        if (typeof initOrderProcessingTime === 'function') initOrderProcessingTime();
+                        break;
+                    case 'stock-inward-sales':
+                        if (typeof initStockInwardSalesTable === 'function') initStockInwardSalesTable();
+                        break;
                 }
-                
+
+                const activeTable = $('#' + activeTabId).find('.datatables-products');
+                if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
+                    activeTable.DataTable().ajax.reload(null, false);
+                }
+
                 if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
                     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
                     tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -366,7 +411,6 @@ $(document).ready(function() {
         });
     });
 
-    // Export Handlers
     $('#btn-excel').on('click', function() {
         $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();
     });
@@ -377,19 +421,111 @@ $(document).ready(function() {
         $('.tab-pane.active .datatables-products').DataTable().button('.buttons-print').trigger();
     });
 
-    // Fix DataTables column width in hidden tabs when they become visible
-    $('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
-        var targetId = $(e.target).attr('data-bs-target') || $(e.target).attr('href');
-        if (targetId) {
-            var $table = $(targetId).find('.datatables-products');
-            if ($table.length > 0) {
-                $table.each(function() {
-                    if ($.fn.DataTable.isDataTable(this)) {
-                        $(this).DataTable().columns.adjust().responsive.recalc();
-                    }
-                });
-            }
+    $(document).on('click', '#btn-reset-report', function(e) {
+        e.preventDefault();
+
+        $('.start_date').val('');
+        $('.end_date').val('');
+        $('select[name="brand_id"]').val('').trigger('change');
+        $('select[name="store_id"]').val('').trigger('change');
+
+        if (typeof renderStockInwardSalesBrandLevel === 'function') {
+            renderStockInwardSalesBrandLevel();
         }
+        if (typeof renderLostSalesBrandLevel === 'function') {
+            renderLostSalesBrandLevel();
+        }
+        if (typeof renderOrderProcessingTimeRootLevel === 'function') {
+            renderOrderProcessingTimeRootLevel();
+        }
+        if (typeof renderCompletionRootLevel === 'function') {
+            renderCompletionRootLevel();
+        }
+        if (typeof renderBrandLevel === 'function') {
+            renderBrandLevel();
+        }
+
+        $('#warehouseReportForm').trigger('submit');
+    });
+
+    function handleTabActivation(targetId) {
+        if (!targetId) return;
+        var activeTabId = targetId.replace('#', '');
+        
+        switch (activeTabId) {
+            case 'brand-stock':
+            case 'brandwise-stock':
+                if (typeof window.initBrandwiseStockTable === 'function') window.initBrandwiseStockTable();
+                else if (typeof initBrandwiseStockTable === 'function') initBrandwiseStockTable();
+                break;
+            case 'assorted-stock':
+                if (typeof window.initAssortedStockTable === 'function') window.initAssortedStockTable();
+                else if (typeof initAssortedStockTable === 'function') initAssortedStockTable();
+                break;
+            case 'order-dispatch':
+            case 'order-vs-dispatch':
+                if (typeof window.initOrderVsDispatchTable === 'function') window.initOrderVsDispatchTable();
+                else if (typeof initOrderVsDispatchTable === 'function') initOrderVsDispatchTable();
+                break;
+            case 'urgent-orders':
+                if (typeof window.initUrgentOrdersTable === 'function') window.initUrgentOrdersTable();
+                else if (typeof initUrgentOrdersTable === 'function') initUrgentOrdersTable();
+                break;
+            case 'dispatch':
+            case 'dispatch-report':
+                if (typeof window.initDispatchReportTable === 'function') window.initDispatchReportTable();
+                else if (typeof initDispatchReportTable === 'function') initDispatchReportTable();
+                break;
+            case 'inward':
+            case 'stock-inward':
+                if (typeof window.initStockInwardTable === 'function') window.initStockInwardTable();
+                else if (typeof initStockInwardTable === 'function') initStockInwardTable();
+                break;
+            case 'discount':
+            case 'regular-discount':
+                if (typeof window.initRegularDiscountTable === 'function') window.initRegularDiscountTable();
+                else if (typeof initRegularDiscountTable === 'function') initRegularDiscountTable();
+                break;
+            case 'brandwise-lost-sales':
+                if (typeof window.initBrandwiseLostSalesTable === 'function') window.initBrandwiseLostSalesTable();
+                else if (typeof initBrandwiseLostSalesTable === 'function') initBrandwiseLostSalesTable();
+                break;
+            case 'order-processing-time':
+                if (typeof window.initOrderProcessingTime === 'function') window.initOrderProcessingTime();
+                else if (typeof initOrderProcessingTime === 'function') initOrderProcessingTime();
+                break;
+            case 'stock-inward-sales':
+                if (typeof window.initStockInwardSalesTable === 'function') window.initStockInwardSalesTable();
+                else if (typeof initStockInwardSalesTable === 'function') initStockInwardSalesTable();
+                break;
+            case 'brandwise-completion':
+                if (typeof window.initBrandwiseCompletionTable === 'function') window.initBrandwiseCompletionTable();
+                else if (typeof initBrandwiseCompletionTable === 'function') initBrandwiseCompletionTable();
+                break;
+        }
+
+        var $table = $(targetId).find('.datatables-products');
+        if ($table.length > 0) {
+            $table.each(function() {
+                if ($.fn.DataTable.isDataTable(this)) {
+                    $(this).DataTable().columns.adjust().responsive.recalc();
+                }
+            });
+        }
+    }
+
+    $(document).on('shown.bs.tab', '[data-bs-toggle="tab"]', function (e) {
+        var $btn = $(e.target).closest('[data-bs-toggle="tab"]');
+        var targetId = $btn.attr('data-bs-target') || $btn.attr('href');
+        handleTabActivation(targetId);
+    });
+
+    $(document).on('click', '[data-bs-toggle="tab"]', function (e) {
+        var $btn = $(this).closest('[data-bs-toggle="tab"]');
+        var targetId = $btn.attr('data-bs-target') || $btn.attr('href');
+        setTimeout(function() {
+            handleTabActivation(targetId);
+        }, 50);
     });
 });
 </script>

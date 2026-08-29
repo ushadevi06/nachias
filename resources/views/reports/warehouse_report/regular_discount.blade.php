@@ -15,9 +15,9 @@
 </div>
 
 <script>
-$(document).ready(function() {
+window.initRegularDiscountTable = function() {
     if ($.fn.DataTable.isDataTable('#regularDiscountTable')) {
-        $('#regularDiscountTable').DataTable().destroy();
+        $('#regularDiscountTable').DataTable().clear().destroy();
     }
     $('#regularDiscountTable').DataTable({
         processing: true,
@@ -43,5 +43,12 @@ $(document).ready(function() {
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
-});
+};
+function initRegularDiscountTable() {
+    window.initRegularDiscountTable();
+}
+
+if ($('#discount').hasClass('active') || $('#regular-discount').hasClass('active')) {
+    window.initRegularDiscountTable();
+}
 </script>

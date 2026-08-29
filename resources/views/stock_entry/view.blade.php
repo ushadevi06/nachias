@@ -7,21 +7,27 @@
             <div class="table-header-box d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Stock Entry</h4>
                 <div class="d-flex gap-2">
-                    {{-- @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials') || auth()->user()->can('create stock-entry-finished-goods'))
+                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials') || auth()->user()->can('create stock-entry-finished-goods'))
                     <button type="button" class="btn btn-secondary" id="import-stock-btn" data-bs-toggle="modal" data-bs-target="#importModal" style="display: none;">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                     </button>
-                    @endif --}}
+                    @endif 
+                    @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods') || auth()->user()->can('view stock-entry-raw-materials'))
+                    <div id="stock-export-filter-box" class="d-flex align-items-center gap-2">
+                        <input type="text" id="stock_export_date" class="form-control form-control-sm" style="width: 140px;" placeholder="Select Date" title="Select Date">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="stock_export_reset_btn" title="Reset Date Filter"><i class="ri ri-refresh-line"></i></button>
+                    </div>
+                    @endif
                     @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods'))
-                    <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success" id="export-finished-goods-btn" style="display: none;">
+                    <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success disabled" id="export-finished-goods-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1" aria-disabled="true">
                         <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export 
                     </a>
-                    <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary" id="export-barcode-btn" style="display: none;">
+                    <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary disabled" id="export-barcode-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1" aria-disabled="true">
                         <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export Barcode
                     </a>
                     @endif
                     @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-raw-materials'))
-                    <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success" id="export-raw-materials-btn" style="display: none;">
+                    <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success disabled" id="export-raw-materials-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1" aria-disabled="true">
                         <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export 
                     </a>
                     @endif
@@ -222,6 +228,7 @@
                     d.art_no = new URLSearchParams(window.location.search).get('art_no');
                     d.grn_no = new URLSearchParams(window.location.search).get('grn_no');
                     d.entry_type = $('#stockEntryTabs .nav-link.active').data('entry-type');
+                    d.date = $('#stock_export_date').val();
                 }
             },
             columns: [{
@@ -285,10 +292,54 @@
             ]
         });
 
+        function updateExportButtonsState() {
+            let date = $('#stock_export_date').val();
+            let exportBtns = $('#export-finished-goods-btn, #export-barcode-btn, #export-raw-materials-btn');
+            if (date && date.trim() !== '') {
+                exportBtns.removeClass('disabled').removeAttr('tabindex').removeAttr('aria-disabled').css({'pointer-events': 'auto', 'opacity': '1'});
+            } else {
+                exportBtns.addClass('disabled').attr('tabindex', '-1').attr('aria-disabled', 'true').css({'pointer-events': 'none', 'opacity': '0.5'});
+            }
+        }
+
+        let stockDatePicker;
+        if (typeof $.fn.flatpickr !== 'undefined') {
+            stockDatePicker = $('#stock_export_date').flatpickr({
+                dateFormat: 'd-m-Y',
+                allowInput: true,
+                onChange: function() {
+                    updateExportButtonsState();
+                    table.ajax.reload();
+                },
+                onClose: function() {
+                    updateExportButtonsState();
+                }
+            });
+        } else {
+            $('#stock_export_date').on('change keyup input', function() {
+                updateExportButtonsState();
+                table.ajax.reload();
+            });
+        }
+
         $('#stockEntryTabs .nav-link').on('click', function() {
             $('#stockEntryTabs .nav-link').removeClass('active');
             $(this).addClass('active');
+            $('#stock_export_date').val('');
+            if (stockDatePicker && typeof stockDatePicker.clear === 'function') {
+                stockDatePicker.clear();
+            }
+            updateExportButtonsState();
             applyTabLogic();
+        });
+
+        $('#stock_export_reset_btn').on('click', function() {
+            $('#stock_export_date').val('');
+            if (stockDatePicker && typeof stockDatePicker.clear === 'function') {
+                stockDatePicker.clear();
+            }
+            updateExportButtonsState();
+            table.ajax.reload();
         });
 
         function applyTabLogic() {
@@ -340,6 +391,7 @@
                 table.column(9).visible(false);
             }
 
+            updateExportButtonsState();
             table.ajax.reload();
         }
 
@@ -364,6 +416,43 @@
             }
         }
 
+        updateExportButtonsState();
+
+        function getStockExportParams() {
+            let params = new URLSearchParams();
+            let date = $('#stock_export_date').val();
+
+            if (date) params.append('date', date);
+
+            return params.toString();
+        }
+
+        $('#export-finished-goods-btn').on('click', function(e) {
+            e.preventDefault();
+            if ($(this).hasClass('disabled')) return false;
+            let query = getStockExportParams();
+            let url = "{{ url('stock_entries/export-finished-goods') }}";
+            if (query) url += '?' + query;
+            window.location.href = url;
+        });
+
+        $('#export-barcode-btn').on('click', function(e) {
+            e.preventDefault();
+            if ($(this).hasClass('disabled')) return false;
+            let query = getStockExportParams();
+            let url = "{{ url('stock_entries/export-barcode') }}";
+            if (query) url += '?' + query;
+            window.location.href = url;
+        });
+
+        $('#export-raw-materials-btn').on('click', function(e) {
+            e.preventDefault();
+            if ($(this).hasClass('disabled')) return false;
+            let query = getStockExportParams();
+            let url = "{{ url('stock_entries/export-raw-materials') }}";
+            if (query) url += '?' + query;
+            window.location.href = url;
+        });
 
         $('#btn-filter').click(function() {
             table.ajax.reload();

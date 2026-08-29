@@ -52,8 +52,27 @@ class StockEntryController extends Controller
                     'fabricType',
                     'color',
                     'item'
-                ])->whereHas('stockEntry', function($q) {
+                ])->whereHas('stockEntry', function($q) use ($request) {
                     $q->where('entry_type', 'Finished Goods');
+
+                    if ($request->filled('date')) {
+                        try {
+                            $stockDate = Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
+                            $q->whereDate('stock_date', $stockDate);
+                        } catch (\Exception $e) {}
+                    }
+                    if ($request->filled('from_date')) {
+                        try {
+                            $fromDate = Carbon::createFromFormat('d-m-Y', $request->from_date)->format('Y-m-d');
+                            $q->whereDate('stock_date', '>=', $fromDate);
+                        } catch (\Exception $e) {}
+                    }
+                    if ($request->filled('to_date')) {
+                        try {
+                            $toDate = Carbon::createFromFormat('d-m-Y', $request->to_date)->format('Y-m-d');
+                            $q->whereDate('stock_date', '<=', $toDate);
+                        } catch (\Exception $e) {}
+                    }
                 });
 
                 if ($request->art_no) {
@@ -143,6 +162,14 @@ class StockEntryController extends Controller
                     return response()->json(['error' => 'Unauthorized'], 403);
                 }
                 $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType']);
+                
+                if ($request->filled('date')) {
+                    try {
+                        $stockDate = Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
+                        $query->whereDate('stock_date', $stockDate);
+                    } catch (\Exception $e) {}
+                }
+
                 if ($request->material_category) {
                     $query->whereHas('stockEntryItems', function ($q) use ($request) {
                         $q->where('store_category_id', $request->material_category);
@@ -642,31 +669,31 @@ class StockEntryController extends Controller
         return view('stock_entry.adjustment_logs', compact('logs'));
     }
 
-    public function exportFinishedGoods()
+    public function exportFinishedGoods(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
 
-        return Excel::download(new FinishedGoodsStockExport, 'finished_goods_stock_' . date('Ymd_His') . '.xlsx');
+        return Excel::download(new FinishedGoodsStockExport($request->all()), 'finished_goods_stock_' . date('Ymd_His') . '.xlsx');
     }
 
-    public function exportBarcode()
+    public function exportBarcode(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
 
-        return Excel::download(new BarcodeExport, 'barcode_export_' . date('Ymd_His') . '.xlsx');
+        return Excel::download(new BarcodeExport($request->all()), 'barcode_export_' . date('Ymd_His') . '.xlsx');
     }
 
-    public function exportRawMaterials()
+    public function exportRawMaterials(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-raw-materials')) {
             return unauthorizedRedirect();
         }
 
-        return Excel::download(new RawMaterialStockExport, 'raw_material_stock_' . date('Ymd_His') . '.xlsx');
+        return Excel::download(new RawMaterialStockExport($request->all()), 'raw_material_stock_' . date('Ymd_His') . '.xlsx');
     }
 
     public function importRawMaterials(Request $request)

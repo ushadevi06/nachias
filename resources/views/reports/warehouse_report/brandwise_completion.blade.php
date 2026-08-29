@@ -1,87 +1,65 @@
-<div class="mb-3 d-flex align-items-center" id="completionBreadcrumbs" style="display: none !important;">
-    <button class="btn btn-sm btn-outline-secondary me-2" onclick="renderCompletionRootLevel()" id="btnBackToCompletionOrders">
-        <i class="ri-arrow-left-line me-1"></i> Back to Completion Orders
+<div class="mb-3 d-flex align-items-center" id="brandwiseCompletionBreadcrumbs" style="display: none !important;">
+    <button class="btn btn-sm btn-outline-secondary me-2" onclick="renderBrandwiseCompletionBrandsLevel()" id="btnBackToCompletionBrands">
+        <i class="ri ri-arrow-left-line me-1"></i> Back to Brands
     </button>
-    <span class="text-dark fw-bold" id="completionBreadcrumbText">All Orders</span>
+    <span class="text-muted fw-bold" id="brandwiseCompletionBreadcrumbText">All Brands</span>
 </div>
 
 <div class="card-datatable table-responsive">
-    <table class="datatables-products table table-hover table-bordered align-middle" id="brandwiseCompletionTable" style="font-size: 0.85rem;">
-        <thead class="table-light" id="brandwiseCompletionThead">
+    <table class="datatables-products table table-hover border-top align-middle" id="brandwiseCompletionTable" style="font-size: 0.82rem;">
+        <thead class="table-light text-center">
             <tr>
-                <th style="width: 40px;">S.No</th>
-                <th class="text-center" style="min-width: 110px; white-space: nowrap;">Order Date</th>
-                <th style="min-width: 95px; white-space: nowrap;">Order No</th>
-                <th class="text-center" style="min-width: 110px; white-space: nowrap;">Delivery Date</th>
-                <th class="text-center" style="min-width: 100px;">Priority</th>
-                <th style="min-width: 190px;">Customer</th>
-                <th style="min-width: 130px;">Place</th>
-                <th style="min-width: 140px;">Brand</th>
-                <th class="text-center">Order Qty</th>
-                <th class="text-center">Invoiced Qty</th>
-                <th class="text-center">Pending Qty</th>
-                <th class="text-center" style="min-width: 110px;">Order Compltd %</th>
-                <th class="text-center" style="min-width: 130px;">Status</th>
-                <th class="text-center" style="min-width: 130px; white-space: nowrap;">Awaiting Art No</th>
-                <th style="min-width: 140px;">Action Required</th>
+                <th class="text-nowrap">S.NO</th>
+                <th class="text-nowrap">BRAND</th>
+                <th class="text-nowrap">ORDER RECEIVED</th>
+                <th class="text-nowrap">TOTAL QTY</th>
+                <th class="text-nowrap">TOTAL QTY INVOICED</th>
+                <th class="text-nowrap">COMPLETION %</th>
+                <th class="text-nowrap">PENDING QTY</th>
             </tr>
         </thead>
-        <tbody id="brandwiseCompletionTbody">
-            <tr>
-                <td colspan="15" class="text-center py-5">
-                    <div class="spinner-border text-primary me-2" role="status"></div>
-                    <span class="fw-bold text-primary align-middle">Loading Brand Wise Completion Report...</span>
-                </td>
-            </tr>
+        <tbody>
         </tbody>
     </table>
 </div>
 
 <style>
-    #brandwiseCompletionTable th,
-    #brandwiseCompletionTable td {
-        vertical-align: middle !important;
+    #brandwiseCompletionTable tbody tr:hover td {
+        background-color: rgba(105, 108, 255, 0.08) !important;
+        transition: all 0.2s ease-in-out;
     }
 </style>
 
 <script>
-let completionIsRoot = true;
+var currentCompletionBrandId = null;
+var currentCompletionBrandName = '';
+var currentCompletionSoId = null;
+var currentCompletionSoNo = '';
 
-function renderCompletionRootLevel() {
-    completionIsRoot = true;
-    $('#completionBreadcrumbs').attr('style', 'display: none !important;');
-
+function reinitBrandwiseCompletionTable() {
     if ($.fn.DataTable.isDataTable('#brandwiseCompletionTable')) {
-        $('#brandwiseCompletionTable').DataTable().destroy();
+        $('#brandwiseCompletionTable').DataTable().clear().destroy();
     }
+    $('#brandwiseCompletionTable').empty();
+}
 
-    $('#brandwiseCompletionThead').html(`
-        <tr>
-            <th style="width: 40px;">S.No</th>
-            <th class="text-center" style="min-width: 110px; white-space: nowrap;">Order Date</th>
-            <th style="min-width: 95px; white-space: nowrap;">Order No</th>
-            <th class="text-center" style="min-width: 110px; white-space: nowrap;">Delivery Date</th>
-            <th class="text-center" style="min-width: 100px;">Priority</th>
-            <th style="min-width: 190px;">Customer</th>
-            <th style="min-width: 130px;">Place</th>
-            <th style="min-width: 140px;">Brand</th>
-            <th class="text-center">Order Qty</th>
-            <th class="text-center">Invoiced Qty</th>
-            <th class="text-center">Pending Qty</th>
-            <th class="text-center" style="min-width: 110px;">Order Compltd %</th>
-            <th class="text-center" style="min-width: 130px;">Status</th>
-            <th class="text-center" style="min-width: 130px; white-space: nowrap;">Awaiting Art No</th>
-            <th style="min-width: 140px;">Action Required</th>
-        </tr>
-    `);
+function renderBrandwiseCompletionBrandsLevel() {
+    $('#brandwiseCompletionBreadcrumbs').attr('style', 'display: none !important;');
+    reinitBrandwiseCompletionTable();
 
-    $('#brandwiseCompletionTbody').html(`
-        <tr>
-            <td colspan="15" class="text-center py-5">
-                <div class="spinner-border text-primary me-2" role="status"></div>
-                <span class="fw-bold text-primary align-middle">Loading Brand Wise Completion Report...</span>
-            </td>
-        </tr>
+    $('#brandwiseCompletionTable').html(`
+        <thead class="table-light text-center">
+            <tr>
+                <th class="text-nowrap">S.NO</th>
+                <th class="text-nowrap">BRAND</th>
+                <th class="text-nowrap">ORDER RECEIVED</th>
+                <th class="text-nowrap">TOTAL QTY</th>
+                <th class="text-nowrap">TOTAL QTY INVOICED</th>
+                <th class="text-nowrap">COMPLETION %</th>
+                <th class="text-nowrap">PENDING QTY</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
     `);
 
     $('#brandwiseCompletionTable').DataTable({
@@ -98,110 +76,164 @@ function renderCompletionRootLevel() {
             }
         },
         columns: [
-            { data: 'sno', name: 'sno', className: 'text-center' },
-            { data: 'order_date', name: 'order_date', className: 'text-center' },
-            { data: 'order_no', name: 'order_no', className: 'fw-bold' },
-            { data: 'delivery_date', name: 'delivery_date', className: 'text-center' },
-            { data: 'priority', name: 'priority', className: 'text-center' },
-            { data: 'customer', name: 'customer' },
-            { data: 'place', name: 'place' },
+            { data: 'sno', name: 'sno', className: 'text-center', orderable: false },
             { data: 'brand', name: 'brand' },
-            { data: 'order_qty', name: 'order_qty', className: 'text-center' },
+            { data: 'orders_count', name: 'orders_count', className: 'text-center fw-bold' },
+            { data: 'total_qty', name: 'total_qty', className: 'text-center fw-bold' },
             { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
-            { data: 'pending_qty', name: 'pending_qty', className: 'text-center fw-bold text-danger' },
-            { data: 'compltd_percent', name: 'compltd_percent', className: 'text-center' },
-            { data: 'status', name: 'status', className: 'text-center' },
-            { data: 'awaiting_art_no', name: 'awaiting_art_no', className: 'text-center' },
-            { data: 'action_required', name: 'action_required' }
+            { data: 'completion_pct', name: 'completion_pct', className: 'text-center' },
+            { data: 'pending_qty', name: 'pending_qty', className: 'text-center' }
         ],
-        language: {
-            processing: '<div class="py-4"><div class="spinner-border text-primary me-2" role="status"></div> <span class="fw-bold text-primary align-middle">Loading Completion Data...</span></div>',
-            emptyTable: "No completion records found matching your filters",
-            zeroRecords: "No matching records found"
-        },
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
 }
 
-function drillDownToCompletionArtNos(soId, soNo) {
-    completionIsRoot = false;
-    $('#completionBreadcrumbs').removeAttr('style');
-    $('#completionBreadcrumbText').html('All Orders &gt; <span class="text-primary text-uppercase">ORDER #' + soNo + '</span> (Art No Breakdown)');
+function drillDownToBrandOrders(brandId, brandName) {
+    currentCompletionBrandId = brandId;
+    currentCompletionBrandName = brandName;
 
-    if ($.fn.DataTable.isDataTable('#brandwiseCompletionTable')) {
-        $('#brandwiseCompletionTable').DataTable().destroy();
-    }
+    $('#brandwiseCompletionBreadcrumbs').attr('style', 'display: flex !important;');
+    $('#brandwiseCompletionBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; Brand: <span class="text-primary fw-bold">${brandName}</span>`);
+    $('#btnBackToCompletionBrands').attr('onclick', 'renderBrandwiseCompletionBrandsLevel()');
 
-    $('#brandwiseCompletionThead').html(`
-        <tr>
-            <th>Art No</th>
-            <th>Item Name / SKU</th>
-            <th class="text-center">Ordered Qty</th>
-            <th class="text-center">Invoiced Qty</th>
-            <th class="text-center">Pending Qty</th>
-            <th class="text-center">Status</th>
-        </tr>
+    reinitBrandwiseCompletionTable();
+
+    $('#brandwiseCompletionTable').html(`
+        <thead class="table-light text-center">
+            <tr>
+                <th class="text-nowrap">S.NO</th>
+                <th class="text-nowrap">ORDER DATE</th>
+                <th class="text-nowrap">ORDER NO</th>
+                <th class="text-nowrap">CUSTOMER</th>
+                <th class="text-nowrap">TOTAL QTY</th>
+                <th class="text-nowrap">INVOICED QTY</th>
+                <th class="text-nowrap">PENDING QTY</th>
+                <th class="text-nowrap">STATUS</th>
+                <th class="text-nowrap">AWAITING ART NO</th>
+                <th class="text-nowrap">ACTION REQUIRED</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
     `);
 
-    $('#brandwiseCompletionTbody').html(`
-        <tr>
-            <td colspan="6" class="text-center py-5">
-                <div class="spinner-border text-primary me-2" role="status"></div>
-                <span class="fw-bold text-primary align-middle">Loading Art Nos for Order #${soNo}...</span>
-            </td>
-        </tr>
-    `);
-
-    $.ajax({
-        url: "{{ url('warehouse_reports/brandwise_completion_art_nos') }}",
-        type: "GET",
-        data: { so_id: soId },
-        dataType: "json",
-        success: function(response) {
-            if (response.status) {
-                let rowsHtml = '';
-                if (response.items && response.items.length > 0) {
-                    $.each(response.items, function(idx, item) {
-                        rowsHtml += `<tr>
-                            <td class="fw-bold text-primary">${item.art_no}</td>
-                            <td>${item.item_name}</td>
-                            <td class="text-center">${item.ordered_qty}</td>
-                            <td class="text-center">${item.invoiced_qty}</td>
-                            <td class="text-center fw-bold text-danger">${item.pending_qty}</td>
-                            <td class="text-center">${item.status}</td>
-                        </tr>`;
-                    });
-                } else {
-                    rowsHtml = '<tr><td colspan="6" class="text-center py-4 text-muted">No line-item Art Nos found for this order.</td></tr>';
-                }
-
-                $('#brandwiseCompletionTbody').html(rowsHtml);
-
-                $('#brandwiseCompletionTable').DataTable({
-                    autoWidth: false,
-                    paging: true,
-                    searching: true,
-                    ordering: true,
-                    info: true,
-                    lengthMenu: [10, 25, 50, 100],
-                    pageLength: 10,
-                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
-                });
+    $('#brandwiseCompletionTable').DataTable({
+        processing: true,
+        serverSide: true,
+        autoWidth: false,
+        ajax: {
+            url: "{{ url('warehouse_reports/brandwise_completion_orders') }}",
+            data: function (d) {
+                d.brand_id = brandId;
+                d.brand_name = brandName;
+                d.from_date = $('.start_date').val();
+                d.to_date = $('.end_date').val();
+                d.store_id = $('select[name="store_id"]').val();
             }
         },
-        error: function() {
-            $('#brandwiseCompletionTbody').html('<tr><td colspan="6" class="text-center text-danger py-4">Failed to load Art No breakdown. Please try again.</td></tr>');
-        }
+        columns: [
+            { data: 'sno', name: 'sno', className: 'text-center font-monospace' },
+            { data: 'order_date', name: 'order_date', className: 'text-center text-nowrap' },
+            { data: 'so_no', name: 'so_no', className: 'text-center fw-bold text-nowrap' },
+            { data: 'customer', name: 'customer' },
+            { data: 'total_qty', name: 'total_qty', className: 'text-center fw-bold' },
+            { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
+            { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+            { data: 'status', name: 'status', className: 'text-center' },
+            { data: 'awaiting_art_nos', name: 'awaiting_art_nos', className: 'text-center', orderable: false },
+            { data: 'action_required', name: 'action_required', orderable: false }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
     });
 }
 
-function openArtNoModal(soId, soNo) {
-    drillDownToCompletionArtNos(soId, soNo);
+function drillDownToBrandOrderArtNos(soId, soNo) {
+    currentCompletionSoId = soId;
+    currentCompletionSoNo = soNo;
+
+    $('#brandwiseCompletionBreadcrumbs').attr('style', 'display: flex !important;');
+    $('#brandwiseCompletionBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; Brand: <span class="text-secondary cursor-pointer" onclick="drillDownToBrandOrders(${currentCompletionBrandId}, '${currentCompletionBrandName.replace(/'/g, "\\'")}')">${currentCompletionBrandName}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; Order No: <span class="text-danger fw-bold">${soNo}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">Awaiting Art Numbers</span>`);
+    $('#btnBackToCompletionBrands').attr('onclick', `drillDownToBrandOrders(${currentCompletionBrandId}, '${currentCompletionBrandName.replace(/'/g, "\\'")}')`);
+
+    reinitBrandwiseCompletionTable();
+
+    $('#brandwiseCompletionTable').html(`
+        <thead class="text-center">
+            <tr>
+                <th style="width: 40px;">#</th>
+                <th>ART NO</th>
+                <th>ITEM NAME</th>
+                <th class="text-center">SLEEVE</th>
+                <th class="text-center">SIZE</th>
+                <th class="text-center">ORDERED QTY</th>
+                <th class="text-center">STATUS</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `);
+
+    $('#brandwiseCompletionTable').DataTable({
+        processing: true,
+        serverSide: true,
+        autoWidth: false,
+        ajax: {
+            url: "{{ url('warehouse_reports/order_processing_time_art_nos') }}",
+            data: function (d) {
+                d.so_id = soId;
+            }
+        },
+        columns: [
+            { data: 'sno', name: 'sno', className: 'text-center font-monospace', width: '5%' },
+            { data: 'art_no', name: 'art_no', width: '20%' },
+            { data: 'item_name', name: 'item_name', width: '35%' },
+            { data: 'sleeve', name: 'sleeve', className: 'text-center', width: '10%' },
+            { data: 'size', name: 'size', className: 'text-center', width: '10%' },
+            { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center fw-bold', width: '10%' },
+            { data: 'status', name: 'status', className: 'text-center', width: '10%' }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
+    });
 }
 
-$(document).ready(function() {
-    renderCompletionRootLevel();
+window.initBrandwiseCompletionTable = function() {
+    renderBrandwiseCompletionBrandsLevel();
+};
+function initBrandwiseCompletionTable() {
+    window.initBrandwiseCompletionTable();
+}
+
+if ($('#brandwise-completion').hasClass('active')) {
+    window.initBrandwiseCompletionTable();
+}
+
+$(document).on('click', '#brandwise-completion .view-brand-orders-link', function(e) {
+    e.preventDefault();
+    const brandId = $(this).data('brand-id');
+    const brandName = $(this).data('brand-name');
+    drillDownToBrandOrders(brandId, brandName);
+});
+
+$(document).on('click', '#brandwiseCompletionTable tbody tr', function(e) {
+    if ($(e.target).is('a') || $(e.target).is('button') || $(e.target).closest('a').length > 0 || $(e.target).closest('button').length > 0) {
+        return;
+    }
+    const link = $(this).find('.view-brand-orders-link');
+    if (link.length > 0) {
+        const brandId = link.data('brand-id');
+        const brandName = link.data('brand-name');
+        drillDownToBrandOrders(brandId, brandName);
+    }
+});
+
+$(document).on('click', '#brandwise-completion .view-awaiting-art-nos', function(e) {
+    e.preventDefault();
+    const soId = $(this).data('so-id');
+    const soNo = $(this).data('so-no');
+    drillDownToBrandOrderArtNos(soId, soNo);
 });
 </script>

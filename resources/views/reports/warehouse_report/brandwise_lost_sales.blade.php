@@ -15,12 +15,6 @@
             </tr>
         </thead>
         <tbody id="brandwiseLostSalesTbody">
-            <tr>
-                <td colspan="3" class="text-center py-5">
-                    <div class="spinner-border text-primary me-2" role="status"></div>
-                    <span class="fw-bold text-primary align-middle">Loading Brandwise Lost Sales...</span>
-                </td>
-            </tr>
         </tbody>
     </table>
 </div>
@@ -33,7 +27,7 @@
 </style>
 
 <script>
-let lostSalesIsRoot = true;
+var lostSalesIsRoot = true;
 
 function renderLostSalesBrandLevel() {
     lostSalesIsRoot = true;
@@ -51,14 +45,7 @@ function renderLostSalesBrandLevel() {
         </tr>
     `);
 
-    $('#brandwiseLostSalesTbody').html(`
-        <tr>
-            <td colspan="3" class="text-center py-5">
-                <div class="spinner-border text-primary me-2" role="status"></div>
-                <span class="fw-bold text-primary align-middle">Loading Brandwise Lost Sales...</span>
-            </td>
-        </tr>
-    `);
+    $('#brandwiseLostSalesTbody').empty();
 
     $('#brandwiseLostSalesTable').DataTable({
         processing: true,
@@ -97,6 +84,7 @@ function drillDownToLostSalesBrand(brandName) {
     if ($.fn.DataTable.isDataTable('#brandwiseLostSalesTable')) {
         $('#brandwiseLostSalesTable').DataTable().destroy();
     }
+    $('#brandwiseLostSalesTbody').empty();
 
     $('#brandwiseLostSalesThead').html(`
         <tr>
@@ -111,66 +99,49 @@ function drillDownToLostSalesBrand(brandName) {
         </tr>
     `);
 
-    $('#brandwiseLostSalesTbody').html(`
-        <tr>
-            <td colspan="8" class="text-center py-5">
-                <div class="spinner-border text-primary me-2" role="status"></div>
-                <span class="fw-bold text-primary align-middle">Loading Missed Orders for ${brandName}...</span>
-            </td>
-        </tr>
-    `);
-
-    $.ajax({
-        url: "{{ url('warehouse_reports/brandwise_lost_sales_orders') }}",
-        type: "GET",
-        data: {
-            brand_name: brandName,
-            from_date: $('.start_date').val(),
-            to_date: $('.end_date').val(),
-            store_id: $('select[name="store_id"]').val()
-        },
-        dataType: "json",
-        success: function(response) {
-            if (response.status) {
-                let rowsHtml = '';
-                if (response.orders && response.orders.length > 0) {
-                    $.each(response.orders, function(idx, order) {
-                        rowsHtml += `<tr>
-                            <td>${order.so_no}</td>
-                            <td>${order.customer}</td>
-                            <td class="text-center">${order.so_date}</td>
-                            <td class="text-center">${order.ordered_qty}</td>
-                            <td class="text-center">${order.invoiced_qty}</td>
-                            <td class="text-center">${order.lost_qty}</td>
-                            <td class="text-center">${order.lost_value}</td>
-                            <td>${order.reason}</td>
-                        </tr>`;
-                    });
-                } else {
-                    rowsHtml = '<tr><td colspan="8" class="text-center py-4 text-muted">No missed sales orders found for this brand.</td></tr>';
-                }
-
-                $('#brandwiseLostSalesTbody').html(rowsHtml);
-
-                $('#brandwiseLostSalesTable').DataTable({
-                    autoWidth: false,
-                    paging: true,
-                    searching: true,
-                    ordering: true,
-                    info: true,
-                    lengthMenu: [10, 25, 50, 100],
-                    pageLength: 10,
-                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
-                });
+    $('#brandwiseLostSalesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        autoWidth: false,
+        ajax: {
+            url: "{{ url('warehouse_reports/brandwise_lost_sales_orders') }}",
+            type: "GET",
+            data: function (d) {
+                d.brand_name = brandName;
+                d.from_date = $('.start_date').val();
+                d.to_date = $('.end_date').val();
+                d.store_id = $('select[name="store_id"]').val();
             }
         },
-        error: function() {
-            $('#brandwiseLostSalesTbody').html('<tr><td colspan="8" class="text-center text-danger py-4">Failed to load order breakdown. Please try again.</td></tr>');
-        }
+        columns: [
+            { data: 'so_no', name: 'so_no' },
+            { data: 'customer', name: 'customer' },
+            { data: 'so_date', name: 'so_date', className: 'text-center' },
+            { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center' },
+            { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
+            { data: 'lost_qty', name: 'lost_qty', className: 'text-center' },
+            { data: 'lost_value', name: 'lost_value', className: 'text-center' },
+            { data: 'reason', name: 'reason' }
+        ],
+        language: {
+            processing: '<div class="py-4"><div class="spinner-border text-primary me-2" role="status"></div> <span class="fw-bold text-primary align-middle">Loading Sales Orders...</span></div>',
+            emptyTable: "No missed sales orders found for this brand",
+            zeroRecords: "No matching sales orders found"
+        },
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        lengthMenu: [10, 25, 50, 100],
+        pageLength: 10
     });
 }
 
-$(document).ready(function() {
+window.initBrandwiseLostSalesTable = function() {
     renderLostSalesBrandLevel();
-});
+};
+function initBrandwiseLostSalesTable() {
+    window.initBrandwiseLostSalesTable();
+}
+
+if ($('#brandwise-lost-sales').hasClass('active')) {
+    window.initBrandwiseLostSalesTable();
+}
 </script>

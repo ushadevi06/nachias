@@ -1,7 +1,7 @@
 @extends('layouts.common')
 @section('title', ($invoice ? 'Edit' : 'Add') . ' Sales Invoice - ' . env('WEBSITE_NAME'))
 @section('content')
-<div class="container-xxl section-padding">
+<div class="container-xxl section-padding"> 
     <div class="row">
         <div class="col-lg-12">
             <div class="col-lg-12">
@@ -19,6 +19,7 @@
             </div>
             <form action="{{ isset($invoice) ? url('sales_invoices/add/' . $invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data" novalidate>
                 @csrf
+                <div id="top-pdf-fields-container"></div>
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -323,34 +324,34 @@
                                                         ->value(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
                                                 }
 
-                                                $stockQty += (float)$item->quantity;
+                                                $stockQty += (float)($item->quantity ?? 0);
 
                                                 return [
-                                                    'brand_id' => $item->brand_id,
+                                                    'brand_id' => $item->brand_id ?? null,
                                                     'brand_name' => $brandName ?: '',
-                                                    'item_id' => $item->item_id,
+                                                    'item_id' => $item->item_id ?? null,
                                                     'item_name' => $itemName ?: '',
                                                     'sleeve_type' => $sleeveType ?: '',
-                                                    'color_id' => $item->color_id,
-                                                    'color_name' => $item->api_color ?: ($item->color ? $item->color->color_name : ''),
-                                                    'api_color' => $item->api_color,
-                                                    'size' => $item->size,
-                                                    'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
-                                                    'art_no' => $item->art_no,
-                                                    'hsn_sac' => $item->hsn_sac,
-                                                    'uom_id' => $item->uom_id,
+                                                    'color_id' => $item->color_id ?? null,
+                                                    'color_name' => $item->api_color ?? ($item->color ? $item->color->color_name : ''),
+                                                    'api_color' => $item->api_color ?? null,
+                                                    'size' => $item->size ?? null,
+                                                    'size_name' => $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? ''),
+                                                    'art_no' => $item->art_no ?? null,
+                                                    'hsn_sac' => $item->hsn_sac ?? null,
+                                                    'uom_id' => $item->uom_id ?? null,
                                                     'uom_code' => $item->uom_id ?: '',
-                                                    'quantity' => $item->quantity,
+                                                    'quantity' => $item->quantity ?? 0,
                                                     'max_qty' => $maxQty,
                                                     'stock_qty' => (float)$stockQty,
-                                                    'rate' => $item->rate,
-                                                    'mrp' => $item->mrp,
-                                                    'amount' => $item->amount,
-                                                    'sku' => $item->sku,
-                                                    'stock_entry_item_id' => $item->stock_entry_item_id,
-                                                    'is_extra' => $item->is_extra,
+                                                    'rate' => $item->rate ?? 0,
+                                                    'mrp' => $item->mrp ?? 0,
+                                                    'amount' => $item->amount ?? 0,
+                                                    'sku' => $item->sku ?? null,
+                                                    'stock_entry_item_id' => $item->stock_entry_item_id ?? null,
+                                                    'is_extra' => $item->is_extra ?? 0,
                                                     'is_open_order' => (isset($invoice) && $invoice->salesOrder && $invoice->salesOrder->order_type == 'Open') ? 1 : 0,
-                                                    'id' => $item->id,
+                                                    'id' => $item->id ?? null,
                                                 ];
                                             })->toArray();
                                         }
@@ -373,8 +374,8 @@
                                                             $rowObj->api_color = $stockItem->api_color ?? '';
                                                             $rowObj->color_name = $stockItem->color->color_name ?? '';
                                                             $rowObj->art_no = $stockItem->art_no ?? '';
-                                                            $rowObj->size_name = $stockItem->size;
-                                                            $rowObj->stock_qty = ($stockItem->qty_in - ($stockItem->qty_out ?? 0)) + (float)$rowObj->quantity;
+                                                            $rowObj->size_name = $rowObj->size ?? ($stockItem->size ?? '');
+                                                            $rowObj->stock_qty = ($stockItem->qty_in - ($stockItem->qty_out ?? 0)) + (float)($rowObj->quantity ?? 0);
                                                         }
                                                     }
                                                     $openOrderItems[$index] = $rowObj;
@@ -399,21 +400,21 @@
                                                 @endif
                                                 <input type="hidden" class="invoice-item-db-id" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
+                                                <input type="hidden" class="brand-name" value="{{ $row->brand_name ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][item_id]" class="item-id" value="{{ $row->item_id ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name" value="{{ $row->item_name ?? '' }}">
+                                                <input type="hidden" class="item-name" value="{{ $row->item_name ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][sleeve_type]" class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][sku]" class="sku" value="{{ $row->sku ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][max_qty]" class="max-qty" value="{{ $row->max_qty ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty" value="{{ $row->stock_qty ?? '' }}">
+                                                <input type="hidden" class="max-qty" value="{{ $row->max_qty ?? '' }}">
+                                                <input type="hidden" class="stock-qty" value="{{ $row->stock_qty ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][is_extra]" class="is-extra" value="{{ $row->is_extra ?? '' }}">
                                             </td>
                                             <td>
                                                 <span class="color-text">{{ !empty($row->api_color) ? $row->api_color : ($row->color_name ?? '-') }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id" value="{{ $row->color_id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][api_color]" class="api-color" value="{{ $row->api_color ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name" value="{{ $row->color_name ?? '' }}">
+                                                <input type="hidden" class="color-name" value="{{ $row->color_name ?? '' }}">
                                             </td>
                                             <td>
                                                 <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
@@ -422,12 +423,12 @@
                                             <td>
                                                 <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code" value="{{ $row->uom_code ?? '' }}">
+                                                <input type="hidden" class="uom-code" value="{{ $row->uom_code ?? '' }}">
                                             </td>
                                             <td>
                                                 <span class="size-text">{{ $row->size_name ?? '' }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][size]" class="size-id" value="{{ $row->size ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name" value="{{ $row->size_name ?? '' }}">
+                                                <input type="hidden" class="size-name" value="{{ $row->size_name ?? '' }}">
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
@@ -637,21 +638,27 @@
                                     <h5>Invoice Details</h5>
                                 </div>
                                 <div class="row g-4">
-                                    <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
-                                            <select name="invoice_status" id="invoice_status" class="form-select select2 @error('invoice_status') is-invalid @enderror" data-placeholder="Select Invoice Status">
-                                                <option value="">Select Invoice Status</option>
-                                                <option value="Draft" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Draft' ? 'selected' : '' }} selected>Draft</option>
-                                                <option value="Unpaid/Credit" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Unpaid/Credit' ? 'selected' : '' }}>Unpaid/Credit</option>
-                                                <option value="Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Paid' ? 'selected' : '' }}>Paid</option>
-                                                <option value="Partially Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
-                                            </select>
-                                            <label for="invoice_status">Invoice Status <span class="text-danger">*</span></label>
-                                            @error('invoice_status')
-                                                <div class="text-danger small mt-1">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
+                                     <div class="col-md-6">
+                                         <div class="form-floating form-floating-outline">
+                                             @php
+                                                 $currentInvStatus = old('invoice_status');
+                                                 if (empty($currentInvStatus)) {
+                                                     $currentInvStatus = isset($invoice) && !empty($invoice->invoice_status) ? $invoice->invoice_status : 'Draft';
+                                                 }
+                                             @endphp
+                                             <select name="invoice_status" id="invoice_status" class="form-select select2 @error('invoice_status') is-invalid @enderror" data-placeholder="Select Invoice Status">
+                                                 <option value="">Select Invoice Status</option>
+                                                 <option value="Draft" {{ $currentInvStatus == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                                 <option value="Unpaid/Credit" {{ $currentInvStatus == 'Unpaid/Credit' ? 'selected' : '' }}>Unpaid/Credit</option>
+                                                 <option value="Paid" {{ $currentInvStatus == 'Paid' ? 'selected' : '' }}>Paid</option>
+                                                 <option value="Partially Paid" {{ $currentInvStatus == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
+                                             </select>
+                                             <label for="invoice_status">Invoice Status <span class="text-danger">*</span></label>
+                                             @error('invoice_status')
+                                                 <div class="text-danger small mt-1">{{ $message }}</div>
+                                             @enderror
+                                         </div>
+                                     </div>
 
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
@@ -1927,6 +1934,17 @@
         });
 
         $('.common-form').on('submit', function(e) {
+            // Guarantee all disabled select, input, textarea fields across the form are re-enabled for validation & submission
+            $(this).find('select, input, textarea').prop('disabled', false).removeAttr('disabled');
+
+            // Sync PDF checkboxes to top of form so PHP receives them BEFORE max_input_vars limit
+            $('#top-pdf-fields-container').empty();
+            $('input[name="show_fields[]"]:checked').each(function() {
+                $('<input>').attr({ type: 'hidden', name: 'show_fields[]', value: $(this).val() }).appendTo('#top-pdf-fields-container');
+            });
+            $('input[name="delivery_show_fields[]"]:checked').each(function() {
+                $('<input>').attr({ type: 'hidden', name: 'delivery_show_fields[]', value: $(this).val() }).appendTo('#top-pdf-fields-container');
+            });
             let hasError = false;
 
             // Validate regular items
@@ -1999,12 +2017,14 @@
                 } else {
                     $('#invoice-preloader').show();
                 }
+
                 if (typeof calculateTotals === 'function') {
                     calculateTotals();
                 }
                 var form = this;
                 setTimeout(function() {
                     $(form).data('ready-to-submit', true);
+                    $(form).find('select, input, textarea').prop('disabled', false);
                     form.submit();
                 }, 500);
             }
@@ -2713,7 +2733,7 @@
 
                 // Re-enable disabled elements right before form submit so Laravel receives all values and validation passes
                 $('form.common-form').on('submit', function() {
-                    $(this).find('select, input[type="checkbox"], input[type="radio"], input[type="file"], .flatpickr-input, .date-picker, input[name="inv_date"], input[name="due_date"], input[name="tran_doc_date"]').prop('disabled', false);
+                    $(this).find('select, input, textarea').prop('disabled', false);
                 });
             }
         });

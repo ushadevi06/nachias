@@ -59,9 +59,9 @@
                     <button type="submit" class="btn btn-primary w-100 rounded-pill">
                         <i class="ri ri-search-line me-1"></i> Search
                     </button>
-                    <a href="{{ url('sales_marketing_reports') }}" class="btn btn-outline-light w-100 rounded-pill border">
+                    <button type="button" id="btn-reset-report" class="btn btn-outline-light w-100 rounded-pill border">
                         <i class="ri ri-refresh-line me-1"></i> Reset
-                    </a>
+                    </button>
                 </div>
             </form>
         </div>
@@ -361,43 +361,181 @@ document.addEventListener('DOMContentLoaded', function() {
 @section('scripts')
 <script>
 $(document).ready(function() {
-    $('#salesMarketingReportForm').on('submit', function(e) {
-        e.preventDefault();
-        const form = $(this);
-        const submitBtn = form.find('button[type="submit"]');
-        const originalBtnHtml = submitBtn.html();
+    const tableConfigs = {
+        'order-report': {
+            tableId: '#orderReportTable',
+            type: 'order-report',
+            columns: [
+                { data: 'so_no', name: 'so_no', className: 'fw-bold' },
+                { data: 'so_date', name: 'so_date', className: 'text-nowrap' },
+                { data: 'customer', name: 'customer' },
+                { data: 'item', name: 'item' },
+                { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
+                { data: 'status', name: 'status', className: 'text-center' }
+            ]
+        },
+        'pending-report': {
+            tableId: '#pendingReportTable',
+            type: 'pending-report',
+            columns: [
+                { data: 'customer', name: 'customer' },
+                { data: 'item', name: 'item' },
+                { data: 'ord_qty', name: 'ord_qty', className: 'text-center' },
+                { data: 'bal_qty', name: 'bal_qty', className: 'text-center fw-bold text-danger' }
+            ]
+        },
+        'incentive-report': {
+            tableId: '#incentiveReportTable',
+            type: 'incentive-report',
+            columns: [
+                { data: 'zone', name: 'zone' },
+                { data: 'agent', name: 'agent' },
+                { data: 'total_sales', name: 'total_sales', className: 'text-end fw-bold' },
+                { data: 'incentive_pc', name: 'incentive_pc', className: 'text-center' },
+                { data: 'incentive_amt', name: 'incentive_amt', className: 'text-end fw-bold text-success' }
+            ]
+        },
+        'credit-note-report': {
+            tableId: '#creditNoteReportTable',
+            type: 'credit-note-report',
+            columns: [
+                { data: 'note_no', name: 'note_no', className: 'fw-bold' },
+                { data: 'note_date', name: 'note_date', className: 'text-nowrap' },
+                { data: 'customer', name: 'customer' },
+                { data: 'zone', name: 'zone' },
+                { data: 'agent', name: 'agent' },
+                { data: 'reason', name: 'reason' },
+                { data: 'sub_total', name: 'sub_total', className: 'text-end' },
+                { data: 'discount', name: 'discount', className: 'text-end text-danger' },
+                { data: 'tax_amount', name: 'tax_amount', className: 'text-end' },
+                { data: 'other_charges', name: 'other_charges', className: 'text-end' },
+                { data: 'grand_total', name: 'grand_total', className: 'text-end fw-bold text-success' },
+                { data: 'status', name: 'status', className: 'text-center' }
+            ]
+        },
+        'despatch-report': {
+            tableId: '#despatchReportTable',
+            type: 'despatch-report',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center font-monospace' },
+                { data: 'so_no', name: 'so_no', className: 'fw-bold text-primary' },
+                { data: 'order_no', name: 'order_no' },
+                { data: 'order_type', name: 'order_type' },
+                { data: 'so_date', name: 'so_date', className: 'text-nowrap' },
+                { data: 'agent', name: 'agent' },
+                { data: 'customer', name: 'customer' },
+                { data: 'place', name: 'place' },
+                { data: 'zone', name: 'zone' },
+                { data: 'dhoti_qty', name: 'dhoti_qty', className: 'text-center' },
+                { data: 'white_qty', name: 'white_qty', className: 'text-center' },
+                { data: 'core_qty', name: 'core_qty', className: 'text-center' },
+                { data: 'bravo_qty', name: 'bravo_qty', className: 'text-center' },
+                { data: 'deal_qty', name: 'deal_qty', className: 'text-center' },
+                { data: 'formal_qty', name: 'formal_qty', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center fw-bold' },
+                { data: 'delivery_date', name: 'delivery_date', className: 'text-nowrap' },
+                { data: 'status', name: 'status', className: 'text-center' },
+                { data: 'delivered_qty', name: 'delivered_qty', className: 'text-center' },
+                { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+                { data: 'partial_d_date', name: 'partial_d_date', className: 'text-nowrap' },
+                { data: 'despatch_complete_date', name: 'despatch_complete_date', className: 'text-nowrap' },
+                { data: 'reason', name: 'reason' }
+            ]
+        },
+        'comparison-report': {
+            tableId: '#comparisonReportTable',
+            type: 'comparison-report',
+            columns: [
+                { data: 'month_name', name: 'month_name' },
+                { data: 'prev_year_sales', name: 'prev_year_sales', className: 'text-end' },
+                { data: 'curr_year_sales', name: 'curr_year_sales', className: 'text-end' },
+                { data: 'growth_pc', name: 'growth_pc', className: 'text-center' }
+            ]
+        },
+        'outstanding-report': {
+            tableId: '#outstandingReportTable',
+            type: 'outstanding-report',
+            columns: [
+                { data: 'zone', name: 'zone' },
+                { data: 'customer', name: 'customer' },
+                { data: 'bills_count', name: 'bills_count', className: 'text-center' },
+                { data: 'total_sales', name: 'total_sales', className: 'text-end' },
+                { data: 'received', name: 'received', className: 'text-end' },
+                { data: 'outstanding', name: 'outstanding', className: 'text-end' }
+            ]
+        }
+    };
 
-        submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...').prop('disabled', true);
-        $('.tab-content').css('opacity', '0.6');
+    function loadActiveTabTable(tabPaneId) {
+        const config = tableConfigs[tabPaneId];
+        if (!config) return;
 
-        $.ajax({
-            url: form.attr('action'),
-            method: 'GET',
-            data: form.serialize(),
-            dataType: 'json',
-            success: function(response) {
-                $.each(response, function(tabId, html) {
-                    const targetTab = $('#' + tabId);
-                    if (targetTab.length) {
-                        targetTab.html(html);
-                    }
-                });
-                
-                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-                    tooltipTriggerList.map(function (tooltipTriggerEl) {
-                        return new bootstrap.Tooltip(tooltipTriggerEl)
-                    });
+        const tableElem = $(config.tableId);
+        if (!tableElem.length) return;
+
+        if ($.fn.DataTable.isDataTable(config.tableId)) {
+            tableElem.DataTable().ajax.reload();
+            return;
+        }
+
+        tableElem.DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: {
+                url: "{{ url('sales_marketing_reports/ajax') }}/" + config.type,
+                type: "GET",
+                data: function(d) {
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
+                    d.customer_id = $('select[name="customer_id"]').val();
+                    d.agent_id = $('select[name="agent_id"]').val();
                 }
             },
-            error: function() {
-                alert('An error occurred while fetching the report data. Please try again.');
-            },
-            complete: function() {
-                submitBtn.html(originalBtnHtml).prop('disabled', false);
-                $('.tab-content').css('opacity', '1');
-            }
+            columns: config.columns,
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            lengthMenu: [10, 25, 50, 100],
+            pageLength: 10
         });
+    }
+
+    function handleTabActivation(targetId) {
+        if (!targetId) return;
+        const activeTabId = targetId.replace('#', '');
+        loadActiveTabTable(activeTabId);
+    }
+
+    // Initialize Active Tab on Page Load
+    const initialActiveTab = $('.tab-pane.active').attr('id') || 'order-report';
+    handleTabActivation(initialActiveTab);
+
+    // Delegated Tab switch listener
+    $(document).on('shown.bs.tab', '[data-bs-toggle="tab"]', function (e) {
+        const $btn = $(e.target).closest('[data-bs-toggle="tab"]');
+        const targetId = $btn.attr('data-bs-target') || $btn.attr('href');
+        handleTabActivation(targetId);
+    });
+
+    // Form Filter Submit listener
+    $('#salesMarketingReportForm').on('submit', function(e) {
+        e.preventDefault();
+        const activeTabId = $('.tab-pane.active').attr('id') || 'order-report';
+        const config = tableConfigs[activeTabId];
+        if (config && $.fn.DataTable.isDataTable(config.tableId)) {
+            $(config.tableId).DataTable().ajax.reload();
+        } else {
+            loadActiveTabTable(activeTabId);
+        }
+    });
+
+    // Reset Button Handler (matches Warehouse Report pattern)
+    $(document).on('click', '#btn-reset-report', function(e) {
+        e.preventDefault();
+        $('.start_date').val('');
+        $('.end_date').val('');
+        $('select[name="customer_id"]').val('').trigger('change');
+        $('select[name="agent_id"]').val('').trigger('change');
+        $('#salesMarketingReportForm').trigger('submit');
     });
 
     // Export Handlers

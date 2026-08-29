@@ -9,6 +9,7 @@
             </div>
             <form action="{{ isset($invoice) ? url('sales_invoices/add/' . $invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
+                <div id="top-pdf-fields-container"></div>
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -315,33 +316,33 @@
                                                         ->value(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
                                                 }
 
-                                                $stockQty += (float)$item->quantity;
+                                                $stockQty += (float)($item->quantity ?? 0);
 
                                                 return [
-                                                    'brand_id' => $item->brand_id,
+                                                    'brand_id' => $item->brand_id ?? null,
                                                     'brand_name' => $brandName ?: '',
-                                                    'item_id' => $item->item_id,
+                                                    'item_id' => $item->item_id ?? null,
                                                     'item_name' => $itemName ?: '',
                                                     'sleeve_type' => $sleeveType ?: '',
-                                                    'color_id' => $item->color_id,
-                                                    'color_name' => $item->api_color ?: ($item->color ? $item->color->color_name : ''),
-                                                    'api_color' => $item->api_color,
-                                                    'size' => $item->size,
-                                                    'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
-                                                    'art_no' => $item->art_no,
-                                                    'hsn_sac' => $item->hsn_sac,
-                                                    'uom_id' => $item->uom_id,
+                                                    'color_id' => $item->color_id ?? null,
+                                                    'color_name' => $item->api_color ?? ($item->color ? $item->color->color_name : ''),
+                                                    'api_color' => $item->api_color ?? null,
+                                                    'size' => $item->size ?? null,
+                                                    'size_name' => $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? ''),
+                                                    'art_no' => $item->art_no ?? null,
+                                                    'hsn_sac' => $item->hsn_sac ?? null,
+                                                    'uom_id' => $item->uom_id ?? null,
                                                     'uom_code' => $item->uom_id ?: '',
-                                                    'quantity' => $item->quantity,
+                                                    'quantity' => $item->quantity ?? 0,
                                                     'max_qty' => $maxQty,
                                                     'stock_qty' => (float)$stockQty,
-                                                    'rate' => $item->rate,
-                                                    'mrp' => $item->mrp,
-                                                    'amount' => $item->amount,
-                                                    'sku' => $item->sku,
-                                                    'stock_entry_item_id' => $item->stock_entry_item_id,
-                                                    'is_extra' => $item->is_extra,
-                                                    'id' => $item->id,
+                                                    'rate' => $item->rate ?? 0,
+                                                    'mrp' => $item->mrp ?? 0,
+                                                    'amount' => $item->amount ?? 0,
+                                                    'sku' => $item->sku ?? null,
+                                                    'stock_entry_item_id' => $item->stock_entry_item_id ?? null,
+                                                    'is_extra' => $item->is_extra ?? 0,
+                                                    'id' => $item->id ?? null,
                                                 ];
                                             })->toArray();
                                         }
@@ -364,8 +365,8 @@
                                                             $rowObj->api_color = $stockItem->api_color ?? '';
                                                             $rowObj->color_name = $stockItem->color->color_name ?? '';
                                                             $rowObj->art_no = $stockItem->art_no ?? '';
-                                                            $rowObj->size_name = $stockItem->size;
-                                                            $rowObj->stock_qty = ($stockItem->qty_in - ($stockItem->qty_out ?? 0)) + (float)$rowObj->quantity;
+                                                            $rowObj->size_name = $rowObj->size ?? ($stockItem->size ?? '');
+                                                            $rowObj->stock_qty = ($stockItem->qty_in - ($stockItem->qty_out ?? 0)) + (float)($rowObj->quantity ?? 0);
                                                         }
                                                     }
                                                     $openOrderItems[$index] = $rowObj;
@@ -618,21 +619,27 @@
                                     <h5>Invoice Details</h5>
                                 </div>
                                 <div class="row g-4">
-                                    <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
-                                            <select name="invoice_status" id="invoice_status" class="form-select select2 @error('invoice_status') is-invalid @enderror" data-placeholder="Select Invoice Status">
-                                                <option value="">Select Invoice Status</option>
-                                                <option value="Draft" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Draft' ? 'selected' : '' }}>Draft</option>
-                                                <option value="Unpaid/Credit" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Unpaid/Credit' ? 'selected' : '' }}>Unpaid/Credit</option>
-                                                <option value="Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Paid' ? 'selected' : '' }}>Paid</option>
-                                                <option value="Partially Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
-                                            </select>
-                                            <label for="invoice_status">Invoice Status <span class="text-danger">*</span></label>
-                                            @error('invoice_status')
-                                                <div class="text-danger small mt-1">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
+                                     <div class="col-md-6">
+                                         <div class="form-floating form-floating-outline">
+                                             @php
+                                                 $currentInvStatus = old('invoice_status');
+                                                 if (empty($currentInvStatus)) {
+                                                     $currentInvStatus = isset($invoice) && !empty($invoice->invoice_status) ? $invoice->invoice_status : 'Draft';
+                                                 }
+                                             @endphp
+                                             <select name="invoice_status" id="invoice_status" class="form-select select2 @error('invoice_status') is-invalid @enderror" data-placeholder="Select Invoice Status">
+                                                 <option value="">Select Invoice Status</option>
+                                                 <option value="Draft" {{ $currentInvStatus == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                                 <option value="Unpaid/Credit" {{ $currentInvStatus == 'Unpaid/Credit' ? 'selected' : '' }}>Unpaid/Credit</option>
+                                                 <option value="Paid" {{ $currentInvStatus == 'Paid' ? 'selected' : '' }}>Paid</option>
+                                                 <option value="Partially Paid" {{ $currentInvStatus == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
+                                             </select>
+                                             <label for="invoice_status">Invoice Status <span class="text-danger">*</span></label>
+                                             @error('invoice_status')
+                                                 <div class="text-danger small mt-1">{{ $message }}</div>
+                                             @enderror
+                                         </div>
+                                     </div>
 
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
@@ -734,69 +741,93 @@
                                             <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                         </div>
                                     </div>
-                                    <!-- Show Fields in Customer Invoice PDF -->
-                                    <div class="border-top pt-5 mt-5">
-                                        <h6 class="fw-bold mb-2">Show in Customer Invoice PDF</h6>
-                                        <div class="row">
-                                            @php
-                                                $selected_fields = old('show_fields', isset($invoice->show_fields) ? $invoice->show_fields : ['amount', 'discount', 'tax', 'subtotal', 'grandtotal','mrp','price']);
-                                            @endphp
-                                            <div class="col-md-6 col-lg-4">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_amount" name="show_fields[]" value="amount" {{ in_array('amount', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_amount">Show Amount</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6 col-lg-4">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_discount" name="show_fields[]" value="discount" {{ in_array('discount', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_discount">Show Discount</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6 col-lg-4">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_tax" name="show_fields[]" value="tax" {{ in_array('tax', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_tax">Show Tax (GST/IGST)</label>
-                                                </div>
-                                            </div>
+                                     <!-- Show Fields in Customer Invoice PDF -->
+                                     <div class="border-top pt-5 mt-5">
+                                         <h6 class="fw-bold mb-2">Show in Customer Invoice PDF</h6>
+                                         <div class="row">
+                                             @php
+                                                 $selected_fields = null;
+                                                 if (session()->has('_old_input')) {
+                                                     $selected_fields = old('show_fields');
+                                                 }
+                                                 if ($selected_fields === null && isset($invoice)) {
+                                                     $selected_fields = $invoice->show_fields;
+                                                 }
+                                                 if (is_string($selected_fields)) {
+                                                     $selected_fields = json_decode($selected_fields, true);
+                                                 }
+                                                 if ($selected_fields === null || !is_array($selected_fields)) {
+                                                     $selected_fields = ['amount', 'discount', 'tax', 'subtotal', 'grandtotal', 'mrp', 'price'];
+                                                 }
+                                             @endphp
+                                             <div class="col-md-6 col-lg-4">
+                                                 <div class="form-check">
+                                                     <input class="form-check-input" type="checkbox" id="show_amount" name="show_fields[]" value="amount" {{ in_array('amount', $selected_fields) ? 'checked' : '' }}>
+                                                     <label class="form-check-label" for="show_amount">Show Amount</label>
+                                                 </div>
+                                             </div>
+                                             <div class="col-md-6 col-lg-4">
+                                                 <div class="form-check">
+                                                     <input class="form-check-input" type="checkbox" id="show_discount" name="show_fields[]" value="discount" {{ in_array('discount', $selected_fields) ? 'checked' : '' }}>
+                                                     <label class="form-check-label" for="show_discount">Show Discount</label>
+                                                 </div>
+                                             </div>
+                                             <div class="col-md-6 col-lg-4">
+                                                 <div class="form-check">
+                                                     <input class="form-check-input" type="checkbox" id="show_tax" name="show_fields[]" value="tax" {{ in_array('tax', $selected_fields) ? 'checked' : '' }}>
+                                                     <label class="form-check-label" for="show_tax">Show Tax (GST/IGST)</label>
+                                                 </div>
+                                             </div>
 
-                                            <div class="col-md-6 col-lg-4 mt-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_subtotal" name="show_fields[]" value="subtotal" {{ in_array('subtotal', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_subtotal">Show Sub Total</label>
-                                                </div>
-                                            </div>
+                                             <div class="col-md-6 col-lg-4 mt-2">
+                                                 <div class="form-check">
+                                                     <input class="form-check-input" type="checkbox" id="show_subtotal" name="show_fields[]" value="subtotal" {{ in_array('subtotal', $selected_fields) ? 'checked' : '' }}>
+                                                     <label class="form-check-label" for="show_subtotal">Show Sub Total</label>
+                                                 </div>
+                                             </div>
 
-                                            <div class="col-md-6 col-lg-4 mt-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_grandtotal" name="show_fields[]" value="grandtotal" {{ in_array('grandtotal', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_grandtotal">Show Grand Total</label>
-                                                </div>
-                                            </div>
-            
-                                            <div class="col-md-6 col-lg-4 mt-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_mrp" name="show_fields[]" value="mrp" {{ in_array('mrp', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_mrp">Show MRP</label>
-                                                </div>
-                                            </div>
+                                             <div class="col-md-6 col-lg-4 mt-2">
+                                                 <div class="form-check">
+                                                     <input class="form-check-input" type="checkbox" id="show_grandtotal" name="show_fields[]" value="grandtotal" {{ in_array('grandtotal', $selected_fields) ? 'checked' : '' }}>
+                                                     <label class="form-check-label" for="show_grandtotal">Show Grand Total</label>
+                                                 </div>
+                                             </div>
+             
+                                             <div class="col-md-6 col-lg-4 mt-2">
+                                                 <div class="form-check">
+                                                     <input class="form-check-input" type="checkbox" id="show_mrp" name="show_fields[]" value="mrp" {{ in_array('mrp', $selected_fields) ? 'checked' : '' }}>
+                                                     <label class="form-check-label" for="show_mrp">Show MRP</label>
+                                                 </div>
+                                             </div>
 
-                                            <div class="col-md-6 col-lg-4 mt-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_price" name="show_fields[]" value="price" {{ in_array('price', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_price">Show Price</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                             <div class="col-md-6 col-lg-4 mt-2">
+                                                 <div class="form-check">
+                                                     <input class="form-check-input" type="checkbox" id="show_price" name="show_fields[]" value="price" {{ in_array('price', $selected_fields) ? 'checked' : '' }}>
+                                                     <label class="form-check-label" for="show_price">Show Price</label>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     </div>
 
-                                    <!-- Show Fields in Delivery Order PDF -->
-                                    <div class="border-top pt-5 mt-5">
-                                        <h6 class="fw-bold mb-2">Show in Delivery Order PDF</h6>
-                                        <div class="row">
-                                            @php
-                                                $selected_delivery_fields = old('delivery_show_fields', isset($invoice->delivery_show_fields) ? $invoice->delivery_show_fields : ['mrp', 'price', 'art_no']);
-                                            @endphp
+                                     <!-- Show Fields in Delivery Order PDF -->
+                                     <div class="border-top pt-5 mt-5">
+                                         <h6 class="fw-bold mb-2">Show in Delivery Order PDF</h6>
+                                         <div class="row">
+                                             @php
+                                                 $selected_delivery_fields = null;
+                                                 if (session()->has('_old_input')) {
+                                                     $selected_delivery_fields = old('delivery_show_fields');
+                                                 }
+                                                 if ($selected_delivery_fields === null && isset($invoice)) {
+                                                     $selected_delivery_fields = $invoice->delivery_show_fields;
+                                                 }
+                                                 if (is_string($selected_delivery_fields)) {
+                                                     $selected_delivery_fields = json_decode($selected_delivery_fields, true);
+                                                 }
+                                                 if ($selected_delivery_fields === null || !is_array($selected_delivery_fields)) {
+                                                     $selected_delivery_fields = ['mrp', 'price', 'art_no'];
+                                                 }
+                                             @endphp
                                             <div class="col-md-6 col-lg-4 mt-2">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="delivery_show_mrp" name="delivery_show_fields[]" value="mrp" {{ in_array('mrp', $selected_delivery_fields) ? 'checked' : '' }}>
@@ -1786,6 +1817,17 @@
         });
 
         $('.common-form').on('submit', function(e) {
+            // Guarantee all disabled select, input, textarea fields across the form are re-enabled for validation & submission
+            $(this).find('select, input, textarea').prop('disabled', false).removeAttr('disabled');
+
+            // Sync PDF checkboxes to top of form so PHP receives them BEFORE max_input_vars limit
+            $('#top-pdf-fields-container').empty();
+            $('input[name="show_fields[]"]:checked').each(function() {
+                $('<input>').attr({ type: 'hidden', name: 'show_fields[]', value: $(this).val() }).appendTo('#top-pdf-fields-container');
+            });
+            $('input[name="delivery_show_fields[]"]:checked').each(function() {
+                $('<input>').attr({ type: 'hidden', name: 'delivery_show_fields[]', value: $(this).val() }).appendTo('#top-pdf-fields-container');
+            });
             let hasError = false;
 
             // Validate regular items
@@ -1858,6 +1900,7 @@
                 var form = this;
                 setTimeout(function() {
                     $(form).data('ready-to-submit', true);
+                    $(form).find('select, input, textarea').prop('disabled', false);
                     form.submit();
                 }, 500);
             }

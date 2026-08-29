@@ -26,6 +26,8 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
 
     public function collection()
     {
+        $filters = $this->filters;
+
         return StockEntryItem::with([
             'stockEntry.productionReceipt.jobCard.fabricType',
             'stockEntry.productionReceipt.jobCard.purchaseOrder',
@@ -33,50 +35,30 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
             'fabricType',
             'color',
             'brand'
-        ])->whereHas('stockEntry', function($q) {
+        ])->whereHas('stockEntry', function($q) use ($filters) {
             $q->where('entry_type', 'Finished Goods');
+
+            if (!empty($filters['date'])) {
+                try {
+                    $stockDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['date'])->format('Y-m-d');
+                    $q->whereDate('stock_date', $stockDate);
+                } catch (\Exception $e) {}
+            }
+            if (!empty($filters['from_date'])) {
+                try {
+                    $fromDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['from_date'])->format('Y-m-d');
+                    $q->where('stock_date', '>=', $fromDate);
+                } catch (\Exception $e) {}
+            }
+            if (!empty($filters['to_date'])) {
+                try {
+                    $toDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['to_date'])->format('Y-m-d');
+                    $q->where('stock_date', '<=', $toDate);
+                } catch (\Exception $e) {}
+            }
         })->orderBy('id', 'desc')->get();
     }
 
-    // public function headings(): array
-    // {
-    //     return [
-    //         [
-    //             'Product Variation Details',
-    //             '', '', '', '', '', '', '',
-    //             'Product Details',
-    //             '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
-    //         ],
-    //         [
-    //             'Size',
-    //             'Color',
-    //             'Fit',
-    //             'Barcode*',
-    //             'MRP*',
-    //             'WSP',
-    //             'Pcs in One Set',
-    //             'Variation Description',
-    //             'Product Name*',
-    //             'SKU Code*',
-    //             'Status (ACTIVE/INACTIVE)*',
-    //             'Has Variation? (Yes/No)',
-    //             'Private (Yes/No)',
-    //             'Tags',
-    //             'Category Tree',
-    //             'Label (Helps to Categorise) - Max. 4 Labels',
-    //             'Short Description',
-    //             'Title #1',
-    //             'Description #1',
-    //             'Title #2',
-    //             'Description #2',
-    //             'Title #3',
-    //             'Description #3',
-    //             'Title #4',
-    //             'Description #4',
-    //             'Title #5',
-    //         ]
-    //     ];
-    // }
     public function headings(): array
     {
         return [
@@ -203,9 +185,24 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
         $jobCardFit = $item->stockEntry?->productionReceipt?->jobCard?->fit?->fit_name ?? '-';
         $shortDescription = "{$jobCardFit}";
 
+        $colorName = $item->color->color_name ?? null;
+        if (empty($colorName) || $colorName === '-') {
+            $artNo = trim($item->art_no ?? '');
+            if (!empty($artNo)) {
+                if (str_contains($artNo, '-')) {
+                    $parts = explode('-', $artNo);
+                    $colorName = trim(end($parts));
+                } else {
+                    $colorName = 'A';
+                }
+            } else {
+                $colorName = 'A';
+            }
+        }
+
         return [
             $item->size ?? '-',
-            $item->color->color_name ?? '-',
+            $colorName,
             $fit,
             $item->sku ?? $item->barcode ?? '-',
             $mrp,

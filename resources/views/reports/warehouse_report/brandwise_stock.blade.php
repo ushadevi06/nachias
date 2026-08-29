@@ -31,10 +31,10 @@
 </style>
 
 <script>
-    let currentBrandId = null;
-    let currentBrandName = '';
-    let dtInstance = null;
-    let isRootLevel = true;
+    var currentBrandId = null;
+    var currentBrandName = '';
+    var dtInstance = null;
+    var isRootLevel = true;
 
     function formatNumber(num) {
         return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
@@ -46,8 +46,9 @@
 
     function reinitDataTable() {
         if ($.fn.DataTable.isDataTable('#brandwiseStockTable')) {
-            $('#brandwiseStockTable').DataTable().destroy();
+            $('#brandwiseStockTable').DataTable().clear().destroy();
         }
+        $('#brandwiseStockTable thead th').show().removeAttr('style');
         $('#brandwiseStockTbody').empty();
     }
 
@@ -116,124 +117,99 @@
         applyServerSideDataTable();
     }
     
-    $(document).ready(function() {
-        applyServerSideDataTable();
-    });
+    window.initBrandwiseStockTable = function() {
+        renderBrandLevel();
+    };
+    function initBrandwiseStockTable() {
+        window.initBrandwiseStockTable();
+    }
 
     function drillDownToStyle(brandId, brandName) {
         isRootLevel = false;
         currentBrandId = brandId;
         currentBrandName = brandName;
-        
-        let storeId = $('select[name="store_id"]').val();
-        let fromDate = $('.start_date').val();
-        let toDate = $('.end_date').val();
+
+        $('#brandwiseBreadcrumbs').attr('style', 'display: flex !important;');
+        $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
+        $('#btnBackToBrands').attr('onclick', 'renderBrandLevel()');
+        $('#brandwiseStockCol1').text('STYLE');
 
         reinitDataTable();
-        $('#brandwiseStockTbody').html('<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>');
-        
-        $.ajax({
-            url: "{{ url('warehouse_reports/brandwise_styles') }}",
-            type: "GET",
-            data: {
-                brand_id: brandId,
-                store_id: storeId,
-                from_date: fromDate,
-                to_date: toDate
-            },
-            success: function(response) {
-                $('#brandwiseBreadcrumbs').attr('style', 'display: flex !important;');
-                $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
-                $('#btnBackToBrands').attr('onclick', 'renderBrandLevel()');
-                $('#brandwiseStockCol1').text('STYLE');
-                
-                let html = '';
-                if(response && response.length > 0) {
-                    response.forEach(function(item) {
-                        let totalQty = parseFloat(item.total_qty || 0);
-                        let totalMinStock = parseFloat(item.total_min_stock || 0);
-                        let lowStock = Math.max(0, totalMinStock - totalQty);
-                        let excessStock = Math.max(0, totalQty - (totalMinStock * 2));
-                        
-                        let lowStockDisplay = '-';
-                        let excessStockDisplay = '-';
 
-                        html += `<tr style="cursor: pointer;" onclick="drillDownToArtNo(${brandId}, '${brandName.replace(/'/g, "\\'")}', ${item.style_id}, '${(item.style_name || '-').replace(/'/g, "\\'")}')">
-                            <td class="text-uppercase"><strong>${item.style_name || '-'}</strong></td>
-                            <td class="text-center">${formatNumber(totalQty)}</td>
-                            <td class="text-center">${lowStockDisplay}</td>
-                            <td class="text-center">${excessStockDisplay}</td>
-                            <td class="text-center">-</td>
-                            <td class="text-end fw-bold">${formatCurrency(item.stock_value)}</td>
-                        </tr>`;
-                    });
-                } else {
-                    html = '<tr><td colspan="6" class="text-center text-muted">No styles found.</td></tr>';
+        dtInstance = $('#brandwiseStockTable').DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: {
+                url: "{{ url('warehouse_reports/brandwise_styles') }}",
+                data: function (d) {
+                    d.brand_id = brandId;
+                    d.brand_name = brandName;
+                    d.store_id = $('select[name="store_id"]').val();
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
                 }
-                $('#brandwiseStockTbody').html(html);
-                applyDataTable(false);
             },
-            error: function() {
-                $('#brandwiseStockTbody').html('<tr><td colspan="6" class="text-center text-danger">Error fetching styles.</td></tr>');
+            columns: [
+                { data: 'brand', name: 'styles.style_name', width: '45%' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '15%' },
+                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, visible: false, width: '10%' },
+                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, visible: false, width: '10%' },
+                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, visible: false, width: '10%' },
+                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
+            ],
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            lengthMenu: [10, 25, 50, 100],
+            pageLength: 10,
+            language: {
+                emptyTable: "No styles found matching your filters",
+                zeroRecords: "No matching records found",
+                infoEmpty: "Showing 0 to 0 entries",
             }
         });
     }
 
     function drillDownToArtNo(brandId, brandName, styleId, styleName) {
-        let storeId = $('select[name="store_id"]').val();
-        let fromDate = $('.start_date').val();
-        let toDate = $('.end_date').val();
+        $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')">${brandName}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${styleName}</span>`);
+        $('#btnBackToBrands').attr('onclick', `drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')`);
+        $('#brandwiseStockCol1').text('ART NO');
 
         reinitDataTable();
-        $('#brandwiseStockTbody').html('<tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>');
-        
-        $.ajax({
-            url: "{{ url('warehouse_reports/brandwise_art_nos') }}",
-            type: "GET",
-            data: {
-                brand_id: brandId,
-                style_id: styleId,
-                store_id: storeId,
-                from_date: fromDate,
-                to_date: toDate
-            },
-            success: function(response) {
-                $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')">${brandName}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${styleName}</span>`);
-                $('#btnBackToBrands').attr('onclick', `drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')`);
-                $('#brandwiseStockCol1').text('ART NO');
-                
-                let html = '';
-                if(response && response.length > 0) {
-                    response.forEach(function(item) {
-                        let totalQty = parseFloat(item.total_qty || 0);
-                        let displayQty = totalQty < 0 ? 0 : totalQty; 
-                        let totalMinStock = parseFloat(item.total_min_stock || 0);
-                        let lowStock = Math.max(0, totalMinStock - displayQty);
-                        let excessStock = Math.max(0, displayQty - (totalMinStock * 2));
-                        let stockValue = parseFloat(item.stock_value || 0);
-                        let displayStockValue = stockValue < 0 ? 0 : stockValue;
-                        
-                        let lowStockDisplay = lowStock > 0 ? `<span class="text-danger fw-bold">${formatNumber(lowStock)}</span>` : '-';
-                        let excessStockDisplay = excessStock > 0 ? `<span class="text-success fw-bold">${formatNumber(excessStock)}</span>` : '-';
 
-                        html += `<tr>
-                            <td class="text-uppercase"><strong>${item.art_no || '-'}</strong></td>
-                            <td class="text-center">${formatNumber(displayQty)}</td>
-                            <td class="text-center">${lowStockDisplay}</td>
-                            <td class="text-center">${excessStockDisplay}</td>
-                            <td class="text-center">${item.stock_days || '-'}</td>
-                            <td class="text-end fw-bold">${formatCurrency(displayStockValue)}</td>
-                        </tr>`;
-                    });
-                } else {
-                    html = '<tr><td colspan="6" class="text-center text-muted">No Art Nos found.</td></tr>';
+        dtInstance = $('#brandwiseStockTable').DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: {
+                url: "{{ url('warehouse_reports/brandwise_art_nos') }}",
+                data: function (d) {
+                    d.brand_id = brandId;
+                    d.style_id = styleId;
+                    d.store_id = $('select[name="store_id"]').val();
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
                 }
-                $('#brandwiseStockTbody').html(html);
-                applyDataTable(true);
             },
-            error: function() {
-                $('#brandwiseStockTbody').html('<tr><td colspan="6" class="text-center text-danger">Error fetching Art Nos.</td></tr>');
+            columns: [
+                { data: 'brand', name: 'stock_entry_items.art_no', width: '45%' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '15%' },
+                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, visible: true, width: '10%' },
+                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, visible: true, width: '10%' },
+                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, visible: true, width: '10%' },
+                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
+            ],
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            lengthMenu: [10, 25, 50, 100],
+            pageLength: 10,
+            language: {
+                emptyTable: "No Art Nos found matching your filters",
+                zeroRecords: "No matching records found",
+                infoEmpty: "Showing 0 to 0 entries",
             }
         });
+    }
+
+    if ($('#brand-stock').hasClass('active') || $('#brandwise-stock').hasClass('active')) {
+        initBrandwiseStockTable();
     }
 </script>
