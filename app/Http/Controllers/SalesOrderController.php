@@ -1137,7 +1137,8 @@ class SalesOrderController extends Controller
         try {
             $service = new \App\Services\OrderaxeService();
             $limit = $request->query('limit', 1000);
-            $result = $service->syncOrders((int)$limit);
+            $rewindDays = $request->query('rewind') ?? $request->query('rewind_days') ?? ($request->has('reset') ? 7 : null);
+            $result = $service->syncOrders((int)$limit, $rewindDays);
             if ($result['synced'] > 0 || $result['skipped'] > 0 || $result['failed'] > 0) {
                 $msg = "OrderAxe Order Synced Successfully";
                 return redirect('sales_orders')->with('success', $msg);

@@ -139,7 +139,21 @@ class SalesInvoiceController extends Controller
                              ->orWhere('code', 'like', "%{$search}%");
                       })
                       ->orWhereHas('salesOrder', function($q3) use ($search) {
-                          $q3->where('so_no', 'like', "%{$search}%");
+                          $q3->where('so_no', 'like', "%{$search}%")
+                             ->orWhere('order_no', 'like', "%{$search}%")
+                             ->orWhere('orderaxe_id', 'like', "%{$search}%")
+                             ->orWhere('orderaxe_ref_id', 'like', "%{$search}%");
+                      })
+                      ->orWhereExists(function ($subQ) use ($search) {
+                          $subQ->select(DB::raw(1))
+                              ->from('sales_orders')
+                              ->whereRaw('FIND_IN_SET(sales_orders.id, sales_invoices.so_ids)')
+                              ->where(function ($sQ) use ($search) {
+                                  $sQ->where('so_no', 'like', "%{$search}%")
+                                     ->orWhere('order_no', 'like', "%{$search}%")
+                                     ->orWhere('orderaxe_id', 'like', "%{$search}%")
+                                     ->orWhere('orderaxe_ref_id', 'like', "%{$search}%");
+                              });
                       });
                 });
             }

@@ -182,7 +182,7 @@
         .lot-vertical {
             writing-mode: vertical-rl;
             transform: rotate(180deg);
-            font-size: 5.3pt;
+            font-size: 5.5pt;
             line-height: 1.2;
             padding: 0 1mm;
             color: #000000;
@@ -244,7 +244,7 @@
             $currentSize = preg_replace('/[^0-9]/', '', $labelData['size'] ?? '');
             $bgColor = $sizeColors[$currentSize] ?? '#888888';
             
-            $qrString = ($labelData['sku'] ?? '-') . " | " . ($labelData['product_name'] ?? '-') . " | " . ($labelData['size'] ?? '-');
+            $qrString = $labelData['sku'] ?? $labelData['barcode'] ?? ($labelData['design'] ?? '-');
             
             $sText = $labelData['sleeve'] ?? 'Full';
             $sText = str_replace(['F/S', 'H/S'], ['Full', 'Half'], $sText);
@@ -295,7 +295,7 @@
                         </div>
                         <div class="mrp-section" style="margin-top: 1mm;">
                             <div class="fw-bold" style="font-size: 4pt; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 4pt;">(inclusive of all taxes)</span></div>
-                            <div class="fw-bold" style="font-size: 11pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
+                            <div class="fw-bold" style="font-size: 12pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
                             <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 4pt;">MADE IN INDIA WITH PRIDE</div>
                         </div>
                     </div>

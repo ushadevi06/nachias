@@ -13,6 +13,7 @@ class FgMinStock extends Model
     protected $fillable = [
         'stock_entry_item_id',
         'min_stock',
+        'max_stock',
         'status',
         'created_by',
         'updated_by',

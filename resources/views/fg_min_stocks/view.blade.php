@@ -27,6 +27,7 @@
                                     <th>Size</th>
                                     <th>Sleeve</th>
                                     <th>Minimum Stock</th>
+                                    <th>Maximum Stock</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -60,6 +61,7 @@
                 { data: 'size' },
                 { data: 'sleeve' },
                 { data: 'min_stock' },
+                { data: 'max_stock' },
                 {
                     data: 'status',
                     orderable: false,

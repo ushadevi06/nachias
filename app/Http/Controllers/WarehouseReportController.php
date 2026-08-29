@@ -220,6 +220,7 @@ class WarehouseReportController extends Controller
                 DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty'),
                 DB::raw('SUM((stock_entry_items.qty_in - stock_entry_items.qty_out) * stock_entry_items.price) as stock_value'),
                 DB::raw('SUM(IFNULL(fg_min_stocks.min_stock, 0)) as total_min_stock'),
+                DB::raw('SUM(IFNULL(fg_min_stocks.max_stock, 0)) as total_max_stock'),
                 DB::raw('MIN(CASE WHEN (stock_entry_items.qty_in - stock_entry_items.qty_out) > 0 THEN stock_entry_items.created_at ELSE NULL END) as oldest_stock_date')
             )
             ->where('stock_entry_items.stock_type', 'finished_goods')
@@ -271,8 +272,10 @@ class WarehouseReportController extends Controller
             foreach ($artNos as $artNo) {
                 $displayQty = max(0, floatval($artNo->total_qty ?? 0));
                 $totalMinStock = floatval($artNo->total_min_stock ?? 0);
-                $lowStock = max(0, $totalMinStock - $displayQty);
-                $excessStock = max(0, $displayQty - ($totalMinStock * 2));
+                $totalMaxStock = floatval($artNo->total_max_stock ?? 0);
+
+                $lowStock = ($totalMinStock > 0 && $displayQty < $totalMinStock) ? ($totalMinStock - $displayQty) : 0;
+                $excessStock = ($totalMaxStock > 0 && $displayQty > $totalMaxStock) ? ($displayQty - $totalMaxStock) : 0;
                 $stockValue = max(0, floatval($artNo->stock_value ?? 0));
 
                 $stockDays = '-';
@@ -329,7 +332,6 @@ class WarehouseReportController extends Controller
                 }
                 $brands = $brandsQuery->get();
 
-                // Inward Qty in Date Range (from Stock Entry Items)
                 $inwardQuery = DB::table('stock_entry_items')
                     ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
                     ->leftJoin('brands', function($join) {
@@ -632,8 +634,8 @@ class WarehouseReportController extends Controller
                 ]);
 
             case 'brandwise-sales':
-                $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-d', strtotime('-30 days'));
-                $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : date('Y-m-d');
+                $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : date('Y-m-d', strtotime('-30 days'));
+                $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : date('Y-m-d');
                 $query = SalesInvoiceItem::query()
                     ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
                     ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
@@ -660,6 +662,9 @@ class WarehouseReportController extends Controller
                 }
                 if ($request->store_id) {
                     $query->where('sales_invoices.store_location_id', $request->store_id);
+                }
+                if ($search) {
+                    $query->where('brands.brand_name', 'like', "%{$search}%");
                 }
 
                 $query->select(
@@ -841,12 +846,18 @@ class WarehouseReportController extends Controller
                     )
                     ->join('store_locations', 'stock_entry_items.store_location_id', '=', 'store_locations.id')
                     ->leftJoin('brands', function($join) {
-                        $join->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                            ->whereRaw("NOT EXISTS (
-                                SELECT 1 FROM brands b2 
-                                WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
-                                AND LENGTH(b2.code) > LENGTH(brands.code)
-                            )");
+                        $join->on(function($query) {
+                            $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                                ->orOn(function($sub) {
+                                    $sub->whereNull('stock_entry_items.brand_id')
+                                        ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                        ->whereRaw("NOT EXISTS (
+                                            SELECT 1 FROM brands b2 
+                                            WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                                            AND LENGTH(b2.code) > LENGTH(brands.code)
+                                        )");
+                                });
+                        });
                     })
                     ->where('stock_entry_items.stock_type', 'finished_goods')
                     ->whereNull('stock_entry_items.deleted_at');
@@ -872,7 +883,7 @@ class WarehouseReportController extends Controller
                     'stock_entry_items.finished_item_code',
                     'stock_entry_items.art_no',
                     'stock_entry_items.size'
-                );
+                )->havingRaw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) != 0');
 
                 $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
                 $recordsFiltered = $recordsTotal;
@@ -885,14 +896,12 @@ class WarehouseReportController extends Controller
                 $data = [];
                 
                 foreach ($assortedStock as $stock) {
-                    if ($stock->stock_qty != 0) {
-                        $data[] = [
-                            'store' => $stock->store,
-                            'item_name' => '<strong>' . $stock->item_name . '</strong>',
-                            'size' => $stock->size ?? '-',
-                            'stock_qty' => '<span class="text-primary fw-bold">' . number_format($stock->stock_qty ?? 0, 0) . '</span>',
-                        ];
-                    }
+                    $data[] = [
+                        'store' => $stock->store,
+                        'item_name' => '<strong>' . $stock->item_name . '</strong>',
+                        'size' => $stock->size ?? '-',
+                        'stock_qty' => '<span class="text-primary fw-bold">' . number_format($stock->stock_qty ?? 0, 0) . '</span>',
+                    ];
                 }
 
                 return response()->json([
@@ -1370,13 +1379,13 @@ class WarehouseReportController extends Controller
 
                     // Orderaxe Badge & Link
                     $soNoHtml = '<a href="' . url('sales_orders/view/' . $so->id) . '" target="_blank" class="fw-bold text-primary" data-bs-toggle="tooltip" title="Click to view full Sales Order">' . $so->so_no . '</a>';
-                    if (!empty($so->orderaxe_id) || !empty($so->orderaxe_ref_id)) {
+                    if (!empty($so->orderaxe_id) || !empty($so->orderaxe_ref_id) || !empty($so->order_no)) {
                         $soNoHtml .= ' <span class="badge bg-label-info ms-1" style="font-size:10px;">Orderaxe</span>';
                     }
-                    if (!empty($so->orderaxe_ref_id)) {
-                        $soNoHtml .= '<br><span class="text-muted small" style="font-size: 0.75rem;">Ref: ' . $so->orderaxe_ref_id . '</span>';
-                    } elseif (!empty($so->order_no)) {
+                    if (!empty($so->order_no)) {
                         $soNoHtml .= '<br><span class="text-muted small" style="font-size: 0.75rem;">Ref: ' . $so->order_no . '</span>';
+                    } elseif (!empty($so->orderaxe_ref_id)) {
+                        $soNoHtml .= '<br><span class="text-muted small" style="font-size: 0.75rem;">Ref: ' . $so->orderaxe_ref_id . '</span>';
                     }
 
                     // Dates & Urgency

@@ -27,7 +27,6 @@ $(document).ready(function () {
         $(this).flatpickr({
             dateFormat: 'd-m-Y',
             defaultDate: $(this).val() || 'today',
-            minDate: 'today',
             allowInput: true
         });
     });
@@ -70,21 +69,18 @@ $(document).ready(function () {
         ]
     });
 
-    // Time Picker
     $(".timepicker").flatpickr({
         enableTime: true,
         noCalendar: true,
         dateFormat: "H:i",
     });
 
-    // Date Range Pickers
     flatpickr("#date_range, #po_date_range", {
         mode: "range",
         dateFormat: "d-m-Y",
         allowInput: true
     });
 
-    // Specific IDs
     $("#start_date, #end_date, #completion_date, #issue_date").flatpickr({
         dateFormat: 'd-m-Y',
         allowInput: true

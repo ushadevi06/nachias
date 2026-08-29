@@ -55,6 +55,7 @@ class FgMinStockController extends Controller
                     'size'        => $stockItem->size ?? '-',
                     'sleeve'      => $stockItem->sleeve_type ?? '-',
                     'min_stock'   => $row->min_stock,
+                    'max_stock'   => $row->max_stock ?? '0.00',
                     'status'      => $status,
                     'action'      => $action,
                 ];
@@ -84,6 +85,7 @@ class FgMinStockController extends Controller
             $rules = [
                 'stock_entry_item_id' => 'required|exists:stock_entry_items,id|unique:fg_min_stocks,stock_entry_item_id,' . $id . ',id,deleted_at,NULL',
                 'min_stock'           => 'required|numeric|min:0',
+                'max_stock'           => 'nullable|numeric|min:0',
                 'status'              => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -93,7 +95,8 @@ class FgMinStockController extends Controller
             ];
             $request->validate($rules, $messages);
 
-            $data = $request->only(['stock_entry_item_id', 'min_stock', 'status']);
+            $data = $request->only(['stock_entry_item_id', 'min_stock', 'max_stock', 'status']);
+            $data['max_stock'] = $data['max_stock'] ?? 0;
 
             if ($id) {
                 $data['updated_by'] = auth()->id();
@@ -142,6 +145,15 @@ class FgMinStockController extends Controller
     public function searchStockItems(Request $request)
     {
         $term = $request->get('term', '');
+        $currentFgMinStockId = $request->get('current_id', null);
+
+        $existingItemIds = FgMinStock::whereNull('deleted_at')
+            ->when($currentFgMinStockId, function($q) use ($currentFgMinStockId) {
+                $q->where('id', '!=', $currentFgMinStockId);
+            })
+            ->pluck('stock_entry_item_id')
+            ->toArray();
+
         $query = StockEntryItem::with('item')
             ->where(function ($q) {
                 $q->where('store_category_id', 2)->orWhere('stock_type', 'finished_goods');
@@ -168,19 +180,25 @@ class FgMinStockController extends Controller
         $results = [];
         foreach ($unique as $row) {
             $itemName = $row->finished_item_code ?: ($row->item ? $row->item->name : 'Unknown Item');
-            $label = "{$itemName} | Art No: {$row->art_no} | Size: {$row->size}";
-            if ($row->sleeve_type) {
+            $alreadyExists = in_array($row->id, $existingItemIds);
+
+            $label = "Art No: {$row->art_no} | Item: {$itemName} | Size: {$row->size}";
+            if ($row->sleeve_type && $row->sleeve_type !== '-') {
                 $label .= " | Sleeve: {$row->sleeve_type}";
+            }
+            if ($alreadyExists) {
+                $label .= " (Already Exists)";
             }
 
             $results[] = [
                 'id' => $row->id,
                 'label' => $label,
-                'value' => $label,
+                'value' => $row->art_no,
                 'item_name' => $itemName,
                 'art_no' => $row->art_no,
                 'size' => $row->size,
-                'sleeve_type' => $row->sleeve_type ?? '-'
+                'sleeve_type' => $row->sleeve_type ?? '-',
+                'already_exists' => $alreadyExists
             ];
         }
 

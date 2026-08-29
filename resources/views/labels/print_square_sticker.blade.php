@@ -131,7 +131,7 @@
 
     @foreach($labelCollection as $labelData)
         @php
-            $qrString = ($labelData['sku'] ?? '-') . " | " . ($labelData['product_name'] ?? '-') . " | " . ($labelData['size'] ?? '-');
+            $qrString = $labelData['sku'] ?? $labelData['barcode'] ?? ($labelData['design'] ?? '-');
             $sText = strtoupper($labelData['sleeve'] ?? 'F/S');
             if (strpos($sText, 'FULL') !== false) {
                 $sText = 'F/S';

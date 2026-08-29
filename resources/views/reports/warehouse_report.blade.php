@@ -24,6 +24,23 @@
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
             <form id="warehouseReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('warehouse_reports') }}">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
+                    <select class="form-select select2" id="report_type_select" name="report_type">
+                        <option value="brand-sales" selected>📊 Brandwise Sales</option>
+                        <option value="brand-stock">📦 Brandwise Stock</option>
+                        <option value="assorted-stock">🏷️ Assorted Stock</option>
+                        <option value="order-dispatch">🔄 Order vs Dispatch</option>
+                        <option value="urgent-orders">🔥 Urgent Orders</option>
+                        <option value="dispatch">🚚 Dispatch Report</option>
+                        <option value="inward">📥 Stock Inward</option>
+                        <option value="discount">🏷️ Regular / Discount</option>
+                        <option value="brandwise-lost-sales">❌ Brandwise Lost Sales</option>
+                        <option value="order-processing-time">⏱️ Order Processing Time Report</option>
+                        <option value="stock-inward-sales">📊 Stock Inward & Sales</option>
+                        <option value="brandwise-completion">📈 Brandwise Completion</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
                     <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
@@ -41,129 +58,58 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted">Store</label>
-                    <select class="form-select select2" name="store_id" data-placeholder="Select Store">
-                        <option value=""></option>
-                        @foreach($stores as $store)
-                            <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_location }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                        <i class="ri ri-search-line me-1"></i> Search
-                    </button>
-                    <button type="button" id="btn-reset-report" class="btn btn-outline-light w-100 rounded-pill border">
-                        <i class="ri ri-refresh-line me-1"></i> Reset
-                    </button>
+                <div class="col-md-3 d-flex gap-2">
+                    <div class="w-50">
+                        <label class="form-label small fw-bold text-muted">Store</label>
+                        <select class="form-select select2" name="store_id" data-placeholder="Select Store">
+                            <option value=""></option>
+                            @foreach($stores as $store)
+                                <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_location }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="w-50 d-flex gap-1 align-items-end">
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                            <i class="ri ri-search-line me-1"></i> Search
+                        </button>
+                        <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border">
+                            <i class="ri ri-refresh-line"></i>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Tabs Interface -->
+    <!-- Content Card -->
     <div class="card shadow-sm border-0 premium-content-card">
-        <div class="card-header bg-white border-bottom-0 p-0">
-            <ul class="nav nav-tabs nav-fill premium-nav-tabs" id="warehouseTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#brand-sales" type="button" role="tab">Brandwise Sales</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brand-stock" type="button" role="tab">Brandwise Stock</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#assorted-stock" type="button" role="tab">Assorted Stock</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#order-dispatch" type="button" role="tab">Order vs Dispatch</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#urgent-orders" type="button" role="tab"><i class="ri-fire-line me-1 text-danger"></i>Urgent Orders</button>
-                </li>
-                {{-- <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sales-return" type="button" role="tab">Sales Return</button>
-                </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#white-dhoti" type="button" role="tab">White & Dhoti</button>
-                </li> --}}
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dispatch" type="button" role="tab">Dispatch Report</button>
-                </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#inward" type="button" role="tab">Stock Inward</button>
-                </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#discount" type="button" role="tab">Regular/Discount</button>
-                </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brandwise-lost-sales" type="button" role="tab">Brandwise Lost Sales</button>
-                </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#order-processing-time" type="button" role="tab">Order Processing Time Report</button>
-                </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#stock-inward-sales" type="button" role="tab">Stock Inward & Sales</button>
-                </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brandwise-completion" type="button" role="tab">Brandwise Completion</button>
-                </li>
-                <li class="nav-item dropdown d-xl-none">
-                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">More</a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#stock-inward-sales" data-bs-toggle="tab">Stock Inward & Sales</a></li>
-                        <li><a class="dropdown-item" href="#order-processing-time" data-bs-toggle="tab">Order Processing Time Report</a></li>
-                        <li><a class="dropdown-item" href="#white-dhoti" data-bs-toggle="tab">White & Dhoti</a></li>
-                        <li><a class="dropdown-item" href="#dispatch" data-bs-toggle="tab">Dispatch Report</a></li>
-                        <li><a class="dropdown-item" href="#inward" data-bs-toggle="tab">Stock Inward</a></li>
-                        <li><a class="dropdown-item" href="#discount" data-bs-toggle="tab">Regular/Discount</a></li>
-                        <li><a class="dropdown-item" href="#brandwise-lost-sales" data-bs-toggle="tab">Brandwise Lost Sales</a></li>
-                        <li><a class="dropdown-item" href="#priority" data-bs-toggle="tab">Priority Stock</a></li>
-                        <li><a class="dropdown-item" href="#damage" data-bs-toggle="tab">Damage Sales</a></li>
-                    </ul>
-                </li>
-            </ul>
+        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+            <h5 class="mb-0 fw-bold text-primary" id="active_report_title">
+                📊 Brandwise Sales Report
+            </h5>
+            <span class="badge bg-label-primary px-3 py-2 rounded-pill" id="active_report_badge">Warehouse Analytics</span>
         </div>
         <div class="card-body py-4">
             <style>
-                /* DataTables loading overlay for all tabs */
+                .card-datatable, div.dataTables_wrapper {
+                    position: relative !important;
+                    min-height: 200px !important;
+                }
                 div.dataTables_wrapper div.dataTables_processing {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: rgba(255, 255, 255, 0.92);
-                    border-radius: 12px;
-                    padding: 20px 32px;
-                    box-shadow: 0 4px 24px rgba(105, 108, 255, 0.15);
-                    z-index: 100;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #696cff;
-                    min-width: 160px;
-                    justify-content: center;
-                }
-                div.dataTables_wrapper div.dataTables_processing::before {
-                    content: '';
-                    display: inline-block;
-                    width: 20px;
-                    height: 20px;
-                    border: 3px solid rgba(105, 108, 255, 0.2);
-                    border-top-color: #696cff;
-                    border-radius: 50%;
-                    animation: dt-spin 0.7s linear infinite;
-                    flex-shrink: 0;
-                }
-                @keyframes dt-spin {
-                    to { transform: rotate(360deg); }
-                }
-                /* Make the tab pane relative so spinner is positioned correctly */
-                .tab-pane {
-                    position: relative;
+                    position: absolute !important;
+                    top: 50% !important;
+                    left: 50% !important;
+                    transform: translate(-50%, -50%) !important;
+                    background: #696cff !important;
+                    color: #ffffff !important;
+                    font-weight: 600 !important;
+                    padding: 8px 24px !important;
+                    border-radius: 8px !important;
+                    z-index: 9999 !important;
+                    box-shadow: 0 4px 20px rgba(105, 108, 255, 0.35) !important;
+                    margin: 0 !important;
+                    width: auto !important;
+                    height: auto !important;
                 }
             </style>
             <div class="tab-content">
@@ -248,7 +194,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div>  
 </div>
 
 <style>
@@ -325,6 +271,19 @@ $.extend(true, $.fn.dataTable.defaults, {
 });
 
 $(document).ready(function() {
+    $('#report_type_select').on('change', function() {
+        let targetTabId = $(this).val();
+        let selectedText = $(this).find('option:selected').text();
+        
+        $('#active_report_title').html(selectedText + ' Report');
+
+        $('.tab-pane').removeClass('show active');
+        $('#' + targetTabId).addClass('show active');
+
+        handleTabActivation('#' + targetTabId);
+        $('#warehouseReportForm').trigger('submit');
+    });
+
     $('#warehouseReportForm').on('submit', function(e) {
         e.preventDefault();
         const form = $(this);
@@ -352,6 +311,10 @@ $(document).ready(function() {
                 });
 
                 switch (activeTabId) {
+                    case 'brand-sales':
+                    case 'brandwise-sales':
+                        if (typeof initBrandwiseSalesTable === 'function') initBrandwiseSalesTable();
+                        break;
                     case 'brand-stock':
                     case 'brandwise-stock':
                         if (typeof initBrandwiseStockTable === 'function') initBrandwiseStockTable();
@@ -429,19 +392,17 @@ $(document).ready(function() {
         $('select[name="brand_id"]').val('').trigger('change');
         $('select[name="store_id"]').val('').trigger('change');
 
-        if (typeof renderStockInwardSalesBrandLevel === 'function') {
+        let activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val() || 'brand-sales';
+
+        if (activeTabId === 'stock-inward-sales' && typeof renderStockInwardSalesBrandLevel === 'function') {
             renderStockInwardSalesBrandLevel();
-        }
-        if (typeof renderLostSalesBrandLevel === 'function') {
+        } else if (activeTabId === 'brandwise-lost-sales' && typeof renderLostSalesBrandLevel === 'function') {
             renderLostSalesBrandLevel();
-        }
-        if (typeof renderOrderProcessingTimeRootLevel === 'function') {
+        } else if (activeTabId === 'order-processing-time' && typeof renderOrderProcessingTimeRootLevel === 'function') {
             renderOrderProcessingTimeRootLevel();
-        }
-        if (typeof renderCompletionRootLevel === 'function') {
+        } else if (activeTabId === 'brandwise-completion' && typeof renderCompletionRootLevel === 'function') {
             renderCompletionRootLevel();
-        }
-        if (typeof renderBrandLevel === 'function') {
+        } else if ((activeTabId === 'brand-stock' || activeTabId === 'brandwise-stock') && typeof renderBrandLevel === 'function') {
             renderBrandLevel();
         }
 
@@ -453,6 +414,11 @@ $(document).ready(function() {
         var activeTabId = targetId.replace('#', '');
         
         switch (activeTabId) {
+            case 'brand-sales':
+            case 'brandwise-sales':
+                if (typeof window.initBrandwiseSalesTable === 'function') window.initBrandwiseSalesTable();
+                else if (typeof initBrandwiseSalesTable === 'function') initBrandwiseSalesTable();
+                break;
             case 'brand-stock':
             case 'brandwise-stock':
                 if (typeof window.initBrandwiseStockTable === 'function') window.initBrandwiseStockTable();

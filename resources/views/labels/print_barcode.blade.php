@@ -290,7 +290,7 @@
             $currentSize = preg_replace('/[^0-9]/', '', $labelData['size'] ?? '');
             $bgColor = $sizeColors[$currentSize] ?? '#888888';
             
-            $qrString = ($labelData['sku'] ?? '-') . " | " . ($labelData['product_name'] ?? '-') . " | " . ($labelData['size'] ?? '-');
+            $qrString = $labelData['sku'] ?? $labelData['barcode'] ?? ($labelData['design'] ?? '-');
             
             $sText = $labelData['sleeve'] ?? 'Full';
             $sText = str_replace(['F/S', 'H/S'], ['Full', 'Half'], $sText);

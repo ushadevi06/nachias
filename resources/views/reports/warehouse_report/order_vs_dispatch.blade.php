@@ -34,8 +34,8 @@ window.initOrderVsDispatchTable = function() {
             }
         },
         columns: [
+            { data: 'so_no', name: 'so_no' },
             { data: 'customer', name: 'customer' },
-            { data: 'so_no', name: 'so_no', className: 'text-center' },
             { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center' },
             { data: 'dispatched_qty', name: 'dispatched_qty', className: 'text-center' },
             { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },

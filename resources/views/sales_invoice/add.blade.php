@@ -38,7 +38,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control form-control inv_date @error('inv_date') is-invalid @enderror" name="inv_date" placeholder="Enter Invoice Date" value="{{ old('inv_date', isset($invoice) ? $invoice->inv_date->format('d-m-Y') : date('d-m-Y')) }}" />
+                                    <input type="text" class="form-control form-control @error('inv_date') is-invalid @enderror" id="inv_date" name="inv_date" placeholder="Enter Invoice Date" value="{{ old('inv_date', isset($invoice) ? $invoice->inv_date->format('d-m-Y') : date('d-m-Y')) }}" readonly style="background-color: #f8f9fa;" />
                                     <label for="inv_date">Invoice Date <span class="text-danger">*</span> </label>
                                     @error('inv_date')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -2673,14 +2673,7 @@
             updateInvoiceNo();
         });
 
-        setTimeout(function() {
-            let fp = document.querySelector('input[name="inv_date"]');
-            if (fp && fp._flatpickr) {
-                fp._flatpickr.config.onChange.push(function(selectedDates, dateStr, instance) {
-                    updateInvoiceNo();
-                });
-            }
-        }, 1000);
+
 
         if ($('#brand_id').val()) {
             updateInvoiceNo();

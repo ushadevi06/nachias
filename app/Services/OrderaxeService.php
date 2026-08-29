@@ -67,35 +67,28 @@ class OrderaxeService
         return null;
     }
 
-    public function syncOrders($limit = 1000)
+    public function syncOrders($limit = 1000, $rewindDays = null)
     {
-        $lastTimestamp = \Illuminate\Support\Facades\Cache::get('orderaxe_last_sync_timestamp');
-
-        if (!$lastTimestamp) {
-            $latestOrder = \App\Models\SalesOrder::whereNotNull('orderaxe_id')->orderBy('id', 'desc')->first();
-            if ($latestOrder && $latestOrder->created_at) {
-                $lastTimestamp = (strtotime($latestOrder->created_at) - (30 * 24 * 60 * 60)) * 1000;
-            } else {
-                $lastTimestamp = 0;
-            }
+        $bufferDays = $rewindDays ? (int)$rewindDays : 7;
+        
+        $latestOrder = \App\Models\SalesOrder::whereNotNull('orderaxe_id')->orderBy('id', 'desc')->first();
+        if ($latestOrder && $latestOrder->created_at) {
+            $lastTimestamp = (strtotime($latestOrder->created_at) - ($bufferDays * 24 * 60 * 60)) * 1000;
+        } else {
+            $lastTimestamp = 0;
         }
 
         $orders = $this->fetchOrders($lastTimestamp, $limit);
 
-        if (!$orders)
+        if (!$orders) {
             return ['synced' => 0, 'skipped' => 0, 'failed' => 0];
+        }
 
         $syncCount = 0;
         $skipCount = 0;
         $failCount = 0;
-        $maxTimestamp = $lastTimestamp;
 
         foreach ($orders as $orderData) {
-            $effectiveDateMs = $orderData['updated_at'] ?? $orderData['created_at'] ?? 0;
-            if ($effectiveDateMs > $maxTimestamp) {
-                $maxTimestamp = (int) $effectiveDateMs;
-            }
-
             $status = $this->processOrder($orderData);
             if ($status === 'synced') {
                 $syncCount++;
@@ -104,10 +97,6 @@ class OrderaxeService
             } else {
                 $failCount++;
             }
-        }
-
-        if ($maxTimestamp > $lastTimestamp) {
-            \Illuminate\Support\Facades\Cache::put('orderaxe_last_sync_timestamp', $maxTimestamp);
         }
 
         return ['synced' => $syncCount, 'skipped' => $skipCount, 'failed' => $failCount];
@@ -136,7 +125,7 @@ class OrderaxeService
                 return 'skipped';
             }
 
-            $effectiveDateMs = $orderData['updated_at'] ?? $orderData['created_at'] ?? 0;
+            $effectiveDateMs = $orderData['date'] ?? $orderData['created_at'] ?? $orderData['updated_at'] ?? 0;
             $orderDate = date('Y-m-d');
             if ($effectiveDateMs > 0) {
                 $dt = new \DateTime('@' . (int)($effectiveDateMs / 1000));
@@ -208,6 +197,14 @@ class OrderaxeService
                 $deliveryDate = $delDt->format('Y-m-d');
             }
 
+            $createdMs = $orderData['created_at'] ?? $orderData['order_date'] ?? $orderData['date'] ?? 0;
+            $requestDate = $orderDate;
+            if ($createdMs > 0) {
+                $cDt = new \DateTime('@' . (int)($createdMs / 1000));
+                $cDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+                $requestDate = $cDt->format('Y-m-d');
+            }
+
             DB::beginTransaction();
 
             $salesOrder = SalesOrder::create([
@@ -216,7 +213,7 @@ class OrderaxeService
                 'orderaxe_id'  => $orderAxeId,
                 'orderaxe_ref_id' => $orderaxeRefId,
                 'so_date'      => $orderDate,
-                'request_date' => $orderDate,
+                'request_date' => $requestDate,
                 'delivery_date'=> $deliveryDate,
                 'customer_id'  => $customer->id,
                 'agent_id'     => $agentId,

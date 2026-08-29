@@ -505,6 +505,7 @@ class JobCardEntryController extends Controller
                     }
                 }
 
+                $savedFabricDetailIds = [];
                 if ($request->fabrics) {
                     foreach ($request->fabrics as $index => $fabric) {
                         $artNo = $fabric['art_no'] ?? null;
@@ -665,6 +666,7 @@ class JobCardEntryController extends Controller
                                 }
                             }
                         }
+                        $savedFabricDetailIds[] = $fabricDetail->id;
                         $fabricDetail->update(['row_total' => $rowTotal]);
 
                         /*  if (isset($issueBackup[$artNo]) && !$hasTasks) {
@@ -675,6 +677,17 @@ class JobCardEntryController extends Controller
                                 'updated_by' => auth()->id(),
                              ]));
                         } */
+                    }
+                }
+
+                if ($id) {
+                    $removedFabricDetails = $jobCard->fabricDetails()->whereNotIn('id', $savedFabricDetailIds)->get();
+                    foreach ($removedFabricDetails as $removedFd) {
+                        JobCardIssueItem::where('job_card_article_matrix_id', $removedFd->id)->delete();
+                        $removedFd->quantities()->delete();
+                        $removedFd->consumptions()->delete();
+                        $removedFd->layMarks()->delete();
+                        $removedFd->delete();
                     }
                 }
 
@@ -1207,14 +1220,7 @@ class JobCardEntryController extends Controller
                             $suffix = $matches[3] ?? '1';
                             $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
 
-                            $isReused = false;
-                            if ($artNo) {
-                                $isReused = BarcodeMaster::where('art_no', $artNo)
-                                    ->where('lot_no', '!=', $jobCard->job_card_no)
-                                    ->exists();
-                            }
-
-                            if ($numericBase === '' || $isReused) {
+                            if ($numericBase === '') {
                                 $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
                                 $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
                             }
@@ -2683,14 +2689,7 @@ class JobCardEntryController extends Controller
             $suffix = $matches[3] ?? '1';
             $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
 
-            $isReused = false;
-            if ($artNo) {
-                $isReused = BarcodeMaster::where('art_no', $artNo)
-                    ->where('lot_no', '!=', $jobCard->job_card_no)
-                    ->exists();
-            }
-
-            if ($numericBase === '' || $isReused) {
+            if ($numericBase === '') {
                 $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
                 $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
             }
