@@ -23,11 +23,12 @@
     <!-- Global Filter Card -->
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
-            <form id="warehouseReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('warehouse_reports') }}">
+            <form id="warehouseReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('warehouse_reports') }}" onsubmit="return false;">
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
                     <select class="form-select select2" id="report_type_select" name="report_type">
-                        <option value="brand-sales" selected>📊 Brandwise Sales</option>
+                        <option value="warehouse-summary" selected>🏬 Warehouse Summary</option>
+                        <option value="brand-sales">📊 Brandwise Sales</option>
                         <option value="brand-stock">📦 Brandwise Stock</option>
                         <option value="assorted-stock">🏷️ Assorted Stock</option>
                         <option value="order-dispatch">🔄 Order vs Dispatch</option>
@@ -60,11 +61,11 @@
                 </div>
                 <div class="col-md-3 d-flex gap-2">
                     <div class="w-50">
-                        <label class="form-label small fw-bold text-muted">Store</label>
-                        <select class="form-select select2" name="store_id" data-placeholder="Select Store">
+                        <label class="form-label small fw-bold text-muted">Store Type</label>
+                        <select class="form-select select2" name="store_id" data-placeholder="Select Store Type">
                             <option value=""></option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_location }}</option>
+                                <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_type_name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -85,9 +86,18 @@
     <div class="card shadow-sm border-0 premium-content-card">
         <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
             <h5 class="mb-0 fw-bold text-primary" id="active_report_title">
-                📊 Brandwise Sales Report
+                🏬 Warehouse Summary Report
             </h5>
-            <span class="badge bg-label-primary px-3 py-2 rounded-pill" id="active_report_badge">Warehouse Analytics</span>
+            <div class="d-flex align-items-center gap-2">
+                <div id="top_warehouse_wrapper">
+                    <select id="top_warehouse_select" class="form-select form-select-sm border-primary text-primary fw-bold" style="width: 240px;">
+                        @foreach($warehouses ?? [] as $wh)
+                            <option value="{{ $wh->id }}" {{ $loop->first ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <span class="badge bg-label-primary px-3 py-2 rounded-pill" id="active_report_badge">Warehouse Analytics</span>
+            </div>
         </div>
         <div class="card-body py-4">
             <style>
@@ -113,8 +123,13 @@
                 }
             </style>
             <div class="tab-content">
+                <!-- 0. Warehouse Summary Report -->
+                <div class="tab-pane fade show active" id="warehouse-summary" role="tabpanel">
+                    @include('reports.warehouse_report.warehouse_summary', ['reportData' => [], 'totals' => []])
+                </div>
+
                 <!-- 1. Brandwise Sales Report -->
-                <div class="tab-pane fade show active" id="brand-sales" role="tabpanel">
+                <div class="tab-pane fade" id="brand-sales" role="tabpanel">
                     @include('reports.warehouse_report.brandwise_sales')
                 </div>
 
@@ -277,12 +292,37 @@ $(document).ready(function() {
         
         $('#active_report_title').html(selectedText + ' Report');
 
+        if (targetTabId === 'warehouse-summary') {
+            $('#top_warehouse_wrapper').show();
+        } else {
+            $('#top_warehouse_wrapper').hide();
+        }
+
         $('.tab-pane').removeClass('show active');
         $('#' + targetTabId).addClass('show active');
 
         handleTabActivation('#' + targetTabId);
         $('#warehouseReportForm').trigger('submit');
     });
+
+    $('#top_warehouse_select').on('change', function() {
+        $('#warehouseReportForm').trigger('submit');
+    });
+
+    $.fn.dataTable.ext.errMode = 'none';
+
+    function showWarehouseReportLoading(isLoading) {
+        let loader = $('#report_loader');
+        if (isLoading) {
+            if (!loader.length) {
+                $('#active_report_title').append(' <div class="spinner-border spinner-border-sm text-primary ms-2" id="report_loader" role="status"></div>');
+            }
+            $('.tab-content').css({ 'opacity': '0.5', 'transition': 'opacity 0.2s ease-in-out' });
+        } else {
+            loader.remove();
+            $('.tab-content').css({ 'opacity': '1.0' });
+        }
+    }
 
     $('#warehouseReportForm').on('submit', function(e) {
         e.preventDefault();
@@ -291,11 +331,14 @@ $(document).ready(function() {
         const originalBtnHtml = submitBtn.html();
 
         submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...').prop('disabled', true);
-        $('.tab-content').css('opacity', '0.6');
+        showWarehouseReportLoading(true);
 
-        let activeTabId = $('.tab-pane.active').attr('id') || 'brand-sales';
+        let activeTabId = $('.tab-pane.active').attr('id') || 'warehouse-summary';
         let formData = form.serializeArray();
         formData.push({ name: 'active_tab', value: activeTabId });
+        if (activeTabId === 'warehouse-summary') {
+            formData.push({ name: 'warehouse_id', value: $('#top_warehouse_select').val() });
+        }
 
         $.ajax({
             url: form.attr('action'),
@@ -311,6 +354,9 @@ $(document).ready(function() {
                 });
 
                 switch (activeTabId) {
+                    case 'warehouse-summary':
+                        if (typeof initWarehouseSummaryTable === 'function') initWarehouseSummaryTable();
+                        break;
                     case 'brand-sales':
                     case 'brandwise-sales':
                         if (typeof initBrandwiseSalesTable === 'function') initBrandwiseSalesTable();
@@ -354,7 +400,9 @@ $(document).ready(function() {
 
                 const activeTable = $('#' + activeTabId).find('.datatables-products');
                 if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
-                    activeTable.DataTable().ajax.reload(null, false);
+                    if (activeTable.DataTable().ajax && typeof activeTable.DataTable().ajax.url === 'function' && activeTable.DataTable().ajax.url()) {
+                        activeTable.DataTable().ajax.reload(null, false);
+                    }
                 }
 
                 if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
@@ -369,10 +417,13 @@ $(document).ready(function() {
             },
             complete: function() {
                 submitBtn.html(originalBtnHtml).prop('disabled', false);
-                $('.tab-content').css('opacity', '1');
+                showWarehouseReportLoading(false);
             }
         });
     });
+
+    // Auto-trigger initial search on load
+    $('#warehouseReportForm').trigger('submit');
 
     $('#btn-excel').on('click', function() {
         $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();

@@ -129,7 +129,7 @@
         .tag-main-details {
             height: 33.2mm;
             position: relative;
-            padding-top: 2.3mm;
+            padding-top: 5mm;
         }
         
         .details-table {
@@ -137,7 +137,7 @@
             width: 100%;
         }
         .details-table td {
-            padding: 0.5mm 0;
+            padding: 0.4mm 0;
             vertical-align: middle;
             font-size: 6.5pt;
             line-height: 1.1;
@@ -151,20 +151,20 @@
         .tag-qr-section {
             position: absolute;
             right: 3.3mm;
-            top: 6mm;
+            top: 8mm;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .tag-qr-section img, .tag-qr-section svg {
-            width: 8mm;
-            height: 8mm;
+            width: 10mm;
+            height: 10mm;
         }
         
         .lot-vertical {
             position: absolute;
             right: -0.5mm;
-            top: 2mm;
+            top: 5mm;
             writing-mode: vertical-rl;
             transform: rotate(180deg);
             font-size: 6pt;
@@ -175,13 +175,13 @@
         
         .tag-separator {
             border-top: 1px solid #221F1F;
-            margin: 1.5mm -2mm;
+            margin: 1mm -2mm;
         }
         
         .tag-footer-info {
             text-align: left;
-            line-height: 1.1;
-            height: 13.4mm;
+            line-height: 1.05;
+            height: 11.5mm;
             overflow: hidden;
         }
         
@@ -191,7 +191,7 @@
         }
         .complaints-table td {
             font-size: 4.5pt;
-            line-height: 1.2;
+            line-height: 1.1;
             vertical-align: top;
         }
         .comp-lbl { width: 13mm; }
@@ -201,7 +201,7 @@
         .mrp-section {
             text-align: center;
             position: absolute;
-            bottom: 2mm;
+            bottom: 0.5mm;
             left: 0;
             right: 0;
             width: 100%;
@@ -209,6 +209,17 @@
         
         .hide-for-print {
             visibility: hidden !important;
+        }
+        
+        .top-sleeve-label {
+            position: absolute;
+            top: 6mm;
+            left: 2mm;      
+            font-size: 10pt;
+            font-weight: bold;
+            font-family: 'Open Sans', Arial, sans-serif;
+            color: #000000;
+            z-index: 100;
         }
         
     </style>
@@ -232,10 +243,16 @@
             $currentSize = preg_replace('/[^0-9]/', '', $labelData['size'] ?? '');
             $bgColor = $sizeColors[$currentSize] ?? '#888888';
             
-            $qrString = ($labelData['sku'] ?? '-') . " | " . ($labelData['product_name'] ?? '-') . " | " . ($labelData['size'] ?? '-');
+            $qrString = $labelData['sku'] ?? $labelData['barcode'] ?? ($labelData['design'] ?? '-');
             
-            $sText = $labelData['sleeve'] ?? 'Full';
-            $sText = str_replace(['F/S', 'H/S'], ['Full', 'Half'], $sText);
+            $rawSleeve = strtoupper($labelData['sleeve'] ?? 'F/S');
+            if (strpos($rawSleeve, 'FULL') !== false || $rawSleeve === 'F/S' || $rawSleeve === 'F') {
+                $sText = 'F/S';
+            } elseif (strpos($rawSleeve, 'HALF') !== false || $rawSleeve === 'H/S' || $rawSleeve === 'H') {
+                $sText = 'H/S';
+            } else {
+                $sText = $rawSleeve;
+            }
 
             $brandText = ucwords(strtolower($labelData['brand_name'] ?? '-'));
             $companyName = ucwords(strtolower($labelData['company_name'] ?? 'Nachias Fashion Private Limited'));
@@ -253,7 +270,9 @@
                     <img src="{{ url('assets/images/fav.jpeg') }}" class="tag-logo" alt="Logo">
                     <div class="tag-hole"></div>
                 </div>
-                
+                <div class="top-sleeve-label">
+                    <span style="font-weight: 700; font-size: 6.5pt;">Sleeve :</span> {{ $sText }}
+                </div>
                 <div class="size-banner hide-for-print" style="background-color: {{ $bgColor }};">
                     <span class="f-6  font-oswald">Size</span>
                     <span class="f-14 font-bebas" style="letter-spacing: 1px;">{{ $labelData['size'] ?? '-' }}</span>
@@ -264,14 +283,13 @@
                         <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
                         <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
                         <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fit'] ?? 'Tailor Fit')) }}</td></tr>
-                        <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
                         <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
                         <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
                         <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
-                        <tr><td class="td-lbl" style="padding-top: 3mm;">Art No</td><td class="td-col" style="padding-top: 3mm;">:</td><td class="td-val font-bebas" style="padding-top: 3mm; font-size: 12pt; letter-spacing: 0.5px;">{{ $labelData['design'] ?? '-' }}</td></tr>
+                        <tr><td class="td-lbl" style="padding-top: 2mm;">Art No</td><td class="td-col" style="padding-top: 2mm;">:</td><td class="td-val font-bebas" style="padding-top: 2mm; font-size: 12pt; letter-spacing: 0.5px;">{{ $labelData['design'] ?? '-' }}</td></tr>
                     </table>
                     <div class="tag-qr-section">
-                        {!! QrCode::size(50)->generate($qrString) !!}
+                        {!! QrCode::size(60)->generate($qrString) !!}
                     </div>
                     <div class="lot-vertical">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
                 </div>
@@ -302,8 +320,8 @@
                 
                 <div class="mrp-section">
                     <div class="fw-bold" style="font-size: 6.2pt; color: #000000;">MRP <span class="fw-bold" style="font-size: 6.5pt; color: #000000;">(inclusive of all taxes)</span></div>
-                    <div class="fw-bold" style="font-size: 11pt; line-height: 1; color: #000000; margin: 0.8mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
-                    <div class="fw-bold" style="font-size: 4pt; color: #000000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
+                    <div class="fw-bold" style="font-size: 12pt; line-height: 1; color: #000000; margin: 0mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
+                    <div class="fw-bold" style="font-size: 4pt; color: #000000; margin-top: 0mm;">MADE IN INDIA WITH PRIDE</div>
                 </div>
         </div>
     @endforeach

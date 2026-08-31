@@ -250,13 +250,25 @@ class AjaxController extends Controller
 
     public function getCustomerDetails($id)
     {
-        $customer = Customer::with(['tax', 'zone'])->find($id);
+        $customer = Customer::with(['tax', 'zone', 'state', 'city'])->find($id);
         if (!$customer) {
             return response()->json(['success' => false, 'message' => 'Customer not found']);
         }
+
+        $addressParts = array_filter([
+            $customer->address_line_1,
+            $customer->address_line_2,
+            $customer->address_line_3,
+            $customer->city->city_name ?? '',
+            $customer->state->state_name ?? '',
+            $customer->zip_code
+        ]);
+        $formattedAddress = implode(', ', $addressParts);
+
         return response()->json([
             'success' => true,
             'customer' => $customer,
+            'address' => $formattedAddress,
             'box_discount_amount' => (float)$customer->box_discount_amount,
             'sales_discount' => (float)$customer->sales_discount
         ]);

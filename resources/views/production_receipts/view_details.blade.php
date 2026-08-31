@@ -18,6 +18,15 @@
             </div>
         </div>
 
+@if(isset($capacityWarning) && $capacityWarning)
+        <div class="col-lg-12">
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="ri-alert-line me-1 fs-5"></i> <strong>Capacity Notice:</strong> {{ $capacityWarning }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+@endif
+
         <div class="col-lg-12">
             <div class="card mb-4">
                 <div class="card-body">
@@ -45,6 +54,10 @@
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Plant</label>
                             <p>{{ $receipt->plant->plant_name ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Warehouse</label>
+                            <p>{{ $receipt->warehouse->warehouse_name ?? '-' }}</p>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Order Due Date</label>

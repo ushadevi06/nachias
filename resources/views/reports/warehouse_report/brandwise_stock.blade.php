@@ -8,12 +8,9 @@
 <div class="card-datatable table-responsive">
     <table id="brandwiseStockTable" class="datatables-products table table-hover">
         <thead class="table-light">
-            <tr>
+            <tr id="brandwiseStockTheadTr">
                 <th class="fw-bold" id="brandwiseStockCol1">BRAND</th>
                 <th class="text-center fw-bold">STOCK</th>
-                <th class="text-center fw-bold">LOW STOCK QTY</th>
-                <th class="text-center fw-bold">EXCESS STOCK QTY</th>
-                <th class="text-center fw-bold">STOCK DAYS</th>
                 <th class="text-end fw-bold">STOCK VALUE</th>
             </tr>
         </thead>
@@ -48,35 +45,16 @@
         if ($.fn.DataTable.isDataTable('#brandwiseStockTable')) {
             $('#brandwiseStockTable').DataTable().clear().destroy();
         }
-        $('#brandwiseStockTable thead th').show().removeAttr('style');
         $('#brandwiseStockTbody').empty();
-    }
-
-    function applyDataTable(showExtraColumns = false) {
-        $('#brandwiseStockTable').DataTable({
-            responsive: true,
-            paging: true,
-            autoWidth: false,
-            searching: true,
-            ordering: true,
-            info: true,
-            lengthChange: true,
-            pageLength: 10,
-            columnDefs: [
-                { targets: [2, 3, 4], visible: showExtraColumns }
-            ],
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-            buttons: ['excel', 'pdf', 'print'],
-            language: {
-                emptyTable: "No data found matching your filters",
-                zeroRecords: "No matching records found",
-                infoEmpty: "Showing 0 to 0 entries",
-            }
-        });
     }
     
     function applyServerSideDataTable() {
         isRootLevel = true;
+        $('#brandwiseStockTheadTr').html(`
+            <th class="fw-bold" id="brandwiseStockCol1">BRAND</th>
+            <th class="text-center fw-bold">STOCK</th>
+            <th class="text-end fw-bold">STOCK VALUE</th>
+        `);
         dtInstance = $('#brandwiseStockTable').DataTable({
             processing: true,
             serverSide: true,
@@ -91,11 +69,8 @@
                 }
             },
             columns: [
-                { data: 'brand', name: 'brand', width: '45%' },
-                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '15%' },
-                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, visible: false, width: '10%' },
-                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, visible: false, width: '10%' },
-                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, visible: false, width: '10%' },
+                { data: 'brand', name: 'brand', width: '55%' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '20%' },
                 { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
             ],
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
@@ -111,7 +86,6 @@
 
     function renderBrandLevel() {
         $('#brandwiseBreadcrumbs').attr('style', 'display: none !important;');
-        $('#brandwiseStockCol1').text('BRAND');
         
         reinitDataTable();
         applyServerSideDataTable();
@@ -132,9 +106,14 @@
         $('#brandwiseBreadcrumbs').attr('style', 'display: flex !important;');
         $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
         $('#btnBackToBrands').attr('onclick', 'renderBrandLevel()');
-        $('#brandwiseStockCol1').text('STYLE');
 
         reinitDataTable();
+
+        $('#brandwiseStockTheadTr').html(`
+            <th class="fw-bold" id="brandwiseStockCol1">STYLE</th>
+            <th class="text-center fw-bold">STOCK</th>
+            <th class="text-end fw-bold">STOCK VALUE</th>
+        `);
 
         dtInstance = $('#brandwiseStockTable').DataTable({
             processing: true,
@@ -151,11 +130,8 @@
                 }
             },
             columns: [
-                { data: 'brand', name: 'styles.style_name', width: '45%' },
-                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '15%' },
-                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, visible: false, width: '10%' },
-                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, visible: false, width: '10%' },
-                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, visible: false, width: '10%' },
+                { data: 'brand', name: 'styles.style_name', width: '55%' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '20%' },
                 { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
             ],
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
@@ -172,9 +148,17 @@
     function drillDownToArtNo(brandId, brandName, styleId, styleName) {
         $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')">${brandName}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${styleName}</span>`);
         $('#btnBackToBrands').attr('onclick', `drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')`);
-        $('#brandwiseStockCol1').text('ART NO');
 
         reinitDataTable();
+
+        $('#brandwiseStockTheadTr').html(`
+            <th class="fw-bold" id="brandwiseStockCol1">ART NO</th>
+            <th class="text-center fw-bold">STOCK</th>
+            <th class="text-center fw-bold">LOW STOCK QTY</th>
+            <th class="text-center fw-bold">EXCESS STOCK QTY</th>
+            <th class="text-center fw-bold">STOCK DAYS</th>
+            <th class="text-end fw-bold">STOCK VALUE</th>
+        `);
 
         dtInstance = $('#brandwiseStockTable').DataTable({
             processing: true,
@@ -191,12 +175,12 @@
                 }
             },
             columns: [
-                { data: 'brand', name: 'stock_entry_items.art_no', width: '45%' },
+                { data: 'brand', name: 'stock_entry_items.art_no', width: '30%' },
                 { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '15%' },
-                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, visible: true, width: '10%' },
-                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, visible: true, width: '10%' },
-                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, visible: true, width: '10%' },
-                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
+                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, width: '15%' },
+                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, width: '15%' },
+                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, width: '10%' },
+                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '15%' }
             ],
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],

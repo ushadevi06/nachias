@@ -15,6 +15,7 @@ class StockEntry extends Model
         'stock_date',
         'entry_type',
         'grn_entry_id',
+        'warehouse_id',
         'from_store_location_id',
         'to_store_location_id',
         'remarks',
@@ -52,6 +53,11 @@ class StockEntry extends Model
     ];
 
     // Relationships
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
     public function grnEntry()
     {
         return $this->belongsTo(GrnEntry::class);

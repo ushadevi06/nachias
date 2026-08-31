@@ -1414,7 +1414,13 @@ $(document).ready(function () {
                 success: function(res) {
                     if (res.success && res.customer) {
                         let c = res.customer;
-                        let parts = [c.address_line_1, c.address_line_2, c.address_line_3, c.city, c.state, c.pincode].filter(Boolean).map(s => s.trim());
+                        let cityName = (c.city && typeof c.city === 'object') ? (c.city.city_name || '') : (c.city || '');
+                        let stateName = (c.state && typeof c.state === 'object') ? (c.state.state_name || '') : (c.state || '');
+                        let zipCode = c.zip_code || c.pincode || '';
+                        let parts = [c.address_line_1, c.address_line_2, c.address_line_3, cityName, stateName, zipCode]
+                            .filter(Boolean)
+                            .map(s => String(s).trim())
+                            .filter(s => s.length > 0);
                         let uniqueParts = [];
                         for (let part of parts) {
                             let lowerPart = part.toLowerCase();
@@ -1447,7 +1453,6 @@ $(document).ready(function () {
 
                         let customerStateId = c.state_id;
                         let companyStateId = "{{ $web_settings->state_id ?? '' }}";
-                        console.log(customerStateId,companyStateId);
                         if (customerStateId && companyStateId) {
                             if (customerStateId == companyStateId) {
                                 $('#other_state_no').prop('checked', true).trigger('change');

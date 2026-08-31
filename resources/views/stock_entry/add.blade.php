@@ -51,6 +51,20 @@
                                     @enderror
                                 </div>
                             </div>
+                            <div class="col-lg-4 mb-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="warehouse_id" name="warehouse_id" class="select2 form-select" data-placeholder="Select Warehouse">
+                                        <option value="">Select Target Warehouse</option>
+                                        @foreach($warehouses as $wh)
+                                            <option value="{{ $wh->id }}" {{ old('warehouse_id', $stockEntry->warehouse_id ?? '') == $wh->id ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="warehouse_id">Target Warehouse</label>
+                                    @error('warehouse_id')
+                                        <div class="text-danger small">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
                             <input type="hidden" name="entry_type_radio" value="raw_material">
                         </div>
 

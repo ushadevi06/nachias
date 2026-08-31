@@ -9,3 +9,6 @@ SET brand_id = (
 )
 WHERE stock_type = 'finished_goods' 
 AND brand_id IS NULL;
+
+ALTER TABLE `settings`
+ADD COLUMN `ip_address` VARCHAR(255) NULL AFTER `email`;

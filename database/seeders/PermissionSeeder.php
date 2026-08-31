@@ -33,6 +33,7 @@ class PermissionSeeder extends Seeder
             'fabric-sizes' => ['create', 'edit', 'delete', 'view'],
             'charges' => ['create', 'edit', 'delete', 'view'],
             'store-location' => ['create', 'edit', 'delete', 'view'],
+            'warehouses' => ['create', 'edit', 'delete', 'view'],
             'departments' => ['create', 'edit', 'delete', 'view'],
             'taxes' => ['create', 'edit', 'delete', 'view'],
             'styles' => ['create', 'edit', 'delete', 'view'],

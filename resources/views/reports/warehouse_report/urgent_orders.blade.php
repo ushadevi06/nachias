@@ -4,6 +4,7 @@
             <tr>
                 <th>SO No</th>
                 <th>Customer</th>
+                <th class="text-center">SO Date</th>
                 <th class="text-center">Order Date</th>
                 <th class="text-center">Days Pending</th>
                 <th class="text-center">Delivery Date</th>
@@ -107,6 +108,7 @@ window.initUrgentOrdersTable = function() {
         columns: [
             { data: 'so_no', name: 'so_no', className: 'text-center' },
             { data: 'customer', name: 'customer' },
+            { data: 'so_date', name: 'so_date', className: 'text-center' },
             { data: 'order_date', name: 'order_date', className: 'text-center' },
             { data: 'days_pending', name: 'days_pending', className: 'text-center', orderable: false },
             { data: 'delivery_date', name: 'delivery_date', className: 'text-center', orderable: false },

@@ -102,19 +102,25 @@
 
     <div class="title">Production Receipt</div>
 
-    {{-- Metadata row (same 4-column layout as Work Order) --}}
+    {{-- Metadata row (4-column layout with clean alignment) --}}
     <table class="metadata-table">
         <tr>
-            <td class="label">Receipt Date</td>
-            <td>: {{ date('d/m/Y', strtotime($receipt->receipt_date)) }}</td>
-            <td class="label" style="text-align: right;">Brand</td>
-            <td style="text-align: left;">: {{ $receipt->jobCard->brand->brand_name ?? '-' }}</td>
+            <td style="width: 18%; font-weight: bold;">Receipt Date</td>
+            <td style="width: 32%;">: {{ date('d/m/Y', strtotime($receipt->receipt_date)) }}</td>
+            <td style="width: 18%; font-weight: bold;">Brand</td>
+            <td style="width: 32%;">: {{ $receipt->jobCard->brand->brand_name ?? '-' }}</td>
         </tr>
         <tr>
-            <td class="label">Job Card No #</td>
-            <td>: {{ $receipt->jobCard->job_card_no ?? '-' }}</td>
-            <td class="label" style="text-align: right;">Store</td>
-            <td style="text-align: left;">: {{ $receipt->storeType->store_type_name ?? '-' }}</td>
+            <td style="width: 18%; font-weight: bold;">Job Card No #</td>
+            <td style="width: 32%;">: {{ $receipt->jobCard->job_card_no ?? '-' }}</td>
+            <td style="width: 18%; font-weight: bold;">Warehouse</td>
+            <td style="width: 32%;">: {{ $receipt->warehouse->warehouse_name ?? '-' }}</td>
+        </tr>
+        <tr>
+            <td style="width: 18%; font-weight: bold;">Store</td>
+            <td style="width: 32%;">: {{ $receipt->storeType->store_type_name ?? '-' }}</td>
+            <td style="width: 18%; font-weight: bold;">Store Location</td>
+            <td style="width: 32%;">: {{ $receipt->storeLocation->store_location ?? '-' }}</td>
         </tr>
     </table>
 

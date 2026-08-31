@@ -12,6 +12,8 @@ use App\Models\SalesInvoiceItem;
 use App\Models\SalesOrder;
 use App\Models\StockEntryItem;
 use App\Models\StoreLocation;
+use App\Models\Warehouse;
+use App\Models\WarehouseBrandCapacity;
 use Illuminate\Support\Facades\DB;
 
 class WarehouseReportController extends Controller
@@ -25,10 +27,96 @@ class WarehouseReportController extends Controller
     public function index(Request $request)
     {
         $brands = Brand::where('status', 'Active')->get();
-        $stores = StoreLocation::where('status', 'Active')->get();
+        $stores = \App\Models\StoreType::where('status', 'Active')->get();
+        $warehouses = Warehouse::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $defaultWarehouseId = $warehouses->first()?->id;
 
         if ($request->ajax()) {
             $activeTab = $request->get('active_tab');
+
+            if ($activeTab == 'warehouse-summary') {
+                $selectedWarehouseId = $request->get('warehouse_id', $defaultWarehouseId);
+                
+                $capacities = WarehouseBrandCapacity::where('warehouse_id', $selectedWarehouseId)->where('status', 'Active')->pluck('capacity_pcs', 'brand_id')->toArray();
+
+                $activeBrands = Brand::where('status', 'Active')->orderBy('id','desc')->get();
+                $reportData = [];
+
+                $totalCapacity = 0;
+                $totalSetwise = 0;
+                $totalSingle = 0;
+                $totalTotalStock = 0;
+                $totalDamage = 0;
+
+                foreach ($activeBrands as $brand) {
+                    $capacityPcs = $capacities[$brand->id] ?? 0;
+
+                    // Fetch all finished goods stock items for this brand and warehouse
+                    $stockItems = StockEntryItem::where('brand_id', $brand->id)
+                        ->where(function($q) use ($selectedWarehouseId) {
+                            $q->where('warehouse_id', $selectedWarehouseId)
+                              ->orWhereHas('stockEntry', function($se) use ($selectedWarehouseId) {
+                                  $se->where('warehouse_id', $selectedWarehouseId);
+                              });
+                        })
+                        ->with('stockEntry.productionReceipt')
+                        ->get();
+
+                    $setwiseStock = 0;
+                    $singleStoreStock = 0;
+                    $damageStock = 0;
+
+                    foreach ($stockItems as $item) {
+                        $netQty = (float)($item->qty_in - $item->qty_out);
+                        $storeTypeId = $item->stockEntry?->productionReceipt?->store_type_id ?? $item->store_category_id;
+
+                        if ($storeTypeId == 12) {
+                            // Single Store Stock (Store Type ID 12)
+                            $singleStoreStock += $netQty;
+                        } elseif ($storeTypeId == 6) {
+                            // Damage Store Stock (Store Type ID 6)
+                            $damageStock += $netQty;
+                        } else {
+                            // Setwise Stock (Store Type ID 3 or Default Finished Goods)
+                            $setwiseStock += $netQty;
+                        }
+                    }
+
+                    $totalStock = $setwiseStock + $singleStoreStock;
+                    $utilizationPct = $capacityPcs > 0 ? round(($totalStock / $capacityPcs) * 100, 2) : 0;
+
+                    $totalCapacity += $capacityPcs;
+                    $totalSetwise += $setwiseStock;
+                    $totalSingle += $singleStoreStock;
+                    $totalTotalStock += $totalStock;
+                    $totalDamage += $damageStock;
+
+                    $reportData[] = [
+                        'brand_name' => $brand->brand_name,
+                        'capacity_pcs' => $capacityPcs,
+                        'setwise_stock' => $setwiseStock,
+                        'single_store_stock' => $singleStoreStock,
+                        'total_stock' => $totalStock,
+                        'utilization_pct' => $utilizationPct,
+                        'damage_stock' => $damageStock,
+                    ];
+                }
+
+                $totalUtilizationPct = $totalCapacity > 0 ? round(($totalTotalStock / $totalCapacity) * 100, 2) : 0;
+
+                $totals = [
+                    'capacity_pcs' => $totalCapacity,
+                    'setwise_stock' => $totalSetwise,
+                    'single_store_stock' => $totalSingle,
+                    'total_stock' => $totalTotalStock,
+                    'utilization_pct' => $totalUtilizationPct,
+                    'damage_stock' => $totalDamage,
+                ];
+
+                return response()->json([
+                    'warehouse-summary' => view('reports.warehouse_report.warehouse_summary', compact('reportData', 'totals'))->render()
+                ]);
+            }
 
             $tabViews = [
                 'brand-stock' => 'reports.warehouse_report.brandwise_stock',
@@ -73,8 +161,7 @@ class WarehouseReportController extends Controller
                     $priorityStockQuery->where('store_location_id', $request->store_id);
                 }
 
-                $priorityStock = $priorityStockQuery->groupBy('art_no')
-                    ->having('current_stock', '>', 0)
+                $priorityStock = $priorityStockQuery->groupBy('art_no')->having('current_stock', '>', 0)
                     ->having('ageing_days', '>=', 90)
                     ->orderBy('ageing_days', 'desc')
                     ->get();
@@ -102,7 +189,9 @@ class WarehouseReportController extends Controller
         return view('reports/warehouse_report', compact(
             'priorityStock',
             'brands',
-            'stores'
+            'stores',
+            'warehouses',
+            'defaultWarehouseId'
         ));
     }
 
@@ -116,7 +205,7 @@ class WarehouseReportController extends Controller
 
         $brandId = $request->brand_id;
         
-        $stockQuery = \App\Models\StockEntryItem::query()
+        $stockQuery = StockEntryItem::query()
             ->leftJoin('styles', 'stock_entry_items.style_id', '=', 'styles.id')
             ->select(
                 DB::raw('COALESCE(styles.id, 0) as style_id'),
@@ -209,7 +298,7 @@ class WarehouseReportController extends Controller
         $brandId = $request->brand_id;
         $styleId = $request->style_id;
         
-        $stockQuery = \App\Models\StockEntryItem::query()
+        $stockQuery = StockEntryItem::query()
             ->leftJoin('fg_min_stocks', function($join) {
                 $join->on('stock_entry_items.id', '=', 'fg_min_stocks.stock_entry_item_id')
                      ->where('fg_min_stocks.status', '=', 'Active')
@@ -1231,6 +1320,7 @@ class WarehouseReportController extends Controller
                         'sales_orders.customer_id',
                         'sales_orders.so_no',
                         'sales_orders.so_date',
+                        'sales_orders.request_date',
                         'sales_orders.delivery_date',
                         'sales_orders.orderaxe_id',
                         'sales_orders.orderaxe_ref_id',
@@ -1245,10 +1335,10 @@ class WarehouseReportController extends Controller
                     ->whereNull('sales_invoice_items.deleted_at');
 
                 if ($request->from_date) {
-                    $query->where('sales_orders.so_date', '>=', date('Y-m-d', strtotime($request->from_date)));
+                    $query->where(DB::raw('COALESCE(NULLIF(sales_orders.request_date, "0000-00-00"), sales_orders.so_date)'), '>=', date('Y-m-d', strtotime($request->from_date)));
                 }
                 if ($request->to_date) {
-                    $query->where('sales_orders.so_date', '<=', date('Y-m-d', strtotime($request->to_date)));
+                    $query->where(DB::raw('COALESCE(NULLIF(sales_orders.request_date, "0000-00-00"), sales_orders.so_date)'), '<=', date('Y-m-d', strtotime($request->to_date)));
                 }
                 if ($request->store_id) {
                     $query->where('sales_orders.store_id', $request->store_id);
@@ -1286,6 +1376,7 @@ class WarehouseReportController extends Controller
                     'sales_orders.customer_id',
                     'sales_orders.so_no',
                     'sales_orders.so_date',
+                    'sales_orders.request_date',
                     'sales_orders.delivery_date',
                     'sales_orders.orderaxe_id',
                     'sales_orders.orderaxe_ref_id',
@@ -1389,8 +1480,10 @@ class WarehouseReportController extends Controller
                     }
 
                     // Dates & Urgency
-                    $orderDateFormatted = date('d M Y', strtotime($so->so_date));
-                    $daysPending = $today->diffInDays(\Carbon\Carbon::parse($so->so_date));
+                    $soDateFormatted = !empty($so->so_date) ? date('d M Y', strtotime($so->so_date)) : '-';
+                    $effectiveOrderDate = (!empty($so->request_date) && $so->request_date != '0000-00-00') ? $so->request_date : $so->so_date;
+                    $orderDateFormatted = !empty($effectiveOrderDate) ? date('d M Y', strtotime($effectiveOrderDate)) : '-';
+                    $daysPending = $today->diffInDays(\Carbon\Carbon::parse($effectiveOrderDate));
                     $daysPendingHtml = '<span class="badge bg-label-warning text-dark fw-bold px-2 py-1" style="font-size: 11px;">' . $daysPending . ' ' . ($daysPending == 1 ? 'Day' : 'Days') . '</span>';
 
                     $deliveryHtml = '-';
@@ -1419,6 +1512,7 @@ class WarehouseReportController extends Controller
                     $data[] = [
                         'so_no' => $soNoHtml,
                         'customer' => $so->customer->name ?? '-',
+                        'so_date' => $soDateFormatted,
                         'order_date' => $orderDateFormatted,
                         'days_pending' => $daysPendingHtml,
                         'delivery_date' => $deliveryHtml,
@@ -1452,6 +1546,8 @@ class WarehouseReportController extends Controller
                         'sales_order_items.art_no',
                         'sales_order_items.sku',
                         'sales_order_items.item_name',
+                        'sales_order_items.category_name',
+                        'sales_order_items.categories_path_val',
                         'sales_order_items.qty',
                         'sales_order_items.amount',
                         'b_stock.brand_name as stock_brand_name',
@@ -1490,6 +1586,8 @@ class WarehouseReportController extends Controller
                         $artNo = trim($item->art_no ?? '');
                         $sku = trim($item->sku ?? '');
                         $itemName = trim($item->item_name ?? '');
+                        $catName = trim($item->category_name ?? '');
+                        $catPath = trim($item->categories_path_val ?? '');
 
                         foreach ($allBrands as $b) {
                             $bCode = trim($b->code);
@@ -1497,9 +1595,13 @@ class WarehouseReportController extends Controller
 
                             if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
                                 ($bCode && $sku && stripos($sku, $bCode) === 0) ||
+                                ($bCode && $catName && stripos($catName, $bCode) === 0) ||
+                                ($bCode && $catPath && stripos($catPath, $bCode) === 0) ||
                                 ($bName && $artNo && stripos($artNo, $bName) !== false) ||
                                 ($bName && $sku && stripos($sku, $bName) !== false) ||
-                                ($bName && $itemName && stripos($itemName, $bName) !== false)) {
+                                ($bName && $itemName && stripos($itemName, $bName) !== false) ||
+                                ($bName && $catName && stripos($catName, $bName) !== false) ||
+                                ($bName && $catPath && stripos($catPath, $bName) !== false)) {
                                 $brandName = $b->brand_name;
                                 $brandId = $b->id;
                                 break;
@@ -2407,6 +2509,8 @@ class WarehouseReportController extends Controller
                 'sales_order_items.art_no',
                 'sales_order_items.sku',
                 'sales_order_items.item_name',
+                'sales_order_items.category_name',
+                'sales_order_items.categories_path_val',
                 'sales_order_items.qty',
                 'sales_order_items.amount',
                 'b_stock.brand_name as stock_brand_name',
@@ -2447,15 +2551,21 @@ class WarehouseReportController extends Controller
                 $artNo = trim($item->art_no ?? '');
                 $sku = trim($item->sku ?? '');
                 $itemName = trim($item->item_name ?? '');
+                $catName = trim($item->category_name ?? '');
+                $catPath = trim($item->categories_path_val ?? '');
 
                 foreach ($allBrands as $b) {
                     $bCode = trim($b->code);
                     $bName = trim($b->brand_name);
                     if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
                         ($bCode && $sku && stripos($sku, $bCode) === 0) ||
+                        ($bCode && $catName && stripos($catName, $bCode) === 0) ||
+                        ($bCode && $catPath && stripos($catPath, $bCode) === 0) ||
                         ($bName && $artNo && stripos($artNo, $bName) !== false) ||
                         ($bName && $sku && stripos($sku, $bName) !== false) ||
-                        ($bName && $itemName && stripos($itemName, $bName) !== false)) {
+                        ($bName && $itemName && stripos($itemName, $bName) !== false) ||
+                        ($bName && $catName && stripos($catName, $bName) !== false) ||
+                        ($bName && $catPath && stripos($catPath, $bName) !== false)) {
                         $resolvedBrand = $b->brand_name;
                         break;
                     }
@@ -2659,7 +2769,7 @@ class WarehouseReportController extends Controller
             'so_no' => $so->so_no,
             'orderaxe_ref_id' => $so->orderaxe_ref_id ?? $so->order_no,
             'customer_name' => $so->customer->name ?? '-',
-            'so_date' => date('d M Y', strtotime($so->so_date)),
+            'so_date' => date('d M Y', strtotime((!empty($so->request_date) && $so->request_date != '0000-00-00') ? $so->request_date : $so->so_date)),
             'delivery_date' => $so->delivery_date ? date('d M Y', strtotime($so->delivery_date)) : '-',
             'status_name' => $so->status,
             'items' => $items

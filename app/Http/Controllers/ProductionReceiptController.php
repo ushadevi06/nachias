@@ -12,6 +12,7 @@ use App\Models\StockEntryItem;
 use App\Models\Task;
 use App\Models\StoreLocation;
 use App\Models\Item;
+use App\Models\Warehouse;
 use App\Models\User;
 use App\Models\JobCardMatrixQuantity;
 use Illuminate\Http\Request;
@@ -29,9 +30,46 @@ class ProductionReceiptController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation'])->orderBy('id', 'desc');
+            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation', 'warehouse'])->orderBy('id', 'desc');
 
             $totalRecords = $query->count();
+
+            if ($request->filled('warehouse_id')) {
+                $query->where('warehouse_id', $request->warehouse_id);
+            }
+
+            if ($request->filled('store_type_id')) {
+                $query->where('store_type_id', $request->store_type_id);
+            }
+
+            if ($request->filled('date_range')) {
+                try {
+                    $rangeStr = $request->date_range;
+                    if (str_contains($rangeStr, ' to ')) {
+                        $dates = explode(' to ', $rangeStr);
+                        $fromDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                        $toDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[1]))->format('Y-m-d');
+                        $query->whereDate('receipt_date', '>=', $fromDate)
+                              ->whereDate('receipt_date', '<=', $toDate);
+                    } else {
+                        $fromDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($rangeStr))->format('Y-m-d');
+                        $query->whereDate('receipt_date', '=', $fromDate);
+                    }
+                } catch (\Exception $e) {}
+            } elseif ($request->filled('from_date') || $request->filled('to_date')) {
+                if ($request->filled('from_date')) {
+                    try {
+                        $fromDate = \Carbon\Carbon::createFromFormat('d-m-Y', $request->from_date)->format('Y-m-d');
+                        $query->whereDate('receipt_date', '>=', $fromDate);
+                    } catch (\Exception $e) {}
+                }
+                if ($request->filled('to_date')) {
+                    try {
+                        $toDate = \Carbon\Carbon::createFromFormat('d-m-Y', $request->to_date)->format('Y-m-d');
+                        $query->whereDate('receipt_date', '<=', $toDate);
+                    } catch (\Exception $e) {}
+                }
+            }
 
             if ($request->has('search') && !empty($request->input('search')['value'])) {
                 $search = $request->input('search')['value'];
@@ -45,6 +83,9 @@ class ProductionReceiptController extends Controller
                         })
                         ->orWhereHas('storeLocation', function ($q4) use ($search) {
                             $q4->where('store_location', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('warehouse', function ($q5) use ($search) {
+                            $q5->where('warehouse_name', 'like', "%{$search}%");
                         });
                 });
             }
@@ -70,9 +111,6 @@ class ProductionReceiptController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view_details production-receipts')) {
                     $action .= '<a href="' . url('production_receipts/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                /* if (auth()->id() == 1 || auth()->user()->can('delete production')) {
-                    $action .= '<a href="' . url('production_receipts/delete/' . $row->id) . '" class="btn btn-delete ps-2" onclick="return confirm(\'Are you sure you want to delete this receipt?\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                } */
                 $action .= '</div>';
 
                 $statusBadge = $row->status == 'Posted'
@@ -84,6 +122,7 @@ class ProductionReceiptController extends Controller
                     'receipt_no' => $row->receipt_no ?? ('RCPT-' . str_pad($row->id, 4, '0', STR_PAD_LEFT)),
                     'job_card_no' => $row->jobCard ? $row->jobCard->job_card_no : '-',
                     'receipt_date' => $row->receipt_date ? date('d-m-Y', strtotime($row->receipt_date)) : '-',
+                    'warehouse' => $row->warehouse ? $row->warehouse->warehouse_name : '-',
                     'store' => $row->storeType ? $row->storeType->store_type_name : '-',
                     'status' => $statusBadge,
                     'store_location' => $row->storeLocation ? $row->storeLocation->store_location : '-',
@@ -99,7 +138,10 @@ class ProductionReceiptController extends Controller
             ]);
         }
 
-        return view('production_receipts.view');
+        $warehouses = Warehouse::where('status', 'Active')->orderBy('id','desc')->get();
+        $storeTypes = \App\Models\StoreType::where('status', 'Active')->orderBy('id','desc')->get();
+
+        return view('production_receipts.view', compact('warehouses', 'storeTypes'));
     }
 
     public function add(Request $request, $id = null)
@@ -147,6 +189,7 @@ class ProductionReceiptController extends Controller
                 'job_card_id' => 'required|exists:job_card_entries,id',
                 'receipt_date' => 'required|date_format:d-m-Y',
                 'doc_date' => 'required|date_format:d-m-Y',
+                'warehouse_id' => 'required|exists:warehouses,id',
                 'store_type_id' => 'required|exists:store_types,id',
                 'store_location_id' => 'required|exists:store_locations,id',
                 'status' => 'required|in:Draft,Posted',
@@ -166,17 +209,26 @@ class ProductionReceiptController extends Controller
             DB::beginTransaction();
             try {
 
+                $orderDueDate = $request->order_due_date ? date('Y-m-d', strtotime($request->order_due_date)) : null;
+                if (!$orderDueDate && $request->job_card_id) {
+                    $selectedJc = JobCardEntry::find($request->job_card_id);
+                    if ($selectedJc && $selectedJc->delivery_date) {
+                        $orderDueDate = date('Y-m-d', strtotime($selectedJc->delivery_date));
+                    }
+                }
+
                 $data = [
 
                     'job_card_id' => $request->job_card_id,
                     'employee_id' => $request->employee_id,
-                    'order_due_date' => $request->order_due_date ? date('Y-m-d', strtotime($request->order_due_date)) : null,
+                    'order_due_date' => $orderDueDate,
                     'receipt_no' => $request->receipt_no ?: ($receipt->receipt_no ?? ('RCPT-' . date('Y') . '-' . str_pad(ProductionReceipt::count() + 1, 4, '0', STR_PAD_LEFT))),
                     'receipt_date' => date('Y-m-d', strtotime($request->receipt_date)),
                     'doc_no' => $request->doc_no,
                     'doc_date' => $request->doc_date ? date('Y-m-d', strtotime($request->doc_date)) : null,
                     'store_type_id' => $request->store_type_id,
                     'store_location_id' => $request->store_location_id,
+                    'warehouse_id' => $request->warehouse_id ?? null,
                     'status' => $request->status,
                     'remarks' => $request->remarks,
                 ];
@@ -272,8 +324,36 @@ class ProductionReceiptController extends Controller
                     }
                 }
 
+                $capacityWarning = null;
+                if ($receipt->warehouse_id && $receipt->job_card_id) {
+                    $jobCard = JobCardEntry::find($receipt->job_card_id);
+                    if ($jobCard && $jobCard->brand_id) {
+                        $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)
+                            ->where('brand_id', $jobCard->brand_id)
+                            ->where('status', 'Active')
+                            ->first();
+                        if ($capObj && $capObj->capacity_pcs > 0) {
+                            $currentStock = (float) \App\Models\StockEntryItem::where('brand_id', $jobCard->brand_id)
+                                ->where(function($q) use ($receipt) {
+                                    $q->where('warehouse_id', $receipt->warehouse_id)
+                                      ->orWhereHas('stockEntry', function($se) use ($receipt) {
+                                          $se->where('warehouse_id', $receipt->warehouse_id);
+                                      });
+                                })
+                                ->sum(DB::raw('qty_in - qty_out'));
+
+                            $utilPct = round(($currentStock / $capObj->capacity_pcs) * 100, 1);
+                            if ($utilPct > 100) {
+                                $whName = $receipt->warehouse?->warehouse_name ?? 'Warehouse';
+                                $brandName = $jobCard->brand?->brand_name ?? 'Brand';
+                                $capacityWarning = "Notice: {$whName} capacity for {$brandName} is currently at {$utilPct}% ({$currentStock} / {$capObj->capacity_pcs} pcs).";
+                            }
+                        }
+                    }
+                }
+
                 DB::commit();
-                return redirect('production_receipts')->with('success', 'Production receipt saved successfully');
+                return redirect('production_receipts')->with('success', 'Production receipt saved successfully.');
             }
             catch (\Exception $e) {
                 DB::rollBack();
@@ -281,7 +361,9 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations', 'employees'));
+        $warehouses = \App\Models\Warehouse::where('status', 'Active')->orderBy('warehouse_name')->get();
+
+        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations', 'employees', 'warehouses'));
     }
 
     private function resolveReceiptItemArtNo($jobCard, array $itemData): ?string
@@ -361,6 +443,7 @@ class ProductionReceiptController extends Controller
             $stockEntry->update([
                 'stock_date' => $receipt->receipt_date,
                 'to_store_location_id' => $storeLocationId,
+                'warehouse_id' => $receipt->warehouse_id ?? null,
                 'remarks' => $receipt->remarks,
                 'price' => $receipt->items->sum('total_value'),
                 'updated_by' => Auth::id(),
@@ -379,6 +462,7 @@ class ProductionReceiptController extends Controller
                 'stock_date' => $receipt->receipt_date,
                 'entry_type' => 'Finished Goods',
                 'to_store_location_id' => $storeLocationId,
+                'warehouse_id' => $receipt->warehouse_id ?? null,
                 'remarks' => $receipt->remarks,
                 'reference_document' => $receipt->receipt_no,
                 'status' => 'Posted',
@@ -496,6 +580,7 @@ class ProductionReceiptController extends Controller
                     'size' => $item->size,
                     'color_id' => $item->color_id,
                     'store_location_id' => $storeLocationId,
+                    'warehouse_id' => $receipt->warehouse_id ?? null,
                     'uom_id' => $item->uom_id,
                     'qty_in' => $item->qty_to_receive,
                     'qty_out' => 0,
@@ -1049,11 +1134,65 @@ class ProductionReceiptController extends Controller
                 'po_number' => $jobCard->purchaseOrder ? $jobCard->purchaseOrder->po_number : '',
                 'plant_id' => $jobCard->service_provider_id,
                 'plant_name' => $jobCard->serviceProvider ? $jobCard->serviceProvider->name : '',
-                'order_due_date' => ($jobCard->purchaseOrder && $jobCard->purchaseOrder->due_date) ? date('d-m-Y', strtotime($jobCard->purchaseOrder->due_date)) : '',
+                'order_due_date' => $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : (($jobCard->purchaseOrder && $jobCard->purchaseOrder->due_date) ? date('d-m-Y', strtotime($jobCard->purchaseOrder->due_date)) : ''),
                 'job_card_date' => $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '',
                 'doc_no' => $jobCard->job_card_no,
                 'items' => $items,
             ]
+        ]);
+    }
+
+    public function getWarehouseCapacity(Request $request)
+    {
+        $warehouseId = $request->get('warehouse_id');
+        $jobCardId = $request->get('job_card_id');
+
+        if (!$warehouseId || !$jobCardId) {
+            return response()->json(['has_capacity' => false]);
+        }
+
+        $jobCard = JobCardEntry::find($jobCardId);
+        if (!$jobCard || !$jobCard->brand_id) {
+            return response()->json(['has_capacity' => false]);
+        }
+
+        $brand = Brand::find($jobCard->brand_id);
+        $warehouse = Warehouse::find($warehouseId);
+
+        $capObj = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
+            ->where('brand_id', $jobCard->brand_id)
+            ->where('status', 'Active')
+            ->first();
+
+        if (!$capObj || $capObj->capacity_pcs <= 0) {
+            return response()->json([
+                'has_capacity' => false,
+                'warehouse_name' => $warehouse?->warehouse_name,
+                'brand_name' => $brand?->brand_name,
+            ]);
+        }
+
+        $currentStock = (float) StockEntryItem::where('brand_id', $jobCard->brand_id)
+            ->where(function($q) use ($warehouseId) {
+                $q->where('warehouse_id', $warehouseId)
+                  ->orWhereHas('stockEntry', function($se) use ($warehouseId) {
+                      $se->where('warehouse_id', $warehouseId);
+                  });
+            })
+            ->sum(DB::raw('qty_in - qty_out'));
+
+        $utilPct = round(($currentStock / $capObj->capacity_pcs) * 100, 1);
+        $isOverCapacity = $utilPct > 100;
+
+        return response()->json([
+            'has_capacity' => true,
+            'warehouse_name' => $warehouse?->warehouse_name,
+            'brand_name' => $brand?->brand_name,
+            'capacity_pcs' => $capObj->capacity_pcs,
+            'current_stock' => $currentStock,
+            'utilization_pct' => $utilPct,
+            'is_over_capacity' => $isOverCapacity,
+            'message' => "{$warehouse?->warehouse_name} Capacity for {$brand?->brand_name}: {$currentStock} / {$capObj->capacity_pcs} Pcs ({$utilPct}%)"
         ]);
     }
 
@@ -1132,6 +1271,7 @@ class ProductionReceiptController extends Controller
             'jobCard.serviceProvider',
             'storeType',
             'storeLocation',
+            'warehouse',
             'employee',
             'items.uom'
         ])->findOrFail($id);
@@ -1139,8 +1279,33 @@ class ProductionReceiptController extends Controller
         foreach ($receipt->items as $item) {
             $item->resolved_art_no = $this->resolveReceiptItemArtNo($receipt->jobCard, $item->toArray());
         }
+
+        $capacityWarning = null;
+        if ($receipt->warehouse_id && $receipt->jobCard && $receipt->jobCard->brand_id) {
+            $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)
+                ->where('brand_id', $receipt->jobCard->brand_id)
+                ->where('status', 'Active')
+                ->first();
+            if ($capObj && $capObj->capacity_pcs > 0) {
+                $currentStock = (float) \App\Models\StockEntryItem::where('brand_id', $receipt->jobCard->brand_id)
+                    ->where(function($q) use ($receipt) {
+                        $q->where('warehouse_id', $receipt->warehouse_id)
+                          ->orWhereHas('stockEntry', function($se) use ($receipt) {
+                              $se->where('warehouse_id', $receipt->warehouse_id);
+                          });
+                    })
+                    ->sum(DB::raw('qty_in - qty_out'));
+
+                $utilPct = round(($currentStock / $capObj->capacity_pcs) * 100, 1);
+                if ($utilPct > 100) {
+                    $whName = $receipt->warehouse?->warehouse_name ?? 'Warehouse';
+                    $brandName = $receipt->jobCard->brand?->brand_name ?? 'Brand';
+                    $capacityWarning = "{$whName} capacity for {$brandName} is currently at {$utilPct}% ({$currentStock} / {$capObj->capacity_pcs} pcs).";
+                }
+            }
+        }
         
-        return view('production_receipts.view_details', compact('receipt'));
+        return view('production_receipts.view_details', compact('receipt', 'capacityWarning'));
     }
 
     public function print($id)
@@ -1156,6 +1321,7 @@ class ProductionReceiptController extends Controller
             'jobCard.serviceProvider',
             'storeType',
             'storeLocation',
+            'warehouse',
             'employee',
             'items.uom'
         ])->findOrFail($id);
@@ -1183,6 +1349,7 @@ class ProductionReceiptController extends Controller
             'jobCard.serviceProvider',
             'storeType',
             'storeLocation',
+            'warehouse',
             'employee',
             'items.uom'
         ])->findOrFail($id);

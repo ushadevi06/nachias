@@ -89,7 +89,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control @error('delivery_address') is-invalid @enderror" id="address" name="delivery_address" placeholder="Enter Delivery Address">{{ old('delivery_address', isset($invoice) ? $invoice->delivery_address : '') }}</textarea>
+                                    <textarea class="form-control @error('delivery_address') is-invalid @enderror" id="address" name="delivery_address" placeholder="Enter Delivery Address" readonly>{{ old('delivery_address', isset($invoice) ? $invoice->delivery_address : '') }}</textarea>
                                     <label for="address">Delivery Address <span class="text-danger">*</span></label>
                                     @error('delivery_address')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -1594,6 +1594,24 @@
         $('#customer_id').on('change', function() {
             let customerId = $(this).val();
             if (customerId) {
+                $.ajax({
+                    url: "{{ url('get-customer-details') }}/" + customerId,
+                    type: "GET",
+                    beforeSend: function() {
+                        $('#address').val('Fetching delivery address...').prop('readonly', true);
+                    },
+                    success: function(res) {
+                        if (res.success && res.address) {
+                            $('#address').val(res.address).prop('readonly', true);
+                        } else {
+                            $('#address').val('').prop('readonly', true);
+                        }
+                    },
+                    error: function() {
+                        $('#address').val('').prop('readonly', true);
+                    }
+                });
+
                 let customerStateId = $(this).find(':selected').data('state-id');
                 let companyStateId = "{{ $web_settings->state_id ?? '' }}";
 
@@ -1647,6 +1665,8 @@
                     $('#transport_distance').removeAttr('readonly').val('');
                 }
                 calculateTotals();
+            } else {
+                $('#address').val('').prop('readonly', true);
             }
         });
 

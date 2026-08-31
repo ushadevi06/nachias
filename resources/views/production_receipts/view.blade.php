@@ -21,19 +21,51 @@
                 @endif
             </div>
         </div>
+
         <div class="col-lg-12">
-             <div class="col-lg-12">
-                @include('flash_messages')
-            </div>
+            @include('flash_messages')
+            
             <div class="card">
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="filter-box mb-4">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-lg-12">
+                                <h5 class="mb-0">Filter</h5>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <select name="warehouse_id" id="warehouse_id" class="form-select select2" data-placeholder="Select Warehouse">
+                                    <option value="">Select Warehouse</option>
+                                    @foreach($warehouses ?? [] as $wh)
+                                        <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <select name="store_type_id" id="store_type_id" class="form-select select2" data-placeholder="Select Store">
+                                    <option value="">Select Store</option>
+                                    @foreach($storeTypes ?? [] as $st)
+                                        <option value="{{ $st->id }}">{{ $st->store_type_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <input type="text" id="date_range" class="form-control" placeholder="Select Receipt Date Range">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" id="filterBtn" class="btn btn-primary text-uppercase">FILTER</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary text-uppercase ms-1">RESET</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-datatable table-responsive">
                         <table class="table" id="production-receipts-table">
                             <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>Job Card No</th>
                                     <th>Receipt Date</th>
+                                    <th>Warehouse</th>
                                     <th>Store</th>
                                     <th>Status</th>
                                     <th>Store Location</th>
@@ -54,7 +86,13 @@
 @section('scripts')
 <script>
     $(function () {
-        $('#production-receipts-table').DataTable({
+        $('#date_range').flatpickr({
+            mode: 'range',
+            dateFormat: 'd-m-Y',
+            allowInput: true
+        });
+
+        var table = $('#production-receipts-table').DataTable({
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -64,18 +102,36 @@
             lengthChange: true,
             processing: true,
             serverSide: true,
-            ajax: '{{ url('production_receipts') }}',
+            ajax: {
+                url: '{{ url('production_receipts') }}',
+                data: function(d) {
+                    d.warehouse_id = $('#warehouse_id').val();
+                    d.store_type_id = $('#store_type_id').val();
+                    d.date_range = $('#date_range').val();
+                }
+            },
             columns: [
                 { data: 'DT_RowIndex', name: 'DT_RowIndex' },
                 { data: 'job_card_no', name: 'job_card_no' },
                 { data: 'receipt_date', name: 'receipt_date' },
+                { data: 'warehouse', name: 'warehouse' },
                 { data: 'store', name: 'store' },
                 { data: 'status', name: 'status' },
                 { data: 'store_location', name: 'store_location' },
                 { data: 'action', name: 'action', orderable: false, searchable: false },
             ],
-            responsive: true,
             order: [[0, 'asc']]
+        });
+
+        $('#filterBtn').on('click', function() {
+            table.ajax.reload();
+        });
+
+        $('#resetBtn').on('click', function() {
+            $('#warehouse_id').val('').trigger('change');
+            $('#store_type_id').val('').trigger('change');
+            $('#date_range').val('');
+            table.ajax.reload();
         });
     });
 </script>

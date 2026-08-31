@@ -34,7 +34,7 @@ class SettingController extends Controller
             'company_name' => 'required|string|min:3|max:100',
             'email' => 'required|string|max:128', 
             'logo' => 'nullable|image|mimes:jpeg,jpg,png,gif,svg|max:1024',
-            'qr_code' => 'nullable|image|mimes:jpeg,jpg,png,gif,svg|max:1024',
+            'ip_address' => 'required|url',    
             'phone_number' => 'required|string|max:15|regex:/^[0-9+\-\s()]+$/',
             'toll_free_no' => 'nullable|string|max:500',
             'state_id' => 'required|exists:states,id',
@@ -76,6 +76,7 @@ class SettingController extends Controller
             '*.regex' => 'This field is an invalid format',
             '*.min' => 'This field must be at least :min characters.',
             '*.max' => 'This field should not be more than :max characters.',
+            '*.url' => 'Please enter a valid URL (e.g. https://example.com or http://...).'
         ];
 
         $validated = $request->validate($rules, $messages);
@@ -83,6 +84,7 @@ class SettingController extends Controller
         $data = [
             'company_name' => $request->company_name,
             'email' => $request->email,
+            'ip_address' => $request->ip_address,
             'phone_number' => $request->phone_number,
             'toll_free_no' => $request->toll_free_no,
             'state_id' => $request->state_id,
@@ -124,23 +126,6 @@ class SettingController extends Controller
                 }
             }
             $data['logo'] = $logoName;
-        }
-
-        if ($request->hasFile('qr_code')) {
-            $qrCode = $request->file('qr_code');
-            $qrCodeName = time() . '_' . $qrCode->getClientOriginalName();
-            $uploadPath = public_path('uploads/qr_code');
-            if (!file_exists($uploadPath)) {
-                mkdir($uploadPath, 0755, true);
-            }
-            $qrCode->move($uploadPath, $qrCodeName);
-            if ($setting && $setting->qr_code) {
-                $oldQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
-                if (file_exists($oldQrPath)) {
-                    unlink($oldQrPath);
-                }
-            }
-            $data['qr_code'] = $qrCodeName;
         }
 
         if ($setting) {

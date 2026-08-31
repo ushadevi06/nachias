@@ -23,7 +23,19 @@
     <!-- Global Filter Card -->
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
-            <form id="salesMarketingReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('sales_marketing_reports') }}">
+            <form id="salesMarketingReportForm" class="row g-3 align-items-end" onsubmit="return false;">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
+                    <select class="form-select select2" id="report_type_select" name="report_type">
+                        <option value="order-report" selected>📦 Order Report</option>
+                        <option value="pending-report">⏳ Pending Orders</option>
+                        <option value="incentive-report">🗺️ Zone Wise Incentive</option>
+                        <option value="comparison-report">📊 Sales Comparison</option>
+                        <option value="credit-note-report">📝 Credit Note Report</option>
+                        <option value="despatch-report">🚚 Despatch Tracking</option>
+                        <option value="outstanding-report">💰 Zone Wise Outstanding</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
                     <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
@@ -55,73 +67,24 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                        <i class="ri ri-search-line me-1"></i> Search
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill p-2" title="Search">
+                        <i class="ri ri-search-line"></i>
                     </button>
-                    <button type="button" id="btn-reset-report" class="btn btn-outline-light w-100 rounded-pill border">
-                        <i class="ri ri-refresh-line me-1"></i> Reset
+                    <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border p-2" title="Reset">
+                        <i class="ri ri-refresh-line"></i>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Tabs Interface -->
+    <!-- Content Card -->
     <div class="card shadow-sm border-0 premium-content-card">
-        <div class="card-header bg-white border-bottom-0 p-0">
-            <ul class="nav nav-tabs nav-fill premium-nav-tabs" id="reportTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="order-tab" data-bs-toggle="tab" data-bs-target="#order-report" type="button" role="tab">Order Report</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-report" type="button" role="tab">Pending Orders</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="incentive-tab" data-bs-toggle="tab" data-bs-target="#incentive-report" type="button" role="tab">Zone Wise Incentive</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-report" type="button" role="tab">Sales Comparison</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="credit-note-tab" data-bs-toggle="tab" data-bs-target="#credit-note-report" type="button" role="tab">Credit Note Report</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="despatch-tab" data-bs-toggle="tab" data-bs-target="#despatch-report" type="button" role="tab">Despatch Tracking</button>
-                </li>
-                {{-- <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="outstanding-tab" data-bs-toggle="tab" data-bs-target="#outstanding-report" type="button" role="tab">Zone Wise Outstanding</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-none d-xl-block" id="tracker-tab" data-bs-toggle="tab" data-bs-target="#tracker-report" type="button" role="tab">Tracker (Customer Feedback)</button>
-                </li>   
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-none d-xl-block" id="location-tab" data-bs-toggle="tab" data-bs-target="#location-report" type="button" role="tab">Location Tracking</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-none d-xl-block" id="trip-tab" data-bs-toggle="tab" data-bs-target="#trip-report" type="button" role="tab">Trip Sheet</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-none d-xl-block" id="expense-tab" data-bs-toggle="tab" data-bs-target="#expense-report" type="button" role="tab">Expenses Cost Sheet</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-none d-xl-block" id="swatch-tab" data-bs-toggle="tab" data-bs-target="#swatch-report" type="button" role="tab">Swatch Card</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-none d-xl-block" id="complaint-tab" data-bs-toggle="tab" data-bs-target="#complaint-report" type="button" role="tab">Complaints</button>
-                </li>
-                <li class="nav-item dropdown d-xl-none">
-                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">More</a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#tracker-report" data-bs-toggle="tab">Feedback</a></li>
-                        <li><a class="dropdown-item" href="#location-report" data-bs-toggle="tab">Location</a></li>
-                        <li><a class="dropdown-item" href="#trip-report" data-bs-toggle="tab">Trip Sheet</a></li>
-                        <li><a class="dropdown-item" href="#expense-report" data-bs-toggle="tab">Expenses</a></li>
-                        <li><a class="dropdown-item" href="#swatch-report" data-bs-toggle="tab">Swatch Card</a></li>
-                        <li><a class="dropdown-item" href="#complaint-report" data-bs-toggle="tab">Complaints</a></li>
-                    </ul>
-                </li> --}}
-            </ul>
+        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+            <h5 class="mb-0 fw-bold text-primary" id="active_report_title">
+                📦 Order Report
+            </h5>
         </div>
         <div class="card-body py-4">
             <div class="tab-content" id="reportTabsContent">
@@ -369,17 +332,17 @@ $(document).ready(function() {
                 { data: 'so_no', name: 'so_no', className: 'fw-bold' },
                 { data: 'so_date', name: 'so_date', className: 'text-nowrap' },
                 { data: 'customer', name: 'customer' },
-                { data: 'item', name: 'item' },
                 { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
-                { data: 'status', name: 'status', className: 'text-center' }
+                { data: 'status', name: 'status', className: 'text-center' },
+                { data: 'action', name: 'action', className: 'text-center', orderable: false }
             ]
         },
         'pending-report': {
             tableId: '#pendingReportTable',
             type: 'pending-report',
             columns: [
+                { data: 'so_no', name: 'so_no', className: 'fw-bold text-primary' },
                 { data: 'customer', name: 'customer' },
-                { data: 'item', name: 'item' },
                 { data: 'ord_qty', name: 'ord_qty', className: 'text-center' },
                 { data: 'bal_qty', name: 'bal_qty', className: 'text-center fw-bold text-danger' }
             ]
@@ -466,6 +429,21 @@ $(document).ready(function() {
         }
     };
 
+    $.fn.dataTable.ext.errMode = 'none';
+
+    function showReportLoading(isLoading) {
+        let loader = $('#report_loader');
+        if (isLoading) {
+            if (!loader.length) {
+                $('#active_report_title').append(' <div class="spinner-border spinner-border-sm text-primary ms-2" id="report_loader" role="status"></div>');
+            }
+            $('#reportTabsContent').css('opacity', '0.6');
+        } else {
+            $('#report_loader').remove();
+            $('#reportTabsContent').css('opacity', '1');
+        }
+    }
+
     function loadActiveTabTable(tabPaneId) {
         const config = tableConfigs[tabPaneId];
         if (!config) return;
@@ -473,15 +451,31 @@ $(document).ready(function() {
         const tableElem = $(config.tableId);
         if (!tableElem.length) return;
 
+        showReportLoading(true);
+
         if ($.fn.DataTable.isDataTable(config.tableId)) {
-            tableElem.DataTable().ajax.reload();
-            return;
+            const dt = tableElem.DataTable();
+            if (dt && dt.ajax && typeof dt.ajax.url === 'function' && dt.ajax.url()) {
+                try {
+                    dt.ajax.reload(function() { showReportLoading(false); }, false);
+                    return;
+                } catch (err) {
+                    dt.destroy();
+                }
+            } else {
+                dt.destroy();
+            }
         }
 
         tableElem.DataTable({
             processing: true,
             serverSide: true,
             autoWidth: false,
+            destroy: true,
+            language: {
+                processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading report data...</div>',
+                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
+            },
             ajax: {
                 url: "{{ url('sales_marketing_reports/ajax') }}/" + config.type,
                 type: "GET",
@@ -492,6 +486,9 @@ $(document).ready(function() {
                     d.agent_id = $('select[name="agent_id"]').val();
                 }
             },
+            drawCallback: function() {
+                showReportLoading(false);
+            },
             columns: config.columns,
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
@@ -499,32 +496,240 @@ $(document).ready(function() {
         });
     }
 
-    function handleTabActivation(targetId) {
-        if (!targetId) return;
-        const activeTabId = targetId.replace('#', '');
-        loadActiveTabTable(activeTabId);
-    }
+    // Select Report Type Change Listener
+    $('#report_type_select').on('change', function() {
+        const selectedType = $(this).val();
+        const selectedText = $(this).find('option:selected').text();
+        $('#active_report_title').html(selectedText);
 
-    // Initialize Active Tab on Page Load
-    const initialActiveTab = $('.tab-pane.active').attr('id') || 'order-report';
-    handleTabActivation(initialActiveTab);
+        $('.tab-pane').removeClass('show active');
+        $('#' + selectedType).addClass('show active');
 
-    // Delegated Tab switch listener
-    $(document).on('shown.bs.tab', '[data-bs-toggle="tab"]', function (e) {
-        const $btn = $(e.target).closest('[data-bs-toggle="tab"]');
-        const targetId = $btn.attr('data-bs-target') || $btn.attr('href');
-        handleTabActivation(targetId);
+        loadActiveTabTable(selectedType);
     });
+
+    // Initialize Active Report on Page Load
+    const initialReportType = $('#report_type_select').val() || 'order-report';
+    const initialText = $('#report_type_select option:selected').text();
+    if (initialText) {
+        $('#active_report_title').html(initialText);
+    }
+    $('.tab-pane').removeClass('show active');
+    $('#' + initialReportType).addClass('show active');
+    loadActiveTabTable(initialReportType);
 
     // Form Filter Submit listener
     $('#salesMarketingReportForm').on('submit', function(e) {
         e.preventDefault();
-        const activeTabId = $('.tab-pane.active').attr('id') || 'order-report';
+        const activeTabId = $('#report_type_select').val() || 'order-report';
         const config = tableConfigs[activeTabId];
         if (config && $.fn.DataTable.isDataTable(config.tableId)) {
-            $(config.tableId).DataTable().ajax.reload();
+            const dt = $(config.tableId).DataTable();
+            if (dt && dt.ajax && typeof dt.ajax.url === 'function' && dt.ajax.url()) {
+                try {
+                    showReportLoading(true);
+                    dt.ajax.reload(function() { showReportLoading(false); });
+                    return;
+                } catch (err) {
+                    dt.destroy();
+                }
+            }
+        }
+        loadActiveTabTable(activeTabId);
+    });
+
+    var isOrderRootLevel = true;
+
+    window.renderOrderLevel = function() {
+        isOrderRootLevel = true;
+        $('#orderBreadcrumbs').hide();
+        $('#selectedOrderInfoHeader').hide();
+
+        if ($.fn.DataTable.isDataTable('#orderReportTable')) {
+            $('#orderReportTable').DataTable().clear().destroy();
+        }
+
+        $('#orderReportTheadTr').html(`
+            <th class="fw-bold">ORDER NO</th>
+            <th class="text-nowrap fw-bold">ORDER DATE</th>
+            <th class="fw-bold">CUSTOMER</th>
+            <th class="text-center fw-bold">QTY</th>
+            <th class="text-center fw-bold">STATUS</th>
+        `);
+        $('#orderReportTbody').empty();
+
+        loadActiveTabTable('order-report');
+    };
+
+    function renderOrderItemLevel(soNo, customer, soDate, statusHtml, itemsData) {
+        isOrderRootLevel = false;
+
+        $('#orderBreadcrumbText').text('Orders > ' + soNo + ' (' + customer + ')');
+        $('#orderBreadcrumbs').css('display', 'flex');
+
+        $('#level2SoNo').text(soNo);
+        $('#level2Customer').text(customer);
+        $('#level2SoDate').text(soDate);
+        $('#level2Status').html(statusHtml);
+        $('#selectedOrderInfoHeader').show();
+
+        if ($.fn.DataTable.isDataTable('#orderReportTable')) {
+            $('#orderReportTable').DataTable().clear().destroy();
+        }
+
+        $('#orderReportTheadTr').html(`
+            <th class="text-center" style="width: 40px;">#</th>
+            <th class="fw-bold">ITEM NAME</th>
+            <th class="text-center fw-bold">SIZE</th>
+            <th class="text-center fw-bold">SLEEVE</th>
+            <th class="text-end fw-bold pe-3">QUANTITY</th>
+        `);
+
+        let rowsHtml = '';
+        if (itemsData && itemsData.length > 0) {
+            itemsData.forEach((item, idx) => {
+                rowsHtml += `
+                    <tr>
+                        <td class="text-center text-muted fw-bold">${idx + 1}</td>
+                        <td class="fw-medium text-dark">${item.name}</td>
+                        <td class="text-center"><span class="badge bg-label-secondary rounded-pill">${item.size}</span></td>
+                        <td class="text-center"><span class="badge bg-label-info rounded-pill">${item.sleeve}</span></td>
+                        <td class="text-end fw-bold pe-3">${item.qty}</td>
+                    </tr>
+                `;
+            });
         } else {
-            loadActiveTabTable(activeTabId);
+            rowsHtml = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</td></tr>';
+        }
+
+        $('#orderReportTbody').html(rowsHtml);
+
+        $('#orderReportTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
+        });
+    }
+
+    // Handle Order Row Click to Drilldown to Items Hierarchy
+    $(document).on('click', '#orderReportTable tbody tr', function(e) {
+        if (!isOrderRootLevel) return;
+        if ($(e.target).is('a, button, input, select')) return;
+
+        const dt = $('#orderReportTable').DataTable();
+        const rowData = dt.row(this).data();
+
+        if (rowData && rowData.items_data) {
+            renderOrderItemLevel(
+                rowData.so_no_raw,
+                rowData.customer_raw,
+                rowData.so_date_raw,
+                rowData.status_html,
+                rowData.items_data
+            );
+        }
+    });
+
+    var isPendingOrderRootLevel = true;
+
+    window.renderPendingOrderLevel = function() {
+        isPendingOrderRootLevel = true;
+        $('#pendingBreadcrumbs').hide();
+        $('#selectedPendingOrderInfoHeader').hide();
+
+        if ($.fn.DataTable.isDataTable('#pendingReportTable')) {
+            $('#pendingReportTable').DataTable().clear().destroy();
+        }
+
+        $('#pendingReportTheadTr').html(`
+            <th class="fw-bold">ORDER NO</th>
+            <th class="fw-bold">CUSTOMER</th>
+            <th class="text-center fw-bold">ORD. QTY</th>
+            <th class="text-center fw-bold">BAL. QTY</th>
+        `);
+        $('#pendingReportTbody').empty();
+
+        loadActiveTabTable('pending-report');
+    };
+
+    function renderPendingOrderItemLevel(soNo, customer, ordQty, balQty, itemsData) {
+        isPendingOrderRootLevel = false;
+
+        $('#pendingBreadcrumbText').text('Pending Orders > ' + soNo + ' (' + customer + ')');
+        $('#pendingBreadcrumbs').css('display', 'flex');
+
+        $('#level2PendingSoNo').text(soNo);
+        $('#level2PendingCustomer').text(customer);
+        $('#level2PendingOrdQty').text(ordQty);
+        $('#level2PendingBalQty').text(balQty);
+        $('#selectedPendingOrderInfoHeader').show();
+
+        if ($.fn.DataTable.isDataTable('#pendingReportTable')) {
+            $('#pendingReportTable').DataTable().clear().destroy();
+        }
+
+        $('#pendingReportTheadTr').html(`
+            <th class="text-center" style="width: 40px;">#</th>
+            <th class="fw-bold">ITEM NAME</th>
+            <th class="text-center fw-bold">SIZE</th>
+            <th class="text-center fw-bold">SLEEVE</th>
+            <th class="text-end fw-bold pe-3">QUANTITY</th>
+        `);
+
+        let rowsHtml = '';
+        if (itemsData && itemsData.length > 0) {
+            itemsData.forEach((item, idx) => {
+                rowsHtml += `
+                    <tr>
+                        <td class="text-center text-muted fw-bold">${idx + 1}</td>
+                        <td class="fw-medium text-dark">${item.name}</td>
+                        <td class="text-center"><span class="badge bg-label-secondary rounded-pill">${item.size}</span></td>
+                        <td class="text-center"><span class="badge bg-label-info rounded-pill">${item.sleeve}</span></td>
+                        <td class="text-end fw-bold pe-3">${item.qty}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            rowsHtml = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</td></tr>';
+        }
+
+        $('#pendingReportTbody').html(rowsHtml);
+
+        $('#pendingReportTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
+        });
+    }
+
+    // Handle Pending Order Row Click to Drilldown to Items Hierarchy
+    $(document).on('click', '#pendingReportTable tbody tr', function(e) {
+        if (!isPendingOrderRootLevel) return;
+        if ($(e.target).is('a, button, input, select')) return;
+
+        const dt = $('#pendingReportTable').DataTable();
+        const rowData = dt.row(this).data();
+
+        if (rowData && rowData.items_data) {
+            renderPendingOrderItemLevel(
+                rowData.so_no_raw,
+                rowData.customer_raw,
+                rowData.ord_qty_raw,
+                rowData.bal_qty_raw,
+                rowData.items_data
+            );
         }
     });
 

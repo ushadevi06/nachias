@@ -11,6 +11,7 @@ use App\Models\StoreCategory;
 use App\Models\RawMaterial;
 use App\Models\StoreLocation;
 use App\Models\Uom;
+use App\Models\Warehouse;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -324,6 +325,7 @@ class StockEntryController extends Controller
         $rawMaterials = RawMaterial::where('status', 'Active')->orderBy('name')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('store_location')->get();
         $uoms = Uom::where('status', 'Active')->orderBy('uom_name')->get();
+        $warehouses = Warehouse::where('status', 'Active')->orderBy('id','desc')->get();
 
         if ($request->isMethod('post')) {
             $rules = [
@@ -385,6 +387,7 @@ class StockEntryController extends Controller
                 $headerData = [
                     'stock_date' => Carbon::createFromFormat('d-m-Y', $request->stock_date)->format('Y-m-d'),
                     'grn_entry_id' => $request->grn_entry_id,
+                    'warehouse_id' => $request->warehouse_id ?? null,
                     'entry_type' => 'Raw Material',
                     'from_store_location_id' => null,
                     'to_store_location_id' => null,
@@ -442,6 +445,7 @@ class StockEntryController extends Controller
                                 'raw_material_id'    => $item['raw_material_id'] ?? null,
                                 'store_category_id'  => $item['store_category_id'] ?? null,
                                 'store_location_id'  => $item['store_location_id'],
+                                'warehouse_id'       => $request->warehouse_id ?? $item['warehouse_id'] ?? null,
                                 'uom_id'             => $item['uom_id'] ?? null,
                                 'qty_in'             => $item['qty_in'] ?? 0,
                                 'qty_out'            => 0,
@@ -488,7 +492,7 @@ class StockEntryController extends Controller
             })->values()->all();
         }
 
-        return view('stock_entry.add', compact('stockEntry', 'grnEntries', 'storeCategories', 'rawMaterials', 'storeLocations', 'uoms', 'nextStockNo', 'savedItems'));
+        return view('stock_entry.add', compact('stockEntry', 'grnEntries', 'storeCategories', 'rawMaterials', 'storeLocations', 'uoms', 'warehouses', 'nextStockNo', 'savedItems'));
     }
 
     public function view($id)

@@ -92,36 +92,6 @@ use App\Http\Controllers\ItemPriceController;
 Route::get('/', function () {
     return view('login');
 });
-Route::get('/update_page', function () {
-    return view('update_page');
-});
-
-Route::get('/sync-two-orders', function () {
-    set_time_limit(0);
-    $service = new \App\Services\OrderaxeService();
-    
-    // Create a timestamp for 20 days ago to ensure we catch them
-    $timestampMs = round(microtime(true) * 1000) - (20 * 24 * 60 * 60 * 1000);
-    
-    // Fetch orders directly from API without touching the cache
-    $orders = $service->fetchOrders($timestampMs, 5000);
-    
-    $processed = 0;
-    foreach ($orders as $orderData) {
-        $orderNo = $orderData['order_no'] ?? null;
-        
-        // ONLY process if it's one of the two missing orders!
-        if (in_array($orderNo, ['100009484', '100009485'])) {
-            $service->processOrder($orderData);
-            $processed++;
-        }
-    }
-    
-    return response()->json([
-        'status' => 'success',
-        'message' => "Done! Successfully found and synced {$processed} target orders out of the downloaded batch.",
-    ]);
-});
 
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {
@@ -246,6 +216,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], '/store_location/add/{id?}', [StoreLocationController::class, 'add']);
     Route::get('/store_location/delete/{id}', [StoreLocationController::class, 'destroy']);
     Route::post('/store_location/status/{id}', [StoreLocationController::class, 'updateStatus']);
+
+    /* Warehouse Master */
+    Route::get('/warehouses', [\App\Http\Controllers\WarehouseController::class, 'index']);
+    Route::match(['GET', 'POST'], '/warehouses/add/{id?}', [\App\Http\Controllers\WarehouseController::class, 'add']);
+    Route::get('/warehouses/delete/{id}', [\App\Http\Controllers\WarehouseController::class, 'destroy']);
+    Route::post('/warehouses/status/{id}', [\App\Http\Controllers\WarehouseController::class, 'updateStatus']);
 
     /* Departments */
     Route::get('/departments', [DepartmentController::class, 'index']);
@@ -442,7 +418,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Item Price */
     Route::get('item_prices', [ItemPriceController::class, 'index']);
-
     Route::match(['get', 'post'], 'item_prices/add/{id?}', [ItemPriceController::class, 'add']);
     Route::get('item_prices/delete/{id}', [ItemPriceController::class, 'destroy']);
     Route::post('item_prices/status/{id}', [ItemPriceController::class, 'updateStatus']);
@@ -615,6 +590,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('production_receipts/print/{id}', [ProductionReceiptController::class, 'print'])->name('production_receipts.print');
     Route::get('production_receipts/download-pdf/{id}', [ProductionReceiptController::class, 'downloadPdf'])->name('production_receipts.download_pdf');
     Route::get('production_receipts/get-job-card-details/{id}', [ProductionReceiptController::class, 'getJobCardDetails']);
+    Route::get('production_receipts/get-warehouse-capacity', [ProductionReceiptController::class, 'getWarehouseCapacity']);
     Route::get('production_receipts/delete/{id}', [ProductionReceiptController::class, 'destroy']);
     Route::get('production_receipts/export-excel', [ProductionReceiptController::class, 'exportExcel']);
     Route::get('production_receipts/report', [ProductionReceiptController::class, 'report']);
@@ -788,7 +764,3 @@ Route::get('/run-permission-seeder', function () {
     ]);
 });
 
-Route::get('fix-dates', function() {
-    \Illuminate\Support\Facades\DB::table('item_prices')->whereYear('effective_from', 26)->update(['effective_from' => \Illuminate\Support\Facades\DB::raw('DATE_ADD(effective_from, INTERVAL 2000 YEAR)')]);
-    return 'Dates Fixed!';
-});

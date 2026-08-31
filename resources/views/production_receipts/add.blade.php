@@ -23,7 +23,7 @@
                                             <option value="{{ $jobCard->id }}" {{ old('job_card_id', $receipt->job_card_id ?? '') == $jobCard->id ? 'selected' : '' }}>{{ $jobCard->job_card_no }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="job_card_id">Job Card No *</label>
+                                    <label for="job_card_id">Job Card No <span class="text-danger">*</span></label>
                                 </div>
                                 @error('job_card_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -31,7 +31,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" name="receipt_date" id="receipt_date" class="form-control receipt-date" placeholder="Select Receipt Date" value="{{ old('receipt_date', $receipt && $receipt->receipt_date ? date('d-m-Y', strtotime($receipt->receipt_date)) : date('d-m-Y')) }}">
-                                    <label for="receipt_date">Receipt Date *</label>
+                                    <label for="receipt_date">Receipt Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('receipt_date') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -44,7 +44,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" name="doc_date" id="doc_date" class="form-control doc-date" placeholder="Select Doc Date" value="{{ old('doc_date', $receipt && $receipt->doc_date ? date('d-m-Y', strtotime($receipt->doc_date)) : '') }}">
-                                    <label for="doc_date">Doc Date *</label>
+                                    <label for="doc_date">Doc Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('doc_date') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -69,7 +69,20 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="order_due_date" id="order_due_date" class="form-control" placeholder="Order Due Date" value="{{ old('order_due_date', ($receipt && $receipt->order_due_date) ? date('d-m-Y', strtotime($receipt->order_due_date)) : '') }}" readonly>
+                                    <select name="warehouse_id" id="warehouse_id" class="form-select select2" data-placeholder="Select Warehouse">
+                                        <option value="">Select Warehouse</option>
+                                        @foreach($warehouses as $wh)
+                                            <option value="{{ $wh->id }}" {{ old('warehouse_id', $receipt->warehouse_id ?? '') == $wh->id ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="warehouse_id">Warehouse Name <span class="text-danger">*</span></label>
+                                </div>
+                                <div id="warehouse_capacity_info"></div>
+                                @error('warehouse_id') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" name="order_due_date" id="order_due_date" class="form-control" placeholder="Order Due Date" value="{{ old('order_due_date', ($receipt && $receipt->order_due_date) ? date('d-m-Y', strtotime($receipt->order_due_date)) : (($receipt && $receipt->jobCard && $receipt->jobCard->delivery_date) ? date('d-m-Y', strtotime($receipt->jobCard->delivery_date)) : '')) }}" readonly>
                                     <label for="order_due_date">Order Due Date</label>
                                 </div>
                             </div>
@@ -81,7 +94,7 @@
                                             <option value="{{ $storeType->id }}" {{ old('store_type_id', $receipt->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>{{ $storeType->store_type_name }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="store_type_id">Store *</label>
+                                    <label for="store_type_id">Store <span class="text-danger">*</span></label>
                                 </div>
                                 @error('store_type_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -95,7 +108,7 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <label for="store_location_id">Store Location *</label>
+                                    <label for="store_location_id">Store Location <span class="text-danger">*</span></label>
                                 </div>
                                 @error('store_location_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -106,7 +119,7 @@
                                         <option value="Draft" {{ old('status', $receipt->status ?? 'Draft') == 'Draft' ? 'selected' : '' }}>Draft</option>
                                         <option value="Posted" {{ old('status', $receipt->status ?? '') == 'Posted' ? 'selected' : '' }}>Posted</option>
                                     </select>
-                                    <label for="status">Status *</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -138,7 +151,7 @@
                                         <th>Qty Ordered</th>
                                         <th>Qty Received</th>
                                         <th>Qty Balance</th>
-                                        <th>Qty To Receive *</th>
+                                        <th>Qty To Receive <span class="text-danger">*</span></th>
                                     </tr>
                                 </thead>
                                 <tbody id="items-tbody">
@@ -374,7 +387,6 @@
                 success: function(response) {
                     if (response.success && response.data) {
                         $('#plant').val(response.data.plant_name || '');
-                        // $('#employee_id').val(response.data.employee_id || '').trigger('change');
                         $('#order_due_date').val(response.data.order_due_date || '');
                         $('#doc_no').val(response.data.job_card_no || '');
                         $('#doc_date').val(response.data.job_card_date || '');
@@ -449,8 +461,42 @@
             }
         });
         
+        function checkLiveWarehouseCapacity() {
+            let warehouseId = $('#warehouse_id').val();
+            let jobCardId = $('#job_card_id').val();
+            
+            if (!warehouseId || !jobCardId) {
+                $('#warehouse_capacity_info').html('');
+                return;
+            }
+            
+            $.ajax({
+                url: "{{ url('production_receipts/get-warehouse-capacity') }}",
+                type: 'GET',
+                data: { warehouse_id: warehouseId, job_card_id: jobCardId },
+                success: function(res) {
+                    if (res.has_capacity) {
+                        let badgeClass = res.is_over_capacity ? 'bg-label-danger text-danger border border-danger' : 'bg-label-info text-info border border-info';
+                        let icon = res.is_over_capacity ? 'ri-error-warning-line' : 'ri-checkbox-circle-line';
+                        let html = '<div class="badge ' + badgeClass + ' text-wrap text-start p-2 mt-2 fs-6 w-100"><i class="' + icon + ' me-1"></i> ' + res.message + '</div>';
+                        $('#warehouse_capacity_info').html(html);
+                    } else {
+                        $('#warehouse_capacity_info').html('');
+                    }
+                }
+            });
+        }
+
+        $(document).on('change', '#warehouse_id, #job_card_id', function() {
+            checkLiveWarehouseCapacity();
+        });
+
         if ($('#job_card_id').val()) {
             $('#job_card_id').trigger('change');
+        }
+
+        if ($('#warehouse_id').val() && $('#job_card_id').val()) {
+            checkLiveWarehouseCapacity();
         }
     });
 </script>

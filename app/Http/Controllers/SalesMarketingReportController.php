@@ -79,7 +79,7 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $orders = $dataQuery->with(['customer', 'items', 'salesInvoices.items'])
+                    $orders = $dataQuery->with(['customer', 'items.stockEntryItem', 'salesInvoices.items'])
                         ->orderBy('id', 'desc')
                         ->offset($start)
                         ->limit($length)
@@ -123,13 +123,25 @@ class SalesMarketingReportController extends Controller
                         if ($fulfillmentStatus == 'Completed') $badgeClass = 'bg-label-success';
                         if ($fulfillmentStatus == 'Planned') $badgeClass = 'bg-label-warning';
 
+                        $statusHtml = '<span class="badge ' . $badgeClass . ' rounded-pill">' . $fulfillmentStatus . '</span>';
+                        $soNoStr = htmlspecialchars((string)($order->so_no ?? '-'));
+                        $custStr = htmlspecialchars((string)(optional($order->customer)->name ?? '-'));
+                        $soDateStr = $order->so_date ? date('d-M-Y', strtotime((string)$order->so_date)) : '-';
+                        $itemsJson = htmlspecialchars(json_encode($itemsData), ENT_QUOTES, 'UTF-8');
+
+                        $actionBtn = '<button type="button" class="btn btn-sm btn-label-primary rounded-pill view-order-modal-btn" data-so-no="' . $soNoStr . '" data-customer="' . $custStr . '" data-date="' . $soDateStr . '" data-status=\'' . htmlspecialchars($statusHtml, ENT_QUOTES, 'UTF-8') . '\' data-items=\'' . $itemsJson . '\'><i class="ri-eye-line me-1"></i>View Items</button>';
+
                         $data[] = [
-                            'so_no' => '<strong>' . htmlspecialchars((string)($order->so_no ?? '-')) . '</strong>',
-                            'so_date' => $order->so_date ? date('d-M-Y', strtotime((string)$order->so_date)) : '-',
-                            'customer' => htmlspecialchars((string)(optional($order->customer)->name ?? '-')),
-                            'item' => $itemsHtml,
+                            'so_no' => '<span class="text-primary fw-bold">' . $soNoStr . ' <i class="ri-arrow-right-s-line ms-1"></i></span>',
+                            'so_date' => $soDateStr,
+                            'customer' => $custStr,
                             'qty' => number_format($total_qty, 0),
-                            'status' => '<span class="badge ' . $badgeClass . ' rounded-pill">' . $fulfillmentStatus . '</span>',
+                            'status' => $statusHtml,
+                            'so_no_raw' => $soNoStr,
+                            'customer_raw' => $custStr,
+                            'so_date_raw' => $soDateStr,
+                            'status_html' => $statusHtml,
+                            'items_data' => $itemsData
                         ];
                     }
 
@@ -172,7 +184,7 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $orders = $dataQuery->with(['customer', 'items'])
+                    $orders = $dataQuery->with(['customer', 'items.stockEntryItem'])
                         ->select('sales_orders.*')
                         ->selectSub($deliveredQtySubquery, 'delivered_qty')
                         ->orderBy('id', 'desc')
@@ -211,13 +223,19 @@ class SalesMarketingReportController extends Controller
                             }
                         }
 
+                        $soNoStr = htmlspecialchars((string)($order->so_no ?? '-'));
                         $custName = htmlspecialchars((string)(optional($order->customer)->name ?? '-')) . ' (' . htmlspecialchars((string)(optional($order->customer)->code ?? '-')) . ')';
 
                         $data[] = [
+                            'so_no' => '<span class="text-primary fw-bold">' . $soNoStr . ' <i class="ri ri-arrow-right-s-line ms-1"></i></span>',
                             'customer' => $custName,
-                            'item' => $itemsHtml,
                             'ord_qty' => number_format($total_qty, 0),
                             'bal_qty' => '<span class="text-danger fw-bold">' . number_format($pending_qty, 0) . '</span>',
+                            'so_no_raw' => $soNoStr,
+                            'customer_raw' => $custName,
+                            'ord_qty_raw' => number_format($total_qty, 0),
+                            'bal_qty_raw' => number_format($pending_qty, 0),
+                            'items_data' => $itemsData ?? []
                         ];
                     }
 
@@ -534,6 +552,53 @@ class SalesMarketingReportController extends Controller
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
                         'data' => $data
+                    ]);
+
+                case 'outstanding-report':
+                    $query = \App\Models\Customer::where('status', 'Active');
+                    if ($customerId) $query->where('id', $customerId);
+                    if ($search) {
+                        $query->where(function($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                              ->orWhere('code', 'like', "%{$search}%");
+                        });
+                    }
+
+                    $allCustomers = $query->with(['zone', 'salesInvoices' => function($invQ) use ($fromDate, $toDate) {
+                        $invQ->whereNull('deleted_at');
+                        if ($fromDate) $invQ->where('inv_date', '>=', $fromDate);
+                        if ($toDate) $invQ->where('inv_date', '<=', $toDate);
+                    }])->get();
+
+                    $outstandingReport = [];
+                    foreach ($allCustomers as $cust) {
+                        $invoices = $cust->salesInvoices;
+                        if ($invoices->count() > 0) {
+                            $totalSales = (float)$invoices->sum('grand_total');
+                            $received = (float)$invoices->sum('received_amount');
+                            $outstanding = max(0, $totalSales - $received);
+
+                            if ($outstanding > 0 || $totalSales > 0) {
+                                $outstandingReport[] = [
+                                    'zone' => '<span class="badge bg-label-secondary">' . htmlspecialchars((string)($cust->zone->zone_name ?? '-')) . '</span>',
+                                    'customer' => '<div class="fw-bold text-dark">' . htmlspecialchars((string)$cust->name) . '</div><small class="text-muted">' . htmlspecialchars((string)$cust->code) . '</small>',
+                                    'bills_count' => '<span class="badge rounded-pill bg-label-info">' . $invoices->count() . '</span>',
+                                    'total_sales' => '₹' . number_format($totalSales, 2),
+                                    'received' => '<span class="text-success">₹' . number_format($received, 2) . '</span>',
+                                    'outstanding' => '<span class="fw-bold text-danger">₹' . number_format($outstanding, 2) . '</span>',
+                                ];
+                            }
+                        }
+                    }
+
+                    $totalRecords = count($outstandingReport);
+                    $pagedData = $length > 0 ? array_slice($outstandingReport, $start, $length) : $outstandingReport;
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $totalRecords,
+                        'data' => $pagedData
                     ]);
 
                 default:

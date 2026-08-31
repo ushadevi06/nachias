@@ -13,6 +13,7 @@ class Setting extends Model
     protected $fillable = [
         'company_name',
         'email',
+        'ip_address',
         'logo',
         'qr_code',
         'phone_number',
