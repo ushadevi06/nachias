@@ -689,6 +689,15 @@
                                         @enderror
                                     </div>
                                     <div class="col-12">
+                                        <div class="form-floating form-floating-outline">
+                                            <textarea name="remarks" id="remarks" class="form-control @error('remarks') is-invalid @enderror" placeholder="Enter Remarks">{{ old('remarks', $purchaseOrder->remarks ?? '') }}</textarea>
+                                            <label for="remarks">Remarks</label>
+                                            @error('remarks')
+                                                <div class="text-danger mt-1">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
                                         <div class="form-floating form-floating-outline text-black">
                                             <input type="file" class="form-control @error('additional_attachments.*') is-invalid @enderror" id="additional_attachments" name="additional_attachments[]" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
                                             <label for="additional_attachments">Additional Attachments (Max 5)</label>

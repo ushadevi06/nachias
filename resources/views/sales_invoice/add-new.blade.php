@@ -425,8 +425,11 @@
                                                 <div class="form-floating form-floating-outline">
                                                     <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
                                                     <label>Qty *</label>
+                                                    <div class="qty-error text-danger small" style="display:none;"></div>
+                                                    @error("items.$index.quantity")
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </div>
-                                                <div class="qty-error text-danger small" style="display:none;"></div>
                                                 @if(isset($row->max_qty) && $row->max_qty !== '')
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif

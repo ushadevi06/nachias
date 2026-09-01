@@ -430,11 +430,13 @@ class SalesInvoiceController extends Controller
                 'items.*.rate.min' => 'Price must be greater than 0.00.',
                 '*.min'           => 'This field must be at least :min characters.',
                 '*.max'           => 'This field must be at most :max characters.',
-                'items.*.quantity.required' => 'This field is required.',
-                'items.*.rate.required' => 'Price is required.',
-                'items.*.quantity.min' => 'Please enter a valid numeric value greater than or equal to 0.01.',
-                'items.*.rate.min' => 'Please enter a valid numeric value greater than or equal to 0.',
-                'items.*.mrp.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'items.*.quantity.required' => 'Quantity is required.',
+                'items.*.quantity.numeric'  => 'Quantity must be a valid number.',
+                'items.*.quantity.min'      => 'Quantity must be greater than 0.00.',
+                'items.*.rate.required'     => 'Price is required.',
+                'items.*.rate.numeric'      => 'Price must be a valid number.',
+                'items.*.rate.min'          => 'Price must be greater than 0.00.',
+                'items.*.mrp.min'           => 'MRP cannot be negative.',
                 'extra_input' => 'nullable|min:3|max:100',
             ]);
 
@@ -586,6 +588,7 @@ class SalesInvoiceController extends Controller
                     // new
                     $invoiceData['received_amount'] = 0.00;
                     $invoiceData['due_amount'] = $calculatedGrandTotal; //new
+                    $invoiceData['updated_by'] = auth()->id();
 
                     $invoice->update($invoiceData);             
                           
@@ -601,6 +604,7 @@ class SalesInvoiceController extends Controller
                     //new
                     $invoiceData['received_amount'] = 0.00;
                     $invoiceData['due_amount'] = $calculatedGrandTotal;//new
+                    $invoiceData['created_by'] = auth()->id();
                     $invoice = SalesInvoice::create($invoiceData);
                 }
                 $invoiceId = $invoice->id;

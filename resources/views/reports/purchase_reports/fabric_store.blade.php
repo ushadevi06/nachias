@@ -25,6 +25,19 @@
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
             <form id="fabricReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('purchase_reports/fabric') }}">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
+                    <select class="form-select select2" id="report_type_select" name="report_type">
+                        <option value="po-report" selected>📋 PO Supplier Wise</option>
+                        <option value="stock-report">📦 Stock Report</option>
+                        <option value="ageing-report">⏳ Stock Ageing</option>
+                        <option value="consumption-report">📊 Average Consumption</option>
+                        <option value="minstock-report">⚠️ Minimum Stock</option>
+                        <option value="return-report">🔄 Return Goods</option>
+                        <option value="performance-report">⭐ Supplier Performance</option>
+                        <option value="casino-po-report">🏷️ Casino Purchase Order Report</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
                     <input type="text" class="form-control start_date" name="from_date" placeholder="DD-MM-YYYY">
@@ -42,9 +55,9 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <label class="form-label small fw-bold text-muted">Art No</label>
-                    <select class="form-select select2" name="art_no" id="art_no" data-placeholder="Select Art No">
+                    <select class="form-select select2" name="art_no" id="art_no" data-placeholder="Art No">
                         <option value=""></option>
                         @foreach($artNos as $artNo)
                             <option value="{{ $artNo }}" {{ request('art_no') == $artNo ? 'selected' : '' }}>{{ $artNo }}</option>
@@ -63,35 +76,12 @@
         </div>
     </div>
 
-    <!-- Tabs Interface -->
+    <!-- Content Card -->
     <div class="card shadow-sm border-0 premium-content-card">
-        <div class="card-header bg-white border-bottom-0 p-0">
-            <ul class="nav nav-tabs nav-fill premium-nav-tabs" id="reportTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="po-tab" data-bs-toggle="tab" data-bs-target="#po-report" type="button" role="tab">PO Supplier Wise</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="stock-tab" data-bs-toggle="tab" data-bs-target="#stock-report" type="button" role="tab">Stock Report</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="ageing-tab" data-bs-toggle="tab" data-bs-target="#ageing-report" type="button" role="tab">Stock Ageing</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="consumption-tab" data-bs-toggle="tab" data-bs-target="#consumption-report" type="button" role="tab">Average Consumption</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="minstock-tab" data-bs-toggle="tab" data-bs-target="#minstock-report" type="button" role="tab">Minimum Stock</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="return-tab" data-bs-toggle="tab" data-bs-target="#return-report" type="button" role="tab">Return Goods</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="performance-tab" data-bs-toggle="tab" data-bs-target="#performance-report" type="button" role="tab">Supplier Performance</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="casino-po-tab" data-bs-toggle="tab" data-bs-target="#casino-po-report" type="button" role="tab">Casino Purchase Order Report</button>
-                </li>
-            </ul>
+        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+            <h5 class="fw-bold mb-0 text-dark" id="active_report_title">
+                <i class="ri-file-chart-line text-primary me-2"></i>📋 PO Supplier Wise
+            </h5>
         </div>
         <div class="card-body py-4">
             <div class="tab-content" id="reportTabsContent">
@@ -237,20 +227,35 @@ $(document).ready(function() {
         });
     }
 
+    $('#report_type_select').on('change', function() {
+        let targetTabId = $(this).val();
+        let selectedText = $(this).find('option:selected').text();
+        $('#active_report_title').html('<i class="ri-file-chart-line text-primary me-2"></i>' + selectedText);
+
+        $('.tab-pane').removeClass('show active');
+        $('#' + targetTabId).addClass('show active');
+
+        let activeTable = $('#' + targetTabId).find('table');
+        if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
+            let dt = activeTable.DataTable();
+            if (dt.ajax && typeof dt.ajax.reload === 'function' && dt.ajax.url()) {
+                dt.ajax.reload();
+            }
+        }
+    });
+
     $('#fabricReportForm').on('submit', function(e) {
         e.preventDefault();
-        if ($('.datatables-po-supplier').length && $.fn.DataTable.isDataTable('.datatables-po-supplier')) {
-            $('.datatables-po-supplier').DataTable().ajax.reload();
-            $('.datatables-stock').DataTable().ajax.reload();
-            $('.datatables-ageing').DataTable().ajax.reload();
-            $('.datatables-consumption').DataTable().ajax.reload();
-            $('.datatables-minstock').DataTable().ajax.reload();
-            $('.datatables-return').DataTable().ajax.reload();
-            $('.datatables-performance').DataTable().ajax.reload();
-            $('.datatables-casino-po').DataTable().ajax.reload();
-        } else {
-            fetchReport();
+        let currentTabId = $('#report_type_select').val();
+        let activeTable = $('#' + currentTabId).find('table');
+        if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
+            let dt = activeTable.DataTable();
+            if (dt.ajax && typeof dt.ajax.reload === 'function' && dt.ajax.url()) {
+                dt.ajax.reload();
+                return;
+            }
         }
+        fetchReport();
     });
 
     // Initial load

@@ -12,3 +12,5 @@ AND brand_id IS NULL;
 
 ALTER TABLE `settings`
 ADD COLUMN `ip_address` VARCHAR(255) NULL AFTER `email`;
+
+ALTER TABLE `purchase_orders` ADD `remarks` TEXT NULL DEFAULT NULL AFTER `payment_terms`;

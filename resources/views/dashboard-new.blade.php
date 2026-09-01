@@ -13,9 +13,64 @@
         </div>
     </div>
 
-    <!-- SECTION 1: SALES & ORDER DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->can('view-sales-order dashboard'))
-    <div class="mb-5">
+    <!-- MODERN SEGMENTED DASHBOARD TABS -->
+    <div class="mb-4">
+        <ul class="nav nav-pills dashboard-nav-pills p-2 bg-white rounded-3 shadow-sm border flex-nowrap overflow-auto" id="dashboardTabs" role="tablist" style="scrollbar-width: thin; gap: 8px;">
+            <!-- Tab 1: Executive Overview -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold px-3 py-2 text-nowrap" id="tab-executive-tab" data-bs-toggle="pill" data-bs-target="#tab-executive" type="button" role="tab" aria-controls="tab-executive" aria-selected="true">
+                    <i class="ri ri-dashboard-line me-1 text-primary"></i> Executive Overview
+                </button>
+            </li>
+
+            <!-- Tab 2: Fabric & Stores -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-fabric-stores-tab" data-bs-toggle="pill" data-bs-target="#tab-fabric-stores" type="button" role="tab" aria-controls="tab-fabric-stores" aria-selected="false">
+                    <i class="ri ri-store-2-line me-1 text-info"></i> Fabric & Stores
+                    @if(isset($fabric_shortage_count) && $fabric_shortage_count > 0)
+                        <span class="badge bg-warning text-dark ms-1">{{ $fabric_shortage_count }} Short</span>
+                    @endif
+                </button>
+            </li>
+
+            <!-- Tab 3: Core Material Planner -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-core-planner-tab" data-bs-toggle="pill" data-bs-target="#tab-core-planner" type="button" role="tab" aria-controls="tab-core-planner" aria-selected="false">
+                    <i class="ri ri-stack-line me-1 text-warning"></i> Material Planner
+                </button>
+            </li>
+
+            <!-- Tab 4: Supplier Performance -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-suppliers-tab" data-bs-toggle="pill" data-bs-target="#tab-suppliers" type="button" role="tab" aria-controls="tab-suppliers" aria-selected="false">
+                    <i class="ri ri-truck-line me-1 text-success"></i> Supplier Reliability
+                </button>
+            </li>
+
+            <!-- Tab 5: Production WIP -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-production-tab" data-bs-toggle="pill" data-bs-target="#tab-production" type="button" role="tab" aria-controls="tab-production" aria-selected="false">
+                    <i class="ri ri-loader-line me-1 text-secondary"></i> Production WIP
+                </button>
+            </li>
+
+            <!-- Tab 6: Maintenance & Compliance -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-maintenance-tab" data-bs-toggle="pill" data-bs-target="#tab-maintenance" type="button" role="tab" aria-controls="tab-maintenance" aria-selected="false">
+                    <i class="ri ri-tools-line me-1 text-danger"></i> Maintenance & Compliance
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- TAB CONTENT CONTAINER -->
+    <div class="tab-content" id="dashboardTabsContent">
+
+        <!-- ==================== TAB 1: EXECUTIVE OVERVIEW ==================== -->
+        <div class="tab-pane fade show active" id="tab-executive" role="tabpanel" aria-labelledby="tab-executive-tab">
+            <!-- SECTION 1: SALES & ORDER DASHBOARD -->
+            @if(auth()->id() == 1 || auth()->user()->can('view-sales-order dashboard'))
+            <div class="mb-5">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-primary me-2"></div>
             <h5 class="fw-bold mb-0">Sales & Order Dashboard</h5>
@@ -477,10 +532,13 @@
         </div>
     </div>
     @endif
+    </div> <!-- /#tab-executive -->
 
-    <!-- SECTION 3: PRODUCTION DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->can('view-production dashboard'))
-    <div class="mb-5">
+    <!-- ==================== TAB 5: PRODUCTION WIP ==================== -->
+    <div class="tab-pane fade" id="tab-production" role="tabpanel" aria-labelledby="tab-production-tab">
+        <!-- SECTION 3: PRODUCTION DASHBOARD -->
+        @if(auth()->id() == 1 || auth()->user()->can('view-production dashboard'))
+        <div class="mb-5">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-warning me-2"></div>
             <h5 class="fw-bold mb-0">Production Dashboard</h5>
@@ -674,10 +732,13 @@
         </div>
     </div>
     @endif
+    </div> <!-- /#tab-production -->
 
-    <!-- SECTION: FABRIC & STORE STOCK DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view warehouse-report') || auth()->user()->can('view stock-entry-raw-materials'))
-    <div class="mb-5">
+    <!-- ==================== TAB 2: FABRIC & STORES ==================== -->
+    <div class="tab-pane fade" id="tab-fabric-stores" role="tabpanel" aria-labelledby="tab-fabric-stores-tab">
+        <!-- SECTION: FABRIC & STORE STOCK DASHBOARD -->
+        @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view warehouse-report') || auth()->user()->can('view stock-entry-raw-materials'))
+        <div class="mb-5">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-info me-2"></div>
             <h5 class="fw-bold mb-0">Fabric & Store Stock Dashboard</h5>
@@ -1374,10 +1435,13 @@
         });
     </script>
     @endif
+    </div> <!-- /#tab-fabric-stores -->
 
-    <!-- SECTION: CORE MATERIAL PLANNER DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view warehouse-report') || auth()->user()->can('view stock-entry-raw-materials'))
-    <div class="mb-5" id="coreMaterialPlannerSection">
+    <!-- ==================== TAB 3: CORE MATERIAL PLANNER ==================== -->
+    <div class="tab-pane fade" id="tab-core-planner" role="tabpanel" aria-labelledby="tab-core-planner-tab">
+        <!-- SECTION: CORE MATERIAL PLANNER DASHBOARD -->
+        @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view warehouse-report') || auth()->user()->can('view stock-entry-raw-materials'))
+        <div class="mb-5" id="coreMaterialPlannerSection">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-warning me-2"></div>
             <h5 class="fw-bold mb-0">Core Material Planner</h5>
@@ -1538,10 +1602,13 @@
         });
     </script>
     @endif
+    </div> <!-- /#tab-core-planner -->
 
-    <!-- SECTION: SUPPLIER PERFORMANCE DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view suppliers'))
-    <div class="mb-5" id="supplierPerformanceSection">
+    <!-- ==================== TAB 4: SUPPLIER PERFORMANCE ==================== -->
+    <div class="tab-pane fade" id="tab-suppliers" role="tabpanel" aria-labelledby="tab-suppliers-tab">
+        <!-- SECTION: SUPPLIER PERFORMANCE DASHBOARD -->
+        @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view suppliers'))
+        <div class="mb-5" id="supplierPerformanceSection">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-info me-2"></div>
             <h5 class="fw-bold mb-0">Supplier Performance</h5>
@@ -1684,10 +1751,13 @@
         });
     </script>
     @endif
+    </div> <!-- /#tab-suppliers -->
 
-    <!-- SECTION 4: MAINTENANCE -->
-    @if(auth()->id() == 1 || auth()->user()->can('view-maintenance dashboard'))
-    <div class="mb-4">
+    <!-- ==================== TAB 6: MAINTENANCE & COMPLIANCE ==================== -->
+    <div class="tab-pane fade" id="tab-maintenance" role="tabpanel" aria-labelledby="tab-maintenance-tab">
+        <!-- SECTION 4: MAINTENANCE -->
+        @if(auth()->id() == 1 || auth()->user()->can('view-maintenance dashboard'))
+        <div class="mb-4">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-danger me-2"></div>
             <h5 class="fw-bold mb-0">Maintenance</h5>
@@ -1813,9 +1883,40 @@
         </div>
     </div>
     @endif
-</div>
+    </div> <!-- /#tab-maintenance -->
+
+    </div> <!-- /#dashboardTabsContent -->
+</div> <!-- /.container-xxl -->
 
 <style>
+    /* Segmented Dashboard Nav Pills */
+    .dashboard-nav-pills {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+    }
+    .dashboard-nav-pills .nav-link {
+        color: #475569;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        transition: all 0.2s ease-in-out;
+    }
+    .dashboard-nav-pills .nav-link:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        transform: translateY(-1px);
+    }
+    .dashboard-nav-pills .nav-link.active {
+        background: #1e3a8a !important;
+        color: #ffffff !important;
+        border-color: #1e3a8a !important;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+    }
+    .dashboard-nav-pills .nav-link.active i {
+        color: #ffffff !important;
+    }
+
     .section-indicator {
         width: 12px;
         height: 24px;
@@ -2083,6 +2184,31 @@
             document.getElementById('attendanceDeviceFilter').addEventListener('change', function() {
                 initAttendanceChart(this.value);
             });
+        }
+
+        // Dashboard Tab Persistence & DataTables auto-resizing
+        $('button[data-bs-toggle="pill"]').on('shown.bs.tab', function(e) {
+            const target = $(e.target).data('bs-target');
+            if (target) {
+                localStorage.setItem('activeDashboardTab', target);
+                if (window.history.replaceState) {
+                    window.history.replaceState(null, null, target);
+                }
+            }
+            // Auto-adjust any DataTables on newly visible tab
+            setTimeout(function() {
+                $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust().responsive.recalc();
+            }, 50);
+        });
+
+        // Restore active tab from URL hash or localStorage
+        const activeTabHash = window.location.hash || localStorage.getItem('activeDashboardTab');
+        if (activeTabHash && $(activeTabHash + '-tab').length) {
+            const triggerEl = document.querySelector(activeTabHash + '-tab');
+            if (triggerEl) {
+                const tabTrigger = new bootstrap.Tab(triggerEl);
+                tabTrigger.show();
+            }
         }
     });
 </script>

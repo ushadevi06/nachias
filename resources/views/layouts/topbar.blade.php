@@ -903,12 +903,6 @@ $isSuper = $user->id == 1;
                                         </a>
                                     </li>
                                 @endif
-                                <li class="menu-item {{ request()->is('update_page') ? 'active' : '' }}">
-                                    <a href="{{ url('update_page') }}" class="menu-link">
-                                        <i class="menu-icon icon-base ri ri-settings-5-line"></i>
-                                        <div>Update Page</div>
-                                    </a>
-                                </li>
                                 <!-- Spacer to prevent last item from being hidden by the next arrow -->
                                 <li class="menu-item d-none d-lg-block" style="width: 50px; pointer-events: none; visibility: hidden;"></li>
                             </ul>

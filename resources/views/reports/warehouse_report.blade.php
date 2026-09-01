@@ -50,7 +50,7 @@
                     <label class="form-label small fw-bold text-muted">To Date</label>
                     <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">Brand</label>
                     <select class="form-select select2" name="brand_id" data-placeholder="Select Brand">
                         <option value=""></option>
@@ -59,24 +59,18 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3 d-flex gap-2">
-                    <div class="w-50">
-                        <label class="form-label small fw-bold text-muted">Store Type</label>
-                        <select class="form-select select2" name="store_id" data-placeholder="Select Store Type">
-                            <option value=""></option>
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_type_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="w-50 d-flex gap-1 align-items-end">
-                        <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                            <i class="ri ri-search-line me-1"></i> Search
-                        </button>
-                        <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border">
-                            <i class="ri ri-refresh-line"></i>
-                        </button>
-                    </div>
+                <div class="col-md-2 d-flex gap-1 align-items-end">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                        <i class="ri ri-search-line me-1"></i> Search
+                    </button>
+                    <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border">
+                        <i class="ri ri-refresh-line"></i>
+                    </button>
+                </div>
+                <div class="d-none">
+                    <select class="form-select" name="store_id">
+                        <option value=""></option>
+                    </select>
                 </div>
             </form>
         </div>
@@ -301,7 +295,6 @@ $(document).ready(function() {
         $('.tab-pane').removeClass('show active');
         $('#' + targetTabId).addClass('show active');
 
-        handleTabActivation('#' + targetTabId);
         $('#warehouseReportForm').trigger('submit');
     });
 
@@ -311,7 +304,7 @@ $(document).ready(function() {
 
     $.fn.dataTable.ext.errMode = 'none';
 
-    function showWarehouseReportLoading(isLoading) {
+    window.showWarehouseReportLoading = function(isLoading) {
         let loader = $('#report_loader');
         if (isLoading) {
             if (!loader.length) {
@@ -322,104 +315,73 @@ $(document).ready(function() {
             loader.remove();
             $('.tab-content').css({ 'opacity': '1.0' });
         }
+    };
+    function showWarehouseReportLoading(isLoading) {
+        window.showWarehouseReportLoading(isLoading);
     }
 
     $('#warehouseReportForm').on('submit', function(e) {
         e.preventDefault();
         const form = $(this);
         const submitBtn = form.find('button[type="submit"]');
-        const originalBtnHtml = submitBtn.html();
+        if (!submitBtn.data('original-html')) {
+            submitBtn.data('original-html', submitBtn.html());
+        }
+        const originalBtnHtml = submitBtn.data('original-html');
 
         submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...').prop('disabled', true);
         showWarehouseReportLoading(true);
 
-        let activeTabId = $('.tab-pane.active').attr('id') || 'warehouse-summary';
-        let formData = form.serializeArray();
-        formData.push({ name: 'active_tab', value: activeTabId });
+        let activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val() || 'warehouse-summary';
+
         if (activeTabId === 'warehouse-summary') {
+            let formData = form.serializeArray();
+            formData.push({ name: 'active_tab', value: activeTabId });
             formData.push({ name: 'warehouse_id', value: $('#top_warehouse_select').val() });
-        }
 
-        $.ajax({
-            url: form.attr('action'),
-            method: 'GET',
-            data: $.param(formData),
-            dataType: 'json',
-            success: function(response) {
-                $.each(response, function(tabId, html) {
-                    const targetTab = $('#' + tabId);
-                    if (targetTab.length) {
-                        targetTab.html(html);
+            $.ajax({
+                url: form.attr('action'),
+                method: 'GET',
+                data: $.param(formData),
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response['warehouse-summary']) {
+                        $('#warehouse-summary').html(response['warehouse-summary']);
                     }
-                });
-
-                switch (activeTabId) {
-                    case 'warehouse-summary':
-                        if (typeof initWarehouseSummaryTable === 'function') initWarehouseSummaryTable();
-                        break;
-                    case 'brand-sales':
-                    case 'brandwise-sales':
-                        if (typeof initBrandwiseSalesTable === 'function') initBrandwiseSalesTable();
-                        break;
-                    case 'brand-stock':
-                    case 'brandwise-stock':
-                        if (typeof initBrandwiseStockTable === 'function') initBrandwiseStockTable();
-                        break;
-                    case 'assorted-stock':
-                        if (typeof initAssortedStockTable === 'function') initAssortedStockTable();
-                        break;
-                    case 'order-dispatch':
-                    case 'order-vs-dispatch':
-                        if (typeof initOrderVsDispatchTable === 'function') initOrderVsDispatchTable();
-                        break;
-                    case 'urgent-orders':
-                        if (typeof initUrgentOrdersTable === 'function') initUrgentOrdersTable();
-                        break;
-                    case 'dispatch':
-                    case 'dispatch-report':
-                        if (typeof initDispatchReportTable === 'function') initDispatchReportTable();
-                        break;
-                    case 'inward':
-                    case 'stock-inward':
-                        if (typeof initStockInwardTable === 'function') initStockInwardTable();
-                        break;
-                    case 'discount':
-                    case 'regular-discount':
-                        if (typeof initRegularDiscountTable === 'function') initRegularDiscountTable();
-                        break;
-                    case 'brandwise-lost-sales':
-                        if (typeof initBrandwiseLostSalesTable === 'function') initBrandwiseLostSalesTable();
-                        break;
-                    case 'order-processing-time':
-                        if (typeof initOrderProcessingTime === 'function') initOrderProcessingTime();
-                        break;
-                    case 'stock-inward-sales':
-                        if (typeof initStockInwardSalesTable === 'function') initStockInwardSalesTable();
-                        break;
+                    if (typeof initWarehouseSummaryTable === 'function') initWarehouseSummaryTable();
+                },
+                error: function() {
+                    alert('An error occurred while fetching the summary.');
+                },
+                complete: function() {
+                    submitBtn.html(originalBtnHtml).prop('disabled', false);
+                    showWarehouseReportLoading(false);
                 }
+            });
+        } else {
+            var activeTable = $('#' + activeTabId).find('.datatables-products:visible');
+            var isRealAjaxTable = false;
 
-                const activeTable = $('#' + activeTabId).find('.datatables-products');
-                if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
-                    if (activeTable.DataTable().ajax && typeof activeTable.DataTable().ajax.url === 'function' && activeTable.DataTable().ajax.url()) {
-                        activeTable.DataTable().ajax.reload(null, false);
-                    }
+            if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
+                var dtInstance = activeTable.DataTable();
+                if (dtInstance.ajax && typeof dtInstance.ajax.reload === 'function' && dtInstance.ajax.url()) {
+                    isRealAjaxTable = true;
                 }
-
-                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-                    tooltipTriggerList.map(function (tooltipTriggerEl) {
-                        return new bootstrap.Tooltip(tooltipTriggerEl)
-                    });
-                }
-            },
-            error: function() {
-                alert('An error occurred while fetching the report data. Please try again.');
-            },
-            complete: function() {
-                submitBtn.html(originalBtnHtml).prop('disabled', false);
-                showWarehouseReportLoading(false);
             }
-        });
+
+            if (isRealAjaxTable) {
+                activeTable.DataTable().ajax.reload(function() {
+                    submitBtn.html(originalBtnHtml).prop('disabled', false);
+                    showWarehouseReportLoading(false);
+                }, false);
+            } else {
+                handleTabActivation('#' + activeTabId);
+                setTimeout(function() {
+                    submitBtn.html(originalBtnHtml).prop('disabled', false);
+                    showWarehouseReportLoading(false);
+                }, 400);
+            }
+        }
     });
 
     // Auto-trigger initial search on load

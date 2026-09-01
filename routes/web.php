@@ -97,6 +97,9 @@ Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication']
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
     Route::get('/dashboard/service-wip', [HomeController::class, 'getServiceWipDetails']);
+    Route::get('/dashboard/fabric-utilisation', [HomeController::class, 'getFabricUtilisationAjax']);
+    Route::get('/dashboard/core-material-planner', [HomeController::class, 'getCoreMaterialPlannerAjax']);
+    Route::get('/dashboard/supplier-performance', [HomeController::class, 'getSupplierPerformanceAjax']);
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
     Route::match(['get', 'post'], 'logout', [AuthController::class, 'logout']);
 

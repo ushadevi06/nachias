@@ -118,22 +118,42 @@ class OrderaxeService
                 return 'skipped';
             }
 
+            $transferMs = $orderData['transfer_to_erp_on'] ?? $orderData['submitted_on'] ?? $orderData['updated_at'] ?? $orderData['order_date'] ?? $orderData['date'] ?? $orderData['created_at'] ?? 0;
+            $soDate = date('Y-m-d');
+            if ($transferMs > 0) {
+                $dt = new \DateTime('@' . (int)($transferMs / 1000));
+                $dt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+                $soDate = $dt->format('Y-m-d');
+                if ($soDate < '2026-07-02') {
+                    return 'skipped';
+                }
+            }
+
+            $orderaxeRefId = $orderData['retailer']['reference_id'] ?? null;
+            $deliveryDate = null;
+            if (!empty($orderData['delivery_date'])) {
+                $delDt = new \DateTime('@' . (int)($orderData['delivery_date'] / 1000));
+                $delDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+                $deliveryDate = $delDt->format('Y-m-d');
+            }
+
+            $createdMs = $orderData['created_at'] ?? $orderData['order_date'] ?? $orderData['submitted_on'] ?? 0;
+            $requestDate = $soDate;
+            if ($createdMs > 0) {
+                $cDt = new \DateTime('@' . (int)($createdMs / 1000));
+                $cDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+                $requestDate = $cDt->format('Y-m-d');
+            }
+
             $existingOrder = SalesOrder::where('order_no', $orderNo)->first();
             
             if ($existingOrder) {
-                Log::info("Orderaxe Sync: Skipped existing order_no {$orderNo}");
-                return 'skipped';
-            }
-
-            $effectiveDateMs = $orderData['date'] ?? $orderData['created_at'] ?? $orderData['updated_at'] ?? 0;
-            $orderDate = date('Y-m-d');
-            if ($effectiveDateMs > 0) {
-                $dt = new \DateTime('@' . (int)($effectiveDateMs / 1000));
-                $dt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
-                $orderDate = $dt->format('Y-m-d');
-                if ($orderDate < '2026-07-02') {
-                    return 'skipped';
-                }
+                $existingOrder->update([
+                    'so_date' => $soDate,
+                    'request_date' => $requestDate,
+                    'delivery_date' => $deliveryDate ?? $existingOrder->delivery_date
+                ]);
+                return 'synced';
             }
 
             $customerData = $orderData['retailer'] ?? [];
@@ -189,22 +209,6 @@ class OrderaxeService
                 $zoneId = $customer->zone_id;
             }
 
-            $orderaxeRefId = $orderData['retailer']['reference_id'] ?? null;
-            $deliveryDate = null;
-            if (!empty($orderData['delivery_date'])) {
-                $delDt = new \DateTime('@' . (int)($orderData['delivery_date'] / 1000));
-                $delDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
-                $deliveryDate = $delDt->format('Y-m-d');
-            }
-
-            $createdMs = $orderData['created_at'] ?? $orderData['order_date'] ?? $orderData['date'] ?? 0;
-            $requestDate = $orderDate;
-            if ($createdMs > 0) {
-                $cDt = new \DateTime('@' . (int)($createdMs / 1000));
-                $cDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
-                $requestDate = $cDt->format('Y-m-d');
-            }
-
             DB::beginTransaction();
 
             $salesOrder = SalesOrder::create([
@@ -212,7 +216,7 @@ class OrderaxeService
                 'order_no'     => $orderNo,
                 'orderaxe_id'  => $orderAxeId,
                 'orderaxe_ref_id' => $orderaxeRefId,
-                'so_date'      => $orderDate,
+                'so_date'      => $soDate,
                 'request_date' => $requestDate,
                 'delivery_date'=> $deliveryDate,
                 'customer_id'  => $customer->id,

@@ -1530,10 +1530,10 @@ class WarehouseReportController extends Controller
                 ]);
 
             case 'brandwise-lost-sales':
-                $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
-                $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
+                $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : '2026-04-01';
+                $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : date('Y-m-d');
 
-                $allBrands = Brand::orderByRaw('LENGTH(code) DESC')->orderByRaw('LENGTH(brand_name) DESC')->get();
+                $allBrands = Brand::where('status', 'Active')->orderByRaw('LENGTH(code) DESC')->orderByRaw('LENGTH(brand_name) DESC')->get();
 
                 // 1. Fetch sales order items
                 $orderQuery = DB::table('sales_order_items')
@@ -1574,44 +1574,13 @@ class WarehouseReportController extends Controller
                 $soIdsList = [];
 
                 foreach ($orderItems as $item) {
-                    $brandName = null;
-                    $brandId = null;
-
-                    if (!empty($item->stock_brand_name)) {
-                        $brandName = $item->stock_brand_name;
-                        $brandId = $item->stock_brand_id;
-                    } elseif (!empty($item->cat_brand_name)) {
-                        $brandName = $item->cat_brand_name;
-                    } else {
-                        $artNo = trim($item->art_no ?? '');
-                        $sku = trim($item->sku ?? '');
-                        $itemName = trim($item->item_name ?? '');
-                        $catName = trim($item->category_name ?? '');
-                        $catPath = trim($item->categories_path_val ?? '');
-
-                        foreach ($allBrands as $b) {
-                            $bCode = trim($b->code);
-                            $bName = trim($b->brand_name);
-
-                            if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
-                                ($bCode && $sku && stripos($sku, $bCode) === 0) ||
-                                ($bCode && $catName && stripos($catName, $bCode) === 0) ||
-                                ($bCode && $catPath && stripos($catPath, $bCode) === 0) ||
-                                ($bName && $artNo && stripos($artNo, $bName) !== false) ||
-                                ($bName && $sku && stripos($sku, $bName) !== false) ||
-                                ($bName && $itemName && stripos($itemName, $bName) !== false) ||
-                                ($bName && $catName && stripos($catName, $bName) !== false) ||
-                                ($bName && $catPath && stripos($catPath, $bName) !== false)) {
-                                $brandName = $b->brand_name;
-                                $brandId = $b->id;
-                                break;
-                            }
-                        }
+                    $resolved = $this->resolveBrandFromOrderItem($item, $allBrands);
+                    if (!$resolved || empty($resolved['name']) || strtolower($resolved['name']) === 'uncategorized') {
+                        continue; // Do not show Uncategorized
                     }
 
-                    if (!$brandName) {
-                        $brandName = 'Uncategorized';
-                    }
+                    $brandName = $resolved['name'];
+                    $brandId = $resolved['id'];
 
                     if ($request->brand_id && $brandId != $request->brand_id) {
                         continue;
@@ -1951,6 +1920,164 @@ class WarehouseReportController extends Controller
                         'wip' => '-',
                         'action_required' => htmlspecialchars($so->reason_for_delay ?: '-')
                     ];
+                }
+
+                return response()->json([
+                    'draw' => $draw,
+                    'recordsTotal' => $recordsTotal,
+                    'recordsFiltered' => $recordsFiltered,
+                    'data' => $data,
+                ]);
+
+            case 'brandwise-lost-sales':
+                $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
+                $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
+                $storeId = $request->store_id;
+                $brandIdFilter = $request->brand_id;
+
+                $allBrands = DB::table('brands')->get();
+
+                $orderQuery = DB::table('sales_order_items')
+                    ->join('sales_orders', 'sales_order_items.sale_order_id', '=', 'sales_orders.id')
+                    ->leftJoin('stock_entry_items', 'sales_order_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                    ->leftJoin('brands', 'stock_entry_items.brand_id', '=', 'brands.id')
+                    ->leftJoin('brand_categories', 'sales_order_items.brand_cat_id', '=', 'brand_categories.id')
+                    ->whereNull('sales_orders.deleted_at')
+                    ->whereNull('sales_order_items.deleted_at')
+                    ->select(
+                        'sales_order_items.sale_order_id',
+                        'sales_order_items.art_no',
+                        'sales_order_items.sku',
+                        'sales_order_items.item_name',
+                        'sales_order_items.qty',
+                        'sales_order_items.amount',
+                        'brands.id as stock_brand_id',
+                        'brands.brand_name as stock_brand_name',
+                        'brand_categories.name as cat_brand_name'
+                    );
+
+                if ($fromDate && $toDate) {
+                    $orderQuery->whereBetween('sales_orders.so_date', [$fromDate, $toDate]);
+                }
+                if ($storeId) {
+                    $orderQuery->where('sales_orders.store_id', $storeId);
+                }
+
+                $orderItems = $orderQuery->get();
+
+                $brandMap = [];
+                foreach ($orderItems as $item) {
+                    $brandName = null;
+                    $brandId = null;
+
+                    if (!empty($item->stock_brand_name)) {
+                        $brandName = $item->stock_brand_name;
+                        $brandId = $item->stock_brand_id;
+                    } elseif (!empty($item->cat_brand_name)) {
+                        $brandName = $item->cat_brand_name;
+                    } else {
+                        $artNo = trim($item->art_no ?? '');
+                        $sku = trim($item->sku ?? '');
+                        $itemName = trim($item->item_name ?? '');
+
+                        foreach ($allBrands as $b) {
+                            $bCode = trim($b->code ?? '');
+                            $bName = trim($b->brand_name ?? '');
+
+                            if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
+                                ($bCode && $sku && stripos($sku, $bCode) === 0) ||
+                                ($bName && $artNo && stripos($artNo, $bName) !== false) ||
+                                ($bName && $sku && stripos($sku, $bName) !== false) ||
+                                ($bName && $itemName && stripos($itemName, $bName) !== false)) {
+                                $brandName = $b->brand_name;
+                                $brandId = $b->id;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!$brandName || $brandName === 'Unassigned Brand') {
+                        continue;
+                    }
+
+                    if ($brandIdFilter && $brandId != $brandIdFilter) {
+                        continue;
+                    }
+
+                    if (!isset($brandMap[$brandName])) {
+                        $brandMap[$brandName] = [
+                            'brand_id' => $brandId,
+                            'brand_name' => $brandName,
+                            'so_ids' => [],
+                            'items' => []
+                        ];
+                    }
+
+                    $soId = $item->sale_order_id;
+                    $brandMap[$brandName]['so_ids'][$soId] = true;
+                    $brandMap[$brandName]['items'][] = $item;
+                }
+
+                $data = [];
+                foreach ($brandMap as $bName => $bData) {
+                    $soIds = array_keys($bData['so_ids']);
+                    $invoicedArtNos = [];
+
+                    if (!empty($soIds)) {
+                        $invoicedArtNos = DB::table('sales_invoice_items')
+                            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+                            ->whereIn('sales_invoices.so_id', $soIds)
+                            ->whereNull('sales_invoices.deleted_at')
+                            ->whereNull('sales_invoice_items.deleted_at')
+                            ->select(
+                                DB::raw('COALESCE(sales_invoice_items.art_no, "") as art_no'),
+                                DB::raw('SUM(sales_invoice_items.quantity) as inv_qty')
+                            )
+                            ->groupBy('art_no')
+                            ->pluck('inv_qty', 'art_no')
+                            ->toArray();
+                    }
+
+                    $missedOrdersSet = [];
+                    $totalLostValue = 0;
+
+                    foreach ($bData['items'] as $item) {
+                        $artNo = $item->art_no;
+                        $ordQty = floatval($item->qty ?? 0);
+                        $ordAmt = floatval($item->amount ?? 0);
+                        $rate = $ordQty > 0 ? ($ordAmt / $ordQty) : 0;
+                        $invQty = floatval($invoicedArtNos[$artNo] ?? 0);
+
+                        $itemPending = max(0, $ordQty - $invQty);
+                        if ($itemPending > 0) {
+                            $missedOrdersSet[$item->sale_order_id] = true;
+                            $totalLostValue += ($itemPending * $rate);
+                        }
+                    }
+
+                    $missedOrdersCount = count($missedOrdersSet);
+                    if ($missedOrdersCount <= 0) {
+                        continue;
+                    }
+
+                    if ($search && stripos($bName, $search) === false) {
+                        continue;
+                    }
+
+                    $brandLink = '<a href="javascript:void(0)" class="fw-bold text-primary" onclick="drillDownToLostSalesBrand(\'' . htmlspecialchars($bName, ENT_QUOTES) . '\')">' . htmlspecialchars($bName) . '</a>';
+
+                    $data[] = [
+                        'brand' => $brandLink,
+                        'missed_orders' => '<span class="badge bg-danger fw-bold px-2 py-1">' . number_format($missedOrdersCount, 0) . '</span>',
+                        'lost_value' => '<span class="text-danger fw-bold">₹' . number_format($totalLostValue, 2) . '</span>',
+                    ];
+                }
+
+                $recordsTotal = count($data);
+                $recordsFiltered = $recordsTotal;
+
+                if ($length != -1) {
+                    $data = array_slice($data, $start, $length);
                 }
 
                 return response()->json([
@@ -2476,6 +2603,61 @@ class WarehouseReportController extends Controller
         return $this->getOrderProcessingTimeArtNos($request);
     }
 
+    protected function resolveBrandFromOrderItem($item, $allBrands)
+    {
+        if (!empty($item->stock_brand_name)) {
+            return ['name' => trim($item->stock_brand_name), 'id' => $item->stock_brand_id ?? null];
+        }
+        if (!empty($item->cat_brand_name)) {
+            return ['name' => trim($item->cat_brand_name), 'id' => null];
+        }
+
+        $artNo = trim($item->art_no ?? '');
+        $sku = trim($item->sku ?? '');
+        $itemName = trim($item->item_name ?? '');
+        $catName = trim($item->category_name ?? '');
+        $catPath = trim($item->categories_path_val ?? '');
+
+        // Check common aliases
+        if (stripos($artNo, 'BC') === 0 || stripos($sku, 'BC') === 0 || stripos($itemName, 'BC-') === 0 || stripos($catName, 'BC-') === 0) {
+            $cbc = $allBrands->firstWhere('code', 'CBC');
+            if ($cbc) {
+                return ['name' => $cbc->brand_name, 'id' => $cbc->id];
+            }
+        }
+
+        foreach ($allBrands as $b) {
+            $bCode = trim($b->code ?? '');
+            $bName = trim($b->brand_name ?? '');
+
+            if (empty($bCode) && empty($bName)) {
+                continue;
+            }
+
+            if ($bCode) {
+                if (($artNo && (stripos($artNo, $bCode) === 0 || stripos($artNo, $bCode . '-') === 0)) ||
+                    ($sku && (stripos($sku, $bCode) === 0 || stripos($sku, $bCode . '-') === 0)) ||
+                    ($itemName && (stripos($itemName, $bCode) === 0 || stripos($itemName, $bCode . '-') === 0 || stripos($itemName, $bCode . ' ') === 0)) ||
+                    ($catName && (stripos($catName, $bCode) === 0 || stripos($catName, $bCode . '-') === 0 || stripos($catName, $bCode . ' ') === 0)) ||
+                    ($catPath && (stripos($catPath, $bCode) === 0 || stripos($catPath, $bCode . '-') === 0))) {
+                    return ['name' => $b->brand_name, 'id' => $b->id];
+                }
+            }
+
+            if ($bName) {
+                if (($artNo && stripos($artNo, $bName) !== false) ||
+                    ($sku && stripos($sku, $bName) !== false) ||
+                    ($itemName && stripos($itemName, $bName) !== false) ||
+                    ($catName && stripos($catName, $bName) !== false) ||
+                    ($catPath && stripos($catPath, $bName) !== false)) {
+                    return ['name' => $b->brand_name, 'id' => $b->id];
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function getBrandwiseLostSalesOrders(Request $request)
     {
         $draw = intval($request->draw);
@@ -2485,10 +2667,10 @@ class WarehouseReportController extends Controller
 
         $brandName = $request->brand_name;
         $storeId = $request->store_id;
-        $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
-        $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : '2026-04-01';
+        $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : date('Y-m-d');
 
-        $allBrands = Brand::orderByRaw('LENGTH(code) DESC')->orderByRaw('LENGTH(brand_name) DESC')->get();
+        $allBrands = Brand::where('status', 'Active')->orderByRaw('LENGTH(code) DESC')->orderByRaw('LENGTH(brand_name) DESC')->get();
 
         $orderQuery = DB::table('sales_order_items')
             ->join('sales_orders', 'sales_order_items.sale_order_id', '=', 'sales_orders.id')
@@ -2542,39 +2724,12 @@ class WarehouseReportController extends Controller
         $matchedSoIds = [];
 
         foreach ($orderItems as $item) {
-            $resolvedBrand = null;
-            if (!empty($item->stock_brand_name)) {
-                $resolvedBrand = $item->stock_brand_name;
-            } elseif (!empty($item->cat_brand_name)) {
-                $resolvedBrand = $item->cat_brand_name;
-            } else {
-                $artNo = trim($item->art_no ?? '');
-                $sku = trim($item->sku ?? '');
-                $itemName = trim($item->item_name ?? '');
-                $catName = trim($item->category_name ?? '');
-                $catPath = trim($item->categories_path_val ?? '');
-
-                foreach ($allBrands as $b) {
-                    $bCode = trim($b->code);
-                    $bName = trim($b->brand_name);
-                    if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
-                        ($bCode && $sku && stripos($sku, $bCode) === 0) ||
-                        ($bCode && $catName && stripos($catName, $bCode) === 0) ||
-                        ($bCode && $catPath && stripos($catPath, $bCode) === 0) ||
-                        ($bName && $artNo && stripos($artNo, $bName) !== false) ||
-                        ($bName && $sku && stripos($sku, $bName) !== false) ||
-                        ($bName && $itemName && stripos($itemName, $bName) !== false) ||
-                        ($bName && $catName && stripos($catName, $bName) !== false) ||
-                        ($bName && $catPath && stripos($catPath, $bName) !== false)) {
-                        $resolvedBrand = $b->brand_name;
-                        break;
-                    }
-                }
+            $resolved = $this->resolveBrandFromOrderItem($item, $allBrands);
+            if (!$resolved || empty($resolved['name']) || strtolower($resolved['name']) === 'uncategorized') {
+                continue;
             }
 
-            if (!$resolvedBrand) {
-                $resolvedBrand = 'Uncategorized';
-            }
+            $resolvedBrand = $resolved['name'];
 
             if ($brandName && strtolower($resolvedBrand) !== strtolower($brandName)) {
                 continue;
@@ -2629,15 +2784,22 @@ class WarehouseReportController extends Controller
         $orderSno = 1;
         foreach ($soMap as $soId => $data) {
             $soInvQty = 0;
+            $lostValue = 0;
             $pendingArtNosList = [];
 
             foreach ($data['items'] as $i) {
                 $artNo = $i->art_no;
                 $ordQ = floatval($i->qty ?? 0);
+                $ordAmt = floatval($i->amount ?? 0);
+                $rate = $ordQ > 0 ? ($ordAmt / $ordQ) : 0;
+
                 $invQ = floatval($invoicedArtNosMap[$soId][$artNo] ?? 0);
-                $soInvQty += min($ordQ, $invQ);
+                $effectiveInvQ = min($ordQ, $invQ);
+                $soInvQty += $effectiveInvQ;
 
                 $itemPending = max(0, $ordQ - $invQ);
+                $lostValue += ($itemPending * $rate);
+
                 if ($itemPending > 0 && !empty($artNo)) {
                     $pendingArtNosList[] = $artNo;
                 }
@@ -2646,6 +2808,11 @@ class WarehouseReportController extends Controller
             $totalOrdQty = $data['ordered_qty'];
             $pendingQty = max(0, $totalOrdQty - $soInvQty);
 
+            // Only include orders that have lost / pending items
+            if ($pendingQty <= 0) {
+                continue;
+            }
+
             $soNoHtml = '<a href="' . url('sales_orders/view/' . $soId) . '" target="_blank" class="fw-bold text-primary">' . htmlspecialchars($data['so_no']) . '</a>';
             if ($data['is_orderaxe']) {
                 $soNoHtml .= ' <span class="badge bg-label-info ms-1" style="font-size:10px;">Orderaxe</span>';
@@ -2653,28 +2820,16 @@ class WarehouseReportController extends Controller
 
             $reasonHtml = $data['reason'] !== '-' ? htmlspecialchars($data['reason']) : '<span class="text-muted">-</span>';
 
-            $uniquePendingArtNos = array_unique($pendingArtNosList);
-            $pendingArtNosCount = count($uniquePendingArtNos);
-
-            if ($pendingArtNosCount > 0 && $pendingQty > 0) {
-                $btnAwaiting = '<button class="btn btn-xs btn-outline-danger" onclick="drillDownToBrandOrderArtNos(' . $soId . ', \'' . htmlspecialchars($data['so_no'], ENT_QUOTES) . '\')">VIEW ART NO (' . $pendingArtNosCount . ')</button>';
-                $statusBadge = '<span class="badge bg-danger">PENDING</span>';
-            } else {
-                $btnAwaiting = '<span class="badge bg-label-success">None / Closed</span>';
-                $statusBadge = '<span class="badge bg-success">COMPLETED</span>';
-            }
-
             $allOrders[] = [
                 'sno' => $orderSno++,
-                'order_date' => $data['so_date'],
                 'so_no' => $soNoHtml,
                 'customer' => htmlspecialchars($data['customer']),
-                'total_qty' => number_format($totalOrdQty, 0),
+                'so_date' => $data['so_date'],
+                'ordered_qty' => number_format($totalOrdQty, 0),
                 'invoiced_qty' => '<span class="text-primary fw-bold">' . number_format($soInvQty, 0) . '</span>',
-                'pending_qty' => '<span class="text-danger fw-bold">' . number_format($pendingQty, 0) . '</span>',
-                'status' => $statusBadge,
-                'awaiting_art_nos' => $btnAwaiting,
-                'action_required' => $reasonHtml,
+                'lost_qty' => '<span class="text-danger fw-bold">' . number_format($pendingQty, 0) . '</span>',
+                'lost_value' => '<span class="text-danger fw-bold">₹' . number_format($lostValue, 2) . '</span>',
+                'reason' => $reasonHtml,
             ];
         }
 

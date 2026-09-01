@@ -436,6 +436,9 @@
                                                     <label>Qty *</label>
                                                 </div>
                                                 <div class="qty-error text-danger small" style="display:none;"></div>
+                                                @error("items.$index.quantity")
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                @enderror
                                                 @if(isset($row->max_qty) && $row->max_qty !== '' && (!isset($row->is_open_order) || $row->is_open_order != 1))
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif

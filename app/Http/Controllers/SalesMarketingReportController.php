@@ -79,11 +79,7 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $orders = $dataQuery->with(['customer', 'items.stockEntryItem', 'salesInvoices.items'])
-                        ->orderBy('id', 'desc')
-                        ->offset($start)
-                        ->limit($length)
-                        ->get();
+                    $orders = $dataQuery->with(['customer', 'items.stockEntryItem', 'salesInvoices.items'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
 
                     $data = [];
                     foreach ($orders as $order) {
@@ -300,35 +296,7 @@ class SalesMarketingReportController extends Controller
                         'data' => $comparisonData
                     ]);
 
-                case 'outstanding-report':
-                    $customers_with_invoices = SalesInvoice::with('customer.zone')
-                        ->whereNull('deleted_at')
-                        ->select('customer_id', DB::raw('SUM(grand_total) as total_invoiced'), DB::raw('SUM(received_amount) as total_received'), DB::raw('SUM(due_amount) as total_due'), DB::raw('COUNT(id) as bills_count'))
-                        ->groupBy('customer_id')
-                        ->having('total_due', '>', 0)
-                        ->get();
 
-                    $outstandingData = [];
-                    foreach ($customers_with_invoices as $inv) {
-                        $customer = $inv->customer;
-                        if (!$customer) continue;
-
-                        $outstandingData[] = [
-                            'zone' => '<span class="badge bg-label-secondary">' . htmlspecialchars((string)(optional($customer->zone)->zone_name ?? 'Unassigned')) . '</span>',
-                            'customer' => '<div class="fw-bold text-dark">' . htmlspecialchars((string)$customer->name) . '</div><small class="text-muted">' . htmlspecialchars((string)$customer->code) . '</small>',
-                            'bills_count' => '<span class="badge rounded-pill bg-label-info">' . (int)$inv->bills_count . '</span>',
-                            'total_sales' => '₹' . number_format((float)$inv->total_invoiced, 2),
-                            'received' => '<span class="text-success">₹' . number_format((float)$inv->total_received, 2) . '</span>',
-                            'outstanding' => '<span class="fw-bold text-danger">₹' . number_format((float)$inv->total_due, 2) . '</span>',
-                        ];
-                    }
-
-                    return response()->json([
-                        'draw' => $draw,
-                        'recordsTotal' => count($outstandingData),
-                        'recordsFiltered' => count($outstandingData),
-                        'data' => $outstandingData
-                    ]);
 
                 case 'incentive-report':
                     $agents = SalesAgent::whereIn('status', ['active', 'Active'])->get();
@@ -401,11 +369,7 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $notes = $dataQuery->with(['customer', 'salesAgent', 'zone'])
-                        ->orderBy('id', 'desc')
-                        ->offset($start)
-                        ->limit($length)
-                        ->get();
+                    $notes = $dataQuery->with(['customer', 'salesAgent', 'zone'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
 
                     $data = [];
                     foreach ($notes as $note) {
@@ -454,11 +418,7 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $orders = $dataQuery->with(['customer.city', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices.items'])
-                        ->orderBy('id', 'desc')
-                        ->offset($start)
-                        ->limit($length)
-                        ->get();
+                    $orders = $dataQuery->with(['customer.city', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices.items'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
 
                     $data = [];
                     $sno = $start + 1;
@@ -560,7 +520,10 @@ class SalesMarketingReportController extends Controller
                     if ($search) {
                         $query->where(function($q) use ($search) {
                             $q->where('name', 'like', "%{$search}%")
-                              ->orWhere('code', 'like', "%{$search}%");
+                              ->orWhere('code', 'like', "%{$search}%")
+                              ->orWhereHas('zone', function($zq) use ($search) {
+                                  $zq->where('zone_name', 'like', "%{$search}%");
+                              });
                         });
                     }
 

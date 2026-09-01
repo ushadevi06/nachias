@@ -225,10 +225,22 @@
                     @if($purchaseOrder->remarks)
                     <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
                         <div class="card-header bg-light py-3">
-                            <h5 class="mb-0 fw-bold text-dark text-uppercase small">Remarks / Terms</h5>
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase small">Remarks</h5>
                         </div>
                         <div class="card-body p-4">
                             <div class="text-dark small" style="white-space: pre-line;">{{ $purchaseOrder->remarks }}
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($purchaseOrder->payment_terms)
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase small">Payment Terms</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="text-dark small" style="white-space: pre-line;">{{ $purchaseOrder->payment_terms }}
                             </div>
                         </div>
                     </div>

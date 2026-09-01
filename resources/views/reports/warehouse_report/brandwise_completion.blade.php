@@ -84,6 +84,16 @@ function renderBrandwiseCompletionBrandsLevel() {
             { data: 'completion_pct', name: 'completion_pct', className: 'text-center' },
             { data: 'pending_qty', name: 'pending_qty', className: 'text-center' }
         ],
+        drawCallback: function() {
+            if (typeof showWarehouseReportLoading === 'function') {
+                showWarehouseReportLoading(false);
+            }
+        },
+        initComplete: function() {
+            if (typeof showWarehouseReportLoading === 'function') {
+                showWarehouseReportLoading(false);
+            }
+        },
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
