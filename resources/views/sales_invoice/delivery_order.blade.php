@@ -299,52 +299,83 @@
                 if (empty($desc)) {
                     $desc = $item->sku ?? '-';
                 }
-                $uom = $item->uom_id ?? '-';
-                $art = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : ($item->art_no ?? '-');
+                
+                $uom = ($item->uom && $item->uom->uom_code) ? $item->uom->uom_code : 'PCS';
                 $mrp = $item->mrp ?? 0;
                 $rate = $item->rate ?? 0;
+                $art = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : ($item->art_no ?? '-');
                 $size = $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-');
                 $qty = $item->quantity;
 
-                $key = $desc . '_' . $uom . '_' . $art . '_' . $mrp . '_' . $rate;
-
-                if (!isset($rows[$key])) {
-                    $rows[$key] = [
-                        'description' => $desc,
+                if (!isset($rows[$desc])) {
+                    $rows[$desc] = [
                         'uom' => $uom,
-                        'art' => $art,
+                        'prices' => []
+                    ];
+                }
+
+                $priceKey = number_format($mrp, 2, '.', '') . '_' . number_format($rate, 2, '.', '');
+                if (!isset($rows[$desc]['prices'][$priceKey])) {
+                    $rows[$desc]['prices'][$priceKey] = [
                         'mrp' => $mrp,
                         'rate' => $rate,
+                        'arts' => [],
                         'quantities' => [],
                         'total' => 0
                     ];
                 }
 
-                if (!isset($rows[$key]['quantities'][$size])) {
-                    $rows[$key]['quantities'][$size] = 0;
+                if ($art && $art !== '-') {
+                    $rows[$desc]['prices'][$priceKey]['arts'][] = $art;
                 }
-                $rows[$key]['quantities'][$size] += $qty;
-                $rows[$key]['total'] += $qty;
+
+                if (!isset($rows[$desc]['prices'][$priceKey]['quantities'][$size])) {
+                    $rows[$desc]['prices'][$priceKey]['quantities'][$size] = 0;
+                }
+                $rows[$desc]['prices'][$priceKey]['quantities'][$size] += $qty;
+                $rows[$desc]['prices'][$priceKey]['total'] += $qty;
             }
 
-            
             $presentationRows[] = [
                 'type' => 'group_header',
                 'name' => $groupName
             ];
+            
             $groupGrandTotal = 0;
             $groupSizeTotals = array_fill_keys($allSizes, 0);
-            foreach($rows as $row) {
-                $presentationRows[] = [
-                    'type' => 'item',
-                    'data' => $row
-                ];
-                foreach($allSizes as $size) {
-                    $qty = $row['quantities'][$size] ?? 0;
-                    $groupSizeTotals[$size] += $qty;
+            
+            foreach($rows as $desc => $descData) {
+                $priceCount = count($descData['prices']);
+                $isFirstPrice = true;
+                
+                foreach($descData['prices'] as $priceKey => $priceData) {
+                    $uniqueArts = array_unique($priceData['arts']);
+                    $artDisplay = !empty($uniqueArts) ? implode(', ', $uniqueArts) : '-';
+                    
+                    $presentationRows[] = [
+                        'type' => 'item',
+                        'data' => [
+                            'description' => $desc,
+                            'uom' => $descData['uom'],
+                            'mrp' => $priceData['mrp'],
+                            'rate' => $priceData['rate'],
+                            'art' => $artDisplay,
+                            'quantities' => $priceData['quantities'],
+                            'total' => $priceData['total']
+                        ],
+                        'price_count' => $priceCount,
+                        'is_first_price' => $isFirstPrice
+                    ];
+                    $isFirstPrice = false;
+                    
+                    foreach($allSizes as $size) {
+                        $qty = $priceData['quantities'][$size] ?? 0;
+                        $groupSizeTotals[$size] += $qty;
+                    }
+                    $groupGrandTotal += $priceData['total'];
                 }
-                $groupGrandTotal += $row['total'];
             }
+            
             $presentationRows[] = [
                 'type' => 'group_subtotal',
                 'group' => $groupName,
@@ -489,8 +520,10 @@
                     @elseif($rowItem['type'] == 'item')
                         @php $row = $rowItem['data']; @endphp
                         <tr>
-                            <td style="padding-left: 6px;">{{ $row['description'] }}</td>
-                            <td class="text-center">{{ $row['uom'] }}</td>
+                            @if($rowItem['is_first_price'])
+                                <td rowspan="{{ $rowItem['price_count'] }}" style="padding-left: 6px; vertical-align: middle;">{{ $row['description'] }}</td>
+                                <td rowspan="{{ $rowItem['price_count'] }}" class="text-center" style="vertical-align: middle;">{{ $row['uom'] }}</td>
+                            @endif
                             @if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
                             <td class="text-center">{{ $row['art'] }}</td>
                             @endif
@@ -527,8 +560,8 @@
         </table>
 
         @if($pageIndex == count($chunks) - 1)
-            <div style="position: absolute; bottom: 0; left: 0; width: 100%;">
-        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <div style="width: 100%; margin-top: 15px;">
+        <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
             <tr>
                 <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
                     <strong>Remarks :</strong> {{ $invoice->remarks ?? '' }}
