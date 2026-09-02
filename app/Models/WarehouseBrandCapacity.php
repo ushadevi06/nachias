@@ -13,6 +13,7 @@ class WarehouseBrandCapacity extends Model
     protected $fillable = [
         'warehouse_id',
         'brand_id',
+        'style_id',
         'capacity_pcs',
         'status',
         'created_by',
@@ -27,6 +28,11 @@ class WarehouseBrandCapacity extends Model
     public function brand()
     {
         return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function style()
+    {
+        return $this->belongsTo(Style::class, 'style_id');
     }
 
     public function scopeActive($query)

@@ -476,12 +476,16 @@
                 data: { warehouse_id: warehouseId, job_card_id: jobCardId },
                 success: function(res) {
                     if (res.has_capacity) {
-                        let badgeClass = res.is_over_capacity ? 'bg-label-danger text-danger border border-danger' : 'bg-label-info text-info border border-info';
-                        let icon = res.is_over_capacity ? 'ri-error-warning-line' : 'ri-checkbox-circle-line';
-                        let html = '<div class="badge ' + badgeClass + ' text-wrap text-start p-2 mt-2 fs-6 w-100"><i class="' + icon + ' me-1"></i> ' + res.message + '</div>';
-                        $('#warehouse_capacity_info').html(html);
+                        if (res.is_over_capacity) {
+                            let html = '<span class="text-danger d-block mt-1">' + res.message + '</span>';
+                            $('#warehouse_capacity_info').html(html);
+                        } else {
+                            let html = '<span class="text-primary d-block mt-1 small">' + res.message + '</span>';
+                            $('#warehouse_capacity_info').html(html);
+                        }
                     } else {
-                        $('#warehouse_capacity_info').html('');
+                        let html = '<span class="text-danger d-block mt-1">' + (res.message || 'Selected warehouse has NO storage capacity configured for this brand.') + '</span>';
+                        $('#warehouse_capacity_info').html(html);
                     }
                 }
             });

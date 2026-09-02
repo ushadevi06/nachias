@@ -27,7 +27,7 @@
 </div>
 
 <script>
-    (function() {
+    $(document).ready(function() {
         const $table = $('.datatables-casino-po');
         if (!$table.length || !$.fn.DataTable) return;
 
@@ -77,5 +77,5 @@
                 emptyTable: 'No casino purchase orders found.'
             }
         });
-    })();
+    });
 </script>

@@ -134,7 +134,7 @@
         });
     }
 
-    (function() {
+    $(document).ready(function() {
         const $table = $('#poSupplierTable');
         if (!$table.length || !$.fn.DataTable) return;
 
@@ -198,5 +198,5 @@
 
             drillDownToPoItems(data.po_number_raw || data.po_number, data.supplier_name, data.items || []);
         });
-    })();
+    });
 </script>

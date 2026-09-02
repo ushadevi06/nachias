@@ -16,6 +16,13 @@
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="table-light border-top">
+            <tr class="bg-light fw-bold">
+                <th class="fw-bold text-start">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="lostSalesFootOrders">0</th>
+                <th class="text-center fw-bold text-danger" id="lostSalesFootRevenue">₹0.00</th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -35,6 +42,16 @@
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="table-light border-top">
+            <tr class="bg-light fw-bold">
+                <th colspan="3" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="lostOrdersFootOrdered">0</th>
+                <th class="text-center fw-bold text-primary" id="lostOrdersFootInvoiced">0</th>
+                <th class="text-center fw-bold text-warning" id="lostOrdersFootLostQty">0</th>
+                <th class="text-center fw-bold text-danger" id="lostOrdersFootLostVal">₹0.00</th>
+                <th></th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -42,13 +59,6 @@
     #brandwiseLostSalesBrandsTable tbody tr.clickable-brand-row:hover td {
         background-color: rgba(105, 108, 255, 0.08) !important;
         transition: all 0.2s ease-in-out;
-    }
-    .dataTables_processing {
-        background: rgba(255, 255, 255, 0.92) !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
-        z-index: 1050 !important;
-        padding: 15px !important;
     }
 </style>
 
@@ -87,6 +97,7 @@ function renderLostSalesBrandLevel() {
                 d.from_date = $('.start_date').val();
                 d.to_date = $('.end_date').val();
                 d.brand_id = $('select[name="brand_id"]').val();
+                d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
             }
         },
@@ -103,6 +114,14 @@ function renderLostSalesBrandLevel() {
             if (submitBtn.length && submitBtn.data('original-html')) {
                 submitBtn.html(submitBtn.data('original-html')).prop('disabled', false);
             }
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            var cur = function (num) { return '₹' + parseFloat(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+            $('#lostSalesFootOrders').html(fmt(api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#lostSalesFootRevenue').html(cur(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         },
         initComplete: function() {
             if (typeof window.showWarehouseReportLoading === 'function') {
@@ -110,11 +129,10 @@ function renderLostSalesBrandLevel() {
             }
         },
         language: {
-            processing: '<div class="py-4"><div class="spinner-border text-primary me-2" role="status"></div> <span class="fw-bold text-primary align-middle">Loading Brandwise Lost Sales...</span></div>',
             emptyTable: "No lost sales found matching your filters",
             zeroRecords: "No matching records found"
         },
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
@@ -150,6 +168,7 @@ function drillDownToLostSalesBrand(brandName) {
                 d.brand_name = currentLostSalesBrand;
                 d.from_date = $('.start_date').val();
                 d.to_date = $('.end_date').val();
+                d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
             }
         },
@@ -171,6 +190,16 @@ function drillDownToLostSalesBrand(brandName) {
             if (submitBtn.length && submitBtn.data('original-html')) {
                 submitBtn.html(submitBtn.data('original-html')).prop('disabled', false);
             }
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            var cur = function (num) { return '₹' + parseFloat(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+            $('#lostOrdersFootOrdered').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#lostOrdersFootInvoiced').html(fmt(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#lostOrdersFootLostQty').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#lostOrdersFootLostVal').html(cur(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         },
         initComplete: function() {
             if (typeof window.showWarehouseReportLoading === 'function') {
@@ -178,11 +207,10 @@ function drillDownToLostSalesBrand(brandName) {
             }
         },
         language: {
-            processing: '<div class="py-4"><div class="spinner-border text-primary me-2" role="status"></div> <span class="fw-bold text-primary align-middle">Loading Sales Orders...</span></div>',
             emptyTable: "No missed sales orders found for this brand",
             zeroRecords: "No matching sales orders found"
         },
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });

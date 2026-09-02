@@ -77,32 +77,30 @@
             <div class="tab-content" id="reportTabsContent">
                 <!-- 1. PO Supplier Wise -->
                 <div class="tab-pane fade show active" id="po-report" role="tabpanel">
-                    <!-- Loaded via AJAX -->
-                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                    @include('reports.purchase_reports._po_supplier_wise', ['qtyLabel' => 'Qty'])
                 </div>
 
                 <!-- 2. Stock Report -->
                 <div class="tab-pane fade" id="stock-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                    @include('reports.purchase_reports._stock_report', ['isFabric' => false])
                 </div>
 
                 <!-- 3. Stock Ageing -->
                 <div class="tab-pane fade" id="ageing-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                    @include('reports.purchase_reports._ageing_report', ['isFabric' => false])
                 </div>
                 
-                <!-- Add other dummy panes -->
                 <div class="tab-pane fade" id="cost-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._cost_report')
                 </div>
                 <div class="tab-pane fade" id="minstock-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._minstock_report', ['isFabric' => false])
                 </div>
                 <div class="tab-pane fade" id="return-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._return_report', ['isFabric' => false])
                 </div>
                 <div class="tab-pane fade" id="performance-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._supplier_performance')
                 </div>
             </div>
         </div>
@@ -242,11 +240,7 @@ $(document).ready(function() {
                 return;
             }
         }
-        fetchReport();
     });
-
-    // Initial load
-    fetchReport();
 
     // Export Handlers
     $('#btn-excel').on('click', function() {

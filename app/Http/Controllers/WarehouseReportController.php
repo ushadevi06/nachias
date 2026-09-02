@@ -10,10 +10,13 @@ use App\Models\GrnEntryItem;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceItem;
 use App\Models\SalesOrder;
+use App\Models\Customer;
+use App\Models\StoreType;
 use App\Models\StockEntryItem;
 use App\Models\StoreLocation;
 use App\Models\Warehouse;
 use App\Models\WarehouseBrandCapacity;
+use App\Models\Style;
 use Illuminate\Support\Facades\DB;
 
 class WarehouseReportController extends Controller
@@ -27,8 +30,9 @@ class WarehouseReportController extends Controller
     public function index(Request $request)
     {
         $brands = Brand::where('status', 'Active')->get();
-        $stores = \App\Models\StoreType::where('status', 'Active')->get();
+        $stores = StoreType::where('status', 'Active')->get();
         $warehouses = Warehouse::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $customers = Customer::where('status', 'Active')->orderBy('id','desc')->get();
         $defaultWarehouseId = $warehouses->first()?->id;
 
         if ($request->ajax()) {
@@ -37,7 +41,12 @@ class WarehouseReportController extends Controller
             if ($activeTab == 'warehouse-summary') {
                 $selectedWarehouseId = $request->get('warehouse_id', $defaultWarehouseId);
                 
-                $capacities = WarehouseBrandCapacity::where('warehouse_id', $selectedWarehouseId)->where('status', 'Active')->pluck('capacity_pcs', 'brand_id')->toArray();
+                $capacities = WarehouseBrandCapacity::where('warehouse_id', $selectedWarehouseId)
+                    ->where('status', 'Active')
+                    ->groupBy('brand_id')
+                    ->select('brand_id', DB::raw('SUM(capacity_pcs) as total_capacity'))
+                    ->pluck('total_capacity', 'brand_id')
+                    ->toArray();
 
                 $activeBrands = Brand::where('status', 'Active')->orderBy('id','desc')->get();
                 $reportData = [];
@@ -92,6 +101,7 @@ class WarehouseReportController extends Controller
                     $totalDamage += $damageStock;
 
                     $reportData[] = [
+                        'brand_id' => $brand->id,
                         'brand_name' => $brand->brand_name,
                         'capacity_pcs' => $capacityPcs,
                         'setwise_stock' => $setwiseStock,
@@ -114,7 +124,7 @@ class WarehouseReportController extends Controller
                 ];
 
                 return response()->json([
-                    'warehouse-summary' => view('reports.warehouse_report.warehouse_summary', compact('reportData', 'totals'))->render()
+                    'warehouse-summary' => view('reports.warehouse_report.warehouse_summary', compact('reportData', 'totals', 'selectedWarehouseId'))->render()
                 ]);
             }
 
@@ -191,6 +201,7 @@ class WarehouseReportController extends Controller
             'brands',
             'stores',
             'warehouses',
+            'customers',
             'defaultWarehouseId'
         ));
     }
@@ -247,6 +258,12 @@ class WarehouseReportController extends Controller
         $recordsTotal = DB::query()->fromSub($stockQuery, 'sub')->count();
         $recordsFiltered = $recordsTotal;
 
+        $totalsRow = DB::query()->fromSub($stockQuery, 'sub')->selectRaw('SUM(total_qty) as sum_qty, SUM(stock_value) as sum_value')->first();
+        $totals = [
+            'total_qty' => number_format($totalsRow->sum_qty ?? 0, 0),
+            'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
+        ];
+
         if ($length != -1) {
             $stockQuery->skip($start)->take($length);
         }
@@ -280,11 +297,207 @@ class WarehouseReportController extends Controller
                 'draw' => $draw,
                 'recordsTotal' => $recordsTotal,
                 'recordsFiltered' => $recordsFiltered,
-                'data' => $data
+                'data' => $data,
+                'totals' => $totals,
             ]);
         }
 
         return response()->json($styles);
+    }
+
+    public function getWarehouseSummaryStyles(Request $request)
+    {
+        $draw = intval($request->draw);
+        $start = intval($request->start);
+        $length = intval($request->length > 0 ? $request->length : 10);
+        $searchVal = $request->search;
+        $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
+
+        $brandId = $request->brand_id;
+        $warehouseId = $request->warehouse_id;
+
+        if (!$warehouseId) {
+            $defaultWh = Warehouse::where('status', 'Active')->orderBy('id', 'desc')->first();
+            $warehouseId = $defaultWh ? $defaultWh->id : null;
+        }
+
+        // Fetch style capacities configured for this warehouse and brand
+        $capacities = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
+            ->where('brand_id', $brandId)
+            ->where('status', 'Active')
+            ->pluck('capacity_pcs', 'style_id')
+            ->toArray();
+
+        // Fetch distinct styles present in stock for this brand & warehouse
+        $stockStyleIds = StockEntryItem::where('brand_id', $brandId)
+            ->where(function($q) use ($warehouseId) {
+                $q->where('warehouse_id', $warehouseId)
+                  ->orWhereHas('stockEntry', function($se) use ($warehouseId) {
+                      $se->where('warehouse_id', $warehouseId);
+                  });
+            })
+            ->whereNotNull('style_id')
+            ->distinct()
+            ->pluck('style_id')
+            ->toArray();
+
+        $allActiveStyles = Style::where('status', 'Active')->orderBy('style_name', 'asc')->get();
+
+        $configuredStyleIds = array_keys($capacities);
+        $targetStyles = $allActiveStyles->filter(function($s) use ($configuredStyleIds, $stockStyleIds) {
+            return in_array($s->id, $configuredStyleIds) || in_array($s->id, $stockStyleIds);
+        });
+
+        if ($targetStyles->isEmpty()) {
+            $targetStyles = $allActiveStyles;
+        }
+
+        $hasNullStyleCap = isset($capacities['']) || isset($capacities[null]) || isset($capacities[0]);
+
+        $data = [];
+        $totalCapacity = 0;
+        $totalSetwise = 0;
+        $totalSingle = 0;
+        $totalTotalStock = 0;
+        $totalDamage = 0;
+
+        foreach ($targetStyles as $style) {
+            if ($search && stripos($style->style_name, $search) === false) {
+                continue;
+            }
+
+            $capPcs = $capacities[$style->id] ?? 0;
+
+            $stockItems = StockEntryItem::where('brand_id', $brandId)
+                ->where('style_id', $style->id)
+                ->where(function($q) use ($warehouseId) {
+                    $q->where('warehouse_id', $warehouseId)
+                      ->orWhereHas('stockEntry', function($se) use ($warehouseId) {
+                          $se->where('warehouse_id', $warehouseId);
+                      });
+                })
+                ->with('stockEntry.productionReceipt')
+                ->get();
+
+            $setwiseStock = 0;
+            $singleStoreStock = 0;
+            $damageStock = 0;
+
+            foreach ($stockItems as $item) {
+                $netQty = (float)($item->qty_in - $item->qty_out);
+                $storeTypeId = $item->stockEntry?->productionReceipt?->store_type_id ?? $item->store_category_id;
+
+                if ($storeTypeId == 12) {
+                    $singleStoreStock += $netQty;
+                } elseif ($storeTypeId == 6) {
+                    $damageStock += $netQty;
+                } else {
+                    $setwiseStock += $netQty;
+                }
+            }
+
+            $totalStock = $setwiseStock + $singleStoreStock;
+            $utilizationPct = $capPcs > 0 ? round(($totalStock / $capPcs) * 100, 2) : 0;
+            $badgeClass = $utilizationPct > 95 ? 'bg-danger' : ($utilizationPct > 80 ? 'bg-warning text-dark' : 'bg-primary');
+
+            $totalCapacity += $capPcs;
+            $totalSetwise += $setwiseStock;
+            $totalSingle += $singleStoreStock;
+            $totalTotalStock += $totalStock;
+            $totalDamage += $damageStock;
+
+            $data[] = [
+                'style_name' => '<strong class="text-uppercase text-dark">' . e($style->style_name) . '</strong>',
+                'capacity_pcs' => number_format($capPcs),
+                'setwise_stock' => '<span class="text-primary fw-semibold">' . number_format($setwiseStock) . '</span>',
+                'single_store_stock' => '<span class="text-info fw-semibold">' . number_format($singleStoreStock) . '</span>',
+                'total_stock' => '<span class="fw-bold">' . number_format($totalStock) . '</span>',
+                'utilization' => '<span class="badge ' . $badgeClass . ' px-3 py-2 fs-6">' . $utilizationPct . '%</span>',
+                'damage_stock' => '<span class="text-danger fw-semibold">' . number_format($damageStock) . '</span>',
+            ];
+        }
+
+        if ($hasNullStyleCap) {
+            $nullCapPcs = $capacities[''] ?? ($capacities[null] ?? ($capacities[0] ?? 0));
+            if ($nullCapPcs > 0 && (!$search || stripos('General / Unassigned', $search) !== false)) {
+                $stockItems = StockEntryItem::where('brand_id', $brandId)
+                    ->whereNull('style_id')
+                    ->where(function($q) use ($warehouseId) {
+                        $q->where('warehouse_id', $warehouseId)
+                          ->orWhereHas('stockEntry', function($se) use ($warehouseId) {
+                              $se->where('warehouse_id', $warehouseId);
+                          });
+                    })
+                    ->with('stockEntry.productionReceipt')
+                    ->get();
+
+                $setwiseStock = 0;
+                $singleStoreStock = 0;
+                $damageStock = 0;
+
+                foreach ($stockItems as $item) {
+                    $netQty = (float)($item->qty_in - $item->qty_out);
+                    $storeTypeId = $item->stockEntry?->productionReceipt?->store_type_id ?? $item->store_category_id;
+
+                    if ($storeTypeId == 12) {
+                        $singleStoreStock += $netQty;
+                    } elseif ($storeTypeId == 6) {
+                        $damageStock += $netQty;
+                    } else {
+                        $setwiseStock += $netQty;
+                    }
+                }
+
+                $totalStock = $setwiseStock + $singleStoreStock;
+                $utilizationPct = $nullCapPcs > 0 ? round(($totalStock / $nullCapPcs) * 100, 2) : 0;
+                $badgeClass = $utilizationPct > 95 ? 'bg-danger' : ($utilizationPct > 80 ? 'bg-warning text-dark' : 'bg-primary');
+
+                $totalCapacity += $nullCapPcs;
+                $totalSetwise += $setwiseStock;
+                $totalSingle += $singleStoreStock;
+                $totalTotalStock += $totalStock;
+                $totalDamage += $damageStock;
+
+                $data[] = [
+                    'style_name' => '<strong class="text-muted fst-italic">General / Unassigned</strong>',
+                    'capacity_pcs' => number_format($nullCapPcs),
+                    'setwise_stock' => '<span class="text-primary fw-semibold">' . number_format($setwiseStock) . '</span>',
+                    'single_store_stock' => '<span class="text-info fw-semibold">' . number_format($singleStoreStock) . '</span>',
+                    'total_stock' => '<span class="fw-bold">' . number_format($totalStock) . '</span>',
+                    'utilization' => '<span class="badge ' . $badgeClass . ' px-3 py-2 fs-6">' . $utilizationPct . '%</span>',
+                    'damage_stock' => '<span class="text-danger fw-semibold">' . number_format($damageStock) . '</span>',
+                ];
+            }
+        }
+
+        $totalUtilPct = $totalCapacity > 0 ? round(($totalTotalStock / $totalCapacity) * 100, 2) : 0;
+        $totBadgeClass = $totalUtilPct > 95 ? 'bg-danger' : ($totalUtilPct > 80 ? 'bg-warning text-dark' : 'bg-primary');
+
+        $totals = [
+            'capacity_pcs' => number_format($totalCapacity),
+            'setwise_stock' => number_format($totalSetwise),
+            'single_store_stock' => number_format($totalSingle),
+            'total_stock' => number_format($totalTotalStock),
+            'utilization' => '<span class="badge ' . $totBadgeClass . ' px-3 py-2 fs-6">' . $totalUtilPct . '%</span>',
+            'damage_stock' => number_format($totalDamage),
+        ];
+
+        $recordsTotal = count($data);
+        $recordsFiltered = $recordsTotal;
+
+        if ($length != -1) {
+            $pagedData = array_slice($data, $start, $length);
+        } else {
+            $pagedData = $data;
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $pagedData,
+            'totals' => $totals
+        ]);
     }
 
     public function getBrandwiseArtNos(Request $request)
@@ -306,6 +519,8 @@ class WarehouseReportController extends Controller
             })
             ->select(
                 'stock_entry_items.art_no',
+                'stock_entry_items.sleeve_type',
+                'stock_entry_items.size',
                 DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty'),
                 DB::raw('SUM((stock_entry_items.qty_in - stock_entry_items.qty_out) * stock_entry_items.price) as stock_value'),
                 DB::raw('SUM(IFNULL(fg_min_stocks.min_stock, 0)) as total_min_stock'),
@@ -342,13 +557,50 @@ class WarehouseReportController extends Controller
         }
 
         if ($search) {
-            $stockQuery->where('stock_entry_items.art_no', 'like', "%{$search}%");
+            $stockQuery->where(function($q) use ($search) {
+                $q->where('stock_entry_items.art_no', 'like', "%{$search}%")
+                  ->orWhere('stock_entry_items.sleeve_type', 'like', "%{$search}%")
+                  ->orWhere('stock_entry_items.size', 'like', "%{$search}%");
+            });
         }
 
-        $stockQuery->groupBy('stock_entry_items.art_no');
+        $stockQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.sleeve_type', 'stock_entry_items.size');
+
+        if ($request->has('order')) {
+            $orderColIdx = intval($request->input('order.0.column'));
+            $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
+            $columnsMap = [
+                0 => 'stock_entry_items.art_no',
+                1 => 'stock_entry_items.sleeve_type',
+                2 => 'stock_entry_items.size',
+                3 => 'total_qty',
+                6 => 'oldest_stock_date',
+                7 => 'stock_value',
+            ];
+            if (isset($columnsMap[$orderColIdx])) {
+                $stockQuery->orderBy($columnsMap[$orderColIdx], $orderDir);
+            }
+        } else {
+            $stockQuery->orderBy('stock_entry_items.art_no', 'asc')
+                       ->orderBy('stock_entry_items.sleeve_type', 'asc')
+                       ->orderBy('stock_entry_items.size', 'asc');
+        }
 
         $recordsTotal = DB::query()->fromSub($stockQuery, 'sub')->count();
         $recordsFiltered = $recordsTotal;
+
+        $totalsRow = DB::query()->fromSub($stockQuery, 'sub')->selectRaw('
+            SUM(total_qty) as sum_qty, 
+            SUM(stock_value) as sum_value,
+            SUM(CASE WHEN total_min_stock > 0 AND total_qty < total_min_stock THEN (total_min_stock - total_qty) ELSE 0 END) as sum_low_stock,
+            SUM(CASE WHEN total_max_stock > 0 AND total_qty > total_max_stock THEN (total_qty - total_max_stock) ELSE 0 END) as sum_excess_stock
+        ')->first();
+        $totals = [
+            'total_qty' => number_format($totalsRow->sum_qty ?? 0, 0),
+            'low_stock' => number_format($totalsRow->sum_low_stock ?? 0, 0),
+            'excess_stock' => number_format($totalsRow->sum_excess_stock ?? 0, 0),
+            'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
+        ];
 
         if ($length != -1) {
             $stockQuery->skip($start)->take($length);
@@ -375,8 +627,22 @@ class WarehouseReportController extends Controller
                 $lowStockDisplay = $lowStock > 0 ? '<span class="text-danger fw-bold">' . number_format($lowStock, 0) . '</span>' : '-';
                 $excessStockDisplay = $excessStock > 0 ? '<span class="text-success fw-bold">' . number_format($excessStock, 0) . '</span>' : '-';
 
+                $rawSleeve = trim((string)($artNo->sleeve_type ?? ''));
+                $sleeveUpper = strtoupper($rawSleeve);
+                if (in_array($sleeveUpper, ['FS', 'F/S', 'FULL', 'FULL SLEEVE'])) {
+                    $sleeveFormatted = 'Full';
+                } elseif (in_array($sleeveUpper, ['HS', 'H/S', 'HALF', 'HALF SLEEVE'])) {
+                    $sleeveFormatted = 'Half';
+                } else {
+                    $sleeveFormatted = $rawSleeve !== '' ? htmlspecialchars($rawSleeve) : '-';
+                }
+
+                $sizeFormatted = !empty($artNo->size) ? htmlspecialchars($artNo->size) : '-';
+
                 $data[] = [
                     'brand' => '<strong class="text-uppercase">' . htmlspecialchars($artNo->art_no ?? '-') . '</strong>',
+                    'sleeve' => $sleeveFormatted,
+                    'size' => $sizeFormatted,
                     'total_qty' => number_format($displayQty, 0),
                     'low_stock' => $lowStockDisplay,
                     'excess_stock' => $excessStockDisplay,
@@ -389,7 +655,8 @@ class WarehouseReportController extends Controller
                 'draw' => $draw,
                 'recordsTotal' => $recordsTotal,
                 'recordsFiltered' => $recordsFiltered,
-                'data' => $data
+                'data' => $data,
+                'totals' => $totals,
             ]);
         }
 
@@ -752,6 +1019,9 @@ class WarehouseReportController extends Controller
                 if ($request->store_id) {
                     $query->where('sales_invoices.store_location_id', $request->store_id);
                 }
+                if ($request->customer_id) {
+                    $query->where('sales_invoices.customer_id', $request->customer_id);
+                }
                 if ($search) {
                     $query->where('brands.brand_name', 'like', "%{$search}%");
                 }
@@ -765,6 +1035,12 @@ class WarehouseReportController extends Controller
 
                 $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
                 $recordsFiltered = $recordsTotal;
+
+                $salesTotalsRow = DB::query()->fromSub($query, 'sub')->selectRaw('SUM(sold_qty) as sum_qty, SUM(sales_value) as sum_value')->first();
+                $totals = [
+                    'sold_qty' => number_format($salesTotalsRow->sum_qty ?? 0, 0),
+                    'sales_value' => '₹' . number_format($salesTotalsRow->sum_value ?? 0, 2),
+                ];
 
                 if ($length != -1) {
                     $query->skip($start)->take($length);
@@ -839,6 +1115,7 @@ class WarehouseReportController extends Controller
                     'recordsTotal' => $recordsTotal,
                     'recordsFiltered' => $recordsFiltered,
                     'data' => $data,
+                    'totals' => $totals,
                 ]);
 
             case 'brandwise-stock':
@@ -888,6 +1165,12 @@ class WarehouseReportController extends Controller
                 $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
                 $recordsFiltered = $recordsTotal;
 
+                $totalsRow = DB::query()->fromSub($query, 'sub')->selectRaw('SUM(total_qty) as sum_qty, SUM(stock_value) as sum_value')->first();
+                $totals = [
+                    'total_qty' => number_format($totalsRow->sum_qty ?? 0, 0),
+                    'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
+                ];
+
                 if ($length != -1) {
                     $query->skip($start)->take($length);
                 }
@@ -923,6 +1206,7 @@ class WarehouseReportController extends Controller
                     'recordsTotal' => $recordsTotal,
                     'recordsFiltered' => $recordsFiltered,
                     'data' => $data,
+                    'totals' => $totals,
                 ]);
 
             case 'assorted-stock':
@@ -1038,6 +1322,9 @@ class WarehouseReportController extends Controller
                             ->where('brands.id', $request->brand_id);
                     });
                 }
+                if ($request->customer_id) {
+                    $query->where('sales_orders.customer_id', $request->customer_id);
+                }
                 
                 if ($search) {
                     $query->where(function ($q) use ($search) {
@@ -1119,6 +1406,9 @@ class WarehouseReportController extends Controller
                             ->whereColumn('sales_order_items.sale_order_id', 'sales_orders.id')
                             ->where('brands.id', $request->brand_id);
                     });
+                }
+                if ($request->customer_id) {
+                    $query->where('sales_orders.customer_id', $request->customer_id);
                 }
                 
                 if ($search) {
@@ -1258,6 +1548,9 @@ class WarehouseReportController extends Controller
                 if ($request->store_id) {
                     $query->where('store_location_id', $request->store_id);
                 }
+                if ($request->customer_id) {
+                    $query->where('customer_id', $request->customer_id);
+                }
                 if ($request->brand_id) {
                     $query->whereExists(function ($q) use ($request) {
                         $q->select(DB::raw(1))
@@ -1342,6 +1635,9 @@ class WarehouseReportController extends Controller
                 }
                 if ($request->store_id) {
                     $query->where('sales_orders.store_id', $request->store_id);
+                }
+                if ($request->customer_id) {
+                    $query->where('sales_orders.customer_id', $request->customer_id);
                 }
                 if ($request->brand_id) {
                     $query->whereExists(function ($q) use ($request) {
@@ -1566,6 +1862,9 @@ class WarehouseReportController extends Controller
                 if ($request->store_id) {
                     $orderQuery->where('sales_orders.store_id', $request->store_id);
                 }
+                if ($request->customer_id) {
+                    $orderQuery->where('sales_orders.customer_id', $request->customer_id);
+                }
 
                 $orderItems = $orderQuery->get();
 
@@ -1711,6 +2010,9 @@ class WarehouseReportController extends Controller
                 }
                 if ($storeIdFilter) {
                     $query->where('sales_orders.store_id', $storeIdFilter);
+                }
+                if ($request->customer_id) {
+                    $query->where('sales_orders.customer_id', $request->customer_id);
                 }
                 if ($brandIdFilter) {
                     $query->whereExists(function ($q) use ($brandIdFilter) {
@@ -2122,6 +2424,9 @@ class WarehouseReportController extends Controller
                 if ($storeId) {
                     $orderQuery->where('sales_orders.store_id', $storeId);
                 }
+                if ($request->customer_id) {
+                    $orderQuery->where('sales_orders.customer_id', $request->customer_id);
+                }
 
                 $orderItems = $orderQuery->get();
 
@@ -2312,6 +2617,9 @@ class WarehouseReportController extends Controller
         if ($storeId) {
             $query->where('sales_orders.store_id', $storeId);
         }
+        if ($request->customer_id) {
+            $query->where('sales_orders.customer_id', $request->customer_id);
+        }
         if ($fromDate && $toDate) {
             $query->whereBetween('sales_orders.so_date', [$fromDate, $toDate]);
         }
@@ -2363,6 +2671,8 @@ class WarehouseReportController extends Controller
             ->select(
                 'sales_orders.id as so_id',
                 'sales_orders.so_no',
+                'sales_orders.order_no as orderaxe_order_no',
+                'sales_orders.order_type',
                 'sales_orders.so_date',
                 'sales_orders.delivery_date',
                 'customers.name as customer_name',
@@ -2373,6 +2683,8 @@ class WarehouseReportController extends Controller
         if (!empty($searchValue)) {
             $soQuery->where(function($q) use ($searchValue) {
                 $q->where('sales_orders.so_no', 'like', "%{$searchValue}%")
+                  ->orWhere('sales_orders.order_no', 'like', "%{$searchValue}%")
+                  ->orWhere('sales_orders.order_type', 'like', "%{$searchValue}%")
                   ->orWhere('customers.name', 'like', "%{$searchValue}%")
                   ->orWhere('sales_orders.reason_for_delay', 'like', "%{$searchValue}%");
             });
@@ -2430,6 +2742,10 @@ class WarehouseReportController extends Controller
             $uniquePendingArtNos = array_unique($pendingArtNos);
             $countArtNos = count($uniquePendingArtNos);
 
+            $completionPct = $orderedQty > 0 ? min(100, round(($invoicedQty / $orderedQty) * 100, 1)) : 0;
+            $pctBadgeClass = ($completionPct >= 100) ? 'bg-label-success' : (($completionPct > 0) ? 'bg-label-warning' : 'bg-label-secondary');
+            $completionHtml = '<span class="badge ' . $pctBadgeClass . ' fw-bold px-2 py-1">' . number_format($completionPct, 1) . '%</span>';
+
             if ($countArtNos > 0) {
                 $awaitingHtml = '<button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 text-nowrap view-awaiting-art-nos" data-so-id="' . $so->so_id . '" data-so-no="' . htmlspecialchars($so->so_no) . '" data-count="' . $countArtNos . '"><i class="ri-eye-line me-1"></i>View Art No (' . $countArtNos . ')</button>';
             } else {
@@ -2440,14 +2756,27 @@ class WarehouseReportController extends Controller
                 ? '<span class="badge bg-success">COMPLETED</span>' 
                 : '<span class="badge bg-danger">PENDING</span>';
 
+            $orderTypeBadge = '-';
+            if (!empty($so->order_type)) {
+                $typeClass = ($so->order_type === 'Regular') ? 'bg-label-primary' : 'bg-label-warning';
+                $orderTypeBadge = '<span class="badge ' . $typeClass . '">' . htmlspecialchars($so->order_type) . '</span>';
+            }
+
+            $orderaxeNoHtml = !empty($so->orderaxe_order_no) 
+                ? '<span class="fw-semibold text-dark">' . htmlspecialchars($so->orderaxe_order_no) . '</span>' 
+                : '<span class="text-muted">-</span>';
+
             $data[] = [
                 'sno' => $sno++,
                 'order_date' => date('d-m-Y', strtotime($so->so_date)),
                 'so_no' => '<a href="' . url('sales_orders/view/' . $so->so_id) . '" target="_blank" class="fw-bold text-primary">' . htmlspecialchars($so->so_no) . '</a>',
+                'orderaxe_order_no' => $orderaxeNoHtml,
+                'order_type' => $orderTypeBadge,
                 'customer' => htmlspecialchars($so->customer_name ?: '-'),
                 'total_qty' => number_format($orderedQty, 0),
                 'invoiced_qty' => number_format($invoicedQty, 0),
                 'pending_qty' => '<span class="fw-bold text-danger">' . number_format($pendingQty, 0) . '</span>',
+                'order_completed' => $completionHtml,
                 'status' => $statusHtml,
                 'awaiting_art_nos' => $awaitingHtml,
                 'action_required' => htmlspecialchars($so->reason_for_delay ?: '-')

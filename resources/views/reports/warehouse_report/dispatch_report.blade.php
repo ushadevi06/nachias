@@ -2,17 +2,24 @@
     <table class="datatables-products table table-hover" id="dispatchReportTable">
         <thead>
             <tr>
-                <th>Dispatch Date</th>
-                <th>Order No</th>
+                <th class="text-center">Dispatch Date</th>
+                <th class="text-center">Order No</th>
                 <th>Party Name</th>
-                <th>Place</th>
-                <th>Transporter/Vehicle</th>
-                <th>LR No</th>
+                <th class="text-center">Place</th>
+                <th class="text-center">Qty</th>
+                <th class="text-center">Invoices</th>
                 <th class="text-center">Status</th>
             </tr>
         </thead>
         <tbody>
         </tbody>
+        <tfoot class="table-light border-top" id="dispatchReportTfoot">
+            <tr class="bg-light fw-bold">
+                <th colspan="4" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="dispatchFootQty">0</th>
+                <th colspan="2"></th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -31,6 +38,7 @@ window.initDispatchReportTable = function() {
                 d.from_date = $('.start_date').val();
                 d.to_date = $('.end_date').val();
                 d.brand_id = $('select[name="brand_id"]').val();
+                d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
             }
         },
@@ -43,9 +51,17 @@ window.initDispatchReportTable = function() {
             { data: 'invoices', name: 'invoices', className: 'text-center', orderable: false },
             { data: 'status', name: 'status', className: 'text-center', orderable: false }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
-        pageLength: 10
+        pageLength: 10,
+        drawCallback: function (settings) {
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            $('#dispatchFootQty').html(fmt(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+        }
     });
 };
 function initDispatchReportTable() {

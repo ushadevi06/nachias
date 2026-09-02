@@ -24,7 +24,7 @@
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
             <form id="warehouseReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('warehouse_reports') }}" onsubmit="return false;">
-                <div class="col-md-3">
+                <div class="col-12 col-md-4 col-xl-2">
                     <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
                     <select class="form-select select2" id="report_type_select" name="report_type">
                         <option value="warehouse-summary" selected>🏬 Warehouse Summary</option>
@@ -42,15 +42,15 @@
                         <option value="brandwise-completion">📈 Brandwise Completion</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-4 col-xl-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
                     <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-4 col-xl-2">
                     <label class="form-label small fw-bold text-muted">To Date</label>
                     <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-4 col-xl-2">
                     <label class="form-label small fw-bold text-muted">Brand</label>
                     <select class="form-select select2" name="brand_id" data-placeholder="Select Brand">
                         <option value=""></option>
@@ -59,7 +59,16 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2 d-flex gap-1 align-items-end">
+                <div class="col-6 col-md-4 col-xl-2">
+                    <label class="form-label small fw-bold text-muted">Customer</label>
+                    <select class="form-select select2" name="customer_id" id="customer_id_select" data-placeholder="Select Customer">
+                        <option value=""></option>
+                        @foreach($customers ?? [] as $customer)
+                            <option value="{{ $customer->id }}" {{ request('customer_id') == $customer->id ? 'selected' : '' }}>{{ $customer->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-12 col-md-4 col-xl-2 d-flex gap-1 align-items-end">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill">
                         <i class="ri ri-search-line me-1"></i> Search
                     </button>
@@ -98,22 +107,6 @@
                 .card-datatable, div.dataTables_wrapper {
                     position: relative !important;
                     min-height: 200px !important;
-                }
-                div.dataTables_wrapper div.dataTables_processing {
-                    position: absolute !important;
-                    top: 50% !important;
-                    left: 50% !important;
-                    transform: translate(-50%, -50%) !important;
-                    background: #696cff !important;
-                    color: #ffffff !important;
-                    font-weight: 600 !important;
-                    padding: 8px 24px !important;
-                    border-radius: 8px !important;
-                    z-index: 9999 !important;
-                    box-shadow: 0 4px 20px rgba(105, 108, 255, 0.35) !important;
-                    margin: 0 !important;
-                    width: auto !important;
-                    height: auto !important;
                 }
             </style>
             <div class="tab-content">
@@ -274,9 +267,7 @@
 @section('scripts')
 <script>
 $.extend(true, $.fn.dataTable.defaults, {
-    language: {
-        processing: 'Loading...',
-    }
+    processing: true,
 });
 
 $(document).ready(function() {
@@ -403,6 +394,7 @@ $(document).ready(function() {
         $('.start_date').val('');
         $('.end_date').val('');
         $('select[name="brand_id"]').val('').trigger('change');
+        $('select[name="customer_id"]').val('').trigger('change');
         $('select[name="store_id"]').val('').trigger('change');
 
         let activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val() || 'brand-sales';

@@ -60,6 +60,16 @@ function renderBrandwiseCompletionBrandsLevel() {
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="table-light border-top">
+            <tr class="bg-light fw-bold">
+                <th colspan="2" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="compFootOrders">0</th>
+                <th class="text-center fw-bold text-primary" id="compFootTotalQty">0</th>
+                <th class="text-center fw-bold text-success" id="compFootInvoicedQty">0</th>
+                <th></th>
+                <th class="text-center fw-bold text-danger" id="compFootPendingQty">0</th>
+            </tr>
+        </tfoot>
     `);
 
     $('#brandwiseCompletionTable').DataTable({
@@ -72,6 +82,7 @@ function renderBrandwiseCompletionBrandsLevel() {
                 d.from_date = $('.start_date').val();
                 d.to_date = $('.end_date').val();
                 d.brand_id = $('select[name="brand_id"]').val();
+                d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
             }
         },
@@ -88,13 +99,22 @@ function renderBrandwiseCompletionBrandsLevel() {
             if (typeof showWarehouseReportLoading === 'function') {
                 showWarehouseReportLoading(false);
             }
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            $('#compFootOrders').html(fmt(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#compFootTotalQty').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#compFootInvoicedQty').html(fmt(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#compFootPendingQty').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         },
         initComplete: function() {
             if (typeof showWarehouseReportLoading === 'function') {
                 showWarehouseReportLoading(false);
             }
         },
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
@@ -116,16 +136,29 @@ function drillDownToBrandOrders(brandId, brandName) {
                 <th class="text-nowrap">S.NO</th>
                 <th class="text-nowrap">ORDER DATE</th>
                 <th class="text-nowrap">ORDER NO</th>
+                <th class="text-nowrap">ORDERAXE NO</th>
+                <th class="text-nowrap">ORDER TYPE</th>
                 <th class="text-nowrap">CUSTOMER</th>
                 <th class="text-nowrap">TOTAL QTY</th>
                 <th class="text-nowrap">INVOICED QTY</th>
                 <th class="text-nowrap">PENDING QTY</th>
+                <th class="text-nowrap">ORDER COMPLETED</th>
                 <th class="text-nowrap">STATUS</th>
                 <th class="text-nowrap">AWAITING ART NO</th>
                 <th class="text-nowrap">ACTION REQUIRED</th>
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="table-light border-top">
+            <tr class="bg-light fw-bold">
+                <th colspan="6" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="compSubFootTotalQty">0</th>
+                <th class="text-center fw-bold text-success" id="compSubFootInvoicedQty">0</th>
+                <th class="text-center fw-bold text-danger" id="compSubFootPendingQty">0</th>
+                <th class="text-center fw-bold text-info" id="compSubFootCompletionPct">0%</th>
+                <th colspan="3"></th>
+            </tr>
+        </tfoot>
     `);
 
     $('#brandwiseCompletionTable').DataTable({
@@ -139,24 +172,44 @@ function drillDownToBrandOrders(brandId, brandName) {
                 d.brand_name = brandName;
                 d.from_date = $('.start_date').val();
                 d.to_date = $('.end_date').val();
+                d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
             }
         },
         columns: [
-            { data: 'sno', name: 'sno', className: 'text-center font-monospace' },
+            { data: 'sno', name: 'sno', className: 'text-center' },
             { data: 'order_date', name: 'order_date', className: 'text-center text-nowrap' },
             { data: 'so_no', name: 'so_no', className: 'text-center fw-bold text-nowrap' },
+            { data: 'orderaxe_order_no', name: 'orderaxe_order_no', className: 'text-center text-nowrap' },
+            { data: 'order_type', name: 'order_type', className: 'text-center text-nowrap' },
             { data: 'customer', name: 'customer' },
             { data: 'total_qty', name: 'total_qty', className: 'text-center fw-bold' },
             { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
             { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+            { data: 'order_completed', name: 'order_completed', className: 'text-center' },
             { data: 'status', name: 'status', className: 'text-center' },
             { data: 'awaiting_art_nos', name: 'awaiting_art_nos', className: 'text-center', orderable: false },
             { data: 'action_required', name: 'action_required', orderable: false }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
-        pageLength: 10
+        pageLength: 10,
+        drawCallback: function () {
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            var totOrdered = api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var totInvoiced = api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var totPending = api.column(8, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var overallPct = totOrdered > 0 ? ((totInvoiced / totOrdered) * 100).toFixed(1) : 0;
+
+            $('#compSubFootTotalQty').html(fmt(totOrdered));
+            $('#compSubFootInvoicedQty').html(fmt(totInvoiced));
+            $('#compSubFootPendingQty').html(fmt(totPending));
+            $('#compSubFootCompletionPct').html(overallPct + '%');
+        }
     });
 }
 
@@ -183,6 +236,13 @@ function drillDownToBrandOrderArtNos(soId, soNo) {
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="table-light border-top">
+            <tr class="bg-light fw-bold">
+                <th colspan="5" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="compArtFootOrdered">0</th>
+                <th></th>
+            </tr>
+        </tfoot>
     `);
 
     $('#brandwiseCompletionTable').DataTable({
@@ -204,9 +264,17 @@ function drillDownToBrandOrderArtNos(soId, soNo) {
             { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center fw-bold', width: '10%' },
             { data: 'status', name: 'status', className: 'text-center', width: '10%' }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
-        pageLength: 10
+        pageLength: 10,
+        drawCallback: function () {
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            $('#compArtFootOrdered').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+        }
     });
 }
 

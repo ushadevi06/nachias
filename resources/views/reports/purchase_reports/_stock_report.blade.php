@@ -53,7 +53,7 @@
 </div>
 
 <script>
-    (function() {
+    $(document).ready(function() {
         const $table = $('.datatables-stock');
         if (!$table.length || !$.fn.DataTable) return;
 
@@ -123,5 +123,5 @@
                 emptyTable: 'No stock data found.'
             }
         });
-    })();
+    });
 </script>

@@ -16,6 +16,13 @@
         </thead>
         <tbody id="brandwiseStockTbody">
         </tbody>
+        <tfoot class="table-light border-top" id="brandwiseStockTfoot">
+            <tr id="brandwiseStockTfootTr" class="bg-light fw-bold">
+                <th class="fw-bold text-start">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="brandwiseStockFootQty">-</th>
+                <th class="text-end fw-bold text-primary" id="brandwiseStockFootValue">-</th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -24,6 +31,11 @@
     #brandwiseStockTable tbody tr:hover td {
         background-color: rgba(105, 108, 255, 0.08) !important;
         transition: all 0.2s ease-in-out;
+    }
+    #brandwiseStockTfoot th {
+        font-size: 0.95rem;
+        padding-top: 12px;
+        padding-bottom: 12px;
     }
 </style>
 
@@ -55,6 +67,12 @@
             <th class="text-center fw-bold">STOCK</th>
             <th class="text-end fw-bold">STOCK VALUE</th>
         `);
+        $('#brandwiseStockTfootTr').html(`
+            <th class="fw-bold text-start">TOTAL</th>
+            <th class="text-center fw-bold text-primary" id="brandwiseStockFootQty">-</th>
+            <th class="text-end fw-bold text-primary" id="brandwiseStockFootValue">-</th>
+        `);
+
         dtInstance = $('#brandwiseStockTable').DataTable({
             processing: true,
             serverSide: true,
@@ -73,13 +91,29 @@
                 { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '20%' },
                 { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
             ],
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
             pageLength: 10,
             language: {
                 emptyTable: "No data found matching your filters",
                 zeroRecords: "No matching records found",
                 infoEmpty: "Showing 0 to 0 entries",
+            },
+            drawCallback: function (settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    $('#brandwiseStockFootQty').html(json.totals.total_qty);
+                    $('#brandwiseStockFootValue').html(json.totals.stock_value);
+                } else {
+                    var api = this.api();
+                    var intVal = function (i) {
+                        return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                    };
+                    var pQty = api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    var pVal = api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    $('#brandwiseStockFootQty').html(formatNumber(pQty));
+                    $('#brandwiseStockFootValue').html(formatCurrency(pVal));
+                }
             }
         });
     }
@@ -114,6 +148,11 @@
             <th class="text-center fw-bold">STOCK</th>
             <th class="text-end fw-bold">STOCK VALUE</th>
         `);
+        $('#brandwiseStockTfootTr').html(`
+            <th class="fw-bold text-start">TOTAL</th>
+            <th class="text-center fw-bold text-primary" id="brandwiseStockFootQty">-</th>
+            <th class="text-end fw-bold text-primary" id="brandwiseStockFootValue">-</th>
+        `);
 
         dtInstance = $('#brandwiseStockTable').DataTable({
             processing: true,
@@ -134,13 +173,29 @@
                 { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '20%' },
                 { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
             ],
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
             pageLength: 10,
             language: {
                 emptyTable: "No styles found matching your filters",
                 zeroRecords: "No matching records found",
                 infoEmpty: "Showing 0 to 0 entries",
+            },
+            drawCallback: function (settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    $('#brandwiseStockFootQty').html(json.totals.total_qty);
+                    $('#brandwiseStockFootValue').html(json.totals.stock_value);
+                } else {
+                    var api = this.api();
+                    var intVal = function (i) {
+                        return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                    };
+                    var pQty = api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    var pVal = api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    $('#brandwiseStockFootQty').html(formatNumber(pQty));
+                    $('#brandwiseStockFootValue').html(formatCurrency(pVal));
+                }
             }
         });
     }
@@ -153,11 +208,23 @@
 
         $('#brandwiseStockTheadTr').html(`
             <th class="fw-bold" id="brandwiseStockCol1">ART NO</th>
+            <th class="text-center fw-bold">SLEEVE</th>
+            <th class="text-center fw-bold">SIZE</th>
             <th class="text-center fw-bold">STOCK</th>
             <th class="text-center fw-bold">LOW STOCK QTY</th>
             <th class="text-center fw-bold">EXCESS STOCK QTY</th>
             <th class="text-center fw-bold">STOCK DAYS</th>
             <th class="text-end fw-bold">STOCK VALUE</th>
+        `);
+        $('#brandwiseStockTfootTr').html(`
+            <th class="fw-bold text-start">TOTAL</th>
+            <th class="text-center fw-bold">-</th>
+            <th class="text-center fw-bold">-</th>
+            <th class="text-center fw-bold text-primary" id="brandwiseStockFootQty">-</th>
+            <th class="text-center fw-bold text-danger" id="brandwiseStockFootLowStock">-</th>
+            <th class="text-center fw-bold text-success" id="brandwiseStockFootExcessStock">-</th>
+            <th class="text-center fw-bold">-</th>
+            <th class="text-end fw-bold text-primary" id="brandwiseStockFootValue">-</th>
         `);
 
         dtInstance = $('#brandwiseStockTable').DataTable({
@@ -175,20 +242,44 @@
                 }
             },
             columns: [
-                { data: 'brand', name: 'stock_entry_items.art_no', width: '30%' },
-                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '15%' },
-                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, width: '15%' },
-                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, width: '15%' },
-                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, width: '10%' },
-                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '15%' }
+                { data: 'brand', name: 'stock_entry_items.art_no', width: '22%' },
+                { data: 'sleeve', name: 'stock_entry_items.sleeve_type', className: 'text-center', width: '10%' },
+                { data: 'size', name: 'stock_entry_items.size', className: 'text-center', width: '10%' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '11%' },
+                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, width: '12%' },
+                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, width: '12%' },
+                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, width: '9%' },
+                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '14%' }
             ],
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
             pageLength: 10,
             language: {
                 emptyTable: "No Art Nos found matching your filters",
                 zeroRecords: "No matching records found",
                 infoEmpty: "Showing 0 to 0 entries",
+            },
+            drawCallback: function (settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    $('#brandwiseStockFootQty').html(json.totals.total_qty);
+                    $('#brandwiseStockFootLowStock').html(json.totals.low_stock != '0' ? json.totals.low_stock : '-');
+                    $('#brandwiseStockFootExcessStock').html(json.totals.excess_stock != '0' ? json.totals.excess_stock : '-');
+                    $('#brandwiseStockFootValue').html(json.totals.stock_value);
+                } else {
+                    var api = this.api();
+                    var intVal = function (i) {
+                        return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                    };
+                    var pQty = api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    var pLow = api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    var pExcess = api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    var pVal = api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    $('#brandwiseStockFootQty').html(formatNumber(pQty));
+                    $('#brandwiseStockFootLowStock').html(pLow > 0 ? formatNumber(pLow) : '-');
+                    $('#brandwiseStockFootExcessStock').html(pExcess > 0 ? formatNumber(pExcess) : '-');
+                    $('#brandwiseStockFootValue').html(formatCurrency(pVal));
+                }
             }
         });
     }

@@ -13,6 +13,9 @@ use App\Models\Task;
 use App\Models\StoreLocation;
 use App\Models\Item;
 use App\Models\Warehouse;
+use App\Models\WarehouseBrandCapacity;
+use App\Models\Brand;
+use App\Models\Style;
 use App\Models\User;
 use App\Models\JobCardMatrixQuantity;
 use Illuminate\Http\Request;
@@ -205,6 +208,13 @@ class ProductionReceiptController extends Controller
             ];
 
             $request->validate($rules, $messages);
+
+            $capacityError = $this->validateWarehouseBrandStyleCapacity($request, $id);
+            if ($capacityError) {
+                return redirect()->back()->withInput()->withErrors([
+                    'warehouse_id' => $capacityError
+                ]);
+            }
 
             DB::beginTransaction();
             try {
@@ -424,6 +434,183 @@ class ProductionReceiptController extends Controller
 
         if ($jobCard->fabricDetails->count() === 1) {
             return trim((string) $jobCard->fabricDetails->first()->art_no) ?: null;
+        }
+
+        return null;
+    }
+
+    private function resolveItemStyleId($jobCard, array $itemData): ?int
+    {
+        $artNo = trim((string) ($itemData['art_no'] ?? ''));
+        $size = trim((string) ($itemData['size'] ?? ''));
+        $sizeVariant = trim((string) ($itemData['size_variant'] ?? ''));
+
+        $sleeveTypeShort = null;
+        if (str_contains($sizeVariant, ' - F/S')) {
+            $sleeveTypeShort = 'F/S';
+        } elseif (str_contains($sizeVariant, ' - H/S')) {
+            $sleeveTypeShort = 'H/S';
+        }
+
+        if ($artNo !== '') {
+            $bm = \App\Models\BarcodeMaster::where('art_no', $artNo)
+                ->when($size !== '', function ($q) use ($size) { $q->where('size', $size); })
+                ->when($sleeveTypeShort, function ($q) use ($sleeveTypeShort) { $q->where('sleeve_type', $sleeveTypeShort); })
+                ->whereNotNull('style_id')
+                ->first();
+            if ($bm && !empty($bm->style_id)) {
+                return (int) $bm->style_id;
+            }
+
+            $bm2 = \App\Models\BarcodeMaster::where('art_no', $artNo)
+                ->whereNotNull('style_id')
+                ->first();
+            if ($bm2 && !empty($bm2->style_id)) {
+                return (int) $bm2->style_id;
+            }
+        }
+
+        if ($jobCard) {
+            $fallbackBm = \App\Models\BarcodeMaster::where('job_card_entry_id', $jobCard->id)
+                ->whereNotNull('style_id')
+                ->first();
+            if ($fallbackBm && !empty($fallbackBm->style_id)) {
+                return (int) $fallbackBm->style_id;
+            }
+            if ($jobCard->item && !empty($jobCard->item->style_id)) {
+                return (int) $jobCard->item->style_id;
+            }
+        }
+
+        if (!empty($itemData['item_id'])) {
+            $it = \App\Models\Item::find($itemData['item_id']);
+            if ($it && !empty($it->style_id)) {
+                return (int) $it->style_id;
+            }
+        }
+
+        return null;
+    }
+
+    private function validateWarehouseBrandStyleCapacity($request, $receiptId = null): ?string
+    {
+        $warehouseId = $request->warehouse_id;
+        $jobCardId = $request->job_card_id;
+        $status = $request->status ?? 'Draft';
+
+        if (!$warehouseId || !$jobCardId) {
+            return null;
+        }
+
+        $jobCard = JobCardEntry::with(['brand', 'item', 'fabricDetails.quantities'])->find($jobCardId);
+        if (!$jobCard || !$jobCard->brand_id) {
+            return null;
+        }
+
+        $brandId = $jobCard->brand_id;
+        $brandName = $jobCard->brand?->brand_name ?? 'this Brand';
+        $warehouse = Warehouse::find($warehouseId);
+        $whName = $warehouse ? $warehouse->warehouse_name : 'Selected Warehouse';
+
+        // Group incoming scan quantities by style_id
+        $styleIncoming = [];
+        if ($request->has('items') && is_array($request->items)) {
+            foreach ($request->items as $itemData) {
+                $qty = floatval($itemData['scan_qty'] ?? 0);
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $resolvedArtNo = $this->resolveReceiptItemArtNo($jobCard, $itemData);
+                if ($resolvedArtNo) {
+                    $itemData['art_no'] = $resolvedArtNo;
+                }
+
+                $styleId = $this->resolveItemStyleId($jobCard, $itemData);
+                $styleKey = $styleId ?: 0;
+
+                if (!isset($styleIncoming[$styleKey])) {
+                    $styleIncoming[$styleKey] = [
+                        'style_id' => $styleId,
+                        'qty' => 0
+                    ];
+                }
+                $styleIncoming[$styleKey]['qty'] += $qty;
+            }
+        }
+
+        if (empty($styleIncoming)) {
+            return null;
+        }
+
+        foreach ($styleIncoming as $entry) {
+            $sId = $entry['style_id'];
+            $incomingQty = $entry['qty'];
+
+            $styleName = 'General / All Styles';
+            if ($sId) {
+                $styleObj = Style::find($sId);
+                $styleName = $styleObj ? $styleObj->style_name : "Style #{$sId}";
+            }
+
+            // Check configured capacity in warehouse_brand_capacities
+            $capObj = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
+                ->where('brand_id', $brandId)
+                ->where('status', 'Active')
+                ->when($sId, function ($q) use ($sId) {
+                    $q->where(function ($sub) use ($sId) {
+                        $sub->where('style_id', $sId)
+                            ->orWhereNull('style_id');
+                    });
+                }, function ($q) {
+                    $q->whereNull('style_id');
+                })
+                ->orderByRaw('style_id IS NOT NULL DESC')
+                ->first();
+
+            // Check 1: Existence of capacity configuration
+            if (!$capObj || $capObj->capacity_pcs <= 0) {
+                return "Warehouse {$whName} has no storage capacity configured for Brand: {$brandName} - Style: {$styleName}. Please configure this capacity in Master > Warehouse.";
+            }
+
+            // Check 2: Numerical capacity limit check on 'Posted'
+            if ($status === 'Posted') {
+                $capPcs = (float) $capObj->capacity_pcs;
+
+                // Current stock for this brand & style in this warehouse
+                $currentStockQuery = StockEntryItem::where('brand_id', $brandId)
+                    ->when($sId, function ($q) use ($sId) {
+                        $q->where('style_id', $sId);
+                    })
+                    ->where(function ($q) use ($warehouseId) {
+                        $q->where('warehouse_id', $warehouseId)
+                          ->orWhereHas('stockEntry', function ($se) use ($warehouseId) {
+                              $se->where('warehouse_id', $warehouseId);
+                          });
+                    });
+
+                // If updating an existing receipt, exclude items already in stock from this receipt
+                if ($receiptId) {
+                    $currentReceipt = ProductionReceipt::find($receiptId);
+                    if ($currentReceipt && $currentReceipt->receipt_no) {
+                        $currentStockQuery->whereDoesntHave('stockEntry', function ($se) use ($currentReceipt) {
+                            $se->where('reference_document', $currentReceipt->receipt_no);
+                        });
+                    }
+                }
+
+                $currentStock = (float) $currentStockQuery->sum(DB::raw('qty_in - qty_out'));
+                $availablePcs = max(0, $capPcs - $currentStock);
+
+                if (($currentStock + $incomingQty) > $capPcs) {
+                    $exceededBy = ($currentStock + $incomingQty) - $capPcs;
+                    return "Capacity limit exceeded for {$brandName} - Style: {$styleName} in {$whName}! " .
+                           "Configured Capacity: " . number_format($capPcs) . " Pcs, " .
+                           "Current Stock: " . number_format($currentStock) . " Pcs, " .
+                           "Available Capacity: " . number_format($availablePcs) . " Pcs, " .
+                           "Incoming: " . number_format($incomingQty) . " Pcs (Exceeds by " . number_format($exceededBy) . " Pcs).";
+                }
+            }
         }
 
         return null;
@@ -1159,16 +1346,17 @@ class ProductionReceiptController extends Controller
         $brand = Brand::find($jobCard->brand_id);
         $warehouse = Warehouse::find($warehouseId);
 
-        $capObj = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
+        $capSum = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
             ->where('brand_id', $jobCard->brand_id)
             ->where('status', 'Active')
-            ->first();
+            ->sum('capacity_pcs');
 
-        if (!$capObj || $capObj->capacity_pcs <= 0) {
+        if ($capSum <= 0) {
             return response()->json([
                 'has_capacity' => false,
                 'warehouse_name' => $warehouse?->warehouse_name,
                 'brand_name' => $brand?->brand_name,
+                'message' => "{$warehouse?->warehouse_name} has NO storage capacity configured for {$brand?->brand_name}."
             ]);
         }
 
@@ -1181,18 +1369,18 @@ class ProductionReceiptController extends Controller
             })
             ->sum(DB::raw('qty_in - qty_out'));
 
-        $utilPct = round(($currentStock / $capObj->capacity_pcs) * 100, 1);
+        $utilPct = round(($currentStock / $capSum) * 100, 1);
         $isOverCapacity = $utilPct > 100;
 
         return response()->json([
             'has_capacity' => true,
             'warehouse_name' => $warehouse?->warehouse_name,
             'brand_name' => $brand?->brand_name,
-            'capacity_pcs' => $capObj->capacity_pcs,
+            'capacity_pcs' => $capSum,
             'current_stock' => $currentStock,
             'utilization_pct' => $utilPct,
             'is_over_capacity' => $isOverCapacity,
-            'message' => "{$warehouse?->warehouse_name} Capacity for {$brand?->brand_name}: {$currentStock} / {$capObj->capacity_pcs} Pcs ({$utilPct}%)"
+            'message' => "{$warehouse?->warehouse_name} Capacity for {$brand?->brand_name}: {$currentStock} / {$capSum} Pcs ({$utilPct}%)"
         ]);
     }
 

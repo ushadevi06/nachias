@@ -47,7 +47,16 @@ var isStockInwardSalesRoot = true;
 function renderStockInwardSalesBrandLevel() {
     isStockInwardSalesRoot = true;
     $('#stockInwardSalesBreadcrumb').attr('style', 'display: none !important;');
-    $('#stockInwardSalesTfoot').show();
+    var brandFootHtml = `<tr class="fw-bold bg-light">
+        <th class="fw-bold">Total</th>
+        <th class="text-center fw-bold text-primary" id="total_op_stock">0</th>
+        <th class="text-center fw-bold text-primary" id="total_inward">0</th>
+        <th class="text-center fw-bold text-primary" id="total_sales">0</th>
+        <th class="text-center fw-bold text-primary" id="total_closing">0</th>
+        <th class="text-center fw-bold text-primary" id="total_sales_return">0</th>
+        <th class="text-center fw-bold text-primary" id="total_net_closing">0</th>
+    </tr>`;
+    $('#stockInwardSalesTfoot').html(brandFootHtml).show();
 
     var headerHtml = `<tr>
         <th>Brand</th>
@@ -87,7 +96,7 @@ function renderStockInwardSalesBrandLevel() {
             { data: 'sales_return', name: 'sales_return', className: 'text-center', width: '13%' },
             { data: 'net_closing', name: 'net_closing', className: 'text-center', width: '13%' }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10,
         footerCallback: function (row, data, start, end, display) {
@@ -110,7 +119,17 @@ function drillDownToStockInwardSalesDetails(brandId, brandName) {
 
     $('#stockInwardSalesBreadcrumb').attr('style', 'display: flex !important;');
     $('#stockInwardSalesBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
-    $('#stockInwardSalesTfoot').hide();
+    
+    var subFootHtml = `<tr class="fw-bold bg-light">
+        <th colspan="4" class="text-end fw-bold">TOTAL</th>
+        <th class="text-center fw-bold text-primary" id="sub_total_op_stock">0</th>
+        <th class="text-center fw-bold text-primary" id="sub_total_inward">0</th>
+        <th class="text-center fw-bold text-primary" id="sub_total_sales">0</th>
+        <th class="text-center fw-bold text-primary" id="sub_total_closing">0</th>
+        <th class="text-center fw-bold text-primary" id="sub_total_sales_return">0</th>
+        <th class="text-center fw-bold text-primary" id="sub_total_net_closing">0</th>
+    </tr>`;
+    $('#stockInwardSalesTfoot').html(subFootHtml).show();
 
     if ($.fn.DataTable.isDataTable('#stockInwardSalesTable')) {
         $('#stockInwardSalesTable').DataTable().destroy();
@@ -158,9 +177,22 @@ function drillDownToStockInwardSalesDetails(brandId, brandName) {
             { data: 'sales_return', name: 'sales_return', className: 'text-center', width: '9%' },
             { data: 'net_closing', name: 'net_closing', className: 'text-center', width: '12%' }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
-        pageLength: 10
+        pageLength: 10,
+        drawCallback: function (settings) {
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            $('#sub_total_op_stock').html(fmt(api.column(4, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+            $('#sub_total_inward').html(fmt(api.column(5, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+            $('#sub_total_sales').html(fmt(api.column(6, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+            $('#sub_total_closing').html(fmt(api.column(7, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+            $('#sub_total_sales_return').html(fmt(api.column(8, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+            $('#sub_total_net_closing').html(fmt(api.column(9, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+        }
     });
 }
 

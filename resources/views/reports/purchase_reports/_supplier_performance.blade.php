@@ -15,7 +15,7 @@
 </div>
 
 <script>
-    (function() {
+    $(document).ready(function() {
         const $table = $('.datatables-performance');
         if (!$table.length || !$.fn.DataTable) return;
 
@@ -53,5 +53,5 @@
                 emptyTable: 'No supplier performance data found.'
             }
         });
-    })();
+    });
 </script>

@@ -26,7 +26,7 @@
 </div>
 
 <script>
-    (function() {
+    $(document).ready(function() {
         const $table = $('.datatables-consumption');
         if (!$table.length || !$.fn.DataTable) return;
 
@@ -78,5 +78,5 @@
                 emptyTable: 'No data available in table'
             }
         });
-    })();
+    });
 </script>

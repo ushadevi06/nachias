@@ -10,6 +10,12 @@
         </thead>
         <tbody>
         </tbody>
+        <tfoot class="table-light border-top" id="assortedStockTfoot">
+            <tr class="bg-light fw-bold">
+                <th colspan="3" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="assortedFootQty">0</th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -37,9 +43,17 @@ window.initAssortedStockTable = function() {
             { data: 'size', name: 'size', className: 'text-center' },
             { data: 'stock_qty', name: 'stock_qty', className: 'text-center' }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
-        pageLength: 10
+        pageLength: 10,
+        drawCallback: function (settings) {
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            $('#assortedFootQty').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+        }
     });
 };
 function initAssortedStockTable() {

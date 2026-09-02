@@ -99,6 +99,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/dashboard/service-wip', [HomeController::class, 'getServiceWipDetails']);
     Route::get('/dashboard/fabric-utilisation', [HomeController::class, 'getFabricUtilisationAjax']);
     Route::get('/dashboard/core-material-planner', [HomeController::class, 'getCoreMaterialPlannerAjax']);
+    Route::get('/dashboard/core-planner', [HomeController::class, 'getCoreMaterialPlannerAjax']);
     Route::get('/dashboard/supplier-performance', [HomeController::class, 'getSupplierPerformanceAjax']);
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
     Route::match(['get', 'post'], 'logout', [AuthController::class, 'logout']);
@@ -721,6 +722,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('warehouse_reports/brandwise_completion_orders', [WarehouseReportController::class, 'getBrandwiseCompletionOrders']);
     Route::get('warehouse_reports/order_processing_time_art_nos', [WarehouseReportController::class, 'getOrderProcessingTimeArtNos']);
     Route::get('warehouse_reports/stock_inward_sales_details', [WarehouseReportController::class, 'getStockInwardSalesDetails']);
+    Route::get('warehouse_reports/warehouse_summary_styles', [WarehouseReportController::class, 'getWarehouseSummaryStyles']);
 
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);

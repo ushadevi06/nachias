@@ -46,21 +46,12 @@
                     <label class="form-label small fw-bold text-muted">To Date</label>
                     <input type="text" class="form-control end_date" name="to_date" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">Supplier</label>
                     <select class="form-select select2" name="supplier_id" id="supplier_id" data-placeholder="Select Supplier">
                         <option value=""></option>
                         @foreach($suppliers as $supplier)
                             <option value="{{ $supplier->id }}" {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label small fw-bold text-muted">Art No</label>
-                    <select class="form-select select2" name="art_no" id="art_no" data-placeholder="Art No">
-                        <option value=""></option>
-                        @foreach($artNos as $artNo)
-                            <option value="{{ $artNo }}" {{ request('art_no') == $artNo ? 'selected' : '' }}>{{ $artNo }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -79,43 +70,39 @@
     <!-- Content Card -->
     <div class="card shadow-sm border-0 premium-content-card">
         <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
-            <h5 class="fw-bold mb-0 text-dark" id="active_report_title">
-                <i class="ri-file-chart-line text-primary me-2"></i>📋 PO Supplier Wise
-            </h5>
+            <h5 class="fw-bold mb-0 text-dark" id="active_report_title">📋 PO Supplier Wise</h5>
         </div>
         <div class="card-body py-4">
             <div class="tab-content" id="reportTabsContent">
                 <!-- 1. PO Supplier Wise -->
                 <div class="tab-pane fade show active" id="po-report" role="tabpanel">
-                    <!-- Loaded via AJAX -->
-                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                    @include('reports.purchase_reports._po_supplier_wise', ['qtyLabel' => 'Meters'])
                 </div>
 
                 <!-- 2. Stock Report -->
                 <div class="tab-pane fade" id="stock-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                    @include('reports.purchase_reports._stock_report', ['isFabric' => true])
                 </div>
 
                 <!-- 3. Stock Ageing -->
                 <div class="tab-pane fade" id="ageing-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                    @include('reports.purchase_reports._ageing_report', ['isFabric' => true])
                 </div>
                 
-                <!-- Add other dummy panes to avoid empty content -->
                 <div class="tab-pane fade" id="consumption-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._consumption_report')
                 </div>
                 <div class="tab-pane fade" id="minstock-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._minstock_report', ['isFabric' => true])
                 </div>
                 <div class="tab-pane fade" id="return-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._return_report', ['isFabric' => true])
                 </div>
                 <div class="tab-pane fade" id="performance-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._supplier_performance')
                 </div>
                 <div class="tab-pane fade" id="casino-po-report" role="tabpanel">
-                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                    @include('reports.purchase_reports._casino_po_report')
                 </div>
             </div>
         </div>
@@ -255,11 +242,7 @@ $(document).ready(function() {
                 return;
             }
         }
-        fetchReport();
     });
-
-    // Initial load
-    fetchReport();
 
     // Export Handlers
     $('#btn-excel').on('click', function() {

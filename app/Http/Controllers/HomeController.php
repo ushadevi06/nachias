@@ -600,6 +600,9 @@ class HomeController extends Controller
         $supplier_perf_ontime = $supplierPerfData['kpis']['overall_ontime'];
         $supplier_perf_returns = $supplierPerfData['kpis']['total_returns'];
 
+        /* Executive Fulfillment & Warehouse Operations KPI Card */
+        $kpiCardData = $this->computeOperationsKpiCard();
+
         return view('dashboard', compact(
             'sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'total_emp', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today', 'dbDevices', 'attendance_chart_data',
             'today_sales_qty', 'today_sales_wot', 'today_return_qty', 'today_return_wot', 'today_net_qty', 'today_net_wot',
@@ -609,8 +612,139 @@ class HomeController extends Controller
             'fabric_stock_summary', 'total_fabric_stock_qty', 'total_fabric_stock_val', 'fabric_shortage_count', 'fabric_excess_count',
             'fabric_utilisation_summary', 'total_util_issued', 'total_util_consumed', 'total_util_wastage', 'total_util_pct',
             'core_total_stock', 'core_total_wip', 'core_total_fg', 'core_total_pipeline',
-            'supplier_perf_count', 'supplier_perf_spend', 'supplier_perf_ontime', 'supplier_perf_returns'
+            'supplier_perf_count', 'supplier_perf_spend', 'supplier_perf_ontime', 'supplier_perf_returns',
+            'kpiCardData'
         ));
+    }
+
+    private function computeOperationsKpiCard()
+    {
+        // 1. Pending Orders
+        $pendingQuery = DB::table('sales_orders')
+            ->where('status', 'Pending')
+            ->whereNull('deleted_at');
+
+        $totalPending = (clone $pendingQuery)->count();
+        $dueToday = (clone $pendingQuery)
+            ->whereNotNull('delivery_date')
+            ->where('delivery_date', '!=', '0000-00-00')
+            ->whereDate('delivery_date', '<=', date('Y-m-d'))
+            ->count();
+
+        $pendingStatus = 'green';
+        if ($totalPending > 20 || $dueToday > 10) {
+            $pendingStatus = 'red';
+        } elseif ($totalPending >= 5 || $dueToday > 0) {
+            $pendingStatus = 'yellow';
+        }
+
+        // 2. Average Lead Time (Rolling Past 30 Days)
+        $leadTimeQuery = DB::table('sales_invoices')
+            ->join('sales_orders', 'sales_invoices.so_id', '=', 'sales_orders.id')
+            ->whereNull('sales_invoices.deleted_at')
+            ->whereNull('sales_orders.deleted_at')
+            ->whereNotNull('sales_invoices.inv_date')
+            ->whereNotNull('sales_orders.so_date')
+            ->where('sales_invoices.inv_date', '>=', 'sales_orders.so_date');
+
+        $leadTimeDays = (clone $leadTimeQuery)
+            ->where('sales_invoices.inv_date', '>=', Carbon::now()->subDays(30))
+            ->selectRaw('AVG(DATEDIFF(sales_invoices.inv_date, sales_orders.so_date)) as avg_days')
+            ->value('avg_days');
+
+        if ($leadTimeDays === null) {
+            $leadTimeDays = $leadTimeQuery
+                ->selectRaw('AVG(DATEDIFF(sales_invoices.inv_date, sales_orders.so_date)) as avg_days')
+                ->value('avg_days');
+        }
+
+        $leadTimeDays = $leadTimeDays !== null ? round(floatval($leadTimeDays), 1) : 0.0;
+        $leadStatus = 'green';
+        if ($leadTimeDays > 5.0) {
+            $leadStatus = 'red';
+        } elseif ($leadTimeDays > 3.0) {
+            $leadStatus = 'yellow';
+        }
+
+        // 3. Warehouse Utilisation (Overall Finished Goods)
+        $whCapQuery = DB::table('warehouse_brand_capacities')->where('status', 'Active');
+        $activeWhIds = (clone $whCapQuery)->distinct()->pluck('warehouse_id')->toArray();
+        $totalCapacity = floatval($whCapQuery->sum('capacity_pcs') ?? 0);
+
+        $stockQuery = DB::table('stock_entry_items')
+            ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
+            ->where('stock_entry_items.stock_type', 'finished_goods')
+            ->whereNull('stock_entry_items.deleted_at')
+            ->where(function($q) {
+                $q->whereNull('stock_entry_items.store_category_id')
+                  ->orWhere('stock_entry_items.store_category_id', '!=', 6);
+            });
+
+        if (!empty($activeWhIds)) {
+            $stockQuery->where(function($q) use ($activeWhIds) {
+                $q->whereIn('stock_entry_items.warehouse_id', $activeWhIds)
+                  ->orWhereIn('stock_entries.warehouse_id', $activeWhIds);
+            });
+        }
+
+        $totalFgStock = floatval($stockQuery->selectRaw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as net_stock')->value('net_stock') ?? 0);
+        $totalFgStock = max(0, $totalFgStock);
+
+        $utilizationPct = $totalCapacity > 0 ? round(($totalFgStock / $totalCapacity) * 100, 1) : 0.0;
+        $utilStatus = 'green';
+        if ($utilizationPct > 95) {
+            $utilStatus = 'red';
+        } elseif ($utilizationPct > 80 || ($utilizationPct < 40 && $totalCapacity > 0)) {
+            $utilStatus = 'yellow';
+        }
+
+        // 4. Dispatch Accuracy
+        $totalDispatches = DB::table('sales_invoices')->whereNull('deleted_at')->count();
+        $dispatchErrors = DB::table('credit_notes')->whereNull('deleted_at')
+            ->where(function($q) {
+                $q->where('fault', 'Warehouse Fault')
+                  ->orWhereIn('reason', ['Invoice Mistake', 'Delay Despatch']);
+            })
+            ->count();
+
+        $accuracyPct = $totalDispatches > 0
+            ? round((($totalDispatches - $dispatchErrors) / $totalDispatches) * 100, 2)
+            : 100.0;
+
+        $accuracyStatus = 'green';
+        if ($accuracyPct < 95.0) {
+            $accuracyStatus = 'red';
+        } elseif ($accuracyPct < 99.0) {
+            $accuracyStatus = 'yellow';
+        }
+
+        return [
+            'pending_orders' => [
+                'total' => $totalPending,
+                'due_today' => $dueToday,
+                'display' => number_format($totalPending) . ' Orders (' . number_format($dueToday) . ' Due Today)',
+                'status' => $pendingStatus
+            ],
+            'average_lead_time' => [
+                'days' => $leadTimeDays,
+                'display' => $leadTimeDays . ' Days',
+                'status' => $leadStatus
+            ],
+            'warehouse_utilisation' => [
+                'capacity' => $totalCapacity,
+                'fg_stock' => $totalFgStock,
+                'pct' => $utilizationPct,
+                'display' => $utilizationPct . '%',
+                'status' => $utilStatus
+            ],
+            'dispatch_accuracy' => [
+                'total' => $totalDispatches,
+                'errors' => $dispatchErrors,
+                'pct' => $accuracyPct,
+                'display' => $accuracyPct . '% (' . number_format($dispatchErrors) . ' Errors)',
+                'status' => $accuracyStatus
+            ]
+        ];
     }
 
     private function computeFabricUtilisationSummary()
@@ -928,7 +1062,8 @@ class HomeController extends Controller
                 'stock' => '<span class="fw-bold text-dark">' . number_format($stock, 2) . '</span>',
                 'wip' => '<span class="fw-bold text-warning">' . number_format($wip, 2) . '</span>',
                 'fg' => '<span class="fw-bold text-success">' . number_format($fg) . ' pcs</span>',
-                'pipeline' => '<span class="fw-bold text-info">' . number_format($pipeline, 2) . '</span>'
+                'pipeline' => '<span class="fw-bold text-info">' . number_format($pipeline, 2) . '</span>',
+                'total_pipeline' => '<span class="fw-bold text-info">' . number_format($pipeline, 2) . '</span>'
             ];
         }
 

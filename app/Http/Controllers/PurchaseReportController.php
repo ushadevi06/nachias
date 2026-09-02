@@ -12,46 +12,20 @@ class PurchaseReportController extends Controller
 {
     public function fabricStore(Request $request)
     {
-        if ($request->ajax() && $request->has('report_type')) {
+        if ($request->ajax() && ($request->has('draw') || ($request->has('report_type') && !$request->has('fetch_report')))) {
             return $this->getReportJson($request, true);
         }
 
-        if ($request->ajax() || $request->has('fetch_report')) {
-            $purchaseOrders = $this->getPurchaseOrders(1, $request);
-            $stockData = $this->getStockData(1, $request, true); 
-            
+        if ($request->ajax() && $request->has('fetch_report')) {
             $html = [
-                'po-report' => view('reports.purchase_reports._po_supplier_wise', [
-                    'purchaseOrders' => $purchaseOrders,
-                    'qtyLabel' => 'Meters'
-                ])->render(),
-                'stock-report' => view('reports.purchase_reports._stock_report', [
-                    'stockData' => $stockData,
-                    'isFabric' => true,
-                    'reportDate' => $request->to_date ? date('d-m-Y', strtotime($request->to_date)) : date('d-m-Y')
-                ])->render(),
-                'ageing-report' => view('reports.purchase_reports._ageing_report', [
-                    'ageingData' => $this->getStockAgeingData(1, $request),
-                    'isFabric' => true
-                ])->render(),
-                'consumption-report' => view('reports.purchase_reports._consumption_report', [
-                    'consumptionData' => $this->getConsumptionData($request)
-                ])->render(),
-                'minstock-report' => view('reports.purchase_reports._minstock_report', [
-                    'minStockData' => $this->getMinStockData(1, $request),
-                    'isFabric' => true
-                ])->render(),
-                'return-report' => view('reports.purchase_reports._return_report', [
-                    'returnGoodsData' => $this->getReturnGoodsData(1, $request),
-                    'isFabric' => true
-                ])->render(),
-                'performance-report' => view('reports.purchase_reports._supplier_performance', [
-                    'performanceData' => $this->getFabricSupplierPerformanceData($request)
-                ])->render(),
-                'casino-po-report' => view('reports.purchase_reports._casino_po_report', [
-                    'casinoData' => $this->getCasinoPoData($request),
-                    'reportDate' => $request->to_date ? date('d.m.Y', strtotime($request->to_date)) : date('d.m.Y')
-                ])->render(),
+                'po-report' => view('reports.purchase_reports._po_supplier_wise', ['qtyLabel' => 'Meters'])->render(),
+                'stock-report' => view('reports.purchase_reports._stock_report', ['isFabric' => true])->render(),
+                'ageing-report' => view('reports.purchase_reports._ageing_report', ['isFabric' => true])->render(),
+                'consumption-report' => view('reports.purchase_reports._consumption_report')->render(),
+                'minstock-report' => view('reports.purchase_reports._minstock_report', ['isFabric' => true])->render(),
+                'return-report' => view('reports.purchase_reports._return_report', ['isFabric' => true])->render(),
+                'performance-report' => view('reports.purchase_reports._supplier_performance')->render(),
+                'casino-po-report' => view('reports.purchase_reports._casino_po_report')->render(),
             ];
 
             return response()->json($html);
@@ -68,41 +42,19 @@ class PurchaseReportController extends Controller
 
     public function accessoriesStore(Request $request)
     {
-        if ($request->ajax() && $request->has('report_type')) {
+        if ($request->ajax() && ($request->has('draw') || ($request->has('report_type') && !$request->has('fetch_report')))) {
             return $this->getReportJson($request, false);
         }
 
-        if ($request->ajax() || $request->has('fetch_report')) {
-            $purchaseOrders = $this->getPurchaseOrders(2, $request);
-            $stockData = $this->getStockData(2, $request); 
-            
+        if ($request->ajax() && $request->has('fetch_report')) {
             $html = [
-                'po-report' => view('reports.purchase_reports._po_supplier_wise', [
-                    'purchaseOrders' => $purchaseOrders,
-                    'qtyLabel' => 'Qty'
-                ])->render(),
-                'stock-report' => view('reports.purchase_reports._stock_report', [
-                    'stockData' => $stockData,
-                    'isFabric' => false
-                ])->render(),
-                'ageing-report' => view('reports.purchase_reports._ageing_report', [
-                    'ageingData' => $this->getStockAgeingData(2, $request),
-                    'isFabric' => false
-                ])->render(),
-                'cost-report' => view('reports.purchase_reports._cost_report', [
-                    'costData' => $this->getAverageCostData($request)
-                ])->render(),
-                'minstock-report' => view('reports.purchase_reports._minstock_report', [
-                    'minStockData' => $this->getMinStockData(2, $request),
-                    'isFabric' => false
-                ])->render(),
-                'return-report' => view('reports.purchase_reports._return_report', [
-                    'returnGoodsData' => $this->getReturnGoodsData(2, $request),
-                    'isFabric' => false
-                ])->render(),
-                'performance-report' => view('reports.purchase_reports._supplier_performance', [
-                    'performanceData' => $this->getAccessoriesSupplierPerformanceData($request)
-                ])->render(),
+                'po-report' => view('reports.purchase_reports._po_supplier_wise', ['qtyLabel' => 'Qty'])->render(),
+                'stock-report' => view('reports.purchase_reports._stock_report', ['isFabric' => false])->render(),
+                'ageing-report' => view('reports.purchase_reports._ageing_report', ['isFabric' => false])->render(),
+                'cost-report' => view('reports.purchase_reports._cost_report')->render(),
+                'minstock-report' => view('reports.purchase_reports._minstock_report', ['isFabric' => false])->render(),
+                'return-report' => view('reports.purchase_reports._return_report', ['isFabric' => false])->render(),
+                'performance-report' => view('reports.purchase_reports._supplier_performance')->render(),
             ];
 
             return response()->json($html);
@@ -264,8 +216,11 @@ class PurchaseReportController extends Controller
         }
 
         if ($isMinStock && $request->art_no) {
-            $query->whereHas('rawMaterial.artNos', function($q) use ($request) {
-                $q->where('art_no', $request->art_no);
+            $query->where(function($q) use ($request) {
+                $q->where('art_no', $request->art_no)
+                  ->orWhereHas('rawMaterial.artNos', function($sub) use ($request) {
+                      $sub->where('art_no', $request->art_no);
+                  });
             });
         }
 
@@ -347,7 +302,15 @@ class PurchaseReportController extends Controller
         $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
 
         foreach ($stockItems as $item) {
-            $key = ($item->raw_material_id ?: 0) . '-' . ($item->item_id ?: 0) . '-' . ($item->style_id ?: 0) . '-' . ($item->color_id ?: 0) . '-' . ($item->fabric_type_id ?: 0) . '-' . ($item->size ?: '') . '-' . ($item->brand_id ?: 0) . '-' . ($item->fabric_width_id ?: 0);
+            $artNoVal = trim($item->art_no ?? '');
+            if (empty($artNoVal) && $item->rawMaterial && $item->rawMaterial->artNos->count() > 0) {
+                $artNoVal = $item->rawMaterial->artNos->pluck('art_no')->implode(', ');
+            }
+            if (empty($artNoVal)) {
+                $artNoVal = 'N/A';
+            }
+
+            $key = $artNoVal . '-' . ($item->raw_material_id ?: 0) . '-' . ($item->item_id ?: 0) . '-' . ($item->style_id ?: 0) . '-' . ($item->color_id ?: 0) . '-' . ($item->fabric_type_id ?: 0) . '-' . ($item->size ?: '') . '-' . ($item->brand_id ?: 0) . '-' . ($item->fabric_width_id ?: 0);
             
             if (!isset($grouped[$key])) {
                 $brandName = 'N/A';
@@ -373,7 +336,7 @@ class PurchaseReportController extends Controller
 
                 $grouped[$key] = [
                     'raw_material_id' => $item->raw_material_id ?: 0,
-                    'art_no' => ($item->rawMaterial && $item->rawMaterial->artNos->count() > 0) ? $item->rawMaterial->artNos->pluck('art_no')->implode(', ') : 'N/A',
+                    'art_no' => $artNoVal,
                     'brand' => $brandName,
                     'item_name' => $itemName,
                     'style' => $item->style ? $item->style->style_name : 'N/A',
@@ -675,99 +638,117 @@ class PurchaseReportController extends Controller
 
         switch ($reportType) {
             case 'po-report':
-                $query = PurchaseOrder::with(['supplier', 'items.purchaseInvoiceItems'])->where('store_type_id', $storeCategoryId);
+                $baseQuery = PurchaseOrder::where('store_type_id', $storeCategoryId);
                 if ($request->from_date) {
-                    $query->whereDate('po_date', '>=', date('Y-m-d', strtotime($request->from_date)));
+                    $baseQuery->whereDate('po_date', '>=', date('Y-m-d', strtotime($request->from_date)));
                 }
                 if ($request->to_date) {
-                    $query->whereDate('po_date', '<=', date('Y-m-d', strtotime($request->to_date)));
+                    $baseQuery->whereDate('po_date', '<=', date('Y-m-d', strtotime($request->to_date)));
                 }
                 if ($request->supplier_id) {
-                    $query->where('supplier_id', $request->supplier_id);
+                    $baseQuery->where('supplier_id', $request->supplier_id);
                 }
 
-                $totalRecords = $query->count();
-                 $allFiltered = $query->get();
+                $totalRecords = (clone $baseQuery)->count();
+
+                $query = clone $baseQuery;
                 if (!empty($search)) {
-
-                    $allFiltered = $allFiltered->filter(function ($po) use ($search) {
-
-                        $totalOrdered = $po->items->sum('quantity');
-
-                        $totalReceived = 0;
-                        foreach ($po->items as $item) {
-                            $totalReceived += $item->purchaseInvoiceItems->sum('qty_received');
-                        }
-
-                        $totalPending = max(0, $totalOrdered - $totalReceived);
-
-                        $status = (
-                            strtolower($po->status) == 'closed' ||
-                            $po->is_self_closed ||
-                            $totalPending <= 0
-                        ) ? 'closed' : 'pending';
-
-                        return
-                            stripos($po->po_number, $search) !== false ||
-                            stripos(optional($po->supplier)->name ?? '', $search) !== false ||
-                            stripos(optional($po->po_date)->format('d-M-Y') ?? '', $search) !== false ||
-                            stripos((string)$totalOrdered, $search) !== false ||
-                            stripos((string)$totalReceived, $search) !== false ||
-                            stripos((string)$totalPending, $search) !== false ||
-                            stripos($status, $search) !== false;
+                    $query->where(function ($q) use ($search) {
+                        $q->where('po_number', 'like', "%{$search}%")
+                            ->orWhere('remarks', 'like', "%{$search}%")
+                            ->orWhereHas('supplier', function ($sq) use ($search) {
+                                $sq->where('name', 'like', "%{$search}%");
+                            });
                     });
                 }
-                $filteredRecords = $allFiltered->count();
-                
+                $filteredRecords = (clone $query)->count();
+
+                $filteredPoIds = (clone $query)->pluck('id');
                 $sumOrdered = 0;
                 $sumReceived = 0;
-                $sumPending = 0;
-                foreach ($allFiltered as $po) {
-                    $to = $po->items->sum('quantity');
-                    $tr = 0;
-                    foreach ($po->items as $item) {
-                        $tr += $item->purchaseInvoiceItems->sum('qty_received');
-                    }
-                    $tp = max(0, $to - $tr);
-                    $sumOrdered += $to;
-                    $sumReceived += $tr;
-                    $sumPending += $tp;
+                if ($filteredPoIds->isNotEmpty()) {
+                    $sumOrdered = (float) DB::table('purchase_order_items')
+                        ->whereIn('purchase_order_id', $filteredPoIds)
+                        ->whereNull('deleted_at')
+                        ->sum('quantity');
+
+                    $sumReceived = (float) DB::table('purchase_invoice_items')
+                        ->join('purchase_order_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id')
+                        ->whereIn('purchase_order_items.purchase_order_id', $filteredPoIds)
+                        ->whereNull('purchase_invoice_items.deleted_at')
+                        ->whereNull('purchase_order_items.deleted_at')
+                        ->sum('purchase_invoice_items.qty_received');
                 }
+                $sumPending = max(0, $sumOrdered - $sumReceived);
+
                 $totals = [
                     'total_ordered' => number_format($sumOrdered, 2),
                     'total_received' => number_format($sumReceived, 2),
                     'total_pending' => number_format($sumPending, 2),
                 ];
 
-               
-                $purchaseOrders = $allFiltered;
+                $query->with(['supplier', 'items.rawMaterial', 'items.purchaseInvoiceItems'])
+                    ->orderBy('id', 'desc');
+
                 if ($length != -1) {
-                    $purchaseOrders = $purchaseOrders->slice($start, $length);
+                    $query->offset($start)->limit($length);
                 }
 
+                $purchaseOrders = $query->get();
                 $count = $start + 1;
 
                 foreach ($purchaseOrders as $po) {
-                    $to = $po->items->sum('quantity');
-                    $tr = 0;
-                    foreach ($po->items as $item) {
-                        $tr += $item->purchaseInvoiceItems->sum('qty_received');
-                    }
-                    $tp = max(0, $to - $tr);
+                    $totalOrderedPo = (float) $po->items->sum('quantity');
+                    $totalReceivedPo = 0;
+                    $itemsData = [];
+                    $itemSno = 1;
 
-                    $statusBadge = (strtolower($po->status) == 'closed' || $po->is_self_closed || $tp <= 0) 
-                        ? '<span class="badge bg-label-success rounded-pill">Closed</span>' 
-                        : '<span class="badge bg-label-warning rounded-pill">Pending</span>';
+                    foreach ($po->items as $item) {
+                        $itemOrd = (float) $item->quantity;
+                        $itemRec = (float) $item->purchaseInvoiceItems->sum('qty_received');
+                        $itemBal = max(0, $itemOrd - $itemRec);
+                        $totalReceivedPo += $itemRec;
+
+                        $itemsData[] = [
+                            'sno' => $itemSno++,
+                            'material_name' => optional($item->rawMaterial)->name ?: 'N/A',
+                            'ordered' => number_format($itemOrd, 2),
+                            'received' => number_format($itemRec, 2),
+                            'balance' => number_format($itemBal, 2),
+                        ];
+                    }
+                    $totalPendingPo = max(0, $totalOrderedPo - $totalReceivedPo);
+
+                    $delayHtml = '-';
+                    if ($po->due_date) {
+                        if ($totalPendingPo <= 0 || strtolower($po->status) == 'closed' || $po->is_self_closed) {
+                            $delayHtml = '<span class="badge bg-label-success">Completed</span>';
+                        } else {
+                            $dueDate = \Carbon\Carbon::parse($po->due_date)->startOfDay();
+                            $today = now()->startOfDay();
+                            if ($today->gt($dueDate)) {
+                                $diffDays = $today->diffInDays($dueDate);
+                                $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days</span>';
+                            } else {
+                                $delayHtml = '<span class="text-success">On Time</span>';
+                            }
+                        }
+                    }
 
                     $data[] = [
                         'DT_RowIndex' => $count++,
-                        'po_number' => $po->po_number,
+                        'po_number' => '<strong>' . htmlspecialchars($po->po_number) . '</strong>',
+                        'po_number_raw' => $po->po_number,
                         'po_date' => $po->po_date ? $po->po_date->format('d-M-Y') : '-',
-                        'supplier_name' => $po->supplier ? $po->supplier->name : '-',
-                        'total_ordered' => number_format($to, 2),
-                        'total_received' => number_format($tr, 2),
-                        'total_pending' => number_format($tp, 2),
-                        'status' => $statusBadge,
+                        'supplier_name' => optional($po->supplier)->name ?? '-',
+                        'total_ordered' => number_format($totalOrderedPo, 2),
+                        'total_received' => number_format($totalReceivedPo, 2),
+                        'total_pending' => number_format($totalPendingPo, 2),
+                        'order_date' => $po->reference_date ? $po->reference_date->format('d-M-Y') : ($po->po_date ? $po->po_date->format('d-M-Y') : '-'),
+                        'expected_delivery' => $po->due_date ? $po->due_date->format('d-M-Y') : '-',
+                        'delay' => $delayHtml,
+                        'remarks' => htmlspecialchars($po->remarks ?: '-'),
+                        'items' => $itemsData,
                     ];
                 }
                 break;
@@ -955,7 +936,8 @@ class PurchaseReportController extends Controller
 
                 if (!empty($search)) {
                     $minStockData = array_filter($minStockData, function($item) use ($search) {
-                        return (strpos(strtolower($item['brand'] ?? ''), strtolower($search)) !== false)
+                        return (strpos(strtolower($item['art_no'] ?? ''), strtolower($search)) !== false)
+                            || (strpos(strtolower($item['brand'] ?? ''), strtolower($search)) !== false)
                             || (strpos(strtolower($item['item_name'] ?? ''), strtolower($search)) !== false)
                             || (strpos(strtolower($item['style'] ?? ''), strtolower($search)) !== false)
                             || (strpos(strtolower($item['color'] ?? ''), strtolower($search)) !== false)

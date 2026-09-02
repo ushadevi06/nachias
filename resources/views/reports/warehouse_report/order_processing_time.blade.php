@@ -30,6 +30,15 @@
         </thead>
         <tbody>
         </tbody>
+        <tfoot class="table-light border-top" id="orderProcessingTfoot">
+            <tr class="bg-light fw-bold">
+                <th colspan="9" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="optFootOrdered">0</th>
+                <th class="text-center fw-bold text-success" id="optFootInvoiced">0</th>
+                <th class="text-center fw-bold text-danger" id="optFootPending">0</th>
+                <th colspan="5"></th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -84,6 +93,7 @@ function renderOrderProcessingTimeMainLevel() {
                 d.from_date = $('.start_date').val();
                 d.to_date = $('.end_date').val();
                 d.brand_id = $('select[name="brand_id"]').val();
+                d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
             }
         },
@@ -106,7 +116,7 @@ function renderOrderProcessingTimeMainLevel() {
             { data: 'wip', name: 'wip', className: 'text-center', orderable: false },
             { data: 'action_required', name: 'action_required', orderable: false }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10,
         drawCallback: function (settings) {
@@ -122,6 +132,14 @@ function renderOrderProcessingTimeMainLevel() {
                     lastDate = groupDate;
                 }
             });
+
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            $('#optFootOrdered').html(fmt(api.column(9, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootInvoiced').html(fmt(api.column(10, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootPending').html(fmt(api.column(11, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         }
     });
 }
@@ -149,6 +167,15 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="table-light border-top">
+            <tr class="bg-light fw-bold">
+                <th colspan="5" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="optSubFootOrdered">0</th>
+                <th class="text-center fw-bold text-success" id="optSubFootInvoiced">0</th>
+                <th class="text-center fw-bold text-danger" id="optSubFootPending">0</th>
+                <th></th>
+            </tr>
+        </tfoot>
     `);
 
     $('#orderProcessingTimeTable').DataTable({
@@ -172,13 +199,23 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
             { data: 'pending_qty', name: 'pending_qty', className: 'text-center fw-bold text-danger', width: '10%' },
             { data: 'status', name: 'status', className: 'text-center', width: '10%' }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10,
         language: {
             emptyTable: "No pending art numbers found for this order",
             zeroRecords: "No matching pending art numbers found",
             infoEmpty: "Showing 0 to 0 entries"
+        },
+        drawCallback: function (settings) {
+            var api = this.api();
+            var intVal = function (i) {
+                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+            };
+            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+            $('#optSubFootOrdered').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optSubFootInvoiced').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optSubFootPending').html(fmt(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         }
     });
 }

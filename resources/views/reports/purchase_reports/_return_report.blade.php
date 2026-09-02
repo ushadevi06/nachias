@@ -27,7 +27,7 @@
 </div>
 
 <script>
-    (function() {
+    $(document).ready(function() {
         const $table = $('.datatables-return');
         if (!$table.length || !$.fn.DataTable) return;
 
@@ -75,5 +75,5 @@
                 emptyTable: 'No return goods found.'
             }
         });
-    })();
+    });
 </script>
