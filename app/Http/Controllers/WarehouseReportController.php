@@ -77,7 +77,7 @@ class WarehouseReportController extends Controller
 
                     foreach ($stockItems as $item) {
                         $netQty = (float)($item->qty_in - $item->qty_out);
-                        $storeTypeId = $item->stockEntry?->productionReceipt?->store_type_id ?? $item->store_category_id;
+                        $storeTypeId = $item->store_type_id ?? $item->stockEntry?->store_type_id ?? $item->stockEntry?->productionReceipt?->store_type_id;
 
                         if ($storeTypeId == 12) {
                             // Single Store Stock (Store Type ID 12)
@@ -385,7 +385,7 @@ class WarehouseReportController extends Controller
 
             foreach ($stockItems as $item) {
                 $netQty = (float)($item->qty_in - $item->qty_out);
-                $storeTypeId = $item->stockEntry?->productionReceipt?->store_type_id ?? $item->store_category_id;
+                $storeTypeId = $item->store_type_id ?? $item->stockEntry?->store_type_id ?? $item->stockEntry?->productionReceipt?->store_type_id;
 
                 if ($storeTypeId == 12) {
                     $singleStoreStock += $netQty;
@@ -437,7 +437,7 @@ class WarehouseReportController extends Controller
 
                 foreach ($stockItems as $item) {
                     $netQty = (float)($item->qty_in - $item->qty_out);
-                    $storeTypeId = $item->stockEntry?->productionReceipt?->store_type_id ?? $item->store_category_id;
+                    $storeTypeId = $item->store_type_id ?? $item->stockEntry?->store_type_id ?? $item->stockEntry?->productionReceipt?->store_type_id;
 
                     if ($storeTypeId == 12) {
                         $singleStoreStock += $netQty;
@@ -678,6 +678,7 @@ class WarehouseReportController extends Controller
                 $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : date('Y-m-d');
                 $brandIdFilter = $request->brand_id;
                 $storeIdFilter = $request->store_id;
+                $warehouseIdFilter = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
 
                 $brandsQuery = Brand::where('status', 'Active');
                 if ($brandIdFilter) {
@@ -715,6 +716,9 @@ class WarehouseReportController extends Controller
                 if ($storeIdFilter) {
                     $inwardQuery->where('stock_entry_items.store_location_id', $storeIdFilter);
                 }
+                if ($warehouseIdFilter) {
+                    $inwardQuery->where('stock_entry_items.warehouse_id', $warehouseIdFilter);
+                }
 
                 $inwardPerBrand = $inwardQuery->select(
                     'brands.id as brand_id',
@@ -749,6 +753,9 @@ class WarehouseReportController extends Controller
                 if ($storeIdFilter) {
                     $salesQuery->where('sales_invoices.store_location_id', $storeIdFilter);
                 }
+                if ($warehouseIdFilter) {
+                    $salesQuery->where('stock_entry_items.warehouse_id', $warehouseIdFilter);
+                }
 
                 $salesPerBrand = $salesQuery->select(
                     'brands.id as brand_id',
@@ -781,6 +788,9 @@ class WarehouseReportController extends Controller
                 if ($brandIdFilter) {
                     $returnQuery->where('brands.id', $brandIdFilter);
                 }
+                if ($warehouseIdFilter) {
+                    $returnQuery->where('stock_entry_items.warehouse_id', $warehouseIdFilter);
+                }
 
                 $returnPerBrand = $returnQuery->select(
                     'brands.id as brand_id',
@@ -811,6 +821,9 @@ class WarehouseReportController extends Controller
                 }
                 if ($storeIdFilter) {
                     $currentStockQuery->where('stock_entry_items.store_location_id', $storeIdFilter);
+                }
+                if ($warehouseIdFilter) {
+                    $currentStockQuery->where('stock_entry_items.warehouse_id', $warehouseIdFilter);
                 }
 
                 $currentStockPerBrand = $currentStockQuery->select(
@@ -846,6 +859,9 @@ class WarehouseReportController extends Controller
                 if ($storeIdFilter) {
                     $inwardFromDateTillNowQuery->where('stock_entry_items.store_location_id', $storeIdFilter);
                 }
+                if ($warehouseIdFilter) {
+                    $inwardFromDateTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseIdFilter);
+                }
                 $inwardTillNowPerBrand = $inwardFromDateTillNowQuery->select(
                     'brands.id as brand_id',
                     DB::raw('SUM(stock_entry_items.qty_in) as inward_qty')
@@ -879,6 +895,9 @@ class WarehouseReportController extends Controller
                 if ($storeIdFilter) {
                     $salesFromDateTillNowQuery->where('sales_invoices.store_location_id', $storeIdFilter);
                 }
+                if ($warehouseIdFilter) {
+                    $salesFromDateTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseIdFilter);
+                }
                 $salesTillNowPerBrand = $salesFromDateTillNowQuery->select(
                     'brands.id as brand_id',
                     DB::raw('SUM(sales_invoice_items.quantity) as sales_qty')
@@ -908,6 +927,9 @@ class WarehouseReportController extends Controller
 
                 if ($brandIdFilter) {
                     $returnsFromDateTillNowQuery->where('brands.id', $brandIdFilter);
+                }
+                if ($warehouseIdFilter) {
+                    $returnsFromDateTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseIdFilter);
                 }
                 $returnsTillNowPerBrand = $returnsFromDateTillNowQuery->select(
                     'brands.id as brand_id',
@@ -950,6 +972,10 @@ class WarehouseReportController extends Controller
                     $totNetClosing += $netClosing;
 
                     $bNameSafe = addslashes($brand->brand_name);
+                    $salesLink = $sales > 0 
+                        ? '<a href="javascript:void(0)" onclick="drillDownToStockInwardSalesInvoices(event, ' . $bId . ', \'' . $bNameSafe . '\', \'\')" class="text-primary fw-bold text-decoration-underline" title="View Sales Invoices">' . number_format($sales, 0) . '</a>'
+                        : '';
+
                     $data[] = [
                         'DT_RowAttr' => [
                             'onclick' => "drillDownToStockInwardSalesDetails({$bId}, '{$bNameSafe}')",
@@ -960,7 +986,7 @@ class WarehouseReportController extends Controller
                         'brand' => '<strong>' . htmlspecialchars($brand->brand_name) . '</strong>',
                         'op_stock' => number_format($opStock, 0),
                         'inward' => $inward > 0 ? number_format($inward, 0) : '',
-                        'sales' => $sales > 0 ? number_format($sales, 0) : '',
+                        'sales' => $salesLink,
                         'closing' => number_format($closing, 0),
                         'sales_return' => $salesReturn > 0 ? number_format($salesReturn, 0) : '',
                         'net_closing' => number_format($netClosing, 0),
@@ -1991,6 +2017,7 @@ class WarehouseReportController extends Controller
                         'sales_orders.id as so_id',
                         'sales_orders.so_no',
                         'sales_orders.so_date',
+                        'sales_orders.request_date',
                         'sales_orders.delivery_date',
                         'sales_orders.order_type',
                         'sales_orders.order_no',
@@ -2061,6 +2088,7 @@ class WarehouseReportController extends Controller
                             'sales_order_items.art_no',
                             'sales_order_items.sku',
                             'sales_order_items.item_name',
+                            'sales_order_items.category_name',
                             'sales_order_items.qty',
                             'b_stock.brand_name as stock_brand_name',
                             'b_stock.id as stock_brand_id',
@@ -2096,18 +2124,9 @@ class WarehouseReportController extends Controller
                 }
 
                 $data = [];
-                $currentDateGroup = null;
-                $dateSnoCounter = 1;
+                $snoCounter = $start + 1;
 
                 foreach ($salesOrders as $so) {
-                    $soDateFormatted = date('d-m-Y', strtotime($so->so_date));
-                    if ($currentDateGroup !== $soDateFormatted) {
-                        $currentDateGroup = $soDateFormatted;
-                        $dateSnoCounter = 1;
-                    } else {
-                        $dateSnoCounter++;
-                    }
-
                     $itemsForSo = array_filter($soItemsList->toArray(), function($item) use ($so) {
                         return $item->sale_order_id == $so->so_id;
                     });
@@ -2127,14 +2146,30 @@ class WarehouseReportController extends Controller
                             $artNo = trim($itm->art_no ?? '');
                             $sku = trim($itm->sku ?? '');
                             $itemName = trim($itm->item_name ?? '');
+                            $catName = trim($itm->category_name ?? '');
                             foreach ($allBrands as $b) {
-                                $bCode = trim($b->code);
-                                $bNameCandidate = trim($b->brand_name);
-                                if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
-                                    ($bCode && $sku && stripos($sku, $bCode) === 0) ||
-                                    ($bNameCandidate && $artNo && stripos($artNo, $bNameCandidate) !== false) ||
-                                    ($bNameCandidate && $sku && stripos($sku, $bNameCandidate) !== false) ||
-                                    ($bNameCandidate && $itemName && stripos($itemName, $bNameCandidate) !== false)) {
+                                $bCode = trim($b->code ?? '');
+                                $bNameCandidate = trim($b->brand_name ?? '');
+                                $isMatched = false;
+
+                                if ($bCode) {
+                                    if (($artNo && stripos($artNo, $bCode) === 0) ||
+                                        ($sku && stripos($sku, $bCode) === 0) ||
+                                        ($itemName && (stripos($itemName, $bCode) === 0 || stripos($itemName, $bCode . '-') !== false || stripos($itemName, $bCode . ' ') !== false || stripos($itemName, $bCode . '_') !== false)) ||
+                                        ($catName && (stripos($catName, $bCode) === 0 || stripos($catName, $bCode . '-') !== false || stripos($catName, $bCode . ' ') !== false || stripos($catName, $bCode . '_') !== false))) {
+                                        $isMatched = true;
+                                    }
+                                }
+                                if (!$isMatched && $bNameCandidate) {
+                                    if (($artNo && stripos($artNo, $bNameCandidate) !== false) ||
+                                        ($sku && stripos($sku, $bNameCandidate) !== false) ||
+                                        ($itemName && stripos($itemName, $bNameCandidate) !== false) ||
+                                        ($catName && stripos($catName, $bNameCandidate) !== false)) {
+                                        $isMatched = true;
+                                    }
+                                }
+
+                                if ($isMatched) {
                                     $bName = $b->brand_name;
                                     break;
                                 }
@@ -2205,9 +2240,10 @@ class WarehouseReportController extends Controller
 
                     $data[] = [
                         'date' => date('d-m-Y', strtotime($so->so_date)),
-                        'sno' => $dateSnoCounter,
-                        'order_date' => date('d-m-Y', strtotime($so->so_date)),
+                        'sno' => $snoCounter++,
+                        'request_date' => !empty($so->request_date) ? date('d-m-Y', strtotime($so->request_date)) : (!empty($so->so_date) ? date('d-m-Y', strtotime($so->so_date)) : '-'),
                         'so_no' => $soNoHtml,
+                        'orderaxe_order_no' => htmlspecialchars($so->order_no ?: '-'),
                         'delivery_date' => !empty($so->delivery_date) ? date('d-m-Y', strtotime($so->delivery_date)) : '-',
                         'priority' => $priorityHtml,
                         'customer' => htmlspecialchars($so->customer_name ?? '-'),
@@ -2284,13 +2320,25 @@ class WarehouseReportController extends Controller
 
                         foreach ($allBrands as $b) {
                             $bCode = trim($b->code ?? '');
-                            $bName = trim($b->brand_name ?? '');
+                            $bNameCandidate = trim($b->brand_name ?? '');
+                            $isMatched = false;
 
-                            if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
-                                ($bCode && $sku && stripos($sku, $bCode) === 0) ||
-                                ($bName && $artNo && stripos($artNo, $bName) !== false) ||
-                                ($bName && $sku && stripos($sku, $bName) !== false) ||
-                                ($bName && $itemName && stripos($itemName, $bName) !== false)) {
+                            if ($bCode) {
+                                if (($artNo && stripos($artNo, $bCode) === 0) ||
+                                    ($sku && stripos($sku, $bCode) === 0) ||
+                                    ($itemName && (stripos($itemName, $bCode) === 0 || stripos($itemName, $bCode . '-') !== false || stripos($itemName, $bCode . ' ') !== false || stripos($itemName, $bCode . '_') !== false))) {
+                                    $isMatched = true;
+                                }
+                            }
+                            if (!$isMatched && $bNameCandidate) {
+                                if (($artNo && stripos($artNo, $bNameCandidate) !== false) ||
+                                    ($sku && stripos($sku, $bNameCandidate) !== false) ||
+                                    ($itemName && stripos($itemName, $bNameCandidate) !== false)) {
+                                    $isMatched = true;
+                                }
+                            }
+
+                            if ($isMatched) {
                                 $brandName = $b->brand_name;
                                 $brandId = $b->id;
                                 break;
@@ -2409,6 +2457,7 @@ class WarehouseReportController extends Controller
                         'sales_order_items.art_no',
                         'sales_order_items.sku',
                         'sales_order_items.item_name',
+                        'sales_order_items.category_name',
                         'sales_order_items.qty',
                         'brands.id as stock_brand_id',
                         'brands.brand_name as stock_brand_name',
@@ -2445,16 +2494,31 @@ class WarehouseReportController extends Controller
                         $artNo = trim($item->art_no ?? '');
                         $sku = trim($item->sku ?? '');
                         $itemName = trim($item->item_name ?? '');
+                        $catName = trim($item->category_name ?? '');
 
                         foreach ($allBrands as $b) {
                             $bCode = trim($b->code ?? '');
-                            $bName = trim($b->brand_name ?? '');
+                            $bNameCandidate = trim($b->brand_name ?? '');
+                            $isMatched = false;
 
-                            if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
-                                ($bCode && $sku && stripos($sku, $bCode) === 0) ||
-                                ($bName && $artNo && stripos($artNo, $bName) !== false) ||
-                                ($bName && $sku && stripos($sku, $bName) !== false) ||
-                                ($bName && $itemName && stripos($itemName, $bName) !== false)) {
+                            if ($bCode) {
+                                if (($artNo && stripos($artNo, $bCode) === 0) ||
+                                    ($sku && stripos($sku, $bCode) === 0) ||
+                                    ($itemName && (stripos($itemName, $bCode) === 0 || stripos($itemName, $bCode . '-') !== false || stripos($itemName, $bCode . ' ') !== false || stripos($itemName, $bCode . '_') !== false)) ||
+                                    ($catName && (stripos($catName, $bCode) === 0 || stripos($catName, $bCode . '-') !== false || stripos($catName, $bCode . ' ') !== false || stripos($catName, $bCode . '_') !== false))) {
+                                    $isMatched = true;
+                                }
+                            }
+                            if (!$isMatched && $bNameCandidate) {
+                                if (($artNo && stripos($artNo, $bNameCandidate) !== false) ||
+                                    ($sku && stripos($sku, $bNameCandidate) !== false) ||
+                                    ($itemName && stripos($itemName, $bNameCandidate) !== false) ||
+                                    ($catName && stripos($catName, $bNameCandidate) !== false)) {
+                                    $isMatched = true;
+                                }
+                            }
+
+                            if ($isMatched) {
                                 $brandName = $b->brand_name;
                                 $brandId = $b->id;
                                 break;
@@ -2537,6 +2601,14 @@ class WarehouseReportController extends Controller
 
                     $pctBadgeClass = $completionPct >= 100 ? 'bg-success' : ($completionPct >= 50 ? 'bg-warning text-dark' : 'bg-danger');
 
+                    if ($completionPct >= 100 || $pendingQty <= 0) {
+                        $statusHtml = '<span class="badge bg-success">Completed</span>';
+                    } elseif ($invoicedQty > 0) {
+                        $statusHtml = '<span class="badge bg-warning text-dark">Partially Completed</span>';
+                    } else {
+                        $statusHtml = '<span class="badge bg-danger">Pending</span>';
+                    }
+
                     $uniquePendingArtNos = array_unique($pendingArtNosList);
                     $awaitingStr = !empty($uniquePendingArtNos) ? implode(', ', array_slice($uniquePendingArtNos, 0, 5)) . (count($uniquePendingArtNos) > 5 ? '...' : '') : 'None / Closed';
                     $reasonsStr = !empty($reasonsList) ? implode('; ', array_slice($reasonsList, 0, 3)) : '-';
@@ -2551,6 +2623,7 @@ class WarehouseReportController extends Controller
                         'invoiced_qty' => number_format($invoicedQty, 0),
                         'completion_pct' => '<span class="badge ' . $pctBadgeClass . ' fw-bold px-2 py-1">' . number_format($completionPct, 2) . '%</span>',
                         'pending_qty' => '<span class="fw-bold text-danger">' . number_format($pendingQty, 0) . '</span>',
+                        'status' => $statusHtml,
                         'awaiting_art_nos' => htmlspecialchars($awaitingStr),
                         'wip' => '-',
                         'action_required' => htmlspecialchars($reasonsStr)
@@ -2609,6 +2682,7 @@ class WarehouseReportController extends Controller
                 'sales_order_items.art_no',
                 'sales_order_items.sku',
                 'sales_order_items.item_name',
+                'sales_order_items.category_name',
                 'brands.id as stock_brand_id',
                 'brands.brand_name as stock_brand_name',
                 'brand_categories.name as cat_brand_name'
@@ -2640,16 +2714,31 @@ class WarehouseReportController extends Controller
                 $artNo = trim($item->art_no ?? '');
                 $sku = trim($item->sku ?? '');
                 $itemName = trim($item->item_name ?? '');
+                $catName = trim($item->category_name ?? '');
 
                 foreach ($allBrands as $b) {
                     $bCode = trim($b->code ?? '');
                     $bBrandName = trim($b->brand_name ?? '');
+                    $isMatched = false;
 
-                    if (($bCode && $artNo && stripos($artNo, $bCode) === 0) ||
-                        ($bCode && $sku && stripos($sku, $bCode) === 0) ||
-                        ($bBrandName && $artNo && stripos($artNo, $bBrandName) !== false) ||
-                        ($bBrandName && $sku && stripos($sku, $bBrandName) !== false) ||
-                        ($bBrandName && $itemName && stripos($itemName, $bBrandName) !== false)) {
+                    if ($bCode) {
+                        if (($artNo && stripos($artNo, $bCode) === 0) ||
+                            ($sku && stripos($sku, $bCode) === 0) ||
+                            ($itemName && (stripos($itemName, $bCode) === 0 || stripos($itemName, $bCode . '-') !== false || stripos($itemName, $bCode . ' ') !== false || stripos($itemName, $bCode . '_') !== false)) ||
+                            ($catName && (stripos($catName, $bCode) === 0 || stripos($catName, $bCode . '-') !== false || stripos($catName, $bCode . ' ') !== false || stripos($catName, $bCode . '_') !== false))) {
+                            $isMatched = true;
+                        }
+                    }
+                    if (!$isMatched && $bBrandName) {
+                        if (($artNo && stripos($artNo, $bBrandName) !== false) ||
+                            ($sku && stripos($sku, $bBrandName) !== false) ||
+                            ($itemName && stripos($itemName, $bBrandName) !== false) ||
+                            ($catName && stripos($catName, $bBrandName) !== false)) {
+                            $isMatched = true;
+                        }
+                    }
+
+                    if ($isMatched) {
                         $bName = $b->brand_name;
                         $bId = $b->id;
                         break;
@@ -2673,6 +2762,7 @@ class WarehouseReportController extends Controller
                 'sales_orders.so_no',
                 'sales_orders.order_no as orderaxe_order_no',
                 'sales_orders.order_type',
+                'sales_orders.request_date',
                 'sales_orders.so_date',
                 'sales_orders.delivery_date',
                 'customers.name as customer_name',
@@ -2693,7 +2783,7 @@ class WarehouseReportController extends Controller
         $recordsTotal = count($soIds);
         $recordsFiltered = $soQuery->count();
 
-        $soQuery->orderBy('sales_orders.so_date', 'desc');
+        $soQuery->orderBy('sales_orders.id', 'desc');
 
         if ($length != -1) {
             $soQuery->skip($start)->take($length);
@@ -2766,9 +2856,15 @@ class WarehouseReportController extends Controller
                 ? '<span class="fw-semibold text-dark">' . htmlspecialchars($so->orderaxe_order_no) . '</span>' 
                 : '<span class="text-muted">-</span>';
 
+            $orderDateStr = !empty($so->request_date) ? date('d-m-Y', strtotime($so->request_date)) : (!empty($so->so_date) ? date('d-m-Y', strtotime($so->so_date)) : '-');
+            $soDateStr = !empty($so->so_date) ? date('d-m-Y', strtotime($so->so_date)) : '-';
+            $deliveryDateStr = !empty($so->delivery_date) ? date('d-m-Y', strtotime($so->delivery_date)) : '-';
+
             $data[] = [
                 'sno' => $sno++,
-                'order_date' => date('d-m-Y', strtotime($so->so_date)),
+                'order_date' => $orderDateStr,
+                'so_date' => $soDateStr,
+                'delivery_date' => $deliveryDateStr,
                 'so_no' => '<a href="' . url('sales_orders/view/' . $so->so_id) . '" target="_blank" class="fw-bold text-primary">' . htmlspecialchars($so->so_no) . '</a>',
                 'orderaxe_order_no' => $orderaxeNoHtml,
                 'order_type' => $orderTypeBadge,
@@ -3269,12 +3365,20 @@ class WarehouseReportController extends Controller
 
         $brandId = $request->brand_id;
         $brandName = $request->brand_name;
+        if (!$brandName && $brandId) {
+            $brandName = DB::table('brands')->where('id', $brandId)->value('brand_name') ?? '';
+        }
         $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-d');
         $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : date('Y-m-d');
         $storeId = $request->store_id;
+        $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
 
-        $makeKey = function($artNo, $itemCode, $sleeve, $size) {
-            return strtolower(trim($artNo ?? '')) . '_' . strtolower(trim($itemCode ?? '')) . '_' . strtolower(trim($sleeve ?? '')) . '_' . strtolower(trim($size ?? ''));
+        $makeKey = function($artNo, $sleeve, $size) {
+            return strtolower(trim($artNo ?? '')) . '_' . strtolower(trim($sleeve ?? '')) . '_' . strtolower(trim($size ?? ''));
+        };
+
+        $makeSimpleKey = function($artNo, $size) {
+            return strtolower(trim($artNo ?? '')) . '_' . strtolower(trim($size ?? ''));
         };
 
         $stockItemsQuery = DB::table('stock_entry_items')
@@ -3310,6 +3414,9 @@ class WarehouseReportController extends Controller
         }
         if ($storeId) {
             $stockItemsQuery->where('stock_entry_items.store_location_id', $storeId);
+        }
+        if ($warehouseId) {
+            $stockItemsQuery->where('stock_entry_items.warehouse_id', $warehouseId);
         }
         if ($search) {
             $stockItemsQuery->where(function($q) use ($search) {
@@ -3347,6 +3454,7 @@ class WarehouseReportController extends Controller
             })
             ->select(
                 'stock_entry_items.art_no',
+                'stock_entry_items.sleeve_type',
                 'stock_entry_items.size',
                 DB::raw('SUM(stock_entry_items.qty_in) as inward_qty')
             )
@@ -3361,11 +3469,14 @@ class WarehouseReportController extends Controller
         if ($storeId) {
             $inwardQuery->where('stock_entry_items.store_location_id', $storeId);
         }
+        if ($warehouseId) {
+            $inwardQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
 
-        $inwardMap = $inwardQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.size')
+        $inwardMap = $inwardQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.sleeve_type', 'stock_entry_items.size')
             ->get()
-            ->keyBy(function($item) {
-                return $item->art_no . '_' . $item->size;
+            ->keyBy(function($item) use ($makeKey) {
+                return $makeKey($item->art_no, $item->sleeve_type, $item->size);
             });
 
         $inwardTillNowQuery = DB::table('stock_entry_items')
@@ -3386,6 +3497,7 @@ class WarehouseReportController extends Controller
             })
             ->select(
                 'stock_entry_items.art_no',
+                'stock_entry_items.sleeve_type',
                 'stock_entry_items.size',
                 DB::raw('SUM(stock_entry_items.qty_in) as inward_qty')
             )
@@ -3400,11 +3512,14 @@ class WarehouseReportController extends Controller
         if ($storeId) {
             $inwardTillNowQuery->where('stock_entry_items.store_location_id', $storeId);
         }
+        if ($warehouseId) {
+            $inwardTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
 
-        $inwardTillNowMap = $inwardTillNowQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.size')
+        $inwardTillNowMap = $inwardTillNowQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.sleeve_type', 'stock_entry_items.size')
             ->get()
-            ->keyBy(function($item) {
-                return $item->art_no . '_' . $item->size;
+            ->keyBy(function($item) use ($makeKey) {
+                return $makeKey($item->art_no, $item->sleeve_type, $item->size);
             });
 
         $salesQuery = DB::table('sales_invoice_items')
@@ -3424,10 +3539,8 @@ class WarehouseReportController extends Controller
                         });
                 });
             })
-            ->leftJoin('styles', 'stock_entry_items.style_id', '=', 'styles.id')
             ->select(
                 'sales_invoice_items.art_no',
-                DB::raw('COALESCE(stock_entry_items.finished_item_code, styles.style_name, "") as finished_item_code'),
                 DB::raw('COALESCE(stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "") as sleeve_type'),
                 'sales_invoice_items.size',
                 DB::raw('SUM(sales_invoice_items.quantity) as sales_qty')
@@ -3442,14 +3555,16 @@ class WarehouseReportController extends Controller
         if ($storeId) {
             $salesQuery->where('sales_invoices.store_id', $storeId);
         }
+        if ($warehouseId) {
+            $salesQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
 
         $salesMap = $salesQuery->groupBy(
             'sales_invoice_items.art_no',
-            DB::raw('COALESCE(stock_entry_items.finished_item_code, styles.style_name, "")'),
             DB::raw('COALESCE(stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "")'),
             'sales_invoice_items.size'
         )->get()->keyBy(function($item) use ($makeKey) {
-            return $makeKey($item->art_no, $item->finished_item_code, $item->sleeve_type, $item->size);
+            return $makeKey($item->art_no, $item->sleeve_type, $item->size);
         });
 
         $salesTillNowQuery = DB::table('sales_invoice_items')
@@ -3469,10 +3584,8 @@ class WarehouseReportController extends Controller
                         });
                 });
             })
-            ->leftJoin('styles', 'stock_entry_items.style_id', '=', 'styles.id')
             ->select(
                 'sales_invoice_items.art_no',
-                DB::raw('COALESCE(stock_entry_items.finished_item_code, styles.style_name, "") as finished_item_code'),
                 DB::raw('COALESCE(stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "") as sleeve_type'),
                 'sales_invoice_items.size',
                 DB::raw('SUM(sales_invoice_items.quantity) as sales_qty')
@@ -3487,27 +3600,30 @@ class WarehouseReportController extends Controller
         if ($storeId) {
             $salesTillNowQuery->where('sales_invoices.store_id', $storeId);
         }
+        if ($warehouseId) {
+            $salesTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
 
         $salesTillNowMap = $salesTillNowQuery->groupBy(
             'sales_invoice_items.art_no',
-            DB::raw('COALESCE(stock_entry_items.finished_item_code, styles.style_name, "")'),
             DB::raw('COALESCE(stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "")'),
             'sales_invoice_items.size'
         )->get()->keyBy(function($item) use ($makeKey) {
-            return $makeKey($item->art_no, $item->finished_item_code, $item->sleeve_type, $item->size);
+            return $makeKey($item->art_no, $item->sleeve_type, $item->size);
         });
 
         $allItems = [];
         foreach ($stockItems as $item) {
-            $key = $item->art_no . '_' . $item->size;
+            $key = $makeKey($item->art_no, $item->sleeve_type, $item->size);
+            $simpleKey = $makeSimpleKey($item->art_no, $item->size);
 
             $currStock = floatval($item->current_stock ?? 0);
-            $inwardTillNow = floatval($inwardTillNowMap[$key]->inward_qty ?? 0);
-            $salesTillNow = floatval($salesTillNowMap[$key]->sales_qty ?? 0);
+            $inwardTillNow = floatval($inwardTillNowMap[$key]->inward_qty ?? ($inwardTillNowMap[$simpleKey]->inward_qty ?? 0));
+            $salesTillNow = floatval($salesTillNowMap[$key]->sales_qty ?? ($salesTillNowMap[$simpleKey]->sales_qty ?? 0));
 
             $opStock = max(0, $currStock - $inwardTillNow + $salesTillNow);
-            $inward = floatval($inwardMap[$key]->inward_qty ?? 0);
-            $sales = floatval($salesMap[$key]->sales_qty ?? 0);
+            $inward = floatval($inwardMap[$key]->inward_qty ?? ($inwardMap[$simpleKey]->inward_qty ?? 0));
+            $sales = floatval($salesMap[$key]->sales_qty ?? ($salesMap[$simpleKey]->sales_qty ?? 0));
             $closing = $opStock + $inward - $sales;
             $salesReturn = 0;
             $netClosing = $closing + $salesReturn;
@@ -3516,6 +3632,13 @@ class WarehouseReportController extends Controller
                 continue;
             }
 
+            $artNoClean = (string)($item->art_no ?? '');
+            $artNoSafe = addslashes($artNoClean);
+            $bNameSafe = addslashes($brandName ?? '');
+            $salesLink = $sales > 0 
+                ? '<a href="javascript:void(0)" onclick="drillDownToStockInwardSalesInvoices(event, ' . ($brandId ?: 'null') . ', \'' . $bNameSafe . '\', \'' . $artNoSafe . '\')" class="text-primary fw-bold text-decoration-underline" title="View Sales Invoices">' . number_format($sales, 0) . '</a>'
+                : '';
+
             $allItems[] = [
                 'art_no' => '<strong>' . htmlspecialchars($item->art_no ?: '-') . '</strong>',
                 'item_name' => htmlspecialchars($item->finished_item_code ?: ($item->style_name ?: '-')),
@@ -3523,7 +3646,7 @@ class WarehouseReportController extends Controller
                 'size' => htmlspecialchars($item->size ?: '-'),
                 'op_stock' => $opStock > 0 ? number_format($opStock, 0) : '',
                 'inward' => $inward > 0 ? number_format($inward, 0) : '',
-                'sales' => $sales > 0 ? number_format($sales, 0) : '',
+                'sales' => $salesLink,
                 'closing' => $closing > 0 ? number_format($closing, 0) : '',
                 'sales_return' => $salesReturn > 0 ? number_format($salesReturn, 0) : '',
                 'net_closing' => '<strong class="text-primary">' . number_format($netClosing, 0) . '</strong>',
@@ -3540,6 +3663,152 @@ class WarehouseReportController extends Controller
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data' => $pagedData,
+        ]);
+    }
+
+    public function getStockInwardSalesInvoices(Request $request)
+    {
+        $draw = intval($request->draw);
+        $start = intval($request->start);
+        $length = intval($request->length > 0 ? $request->length : 10);
+        $search = $request->search['value'] ?? '';
+
+        $brandId = $request->brand_id;
+        $artNo = $request->art_no;
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-d');
+        $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : date('Y-m-d');
+        $storeId = $request->store_id;
+        $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+        $customerId = $request->customer_id;
+
+        $query = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->leftJoin('customers', 'sales_invoices.customer_id', '=', 'customers.id')
+            ->leftJoin('sales_orders', 'sales_invoices.so_id', '=', 'sales_orders.id')
+            ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+            ->leftJoin('brands', function($join) {
+                $join->on(function($query) {
+                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                        ->orOn(function($sub) {
+                            $sub->whereNull('stock_entry_items.brand_id')
+                                ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                ->whereRaw("NOT EXISTS (
+                                    SELECT 1 FROM brands b2 
+                                    WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                    AND LENGTH(b2.code) > LENGTH(brands.code)
+                                )");
+                        });
+                });
+            })
+            ->whereNull('sales_invoices.deleted_at')
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->whereBetween('sales_invoices.inv_date', [$fromDate, $toDate]);
+
+        if ($brandId) {
+            $query->where('brands.id', $brandId);
+        }
+        if ($artNo) {
+            $query->where('sales_invoice_items.art_no', $artNo);
+        }
+        if ($warehouseId) {
+            $query->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
+        if ($customerId) {
+            $query->where('sales_invoices.customer_id', $customerId);
+        }
+        if ($storeId) {
+            $query->where('sales_invoices.store_id', $storeId);
+        }
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('sales_invoices.inv_no', 'like', "%{$search}%")
+                  ->orWhere('sales_orders.so_no', 'like', "%{$search}%")
+                  ->orWhere('customers.name', 'like', "%{$search}%")
+                  ->orWhere('sales_invoice_items.art_no', 'like', "%{$search}%");
+            });
+        }
+
+        $query->select(
+            'sales_invoices.id as invoice_id',
+            'sales_invoices.inv_no',
+            'sales_invoices.inv_date',
+            'sales_invoices.invoice_status',
+            'sales_invoices.grand_total',
+            'sales_orders.so_no',
+            'customers.name as customer_name',
+            DB::raw('GROUP_CONCAT(DISTINCT sales_invoice_items.art_no SEPARATOR ", ") as art_nos'),
+            DB::raw('SUM(sales_invoice_items.quantity) as sold_qty'),
+            DB::raw('SUM(sales_invoice_items.amount) as items_amount')
+        )->groupBy(
+            'sales_invoices.id',
+            'sales_invoices.inv_no',
+            'sales_invoices.inv_date',
+            'sales_invoices.invoice_status',
+            'sales_invoices.grand_total',
+            'sales_orders.so_no',
+            'customers.name'
+        );
+
+        $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
+        $recordsFiltered = $recordsTotal;
+
+        $query->orderBy('sales_invoices.id', 'desc');
+
+        if ($length != -1) {
+            $query->skip($start)->take($length);
+        }
+
+        $rows = $query->get();
+
+        $data = [];
+        $sno = $start + 1;
+        $totSoldQty = 0;
+        $totAmount = 0;
+
+        foreach ($rows as $row) {
+            $soldQty = floatval($row->sold_qty ?? 0);
+            $amount = floatval($row->items_amount ?? 0);
+            $totSoldQty += $soldQty;
+            $totAmount += $amount;
+
+            $invUrl = url('sales_invoices/view/' . $row->invoice_id);
+            $invBadge = '<a href="' . $invUrl . '" target="_blank" class="fw-bold text-primary text-decoration-underline">' . htmlspecialchars($row->inv_no) . '</a>';
+
+            $statusBadge = '<span class="badge bg-label-success">Active</span>';
+            if ($row->invoice_status == 1 || strtolower($row->invoice_status) === 'paid') {
+                $statusBadge = '<span class="badge bg-label-success">Paid</span>';
+            } elseif ($row->invoice_status == 2 || strtolower($row->invoice_status) === 'partially paid') {
+                $statusBadge = '<span class="badge bg-label-warning">Partial</span>';
+            } elseif (strtolower($row->invoice_status) === 'cancelled') {
+                $statusBadge = '<span class="badge bg-label-danger">Cancelled</span>';
+            }
+
+            $actionBtn = '<a href="' . $invUrl . '" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2"><i class="ri-eye-line me-1"></i>View</a>';
+
+            $data[] = [
+                'sno' => $sno++,
+                'inv_no' => $invBadge,
+                'inv_date' => $row->inv_date ? date('d-m-Y', strtotime($row->inv_date)) : '-',
+                'so_no' => htmlspecialchars($row->so_no ?: '-'),
+                'customer' => htmlspecialchars($row->customer_name ?: '-'),
+                'art_nos' => htmlspecialchars($row->art_nos ?: '-'),
+                'sold_qty' => number_format($soldQty, 0),
+                'amount' => '₹' . number_format($amount, 2),
+                'status' => $statusBadge,
+                'action' => $actionBtn
+            ];
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+            'totals' => [
+                'sold_qty' => number_format($totSoldQty, 0),
+                'amount' => '₹' . number_format($totAmount, 2),
+            ]
         ]);
     }
 }

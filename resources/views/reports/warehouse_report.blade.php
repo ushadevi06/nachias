@@ -33,11 +33,11 @@
                         <option value="assorted-stock">🏷️ Assorted Stock</option>
                         <option value="order-dispatch">🔄 Order vs Dispatch</option>
                         <option value="urgent-orders">🔥 Urgent Orders</option>
-                        <option value="dispatch">🚚 Dispatch Report</option>
+                        <option value="dispatch">🚚 Dispatch</option>
                         <option value="inward">📥 Stock Inward</option>
                         <option value="discount">🏷️ Regular / Discount</option>
                         <option value="brandwise-lost-sales">❌ Brandwise Lost Sales</option>
-                        <option value="order-processing-time">⏱️ Order Processing Time Report</option>
+                        <option value="order-processing-time">⏱️ Order Processing Time</option>
                         <option value="stock-inward-sales">📊 Stock Inward & Sales</option>
                         <option value="brandwise-completion">📈 Brandwise Completion</option>
                     </select>
@@ -65,6 +65,15 @@
                         <option value=""></option>
                         @foreach($customers ?? [] as $customer)
                             <option value="{{ $customer->id }}" {{ request('customer_id') == $customer->id ? 'selected' : '' }}>{{ $customer->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2" id="warehouse_filter_col" style="{{ request('report_type') === 'stock-inward-sales' ? '' : 'display: none;' }}">
+                    <label class="form-label small fw-bold text-muted">Warehouse</label>
+                    <select class="form-select select2" name="warehouse_id" id="filter_warehouse_id">
+                        <option value="all" {{ (request('warehouse_id') == 'all' || empty(request('warehouse_id'))) ? 'selected' : '' }}>All</option>
+                        @foreach($warehouses ?? [] as $wh)
+                            <option value="{{ $wh->id }}" {{ request('warehouse_id') == $wh->id ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -271,11 +280,8 @@ $.extend(true, $.fn.dataTable.defaults, {
 });
 
 $(document).ready(function() {
-    $('#report_type_select').on('change', function() {
-        let targetTabId = $(this).val();
-        let selectedText = $(this).find('option:selected').text();
-        
-        $('#active_report_title').html(selectedText + ' Report');
+    function syncReportFilterVisibility() {
+        let targetTabId = $('#report_type_select').val();
 
         if (targetTabId === 'warehouse-summary') {
             $('#top_warehouse_wrapper').show();
@@ -283,11 +289,28 @@ $(document).ready(function() {
             $('#top_warehouse_wrapper').hide();
         }
 
+        if (targetTabId === 'stock-inward-sales') {
+            $('#warehouse_filter_col').show();
+        } else {
+            $('#warehouse_filter_col').hide();
+        }
+    }
+
+    $('#report_type_select').on('change', function() {
+        let targetTabId = $(this).val();
+        let selectedText = $(this).find('option:selected').text();
+        
+        $('#active_report_title').html(selectedText + ' Report');
+
+        syncReportFilterVisibility();
+
         $('.tab-pane').removeClass('show active');
         $('#' + targetTabId).addClass('show active');
 
         $('#warehouseReportForm').trigger('submit');
     });
+
+    syncReportFilterVisibility();
 
     $('#top_warehouse_select').on('change', function() {
         $('#warehouseReportForm').trigger('submit');
@@ -396,6 +419,7 @@ $(document).ready(function() {
         $('select[name="brand_id"]').val('').trigger('change');
         $('select[name="customer_id"]').val('').trigger('change');
         $('select[name="store_id"]').val('').trigger('change');
+        $('select[name="warehouse_id"]').val('all').trigger('change');
 
         let activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val() || 'brand-sales';
 

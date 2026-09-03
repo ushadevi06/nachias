@@ -182,9 +182,19 @@
                                                                     <span class="text-muted ms-1">({{ $firstItem->color->color_name ?? '-' }})</span>
                                                                 </div>
                                                                 <div class="col-sm-4">
+                                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Store Type</label>
+                                                                    <span class="text-primary fw-bold fs-6">{{ $firstItem->storeType->store_type_name ?? ($stockEntry->storeType->store_type_name ?? ($stockEntry->productionReceipt->storeType->store_type_name ?? '-')) }}</span>
+                                                                </div>
+                                                                <div class="col-sm-4">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Store Location</label>
                                                                     <span class="text-dark fw-medium fs-6">{{ $firstItem->storeLocation->store_location ?? ($firstItem->grnEntryItem->storeLocation->store_location ?? '-') }}</span>
                                                                 </div>
+                                                                @if($stockEntry->warehouse || ($firstItem && $firstItem->warehouse))
+                                                                <div class="col-sm-4">
+                                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Warehouse</label>
+                                                                    <span class="text-dark fw-medium fs-6">{{ $firstItem->warehouse->warehouse_name ?? ($stockEntry->warehouse->warehouse_name ?? '-') }}</span>
+                                                                </div>
+                                                                @endif
                                                                 <div class="col-sm-4">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Quantity</label>
                                                                     <span class="text-success fw-bold fs-5">+{{ floatval($firstItem->qty_in) }} <small class="text-muted fs-6 fw-normal">{{ $firstItem->uom->uom_code ?? 'PCS' }}</small></span>

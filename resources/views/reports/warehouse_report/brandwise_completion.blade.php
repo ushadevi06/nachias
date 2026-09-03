@@ -7,7 +7,7 @@
 
 <div class="card-datatable table-responsive">
     <table class="datatables-products table table-hover border-top align-middle" id="brandwiseCompletionTable" style="font-size: 0.82rem;">
-        <thead class="table-light text-center">
+        <thead class="text-center">
             <tr>
                 <th class="text-nowrap">S.NO</th>
                 <th class="text-nowrap">BRAND</th>
@@ -16,6 +16,7 @@
                 <th class="text-nowrap">TOTAL QTY INVOICED</th>
                 <th class="text-nowrap">COMPLETION %</th>
                 <th class="text-nowrap">PENDING QTY</th>
+                <th class="text-nowrap">STATUS</th>
             </tr>
         </thead>
         <tbody>
@@ -48,7 +49,7 @@ function renderBrandwiseCompletionBrandsLevel() {
     reinitBrandwiseCompletionTable();
 
     $('#brandwiseCompletionTable').html(`
-        <thead class="table-light text-center">
+        <thead class="text-center">
             <tr>
                 <th class="text-nowrap">S.NO</th>
                 <th class="text-nowrap">BRAND</th>
@@ -57,10 +58,11 @@ function renderBrandwiseCompletionBrandsLevel() {
                 <th class="text-nowrap">TOTAL QTY INVOICED</th>
                 <th class="text-nowrap">COMPLETION %</th>
                 <th class="text-nowrap">PENDING QTY</th>
+                <th class="text-nowrap">STATUS</th>
             </tr>
         </thead>
         <tbody></tbody>
-        <tfoot class="table-light border-top">
+        <tfoot class="border-top">
             <tr class="bg-light fw-bold">
                 <th colspan="2" class="text-end fw-bold">TOTAL</th>
                 <th class="text-center fw-bold text-primary" id="compFootOrders">0</th>
@@ -68,6 +70,7 @@ function renderBrandwiseCompletionBrandsLevel() {
                 <th class="text-center fw-bold text-success" id="compFootInvoicedQty">0</th>
                 <th></th>
                 <th class="text-center fw-bold text-danger" id="compFootPendingQty">0</th>
+                <th></th>
             </tr>
         </tfoot>
     `);
@@ -93,7 +96,8 @@ function renderBrandwiseCompletionBrandsLevel() {
             { data: 'total_qty', name: 'total_qty', className: 'text-center fw-bold' },
             { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
             { data: 'completion_pct', name: 'completion_pct', className: 'text-center' },
-            { data: 'pending_qty', name: 'pending_qty', className: 'text-center' }
+            { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+            { data: 'status', name: 'status', className: 'text-center' }
         ],
         drawCallback: function() {
             if (typeof showWarehouseReportLoading === 'function') {
@@ -101,7 +105,7 @@ function renderBrandwiseCompletionBrandsLevel() {
             }
             var api = this.api();
             var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                return typeof i === 'string' ? i.replace(/<[^>]*>/g, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
             };
             var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
             $('#compFootOrders').html(fmt(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
@@ -131,10 +135,12 @@ function drillDownToBrandOrders(brandId, brandName) {
     reinitBrandwiseCompletionTable();
 
     $('#brandwiseCompletionTable').html(`
-        <thead class="table-light text-center">
+        <thead class="text-center">
             <tr>
                 <th class="text-nowrap">S.NO</th>
                 <th class="text-nowrap">ORDER DATE</th>
+                <th class="text-nowrap">SO DATE</th>
+                <th class="text-nowrap">DELIVERY DATE</th>
                 <th class="text-nowrap">ORDER NO</th>
                 <th class="text-nowrap">ORDERAXE NO</th>
                 <th class="text-nowrap">ORDER TYPE</th>
@@ -149,9 +155,9 @@ function drillDownToBrandOrders(brandId, brandName) {
             </tr>
         </thead>
         <tbody></tbody>
-        <tfoot class="table-light border-top">
+        <tfoot class="border-top">
             <tr class="bg-light fw-bold">
-                <th colspan="6" class="text-end fw-bold">TOTAL</th>
+                <th colspan="8" class="text-end fw-bold">TOTAL</th>
                 <th class="text-center fw-bold text-primary" id="compSubFootTotalQty">0</th>
                 <th class="text-center fw-bold text-success" id="compSubFootInvoicedQty">0</th>
                 <th class="text-center fw-bold text-danger" id="compSubFootPendingQty">0</th>
@@ -179,6 +185,8 @@ function drillDownToBrandOrders(brandId, brandName) {
         columns: [
             { data: 'sno', name: 'sno', className: 'text-center' },
             { data: 'order_date', name: 'order_date', className: 'text-center text-nowrap' },
+            { data: 'so_date', name: 'so_date', className: 'text-center text-nowrap' },
+            { data: 'delivery_date', name: 'delivery_date', className: 'text-center text-nowrap' },
             { data: 'so_no', name: 'so_no', className: 'text-center fw-bold text-nowrap' },
             { data: 'orderaxe_order_no', name: 'orderaxe_order_no', className: 'text-center text-nowrap' },
             { data: 'order_type', name: 'order_type', className: 'text-center text-nowrap' },
@@ -197,12 +205,12 @@ function drillDownToBrandOrders(brandId, brandName) {
         drawCallback: function () {
             var api = this.api();
             var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                return typeof i === 'string' ? i.replace(/<[^>]*>/g, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
             };
             var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
-            var totOrdered = api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
-            var totInvoiced = api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
-            var totPending = api.column(8, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var totOrdered = api.column(8, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var totInvoiced = api.column(9, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var totPending = api.column(10, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
             var overallPct = totOrdered > 0 ? ((totInvoiced / totOrdered) * 100).toFixed(1) : 0;
 
             $('#compSubFootTotalQty').html(fmt(totOrdered));
@@ -236,7 +244,7 @@ function drillDownToBrandOrderArtNos(soId, soNo) {
             </tr>
         </thead>
         <tbody></tbody>
-        <tfoot class="table-light border-top">
+        <tfoot class="border-top">
             <tr class="bg-light fw-bold">
                 <th colspan="5" class="text-end fw-bold">TOTAL</th>
                 <th class="text-center fw-bold text-primary" id="compArtFootOrdered">0</th>
@@ -270,7 +278,7 @@ function drillDownToBrandOrderArtNos(soId, soNo) {
         drawCallback: function () {
             var api = this.api();
             var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                return typeof i === 'string' ? i.replace(/<[^>]*>/g, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
             };
             var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
             $('#compArtFootOrdered').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));

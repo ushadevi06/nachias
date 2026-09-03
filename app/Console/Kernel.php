@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('orderaxe:sync-orders')->everyFifteenMinutes();
         // $schedule->command('attendance:sync')->twiceDaily(10, 17);
         $schedule->command('attendance:sync')->everyMinute();
+        $schedule->call([new \App\Http\Controllers\BackupController, 'autoBackupToDrive'])->dailyAt('10:17');
     }
 
     /**

@@ -502,10 +502,14 @@ class StockEntryController extends Controller
         }
         $stockEntry = StockEntry::with([
             'grnEntry',
+            'storeType',
+            'warehouse',
             'fromStoreLocation',
             'toStoreLocation',
             'stockEntryItems.rawMaterial.storeCategory',
             'stockEntryItems.storeCategory',
+            'stockEntryItems.storeType',
+            'stockEntryItems.warehouse',
             'stockEntryItems.storeLocation',
             'stockEntryItems.uom',
             'stockEntryItems.grnEntryItem',
@@ -514,6 +518,7 @@ class StockEntryController extends Controller
             'stockEntryItems.style',
             'stockEntryItems.color',
             'stockEntryItems.brand',
+            'productionReceipt.storeType',
             'productionReceipt.jobCard.fabricType',
             'createdBy',
             'updatedBy'
@@ -796,12 +801,15 @@ class StockEntryController extends Controller
     {
         $headers = [
             'Stock Date',
+            'Brand',
+            'Warehouse',
             'Product Code',
             'Art No',
             'Size',
             'Color',
             'Style',
             'Sleeve Type',
+            'Store Type',
             'Qty In',
             'Qty Out',
             'Price',
@@ -817,12 +825,15 @@ class StockEntryController extends Controller
             fputcsv($file, $headers);
             fputcsv($file, [
                 date('d-m-Y'),
+                'CASINO FORMAL',
+                'KALAVASAL',
                 'CB-PRT-FS',
                 'CB0906-1',
                 '38',
                 'BLUE',
                 'PRINT',
                 'FULL',
+                'Finished Goods',
                 '50',
                 '0',
                 '499.00',

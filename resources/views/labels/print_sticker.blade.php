@@ -157,11 +157,27 @@
         .sticker-qr {
             position: absolute;
             right: 23mm;
-            top: 6mm;
+            top: 5.5mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
         .sticker-qr img, .sticker-qr svg {
-            width: 11mm;
-            height: 11mm;
+            width: 10.5mm;
+            height: 10.5mm;
+            display: block;
+        }
+        .sticker-qr .qr-no-text {
+            font-size: 5pt;
+            font-weight: 700;
+            color: #000000;
+            margin-top: 0.5mm;
+            text-align: center;
+            letter-spacing: 0.3px;
+            line-height: 1.1;
+            white-space: nowrap;
         }
         
         .size-wrapper {
@@ -273,6 +289,7 @@
                             </table>
                             <div class="sticker-qr">
                                 {!! QrCode::size(60)->generate($qrString) !!}
+                                <div class="qr-no-text">{{ $qrString }}</div>
                             </div>
                         </div>
                         <div class="art-no-box">

@@ -19,6 +19,7 @@ class StockEntryItem extends Model
         'item_id',
         'finished_item_code', 
         'store_category_id',
+        'store_type_id',
         'store_location_id',
         'warehouse_id',
         'uom_id',
@@ -72,6 +73,11 @@ class StockEntryItem extends Model
     public function storeCategory()
     {
         return $this->belongsTo(StoreCategory::class);
+    }
+
+    public function storeType()
+    {
+        return $this->belongsTo(StoreType::class, 'store_type_id');
     }
 
     public function storeLocation()

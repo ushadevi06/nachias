@@ -16,6 +16,7 @@ class StockEntry extends Model
         'entry_type',
         'grn_entry_id',
         'warehouse_id',
+        'store_type_id',
         'from_store_location_id',
         'to_store_location_id',
         'remarks',
@@ -56,6 +57,11 @@ class StockEntry extends Model
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    public function storeType()
+    {
+        return $this->belongsTo(StoreType::class, 'store_type_id');
     }
 
     public function grnEntry()

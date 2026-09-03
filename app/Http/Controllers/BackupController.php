@@ -245,4 +245,55 @@ class BackupController extends Controller
             return '0 bytes';
         }
     }
+
+    public function autoBackupToDrive()
+    {
+        try {
+            $day = strtolower(date('l')); // e.g., monday, tuesday
+            $period = (date('H') < 16) ? '11AM' : '11PM'; // Before 4 PM is 11AM backup, after is 11PM backup
+            $filename = "{$day}_{$period}_backup.sql";
+            $path = storage_path('app/');
+
+            if (!file_exists($path)) {
+                mkdir($path, 0755, true);
+            }
+
+            $dbName = env('DB_DATABASE');
+            $dbUser = env('DB_USERNAME');
+            $dbPass = env('DB_PASSWORD');
+            $dbHost = env('DB_HOST');
+
+            $dumpPath = env('MYSQLDUMP_PATH', 'mysqldump');
+            
+            $passwordPart = $dbPass ? "--password=\"{$dbPass}\"" : "";
+            $command = "\"{$dumpPath}\" --user={$dbUser} {$passwordPart} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
+
+            exec($command, $output, $returnVar);
+
+            if ($returnVar === 0) {
+                // Upload to Google Drive using the google disk
+                $uploaded = \Illuminate\Support\Facades\Storage::disk('google')->put($filename, file_get_contents($path . $filename));
+
+                if (file_exists($path . $filename)) {
+                    unlink($path . $filename);
+                }
+
+                if ($uploaded) {
+                    Log::info("Auto Google Drive Backup Successful: {$filename}");
+                    return response()->json(['status' => 'success', 'message' => "Backup {$filename} uploaded successfully."]);
+                } else {
+                    Log::error("Failed to upload auto backup to Google Drive: {$filename}");
+                    return response()->json(['status' => 'error', 'message' => 'Failed to upload to Google Drive.'], 500);
+                }
+            } else {
+                $errorMessage = implode("\n", $output);
+                Log::error("Auto backup mysqldump failed. Return var: $returnVar. Output: " . $errorMessage);
+                return response()->json(['status' => 'error', 'message' => 'Backup generation failed.'], 500);
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Auto Google Drive Backup Error: " . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 }

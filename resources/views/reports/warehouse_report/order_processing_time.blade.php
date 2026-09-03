@@ -9,10 +9,11 @@
     <table class="datatables-products table table-hover border-top align-middle" id="orderProcessingTimeTable" style="font-size: 0.82rem;">
         <thead class="table-light text-center">
             <tr>
-                <th class="text-nowrap">DATE</th>
-                <th class="text-nowrap">S.NO</th>
                 <th class="text-nowrap">ORDER DATE</th>
+                <th class="text-nowrap">S.NO</th>
+                <th class="text-nowrap">REQUEST DATE</th>
                 <th class="text-nowrap">ORDER NO</th>
+                <th class="text-nowrap">ORDERAXE NO</th>
                 <th class="text-nowrap">DELIVERY DATE</th>
                 <th class="text-nowrap">PRIORITY</th>
                 <th class="text-nowrap">CUSTOMER</th>
@@ -32,7 +33,7 @@
         </tbody>
         <tfoot class="table-light border-top" id="orderProcessingTfoot">
             <tr class="bg-light fw-bold">
-                <th colspan="9" class="text-end fw-bold">TOTAL</th>
+                <th colspan="10" class="text-end fw-bold">TOTAL</th>
                 <th class="text-center fw-bold text-primary" id="optFootOrdered">0</th>
                 <th class="text-center fw-bold text-success" id="optFootInvoiced">0</th>
                 <th class="text-center fw-bold text-danger" id="optFootPending">0</th>
@@ -61,10 +62,11 @@ function renderOrderProcessingTimeMainLevel() {
     $('#orderProcessingTimeTable').html(`
         <thead class="table-light text-center">
             <tr>
-                <th class="text-nowrap">DATE</th>
-                <th class="text-nowrap">S.NO</th>
                 <th class="text-nowrap">ORDER DATE</th>
+                <th class="text-nowrap">S.NO</th>
+                <th class="text-nowrap">REQUEST DATE</th>
                 <th class="text-nowrap">ORDER NO</th>
+                <th class="text-nowrap">ORDERAXE NO</th>
                 <th class="text-nowrap">DELIVERY DATE</th>
                 <th class="text-nowrap">PRIORITY</th>
                 <th class="text-nowrap">CUSTOMER</th>
@@ -81,6 +83,15 @@ function renderOrderProcessingTimeMainLevel() {
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="table-light border-top" id="orderProcessingTfoot">
+            <tr class="bg-light fw-bold">
+                <th colspan="10" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-primary" id="optFootOrdered">0</th>
+                <th class="text-center fw-bold text-success" id="optFootInvoiced">0</th>
+                <th class="text-center fw-bold text-danger" id="optFootPending">0</th>
+                <th colspan="5"></th>
+            </tr>
+        </tfoot>
     `);
 
     $('#orderProcessingTimeTable').DataTable({
@@ -100,8 +111,9 @@ function renderOrderProcessingTimeMainLevel() {
         columns: [
             { data: 'date', name: 'date', className: 'text-center text-nowrap' },
             { data: 'sno', name: 'sno', className: 'text-center', orderable: false },
-            { data: 'order_date', name: 'order_date', className: 'text-center text-nowrap' },
+            { data: 'request_date', name: 'request_date', className: 'text-center text-nowrap' },
             { data: 'so_no', name: 'so_no', className: 'text-center fw-bold text-nowrap' },
+            { data: 'orderaxe_order_no', name: 'orderaxe_order_no', className: 'text-center text-nowrap' },
             { data: 'delivery_date', name: 'delivery_date', className: 'text-center text-nowrap' },
             { data: 'priority', name: 'priority', className: 'text-center' },
             { data: 'customer', name: 'customer' },
@@ -121,25 +133,13 @@ function renderOrderProcessingTimeMainLevel() {
         pageLength: 10,
         drawCallback: function (settings) {
             var api = this.api();
-            var rows = api.rows({ page: 'current' }).nodes();
-            var lastDate = null;
-
-            api.column(0, { page: 'current' }).data().each(function (groupDate, i) {
-                if (lastDate !== groupDate) {
-                    $(rows).eq(i).before(
-                        '<tr class="table-light date-group-header-row"><td colspan="17" class="py-2 px-3 fw-bold text-primary text-uppercase border-top border-bottom" style="background-color: #f1f5f9 !important; font-size: 0.88rem; letter-spacing: 0.5px;"><i class="ri-calendar-event-line me-2 text-primary"></i>DATE : ' + groupDate + '</td></tr>'
-                    );
-                    lastDate = groupDate;
-                }
-            });
-
             var intVal = function (i) {
                 return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
             };
             var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
-            $('#optFootOrdered').html(fmt(api.column(9, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#optFootInvoiced').html(fmt(api.column(10, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#optFootPending').html(fmt(api.column(11, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootOrdered').html(fmt(api.column(10, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootInvoiced').html(fmt(api.column(11, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootPending').html(fmt(api.column(12, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         }
     });
 }

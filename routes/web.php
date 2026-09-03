@@ -654,6 +654,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('backup_restore/restore', [BackupController::class, 'restore']);
     Route::get('backup_restore/download/{id}', [BackupController::class, 'download']);
     Route::get('backup_restore/delete/{id}', [BackupController::class, 'delete']);
+    Route::get('auto-backup-drive', [App\Http\Controllers\BackupController::class, 'autoBackupToDrive']);
 
     /*  Attendance  */
     Route::get('attendances', [AttendanceController::class, 'index']);
@@ -722,6 +723,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('warehouse_reports/brandwise_completion_orders', [WarehouseReportController::class, 'getBrandwiseCompletionOrders']);
     Route::get('warehouse_reports/order_processing_time_art_nos', [WarehouseReportController::class, 'getOrderProcessingTimeArtNos']);
     Route::get('warehouse_reports/stock_inward_sales_details', [WarehouseReportController::class, 'getStockInwardSalesDetails']);
+    Route::get('warehouse_reports/stock_inward_sales_invoices', [WarehouseReportController::class, 'getStockInwardSalesInvoices']);
     Route::get('warehouse_reports/warehouse_summary_styles', [WarehouseReportController::class, 'getWarehouseSummaryStyles']);
 
     /* Production Report */

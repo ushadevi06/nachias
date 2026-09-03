@@ -2,12 +2,15 @@
 
 namespace App\Imports;
 
+use App\Models\Brand;
 use App\Models\Color;
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
 use App\Models\StoreLocation;
-use App\Models\Uom;
+use App\Models\StoreType;
 use App\Models\Style;
+use App\Models\Uom;
+use App\Models\Warehouse;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +23,9 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
     protected array $entryMap = [];
     protected array $uomCache = [];
     protected array $storeLocationCache = [];
+    protected array $storeTypeCache = [];
+    protected array $warehouseCache = [];
+    protected array $brandCache = [];
     protected array $colorCache = [];
     protected array $styleCache = [];
 
@@ -55,12 +61,15 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         $artNo = $this->nullableTrim($this->getRowValue($row, ['art_no', 'artno']));
         $finishedItemCode = $productCode;
         $uom = $this->resolveUom($this->getRowValue($row, ['uom_id', 'uomid', 'uom']));
-        $storeLocation = $this->resolveStoreLocation($this->getRowValue($row, ['store_location_id', 'storelocationid', 'store_location', 'store_loca', 'storeloca', 'store']));
+        $storeLocation = $this->resolveStoreLocation($this->getRowValue($row, ['store_location_id', 'storelocationid', 'store_location', 'store_loca', 'storeloca']));
+        $storeType = $this->resolveStoreType($this->getRowValue($row, ['store_type', 'storetype', 'store_type_id', 'storetypeid', 'store_name', 'store']));
+        $warehouse = $this->resolveWarehouse($this->getRowValue($row, ['warehouse', 'warehouse_id', 'warehouse_name']));
         $qtyIn = $this->parseNumber($this->getRowValue($row, ['qty_in', 'qtyin']), 'Qty In is required.');
         $qtyOut = $this->parseOptionalNumber($this->getRowValue($row, ['qty_out', 'qtyout'])) ?? 0;
         $price = $this->parseNumber($this->getRowValue($row, ['price']), 'Price is required.');
         $remarks = trim((string) ($this->getRowValue($row, ['remarks']) ?? ''));
         $color = $this->resolveColor($this->getRowValue($row, ['color_id', 'colorid', 'color']));
+        $brandVal = $this->getRowValue($row, ['brand', 'brand_id', 'brand_name', 'brand_code']);
         
         $styleVal = $this->getRowValue($row, ['style_id', 'styleid', 'style']);
         if ($styleVal === null || trim((string)$styleVal) === '') {
@@ -73,14 +82,24 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             throw new \Exception('Product Code is required.');
         }
 
+        $resolvedBrand = null;
+        if ($brandVal !== null && trim((string)$brandVal) !== '') {
+            $resolvedBrand = $this->resolveBrand($brandVal);
+            if (!$resolvedBrand) {
+                throw new \Exception("Brand '{$brandVal}' does not exist in the Brands master.");
+            }
+        }
+
         $parts = explode('-', $finishedItemCode);
         if (count($parts) >= 2) {
             $brandPart = trim($parts[0]);
             $stylePart = trim($parts[1]);
             
-            $brandExists = \App\Models\Brand::where('brand_name', $brandPart)->orWhere('code', $brandPart)->exists();
-            if (!$brandExists) {
-                throw new \Exception("Brand '{$brandPart}' from Product Code '{$finishedItemCode}' does not exist in the Brands master.");
+            if (!$resolvedBrand) {
+                $resolvedBrand = $this->resolveBrand($brandPart);
+                if (!$resolvedBrand) {
+                    throw new \Exception("Brand '{$brandPart}' from Product Code '{$finishedItemCode}' does not exist in the Brands master.");
+                }
             }
 
             $styleExists = \App\Models\Style::where('code', $stylePart)->orWhere('style_name', $stylePart)->exists();
@@ -127,6 +146,8 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         $entryKey = implode('|', [
             $stockDate->format('Y-m-d'),
             $storeLocation->id,
+            $storeType->id,
+            $warehouse?->id ?? '',
             $remarks,
         ]);
 
@@ -136,6 +157,8 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
                 'stock_date' => $stockDate->format('Y-m-d'),
                 'entry_type' => 'Finished Goods',
                 'to_store_location_id' => $storeLocation->id,
+                'store_type_id' => $storeType->id,
+                'warehouse_id' => $warehouse?->id ?? null,
                 'remarks' => $remarks ?: null,
                 'status' => 'Posted',
                 'created_by' => auth()->id() ?? 1,
@@ -156,8 +179,11 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             'size' => $size,
             'color_id' => $color?->id,
             'style_id' => $style?->id,
+            'brand_id' => $resolvedBrand?->id,
             'sleeve_type' => $sleeveType,
             'store_location_id' => $storeLocation->id,
+            'store_type_id' => $storeType->id,
+            'warehouse_id' => $warehouse?->id ?? $stockEntry->warehouse_id ?? null,
             'uom_id' => $uom->id,
             'qty_in' => $qtyIn,
             'qty_out' => $qtyOut,
@@ -171,6 +197,12 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         }
         if (empty($stockEntry->to_store_location_id)) {
             $stockEntry->to_store_location_id = $storeLocation->id;
+        }
+        if (empty($stockEntry->store_type_id)) {
+            $stockEntry->store_type_id = $storeType->id;
+        }
+        if (empty($stockEntry->warehouse_id) && $warehouse) {
+            $stockEntry->warehouse_id = $warehouse->id;
         }
         $stockEntry->save();
     }
@@ -190,7 +222,6 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value));
         }
 
-        // Try exact formats first to avoid Carbon::parse timezone/slashes mismatch
         $formats = ['d-m-Y', 'd/m/Y', 'd-m-y', 'd/m/y', 'Y-m-d', 'Y/m/d'];
         foreach ($formats as $format) {
             try {
@@ -291,6 +322,98 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         }
 
         $this->storeLocationCache[$lookup] = $record;
+
+        return $record;
+    }
+
+    protected function resolveStoreType($value): StoreType
+    {
+        $lookup = $this->nullableTrim($value);
+
+        if (!$lookup) {
+            $default = StoreType::where('id', 3)->orWhere('store_type_name', 'FINISHED GOODS')->first();
+            if ($default) {
+                return $default;
+            }
+            return StoreType::firstOrCreate(['store_type_name' => 'FINISHED GOODS'], ['status' => 'Active', 'created_by' => 1]);
+        }
+
+        if (array_key_exists($lookup, $this->storeTypeCache)) {
+            return $this->storeTypeCache[$lookup];
+        }
+
+        $upper = strtoupper($lookup);
+
+        $record = StoreType::query()
+            ->when(is_numeric($lookup), function ($query) use ($lookup) {
+                $query->where('id', (int) $lookup);
+            }, function ($query) use ($lookup) {
+                $query->where('store_type_name', $lookup);
+            })
+            ->first();
+
+        if (!$record) {
+            if (str_contains($upper, 'SINGLE') || str_contains($upper, 'ASSORT')) {
+                $record = StoreType::where('id', 12)->orWhere('store_type_name', 'LIKE', '%SINGLE%')->first();
+            } elseif (str_contains($upper, 'DAMAGE')) {
+                $record = StoreType::where('id', 6)->orWhere('store_type_name', 'LIKE', '%DAMAGE%')->first();
+            } elseif (str_contains($upper, 'FINISHED') || str_contains($upper, 'SETWISE') || str_contains($upper, 'MAIN')) {
+                $record = StoreType::where('id', 3)->orWhere('store_type_name', 'LIKE', '%FINISHED%')->first();
+            }
+        }
+
+        if (!$record) {
+            throw new \Exception("Store Type '{$lookup}' was not found in Store Types master.");
+        }
+
+        $this->storeTypeCache[$lookup] = $record;
+
+        return $record;
+    }
+
+    protected function resolveBrand(?string $brandCode): ?Brand
+    {
+        if (!$brandCode) {
+            return null;
+        }
+
+        if (array_key_exists($brandCode, $this->brandCache)) {
+            return $this->brandCache[$brandCode];
+        }
+
+        $record = Brand::query()
+            ->where('code', $brandCode)
+            ->orWhere('brand_name', $brandCode)
+            ->first();
+
+        $this->brandCache[$brandCode] = $record;
+
+        return $record;
+    }
+
+    protected function resolveWarehouse($value): ?Warehouse
+    {
+        $lookup = $this->nullableTrim($value);
+        if (!$lookup) {
+            return null;
+        }
+
+        if (array_key_exists($lookup, $this->warehouseCache)) {
+            return $this->warehouseCache[$lookup];
+        }
+
+        $record = Warehouse::query()
+            ->where('warehouse_name', $lookup)
+            ->when(is_numeric($lookup), function ($query) use ($lookup) {
+                $query->orWhere('id', (int) $lookup);
+            })
+            ->first();
+
+        if (!$record) {
+            throw new \Exception("Warehouse '{$lookup}' was not found in Warehouse master.");
+        }
+
+        $this->warehouseCache[$lookup] = $record;
 
         return $record;
     }
