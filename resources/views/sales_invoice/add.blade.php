@@ -3,19 +3,9 @@
 @section('content')
     <style>
         .art-no-filter-row {
+            display: flex;
+            justify-content: flex-end;
             margin-bottom: 1rem;
-        }
-
-        .art-no-filter-row--items {
-            margin-left: 35%;
-        }
-
-        .art-no-filter-row--open-orders {
-            margin-left: 60%;
-        }
-
-        .art-no-filter-row--open-orders-items {
-            margin-left: -2%;
         }
 
         .art-no-filter-input {
@@ -23,11 +13,6 @@
         }
 
         @media (max-width: 767.98px) {
-            .art-no-filter-row--items,
-            .art-no-filter-row--open-orders {
-                margin-left: 0;
-            }
-
             .art-no-filter-input {
                 max-width: 100%;
             }
@@ -281,11 +266,11 @@
                                 </div>
                             @endif
                             <div class="table-responsive">
-                                <div class="art-no-filter-row art-no-filter-row--items">
+                                <div class="art-no-filter-row art-no-filter-row--items mt-3 mb-2">
                                     <div class="form-floating form-floating-outline art-no-filter-row--open-orders-items">
                                         <input type="text" id="art_no_filter" class="form-control art-no-filter-input"
-                                            placeholder="Search by Art No">
-                                        <label for="art_no_filter">Search By Art No</label>
+                                            placeholder="Search by Art No or Size">
+                                        <label for="art_no_filter">Search By Art No / Size</label>
                                     </div>
                                 </div>
                                 <table class="table">
@@ -735,11 +720,11 @@
                                 </div>
                             @endif
                             <div class="table-responsive text-nowrap">
-                                <div class="art-no-filter-row art-no-filter-row--open-orders">
+                                <div class="art-no-filter-row art-no-filter-row--open-orders mt-3 mb-2">
                                     <div class="form-floating form-floating-outline">
                                         <input type="text" id="open_order_art_no_filter"
-                                            class="form-control art-no-filter-input" placeholder="Search by Art No">
-                                        <label for="open_order_art_no_filter">Search By Art No</label>
+                                            class="form-control art-no-filter-input" placeholder="Search by Art No or Size">
+                                        <label for="open_order_art_no_filter">Search By Art No / Size</label>
                                     </div>
                                 </div>
                                 <table class="table table-bordered align-middle" id="open-order-item-rows">
@@ -1875,6 +1860,18 @@
                 ).trim().toLowerCase();
             }
 
+            function getRowSize($row) {
+                return String(
+                    $row.find('.size-id').val() ||
+                    $row.find('.size-name').val() ||
+                    $row.find('.size-input').val() ||
+                    $row.find('input[name*="[size_name]"]').val() ||
+                    $row.find('input[name*="[size]"]').val() ||
+                    $row.find('.size-text').text() ||
+                    ''
+                ).trim().toLowerCase();
+            }
+
             function toggleFilterEmptyRow($tbody, visibleCount, colspan) {
                 let $emptyRow = $tbody.find('.art-no-filter-empty-row');
                 if (visibleCount === 0) {
@@ -1895,7 +1892,8 @@
                 let itemVisibleCount = 0;
                 $itemRows.each(function() {
                     let $row = $(this);
-                    let matches = !term || getRowArtNo($row).includes(term);
+                    let matches = !term || getRowArtNo($row).includes(term) || getRowSize($row)
+                        .includes(term);
                     $row.toggle(matches);
                     if (matches) {
                         itemVisibleCount++;
@@ -1911,7 +1909,8 @@
                 let openVisibleCount = 0;
                 $openRows.each(function() {
                     let $row = $(this);
-                    let matches = !term || getRowArtNo($row).includes(term);
+                    let matches = !term || getRowArtNo($row).includes(term) || getRowSize($row)
+                        .includes(term);
                     $row.toggle(matches);
                     if (matches) {
                         openVisibleCount++;
