@@ -12,6 +12,7 @@ use App\Models\RawMaterial;
 use App\Models\StoreLocation;
 use App\Models\Uom;
 use App\Models\Warehouse;
+use App\Models\StoreType;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,29 +51,39 @@ class StockEntryController extends Controller
                 }
                 $query = StockEntryItem::with([
                     'stockEntry.productionReceipt.jobCard.fabricType',
+                    'stockEntry.productionReceipt.warehouse',
+                    'stockEntry.productionReceipt.storeType',
+                    'stockEntry.warehouse',
+                    'stockEntry.storeType',
+                    'warehouse',
+                    'storeType',
+                    'storeCategory',
                     'fabricType',
                     'color',
-                    'item'
-                ])->whereHas('stockEntry', function($q) use ($request) {
+                    'item.storeCategory'
+                ])->whereHas('stockEntry', function ($q) use ($request) {
                     $q->where('entry_type', 'Finished Goods');
 
                     if ($request->filled('date')) {
                         try {
                             $stockDate = Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
                             $q->whereDate('stock_date', $stockDate);
-                        } catch (\Exception $e) {}
+                        } catch (\Exception $e) {
+                        }
                     }
                     if ($request->filled('from_date')) {
                         try {
                             $fromDate = Carbon::createFromFormat('d-m-Y', $request->from_date)->format('Y-m-d');
                             $q->whereDate('stock_date', '>=', $fromDate);
-                        } catch (\Exception $e) {}
+                        } catch (\Exception $e) {
+                        }
                     }
                     if ($request->filled('to_date')) {
                         try {
                             $toDate = Carbon::createFromFormat('d-m-Y', $request->to_date)->format('Y-m-d');
                             $q->whereDate('stock_date', '<=', $toDate);
-                        } catch (\Exception $e) {}
+                        } catch (\Exception $e) {
+                        }
                     }
                 });
 
@@ -81,8 +92,34 @@ class StockEntryController extends Controller
                 }
 
                 if ($request->grn_no) {
-                    $query->whereHas('stockEntry.productionReceipt.jobCard', function($q) use ($request) {
+                    $query->whereHas('stockEntry.productionReceipt.jobCard', function ($q) use ($request) {
                         $q->where('job_card_no', 'like', '%' . $request->grn_no . '%');
+                    });
+                }
+
+                if ($request->filled('warehouse_id')) {
+                    $whId = $request->warehouse_id;
+                    $query->where(function ($q) use ($whId) {
+                        $q->where('warehouse_id', $whId)
+                            ->orWhereHas('stockEntry', function ($q2) use ($whId) {
+                                $q2->where('warehouse_id', $whId)
+                                    ->orWhereHas('productionReceipt', function ($q3) use ($whId) {
+                                        $q3->where('warehouse_id', $whId);
+                                    });
+                            });
+                    });
+                }
+
+                if ($request->filled('store_type_id')) {
+                    $stId = $request->store_type_id;
+                    $query->where(function ($q) use ($stId) {
+                        $q->where('store_type_id', $stId)
+                            ->orWhereHas('stockEntry', function ($q2) use ($stId) {
+                                $q2->where('store_type_id', $stId)
+                                    ->orWhereHas('productionReceipt', function ($q3) use ($stId) {
+                                        $q3->where('store_type_id', $stId);
+                                    });
+                            });
                     });
                 }
 
@@ -94,9 +131,30 @@ class StockEntryController extends Controller
                         $q->where('art_no', 'like', "%{$search}%")
                             ->orWhere('finished_item_code', 'like', "%{$search}%")
                             ->orWhere('sku', 'like', "%{$search}%")
-                            ->orWhereHas('stockEntry', function($q2) use ($search) {
+                            ->orWhereHas('warehouse', function ($qw) use ($search) {
+                                $qw->where('warehouse_name', 'like', "%{$search}%");
+                            })
+                            ->orWhereHas('storeType', function ($qst) use ($search) {
+                                $qst->where('store_type_name', 'like', "%{$search}%");
+                            })
+                            ->orWhereHas('storeCategory', function ($qsc) use ($search) {
+                                $qsc->where('category_name', 'like', "%{$search}%");
+                            })
+                            ->orWhereHas('stockEntry', function ($q2) use ($search) {
                                 $q2->where('stock_entry_no', 'like', "%{$search}%")
-                                    ->orWhereHas('productionReceipt.jobCard', function($q3) use ($search) {
+                                    ->orWhereHas('warehouse', function ($qw2) use ($search) {
+                                        $qw2->where('warehouse_name', 'like', "%{$search}%");
+                                    })
+                                    ->orWhereHas('storeType', function ($qst2) use ($search) {
+                                        $qst2->where('store_type_name', 'like', "%{$search}%");
+                                    })
+                                    ->orWhereHas('productionReceipt.warehouse', function ($qw3) use ($search) {
+                                        $qw3->where('warehouse_name', 'like', "%{$search}%");
+                                    })
+                                    ->orWhereHas('productionReceipt.storeType', function ($qst3) use ($search) {
+                                        $qst3->where('store_type_name', 'like', "%{$search}%");
+                                    })
+                                    ->orWhereHas('productionReceipt.jobCard', function ($q3) use ($search) {
                                         $q3->where('job_card_no', 'like', "%{$search}%");
                                     });
                             });
@@ -117,7 +175,14 @@ class StockEntryController extends Controller
 
                 foreach ($items as $item) {
                     $entry = $item->stockEntry;
-                    if (!$entry) continue;
+                    if (!$entry)
+                        continue;
+
+                    $warehouseModel = $item->warehouse ?? $entry->warehouse ?? ($entry->productionReceipt ? $entry->productionReceipt->warehouse : null);
+                    $warehouseName = $warehouseModel ? $warehouseModel->warehouse_name : '-';
+
+                    $storeTypeModel = $item->storeType ?? $entry->storeType ?? ($entry->productionReceipt ? $entry->productionReceipt->storeType : null);
+                    $storeTypeName = $storeTypeModel ? $storeTypeModel->store_type_name : '-';
 
                     $materialDisplay = $item->finished_item_code ?: '-';
                     if ($item->size) {
@@ -145,6 +210,9 @@ class StockEntryController extends Controller
                         'DT_RowIndex' => $count++,
                         'stock_entry_no' => $entry->stock_entry_no,
                         'stock_date' => $entry->stock_date ? $entry->stock_date->format('d-m-Y') : '-',
+                        'warehouse' => $warehouseName,
+                        'store_type' => $storeTypeName,
+                        'store_category' => $storeTypeName,
                         'material_category' => '<span class="badge bg-label-info">Finished Goods</span>',
                         'art_no' => $item->art_no ?? '-',
                         'material' => $materialDisplay,
@@ -162,13 +230,14 @@ class StockEntryController extends Controller
                 if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-raw-materials')) {
                     return response()->json(['error' => 'Unauthorized'], 403);
                 }
-                $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType']);
-                
+                $query = StockEntry::with(['grnEntry', 'warehouse', 'storeType', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.storeType', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType', 'stockEntryItems.warehouse']);
+
                 if ($request->filled('date')) {
                     try {
                         $stockDate = Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
                         $query->whereDate('stock_date', $stockDate);
-                    } catch (\Exception $e) {}
+                    } catch (\Exception $e) {
+                    }
                 }
 
                 if ($request->material_category) {
@@ -245,6 +314,10 @@ class StockEntryController extends Controller
 
                     $categoryDisplay = $firstItem && $firstItem->storeCategory ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>' : '-';
 
+                    $storeTypeDisplay = $firstItem && $firstItem->storeType
+                        ? $firstItem->storeType->store_type_name
+                        : ($entry->storeType ? $entry->storeType->store_type_name : '-');
+
                     $artNo = $firstItem ? ($firstItem->art_no ?: '-') : '-';
 
                     $materialDisplay = $firstItem && $firstItem->rawMaterial
@@ -263,10 +336,15 @@ class StockEntryController extends Controller
                     }
                     $action .= '</div>';
 
+                    $rawWarehouse = $entry->warehouse ? $entry->warehouse->warehouse_name : ($firstItem && $firstItem->warehouse ? $firstItem->warehouse->warehouse_name : '-');
+
                     $data[] = [
                         'DT_RowIndex' => $count++,
                         'stock_entry_no' => $entry->stock_entry_no,
                         'stock_date' => $entry->stock_date->format('d-m-Y'),
+                        'warehouse' => $rawWarehouse,
+                        'store_type' => $storeTypeDisplay,
+                        'store_category' => $categoryDisplay,
                         'material_category' => $categoryDisplay,
                         'art_no' => $artNo,
                         'material' => $materialDisplay,
@@ -289,7 +367,10 @@ class StockEntryController extends Controller
             ]);
         }
 
-        return view('stock_entry.view');
+        $warehouses = Warehouse::where('status', 'Active')->orderBy('warehouse_name')->get();
+        $storeTypes = StoreType::where('status', 'Active')->orderBy('store_type_name')->get();
+
+        return view('stock_entry.view', compact('warehouses', 'storeTypes'));
     }
 
     public function add(Request $request, $id = null)
@@ -298,8 +379,7 @@ class StockEntryController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit stock-entry-raw-materials')) {
                 return unauthorizedRedirect();
             }
-        }
-        else {
+        } else {
             if (auth()->id() != 1 && !auth()->user()->can('create stock-entry-raw-materials')) {
                 return unauthorizedRedirect();
             }
@@ -325,7 +405,7 @@ class StockEntryController extends Controller
         $rawMaterials = RawMaterial::where('status', 'Active')->orderBy('name')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('store_location')->get();
         $uoms = Uom::where('status', 'Active')->orderBy('uom_name')->get();
-        $warehouses = Warehouse::where('status', 'Active')->orderBy('id','desc')->get();
+        $warehouses = Warehouse::where('status', 'Active')->orderBy('id', 'desc')->get();
 
         if ($request->isMethod('post')) {
             $rules = [
@@ -422,9 +502,9 @@ class StockEntryController extends Controller
                     addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
                 } else {
                     $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
-                                           ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
-                                           ->first();
-                    $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+                        ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
+                        ->first();
+                    $nextNumber = $lastEntry ? (int) substr($lastEntry->stock_entry_no, 2) + 1 : 1;
                     $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                     $headerData['created_by'] = auth()->id();
                     $stockEntry = StockEntry::create($headerData);
@@ -438,23 +518,23 @@ class StockEntryController extends Controller
                             $purchaseOrderItem = $grnEntryItem?->purchaseInvoiceItem?->purchaseOrderItem;
 
                             StockEntryItem::create([
-                                'stock_entry_id'     => $stockEntry->id,
-                                'stock_type'         => 'raw_material',
-                                'grn_entry_item_id'  => $item['grn_entry_item_id'] ?? null,
-                                'art_no'             => $grnEntryItem->art_no ?? null,
-                                'raw_material_id'    => $item['raw_material_id'] ?? null,
-                                'store_category_id'  => $item['store_category_id'] ?? null,
-                                'store_location_id'  => $item['store_location_id'],
-                                'warehouse_id'       => $request->warehouse_id ?? $item['warehouse_id'] ?? null,
-                                'uom_id'             => $item['uom_id'] ?? null,
-                                'qty_in'             => $item['qty_in'] ?? 0,
-                                'qty_out'            => 0,
-                                'price'              => $item['price'] ?? 0,
-                                'fabric_type_id'     => $item['fabric_type_id'] ?? null,
-                                'brand_id'           => $purchaseOrderItem->brand_id ?? null,
-                                'style_id'           => $purchaseOrderItem->style_id ?? null,
-                                'fabric_width_id'    => $purchaseOrderItem->fabric_width_id ?? null,
-                                'color_id'           => $purchaseOrderItem->color_id ?? null,
+                                'stock_entry_id' => $stockEntry->id,
+                                'stock_type' => 'raw_material',
+                                'grn_entry_item_id' => $item['grn_entry_item_id'] ?? null,
+                                'art_no' => $grnEntryItem->art_no ?? null,
+                                'raw_material_id' => $item['raw_material_id'] ?? null,
+                                'store_category_id' => $item['store_category_id'] ?? null,
+                                'store_location_id' => $item['store_location_id'],
+                                'warehouse_id' => $request->warehouse_id ?? $item['warehouse_id'] ?? null,
+                                'uom_id' => $item['uom_id'] ?? null,
+                                'qty_in' => $item['qty_in'] ?? 0,
+                                'qty_out' => 0,
+                                'price' => $item['price'] ?? 0,
+                                'fabric_type_id' => $item['fabric_type_id'] ?? null,
+                                'brand_id' => $purchaseOrderItem->brand_id ?? null,
+                                'style_id' => $purchaseOrderItem->style_id ?? null,
+                                'fabric_width_id' => $purchaseOrderItem->fabric_width_id ?? null,
+                                'color_id' => $purchaseOrderItem->color_id ?? null,
                             ]);
                         }
                     }
@@ -468,9 +548,9 @@ class StockEntryController extends Controller
         }
 
         $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
-                               ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
-                               ->first();
-        $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+            ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
+            ->first();
+        $nextNumber = $lastEntry ? (int) substr($lastEntry->stock_entry_no, 2) + 1 : 1;
         $nextStockNo = $id ? $stockEntry->stock_entry_no : 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
         $savedItems = [];
@@ -519,6 +599,7 @@ class StockEntryController extends Controller
             'stockEntryItems.color',
             'stockEntryItems.brand',
             'productionReceipt.storeType',
+            'productionReceipt.warehouse',
             'productionReceipt.jobCard.fabricType',
             'createdBy',
             'updatedBy'
@@ -630,7 +711,7 @@ class StockEntryController extends Controller
 
                 $previousAvailable = $item->qty_in - $item->qty_out;
                 $newAvailable = $previousAvailable + $adj['qty_to_add'];
-                
+
                 $item->qty_in = $item->qty_in + $adj['qty_to_add'];
                 $item->save();
 
@@ -801,15 +882,12 @@ class StockEntryController extends Controller
     {
         $headers = [
             'Stock Date',
-            'Brand',
-            'Warehouse',
             'Product Code',
             'Art No',
             'Size',
             'Color',
             'Style',
             'Sleeve Type',
-            'Store Type',
             'Qty In',
             'Qty Out',
             'Price',
@@ -825,15 +903,12 @@ class StockEntryController extends Controller
             fputcsv($file, $headers);
             fputcsv($file, [
                 date('d-m-Y'),
-                'CASINO FORMAL',
-                'KALAVASAL',
                 'CB-PRT-FS',
                 'CB0906-1',
                 '38',
                 'BLUE',
                 'PRINT',
                 'FULL',
-                'Finished Goods',
                 '50',
                 '0',
                 '499.00',
