@@ -233,8 +233,12 @@
                                     <span id="scan_msg"></span>
                                 </div>
                             </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <small class="text-muted">Tip: Scan a barcode or type item code to quickly add it to the order.</small>
+                            <div class="col-md-6 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                <small class="text-muted mb-0">Tip: Scan a barcode or type item code to quickly add it to the order.</small>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-medium">Total Qty:</span>
+                                    <input type="text" class="form-control-plaintext fw-bold py-0" id="total_qty_top" value="{{ old('total_qty', $salesOrder->total_qty ?? '0.00') }}" readonly style="width: 70px;">
+                                </div>
                             </div>
                         </div>
                         @error('items')
@@ -1593,6 +1597,7 @@ $(document).ready(function () {
         });
 
         $('#total_qty').val(totalQty.toFixed(2));
+        $('#total_qty_top').val(totalQty.toFixed(2));
         $('#sub_total_qty').val(subTotal.toFixed(2));
 
         const boxDiscountAmountPerPiece = parseFloat($('#box_discount_amount').val()) || 0;

@@ -272,6 +272,12 @@
                                             <span id="scan_msg"></span>
                                         </div>
                                     </div>
+                                    <div class="col-md-6 d-flex justify-content-end align-items-center">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-medium">Total Qty:</span>
+                                            <span class="fw-bold" id="item_details_total_qty">0.00</span>
+                                        </div>
+                                    </div>
                                 </div>
                             @endif
                             <div class="table-responsive">
@@ -718,9 +724,13 @@
                                             <span id="open_order_scan_msg"></span>
                                         </div>
                                     </div>
-                                    <div class="col-md-6 d-flex align-items-center">
-                                        <small class="text-muted">Tip: Scan a barcode or type item code to quickly add it
+                                    <div class="col-md-6 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                                        <small class="text-muted mb-0">Tip: Scan a barcode or type item code to quickly add it
                                             to the open order.</small>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-medium">Total Qty:</span>
+                                            <span class="fw-bold" id="open_order_total_qty">0.00</span>
+                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -2371,10 +2381,20 @@
                 $('#sub_total_val').text(subTotal.toFixed(2));
                 $('#sub_total').val(subTotal.toFixed(2));
 
-                var totalQty = 0;
-                $('.qty, .open-qty').each(function() {
-                    totalQty += parseFloat($(this).val()) || 0;
+                var itemDetailsTotalQty = 0;
+                $('.qty').each(function() {
+                    itemDetailsTotalQty += parseFloat($(this).val()) || 0;
                 });
+
+                var openOrderTotalQty = 0;
+                $('.open-qty').each(function() {
+                    openOrderTotalQty += parseFloat($(this).val()) || 0;
+                });
+
+                $('#item_details_total_qty').text(itemDetailsTotalQty.toFixed(2));
+                $('#open_order_total_qty').text(openOrderTotalQty.toFixed(2));
+
+                var totalQty = itemDetailsTotalQty + openOrderTotalQty;
                 $('#total_qty_val').text(totalQty.toFixed(2));
                 $('#total_qty').val(totalQty.toFixed(2));
 
