@@ -33,6 +33,12 @@
                 <i class="ri ri-funds-line me-1"></i> Costing Analysis
             </a>
             @endif
+
+            @if(auth()->id() == 1 || auth()->user()->can('issue-item job-card') || auth()->user()->can('edit job-card'))
+            <a href="{{ url('job_card_entries/additional-qty/' . $jobCard->id) }}" class="btn btn-warning me-2 fw-semibold">
+                <i class="ri ri-add-circle-line me-1"></i> Additional Qty
+            </a>
+            @endif
             
             <a href="{{ url('job_card_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line me-1"></i> Back to List</a>
 
@@ -49,6 +55,11 @@
                 <div class="badge bg-label-info px-3 py-2 border border-info">
                     <i class="ri-t-shirt-line me-1"></i> <span class="fw-semibold">Total Qty:</span> {{ number_format($jobCard->grand_total_qty, 0) }}
                 </div>
+                @if($jobCard->additional_qty > 0)
+                <div class="badge bg-label-warning px-3 py-2 border border-warning">
+                    <i class="ri-add-line me-1"></i> <span class="fw-semibold">Added Extra Qty:</span> +{{ number_format($jobCard->additional_qty, 0) }} pcs
+                </div>
+                @endif
                 @if(!$isCanvas)
                 <div class="badge bg-label-primary px-3 py-2 border border-primary">
                     <i class="ri-t-shirt-2-line me-1"></i> <span class="fw-semibold">F/S Qty:</span> {{ number_format($jobCard->total_qty_fs, 0) }}
@@ -838,6 +849,7 @@ $(document).ready(function() {
             e.preventDefault();
         }
     });
+
 });
 </script>
 
