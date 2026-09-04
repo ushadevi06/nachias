@@ -33,7 +33,7 @@ class ProductionReceiptController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation', 'warehouse'])->orderBy('id', 'desc');
+            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation', 'warehouse', 'additionalBatch'])->orderBy('id', 'desc');
 
             $totalRecords = $query->count();
 
@@ -120,10 +120,17 @@ class ProductionReceiptController extends Controller
                     ? '<span class="badge bg-label-success">Posted</span>'
                     : '<span class="badge bg-label-warning">Draft</span>';
 
+                $jobCardLabel = $row->jobCard ? $row->jobCard->job_card_no : '-';
+                if ($row->is_additional && $row->additionalBatch) {
+                    $jobCardLabel .= ' <span class="badge bg-warning text-white" style="font-size: 10px;">+' . intval($row->additionalBatch->batch_total_qty ?? $row->additionalBatch->total_qty) . ' pcs</span>';
+                } elseif ($row->is_additional && $row->jobCard && floatval($row->jobCard->additional_qty) > 0) {
+                    $jobCardLabel .= ' <span class="badge bg-warning text-white" style="font-size: 10px;">+' . intval($row->jobCard->additional_qty) . ' pcs</span>';
+                }
+
                 $data[] = [
                     'DT_RowIndex' => $i++,
                     'receipt_no' => $row->receipt_no ?? ('RCPT-' . str_pad($row->id, 4, '0', STR_PAD_LEFT)),
-                    'job_card_no' => $row->jobCard ? $row->jobCard->job_card_no : '-',
+                    'job_card_no' => $jobCardLabel,
                     'receipt_date' => $row->receipt_date ? date('d-m-Y', strtotime($row->receipt_date)) : '-',
                     'warehouse' => $row->warehouse ? $row->warehouse->warehouse_name : '-',
                     'store' => $row->storeType ? $row->storeType->store_type_name : '-',
@@ -170,7 +177,9 @@ class ProductionReceiptController extends Controller
 
         if ($id) {
             $currentReceipt = ProductionReceipt::find($id);
-            $jobCards = JobCardEntry::with('serviceProvider')
+            $jobCards = JobCardEntry::with(['serviceProvider', 'fabricDetails' => function($q) {
+                $q->where('is_additional', 1);
+            }])
                 ->where(function ($query) use ($currentReceipt, $fullyReceivedJobCardIds) {
                 $query->whereNotIn('id', $fullyReceivedJobCardIds);
                 if ($currentReceipt && $currentReceipt->job_card_id) {
@@ -179,7 +188,9 @@ class ProductionReceiptController extends Controller
             })->orderBy('id', 'desc')->get();
         }
         else {
-            $jobCards = JobCardEntry::with('serviceProvider')
+            $jobCards = JobCardEntry::with(['serviceProvider', 'fabricDetails' => function($q) {
+                $q->where('is_additional', 1);
+            }])
                 ->whereNotIn('id', $fullyReceivedJobCardIds)
                 ->orderBy('id', 'desc')->get();
         }
@@ -188,6 +199,20 @@ class ProductionReceiptController extends Controller
         $employees = User::where('status', 'Active')->where('id', '!=', 1)->orderBy('id','desc')->get();
 
         if ($request->isMethod('post')) {
+            if (is_string($request->job_card_id) && str_contains($request->job_card_id, '_add_')) {
+                $parts = explode('_add_', $request->job_card_id);
+                $request->merge([
+                    'job_card_id' => $parts[0],
+                    'job_card_fabric_detail_id' => $parts[1],
+                    'is_additional' => 1
+                ]);
+            } else {
+                $request->merge([
+                    'is_additional' => 0,
+                    'job_card_fabric_detail_id' => null
+                ]);
+            }
+
             $rules = [
                 'job_card_id' => 'required|exists:job_card_entries,id',
                 'receipt_date' => 'required|date_format:d-m-Y',
@@ -230,6 +255,8 @@ class ProductionReceiptController extends Controller
                 $data = [
 
                     'job_card_id' => $request->job_card_id,
+                    'is_additional' => $request->is_additional ?? 0,
+                    'job_card_fabric_detail_id' => $request->job_card_fabric_detail_id ?? null,
                     'employee_id' => $request->employee_id,
                     'order_due_date' => $orderDueDate,
                     'receipt_no' => $request->receipt_no ?: ($receipt->receipt_no ?? ('RCPT-' . date('Y') . '-' . str_pad(ProductionReceipt::count() + 1, 4, '0', STR_PAD_LEFT))),
@@ -895,12 +922,26 @@ class ProductionReceiptController extends Controller
         };
 
 
+        $fabricDetailId = $request->input('job_card_fabric_detail_id');
+        $isAdditional = $request->input('is_additional');
+
         $isCanvas = false;
         if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
             $isCanvas = true;
         }
 
         $allMaterials = $jobCard->fabricDetails->values();
+        if ($fabricDetailId) {
+            $targetFabric = $jobCard->fabricDetails->firstWhere('id', $fabricDetailId);
+            if ($targetFabric && !empty($targetFabric->additional_batch_no)) {
+                $allMaterials = $jobCard->fabricDetails->where('additional_batch_no', $targetFabric->additional_batch_no)->values();
+            } else {
+                $allMaterials = $allMaterials->where('id', $fabricDetailId)->values();
+            }
+        } elseif ($isAdditional !== null && $isAdditional == '0') {
+            $allMaterials = $allMaterials->where('is_additional', '!=', 1)->values();
+        }
+
         $fabricDetails = $allMaterials->filter(function ($fd) use ($getStoreCategoryIdForArtNo, $isCanvas) {
             $cat = $getStoreCategoryIdForArtNo($fd->art_no);
             $hasMatrix = \App\Models\JobCardMatrixQuantity::where('job_card_fabric_detail_id', $fd->id)->exists();
@@ -959,9 +1000,22 @@ class ProductionReceiptController extends Controller
 
         $excludeReceiptId = $request->input('exclude_receipt_id');
         $existingReceiptIds = ProductionReceipt::where('job_card_id', $id)
+            ->when($fabricDetailId, function ($q) use ($fabricDetailId, $jobCard) {
+                $targetFabric = $jobCard->fabricDetails->firstWhere('id', $fabricDetailId);
+                if ($targetFabric && !empty($targetFabric->additional_batch_no)) {
+                    $batchFabricIds = $jobCard->fabricDetails->where('additional_batch_no', $targetFabric->additional_batch_no)->pluck('id');
+                    return $q->whereIn('job_card_fabric_detail_id', $batchFabricIds);
+                }
+                return $q->where('job_card_fabric_detail_id', $fabricDetailId);
+            })
+            ->when(!$fabricDetailId && $isAdditional !== null && $isAdditional == '0', function ($q) {
+                return $q->where(function($sub) {
+                    $sub->whereNull('is_additional')->orWhere('is_additional', 0);
+                });
+            })
             ->when($excludeReceiptId, function ($q) use ($excludeReceiptId) {
-            return $q->where('id', '!=', $excludeReceiptId);
-        })->pluck('id');
+                return $q->where('id', '!=', $excludeReceiptId);
+            })->pluck('id');
         
         $existingReceiptsItems = ProductionReceiptItem::whereIn('production_receipt_id', $existingReceiptIds)
             ->get()
@@ -1124,9 +1178,9 @@ class ProductionReceiptController extends Controller
             'consumption_details' => $consumptionDetails
             ];
         };
-        $missingItemPrice = false;
+        $missingPriceArtNos = [];
         
-        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap, $isCanvas, &$missingItemPrice) {
+        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap, $isCanvas, &$missingPriceArtNos) {
             if ($qty > 0) {
                 $sizeVariant = $sleeve ? $size . ' - ' . $sleeve : $size;
                 $itemKey = $jobCard->item_id ?? '0';
@@ -1192,7 +1246,7 @@ class ProductionReceiptController extends Controller
                         ->first();
 
                     if (!$itemPrice) {
-                        $missingItemPrice = true;
+                        $missingPriceArtNos[$normalizedArtNo] = $normalizedArtNo;
                     }
 
                     $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
@@ -1308,10 +1362,43 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        if ($missingItemPrice) {
+        if (!empty($missingPriceArtNos)) {
+            $unissuedArtNos = [];
+            $priceMissingArtNos = [];
+
+            foreach ($missingPriceArtNos as $artNo) {
+                $isIssued = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                    ->where(function($q) use ($artNo) {
+                        $q->whereHas('fabricDetail', function($fq) use ($artNo) {
+                            $fq->where('art_no', $artNo);
+                        })
+                        ->orWhereHas('rawMaterial', function($rq) use ($artNo) {
+                            $rq->where('code', $artNo)->orWhere('name', $artNo);
+                        });
+                    })
+                    ->where('qty_used', '>', 0)
+                    ->exists();
+
+                if (!$isIssued) {
+                    $unissuedArtNos[] = $artNo;
+                } else {
+                    $priceMissingArtNos[] = $artNo;
+                }
+            }
+
+            $errorMessages = [];
+            if (!empty($unissuedArtNos)) {
+                $unissuedList = implode(', ', array_unique($unissuedArtNos));
+                $errorMessages[] = "Art No: [{$unissuedList}] does not exist or has not been issued in Job Card Issue Item. Please go to Job Card Issue Item and issue this item first.";
+            }
+            if (!empty($priceMissingArtNos)) {
+                $priceList = implode(', ', array_unique($priceMissingArtNos));
+                $errorMessages[] = "Art No: [{$priceList}] does not exist in the Item Price Master. Please configure the Item Price before creating the Production Receipt.";
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'One or more items from the selected Job Card do not exist in the Item Price Master. Please configure the Item Price before creating the Production Receipt.'
+                'message' => implode(' ', $errorMessages)
             ]);
         }
 
@@ -1464,7 +1551,8 @@ class ProductionReceiptController extends Controller
             'storeLocation',
             'warehouse',
             'employee',
-            'items.uom'
+            'items.uom',
+            'additionalBatch'
         ])->findOrFail($id);
 
         foreach ($receipt->items as $item) {
@@ -1514,7 +1602,8 @@ class ProductionReceiptController extends Controller
             'storeLocation',
             'warehouse',
             'employee',
-            'items.uom'
+            'items.uom',
+            'additionalBatch'
         ])->findOrFail($id);
 
         foreach ($receipt->items as $item) {
@@ -1542,7 +1631,8 @@ class ProductionReceiptController extends Controller
             'storeLocation',
             'warehouse',
             'employee',
-            'items.uom'
+            'items.uom',
+            'additionalBatch'
         ])->findOrFail($id);
 
         foreach ($receipt->items as $item) {

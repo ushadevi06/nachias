@@ -32,8 +32,147 @@ class TaskManagementController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view task-management')) {
             return unauthorizedRedirect();
         }
+
+        if ($request->ajax()) {
+            $query = Task::with(['jobCard.serviceProvider', 'stage.operationStage', 'operationStage', 'assignments.assignee', 'assignments.service']);
+
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('task_no', 'like', "%{$search}%")
+                      ->orWhere('status', 'like', "%{$search}%")
+                      ->orWhere('issue_date', 'like', "%{$search}%")
+                      ->orWhere(DB::raw('DATE_FORMAT(issue_date, "%d-%m-%Y")'), 'like', "%{$search}%")
+                      ->orWhere('due_date', 'like', "%{$search}%")
+                      ->orWhere(DB::raw('DATE_FORMAT(due_date, "%d-%m-%Y")'), 'like', "%{$search}%")
+                      ->orWhereHas('jobCard', function($q2) use ($search) {
+                          $q2->where('job_card_no', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('jobCard.serviceProvider', function($q3) use ($search) {
+                          $q3->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('stage', function($q4) use ($search) {
+                          $q4->where('start_date', 'like', "%{$search}%")
+                             ->orWhere('end_date', 'like', "%{$search}%")
+                             ->orWhere('due_date', 'like', "%{$search}%")
+                             ->orWhere(DB::raw('DATE_FORMAT(start_date, "%d-%m-%Y")'), 'like', "%{$search}%")
+                             ->orWhere(DB::raw('DATE_FORMAT(end_date, "%d-%m-%Y")'), 'like', "%{$search}%")
+                             ->orWhere(DB::raw('DATE_FORMAT(due_date, "%d-%m-%Y")'), 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('operationStage', function($q5) use ($search) {
+                          $q5->where('operation_stage_name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('stage.operationStage', function($q6) use ($search) {
+                          $q6->where('operation_stage_name', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            if ($request->has('status') && !empty($request->status)) {
+                $query->where('status', $request->status);
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
+            // DataTable sorting
+            if ($request->has('order')) {
+                $orderColumnIndex = $request->input('order.0.column');
+                $orderDir = $request->input('order.0.dir');
+                $columns = $request->input('columns');
+                
+                if (isset($columns[$orderColumnIndex]['name'])) {
+                    $orderColumnName = $columns[$orderColumnIndex]['name'];
+                    if (in_array($orderColumnName, ['task_no', 'status'])) {
+                        $query->orderBy($orderColumnName, $orderDir);
+                    } else {
+                        $query->orderBy('id', 'desc');
+                    }
+                } else {
+                    $query->orderBy('id', 'desc');
+                }
+            } else {
+                $query->orderBy('id', 'desc');
+            }
+
+            $tasks = $query->get();
+            $data = [];
+
+            foreach ($tasks as $index => $t) {
+                // Stage Name
+                $stageName = 'No Stage';
+                $stage = $t->stage;
+                if (!$stage && $t->job_card_entry_id) {
+                    $osId = $t->operation_stage_id ?? $t->stage_id;
+                    $stage = ProcessSchedule::where('job_card_entry_id', $t->job_card_entry_id)->where('operation_stage_id', $osId)->first();
+                }
+
+                if ($stage) {
+                    $stageName = $stage->operationStage ? $stage->operationStage->operation_stage_name : ($stage->stage ?: 'No Stage');
+                } elseif ($t->operationStage) {
+                    $stageName = $t->operationStage->operation_stage_name ?: 'No Stage';
+                }
+
+                // Plant Name
+                $plantName = ($t->jobCard && $t->jobCard->serviceProvider) ? $t->jobCard->serviceProvider->name : '-';
+
+                $startDate = $t->issue_date ? date('d-m-Y', strtotime($t->issue_date)) : (($stage && $stage->start_date) ? date('d-m-Y', strtotime($stage->start_date)) : '-');
+                $endDate = $t->due_date ? date('d-m-Y', strtotime($t->due_date)) : (($stage && $stage->due_date) ? date('d-m-Y', strtotime($stage->due_date)) : '-');
+
+                // Status Badge
+                $statusName = $t->status ?: 'Planned';
+                $badgeClass = 'bg-label-primary';
+                if ($statusName === 'Completed') $badgeClass = 'bg-label-success';
+                else if ($statusName === 'In Progress') $badgeClass = 'bg-label-info';
+                else if ($statusName === 'Hold') $badgeClass = 'bg-label-warning';
+                
+                $statusBadge = '<span class="badge ' . $badgeClass . '">' . $statusName . '</span>';
+
+                // Action Buttons
+                $action = '<div class="button-box">';
+                if (auth()->id() == 1 || auth()->user()->can('view_details task-management')) {
+                    $action .= '<a href="' . url('task_management/view/' . $t->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                }
+                if (auth()->id() == 1 || auth()->user()->can('edit task-management') || auth()->user()->can('assign-task job-card')) {
+                    $action .= '<a href="' . url('task_management/add/' . $t->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                }
+                $action .= '</div>';
+
+                $jcBadge = '';
+                if ($t->is_additional) {
+                    $jcBadge = ' <span class="badge bg-warning text-dark ms-1" style="font-size:10px;"><i class="ri ri-add-line"></i> Extra Batch' . ($t->job_card_fabric_detail_id ? ' #' . $t->job_card_fabric_detail_id : '') . '</span>';
+                }
+
+                $data[] = [
+                    'DT_RowIndex' => $start + $index + 1,
+                    'task_no' => $t->task_no . '<br><small class="text-muted">' . ($t->jobCard ? $t->jobCard->job_card_no : '') . '</small>' . $jcBadge,
+                    'plant' => $plantName,
+                    'stage_dept' => $stageName,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'status' => $statusBadge,
+                    'action' => $action
+                ];
+            }
+
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
+        }
+
         $allStatuses = TaskStatus::all();
-        return view('task_management/view', compact('allStatuses'));
+        return view('task_management.view', compact('allStatuses'));
     }
 
     public function fetch(Request $request)
@@ -42,7 +181,7 @@ class TaskManagementController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $tasks = Task::with(['jobCard', 'stage.operationStage', 'operationStage', 'assignments'])->get();
+        $tasks = Task::with(['jobCard', 'stage.operationStage', 'operationStage', 'assignments', 'additionalBatch'])->get();
         $allStatuses = TaskStatus::all();
 
         $boards = [];
@@ -69,12 +208,11 @@ class TaskManagementController extends Controller
                 $stageName = $t->operationStage->operation_stage_name ?: 'No Stage';
             }
 
-            $targetQty = (float) ($t->jobCard->grand_total_qty ?? 0);
-            if ($targetQty == 0 && $stage) {
-                $targetQty = (float) ($stage->planned_qty ?? 0);
-            }
-            if ($targetQty == 0) {
-                $targetQty = (float) ($t->issue_qty ?? 0);
+            $targetQty = (float) ($t->issue_qty ?? 0);
+            if ($targetQty == 0 && $t->is_additional && $t->additionalBatch) {
+                $targetQty = (float) ($t->additionalBatch->batch_total_qty ?? $t->additionalBatch->total_qty);
+            } elseif ($targetQty == 0 && $t->jobCard) {
+                $targetQty = (float) ($t->jobCard->fabricDetails->where('is_additional', 0)->sum('total_qty') ?: ($t->jobCard->grand_total_qty - ($t->jobCard->additional_qty ?? 0)));
             }
 
             $totalReceived = 0;
@@ -82,12 +220,18 @@ class TaskManagementController extends Controller
                 $totalReceived += (float) $assign->completed_qty + (float) $assign->wastage_qty;
             }
 
+            $taskTitle = ($t->job_card_no ?? 'No JC');
+            if ($t->is_additional) {
+                $taskTitle .= ' [Extra Batch' . ($t->job_card_fabric_detail_id ? ' #' . $t->job_card_fabric_detail_id : '') . ']';
+            }
+            $taskTitle .= ' - ' . (int) $targetQty . ' PCS';
+
             if (isset($boards[$statusName])) {
                 $boards[$statusName]['item'][] = [
                     'id' => $t->id,
                     'eid' => $t->id,
                     'task_no' => $t->task_no,
-                    'title' => ($t->job_card_no ?? 'No JC') . ' - ' . (int) $targetQty . ' PCS',
+                    'title' => $taskTitle,
                     'stage_name' => $stageName,
                     'badge-text' => $statusName,
                     'start-date' => $t->issue_date ? Carbon::parse($t->issue_date)->format('d-m-Y') : 'N/A',
@@ -118,18 +262,28 @@ class TaskManagementController extends Controller
         $task = null;
         $jobCard = null;
         $stages = collect([]);
+        $isAdditional = request()->boolean('is_additional') || request()->input('is_additional') == 1;
+        $batchId = request()->input('job_card_fabric_detail_id') ?: request()->input('batch_id');
+        $additionalBatch = null;
 
         if ($id) {
             $task = Task::with([
-                'jobCard',
+                'jobCard.fabricDetails.quantities',
                 'stage.operationStage',
                 'assignee',
                 'assignments.assignee',
-                'assignments.service'
+                'assignments.service',
+                'additionalBatch'
             ])->findOrFail($id);
 
+            if ($task->is_additional) {
+                $isAdditional = true;
+                $batchId = $task->job_card_fabric_detail_id;
+                $additionalBatch = $task->additionalBatch;
+            }
+
             if (!$jobCard && $task->job_card_entry_id) {
-                $jobCard = JobCardEntry::find($task->job_card_entry_id);
+                $jobCard = JobCardEntry::with(['fabricDetails.quantities'])->find($task->job_card_entry_id);
             }
 
             if ($jobCard) {
@@ -150,11 +304,15 @@ class TaskManagementController extends Controller
             }
         } else {
             if (request()->has('job_card_id')) {
-                $jobCard = JobCardEntry::find(request()->job_card_id);
+                $jobCard = JobCardEntry::with(['fabricDetails.quantities'])->find(request()->job_card_id);
                 if ($jobCard) {
                     $jobCardId = $jobCard->id;
                     $stages = ProcessSchedule::with(['operationStage', 'serviceProvider'])->where('job_card_entry_id', $jobCardId)->get();
                 }
+            }
+
+            if ($isAdditional && $batchId) {
+                $additionalBatch = \App\Models\JobCardFabricDetail::with('quantities')->find($batchId);
             }
         }
 
@@ -172,7 +330,6 @@ class TaskManagementController extends Controller
 
             if (!$id && $psStage) {
                 $jobCardId = $psStage->job_card_entry_id;
-                
                 $taskOpStageIds = Task::with('stage')
                     ->where('job_card_entry_id', $jobCardId)
                     ->get()
@@ -310,12 +467,22 @@ class TaskManagementController extends Controller
                     $serviceMaxQty = $stageMaxQty;
                     
                     if ($service && $jobCard) {
-                        if ($service->base_quantity_source == 'FS Qty') {
-                            $serviceMaxQty = $jobCard->total_qty_fs ?? $serviceMaxQty;
-                        } elseif ($service->base_quantity_source == 'HS Qty') {
-                            $serviceMaxQty = $jobCard->total_qty_hs ?? $serviceMaxQty;
+                        if ($isAdditional && $additionalBatch) {
+                            if ($service->base_quantity_source == 'FS Qty') {
+                                $serviceMaxQty = $additionalBatch->batch_fs_qty ?: $additionalBatch->batch_total_qty;
+                            } elseif ($service->base_quantity_source == 'HS Qty') {
+                                $serviceMaxQty = $additionalBatch->batch_hs_qty ?: $additionalBatch->batch_total_qty;
+                            } else {
+                                $serviceMaxQty = $additionalBatch->batch_total_qty;
+                            }
                         } else {
-                            $serviceMaxQty = $jobCard->grand_total_qty ?? $serviceMaxQty;
+                            if ($service->base_quantity_source == 'FS Qty') {
+                                $serviceMaxQty = $jobCard->total_qty_fs ?? $serviceMaxQty;
+                            } elseif ($service->base_quantity_source == 'HS Qty') {
+                                $serviceMaxQty = $jobCard->total_qty_hs ?? $serviceMaxQty;
+                            } else {
+                                $serviceMaxQty = $jobCard->grand_total_qty ?? $serviceMaxQty;
+                            }
                         }
                     }
 
@@ -345,7 +512,7 @@ class TaskManagementController extends Controller
                 }
             }
 
-            $commonData = $request->only(['job_card_entry_id', 'job_card_no', 'stage_id', 'issued_by', 'remarks', 'status']);
+            $commonData = $request->only(['job_card_entry_id', 'job_card_no', 'stage_id', 'is_additional', 'job_card_fabric_detail_id', 'issued_by', 'remarks', 'status']);
 
             DB::beginTransaction();
             try {
@@ -415,10 +582,13 @@ class TaskManagementController extends Controller
                         'task_id' => $task->id,
                         'issued_to' => $isAssigned ? $assign['issued_to'] : null,
                         'issue_qty' => $assign['issue_qty'] ?? 0,
+                        'issue_date' => !empty($assign['issue_date']) ? $this->formatDate($assign['issue_date']) : null,
+                        'due_date' => !empty($assign['due_date']) ? $this->formatDate($assign['due_date']) : null,
+                        'remarks' => $assign['remarks'] ?? null,
                         'total_hrs' => $assign['total_hrs'] ?? 0,
                         'status' => $status,
-                        'remarks' => $assign['remarks'] ?? null,
                         'created_by' => auth()->id(),
+                        'updated_by' => auth()->id()
                     ];
                     
                     if (isset($assign['id']) && $existingAssignmentsMap->has($assign['id'])) {
@@ -436,9 +606,6 @@ class TaskManagementController extends Controller
                     }
 
                     $totalIssueQty += (float) ($assign['issue_qty'] ?? 0);
-
-                    $assignData['issue_date'] = $this->formatDate($assign['issue_date'] ?? null);
-                    $assignData['due_date'] = $this->formatDate($assign['due_date'] ?? null);
 
                     $serviceId = $assign['service_id'] ?? $assign['services'] ?? null;
                     if (is_array($serviceId)) {
@@ -460,10 +627,9 @@ class TaskManagementController extends Controller
                     TaskAssignEmployee::create($assignData);
                 }
 
-                $jc = JobCardEntry::find($task->job_card_entry_id);
                 $task->update([
                     'services' => array_values(array_unique($allServiceIds)),
-                    'issue_qty' => $jc->grand_total_qty ?? $totalIssueQty
+                    'issue_qty' => $totalIssueQty
                 ]);
 
                 DB::commit();
@@ -522,6 +688,16 @@ class TaskManagementController extends Controller
             $selectedSchedule = ProcessSchedule::with(['operationStage'])->find($finalStageId);
         }
 
+        // Adjust planned_qty on selectedSchedule for display in task form
+        if ($selectedSchedule) {
+            if ($isAdditional && $additionalBatch) {
+                $selectedSchedule->planned_qty = $additionalBatch->batch_total_qty;
+            } elseif ($jobCard) {
+                $mainPlannedTotal = max(0, intval($jobCard->grand_total_qty) - intval($jobCard->additional_qty ?? 0));
+                $selectedSchedule->planned_qty = $mainPlannedTotal > 0 ? $mainPlannedTotal : ($selectedSchedule->planned_qty ?? 0);
+            }
+        }
+
         if ($selectedSchedule) {
             $query = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active');
             if ($jobCard && $jobCard->process_group_id) {
@@ -529,15 +705,31 @@ class TaskManagementController extends Controller
                     $q->where('process_groups.id', $jobCard->process_group_id);
                 });
             }
-            $services = $query->orderBy('sequence', 'asc')->get()->map(function ($s) use ($selectedSchedule, $jobCard) {
+            $services = $query->orderBy('sequence', 'asc')->get()->map(function ($s) use ($selectedSchedule, $jobCard, $isAdditional, $additionalBatch) {
                 $qty = $selectedSchedule->planned_qty ?? 0;
-                if ($jobCard) {
+                if ($isAdditional && $additionalBatch) {
                     if ($s->base_quantity_source == 'FS Qty') {
-                        $qty = $jobCard->total_qty_fs ?? $qty;
+                        $qty = $additionalBatch->batch_fs_qty ?: $additionalBatch->batch_total_qty;
                     } elseif ($s->base_quantity_source == 'HS Qty') {
-                        $qty = $jobCard->total_qty_hs ?? $qty;
+                        $qty = $additionalBatch->batch_hs_qty ?: $additionalBatch->batch_total_qty;
                     } else {
-                        $qty = $jobCard->grand_total_qty ?? $qty;
+                        $qty = $additionalBatch->batch_total_qty;
+                    }
+                } elseif ($jobCard) {
+                    $extraFs = $jobCard->fabricDetails->where('is_additional', 1)->sum('fs_qty');
+                    $mainFs = max(0, intval($jobCard->total_qty_fs ?? 0) - intval($extraFs));
+
+                    $extraHs = $jobCard->fabricDetails->where('is_additional', 1)->sum('hs_qty');
+                    $mainHs = max(0, intval($jobCard->total_qty_hs ?? 0) - intval($extraHs));
+
+                    $mainTotal = max(0, intval($jobCard->grand_total_qty) - intval($jobCard->additional_qty ?? 0));
+
+                    if ($s->base_quantity_source == 'FS Qty') {
+                        $qty = $mainFs;
+                    } elseif ($s->base_quantity_source == 'HS Qty') {
+                        $qty = $mainHs;
+                    } else {
+                        $qty = $mainTotal > 0 ? $mainTotal : ($jobCard->grand_total_qty ?? $qty);
                     }
                 }
                 return [
@@ -564,7 +756,25 @@ class TaskManagementController extends Controller
                 ->first() ?? '';
         }
 
-        return view('task_management/add', compact('task', 'jobCard', 'stages', 'users', 'supervisors', 'nextTaskNo', 'allStatuses', 'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts', 'taskAdjustments', 'services', 'jobCardGrnNo'));
+        return view('task_management/add', compact(
+            'task', 
+            'jobCard', 
+            'stages', 
+            'users', 
+            'supervisors', 
+            'nextTaskNo', 
+            'allStatuses', 
+            'nextAdjNo', 
+            'relatedTasks', 
+            'taskAdjustment', 
+            'shifts', 
+            'taskAdjustments', 
+            'services', 
+            'jobCardGrnNo',
+            'isAdditional',
+            'batchId',
+            'additionalBatch'
+        ));
     }
 
     public function view($id)

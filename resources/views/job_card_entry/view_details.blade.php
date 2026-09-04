@@ -708,7 +708,6 @@
                                     </tr>
                                 </tbody>
                             </table>
-                            @endforeach
 
                             <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                                 <thead>
@@ -759,7 +758,7 @@
                                         $hs_summary = array_fill_keys($activeHs, 0);
                                         $grand_total = 0;
                                     @endphp
-                                    @foreach($fabricDetails as $detail)
+                                    @foreach($chunk as $detail)
                                         @php
                                             $row_total = $detail->row_total ?: $detail->quantities->sum('total_qty');
                                             $grand_total += $row_total;
@@ -820,6 +819,10 @@
                                     </tr>
                                 </tfoot>
                             </table>
+                            @if(!$loop->last)
+                                <div class="page-break" style="page-break-after: always; display: none;"></div>
+                            @endif
+                            @endforeach
                             {{-- Authorised Signatures Section --}}
                             <div class="mt-4">
                                 <style>

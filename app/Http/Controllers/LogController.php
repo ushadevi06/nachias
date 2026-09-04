@@ -88,8 +88,8 @@ class LogController extends Controller
         $newValues = $log->new_values ? json_decode($log->new_values, true) : [];
         
         // Fields to exclude from display
-        $excludeFields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at'];
-        
+        // $excludeFields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at'];
+        $excludeFields = ['id', 'created_by', 'updated_by', 'deleted_at'];
         $changedFields = [];
         
         // Helper function to format values

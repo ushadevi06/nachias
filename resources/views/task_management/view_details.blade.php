@@ -37,8 +37,11 @@
                                 <h3 class="fw-bold text-primary mb-0 me-3">{{ $task->task_no }}</h3>
                                 <span class="badge bg-label-primary rounded-pill fw-bold">{{ $task->production_no }}</span>
                             </div>
-                            <p class="text-muted mb-0">
-                                <i class="ri ri-git-merge-line me-1 text-primary"></i> Linked Job Card: <span class="fw-bold text-dark">{{ $task->job_card_no }}</span>
+                            <p class="text-muted mb-0 d-flex align-items-center flex-wrap gap-2">
+                                <span><i class="ri ri-git-merge-line me-1 text-primary"></i> Linked Job Card: <span class="fw-bold text-dark">{{ $task->job_card_no }}</span></span>
+                                @if($task->is_additional)
+                                    <span class="badge bg-warning text-dark"><i class="ri ri-add-circle-line me-1"></i> Additional Qty Batch {{ $task->job_card_fabric_detail_id ? '#' . $task->job_card_fabric_detail_id : '' }}</span>
+                                @endif
                             </p>
                         </div>
                         <div class="col-md-5 text-md-end mt-3 mt-md-0">

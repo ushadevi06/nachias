@@ -4,7 +4,14 @@
 <div class="container-xxl section-padding">
     <div class="row g-4">
         <div class="col-lg-12 d-flex justify-content-between align-items-center">
-            <h4>Production Receipt</h4>
+            <div class="d-flex align-items-center">
+                <h4 class="mb-0">Production Receipt</h4>
+                @if($receipt->is_additional)
+                    <span class="badge bg-warning text-white ms-2 px-2 py-1" style="font-size: 13px;">
+                        <i class="ri-add-circle-line me-1"></i> Additional Qty Batch
+                    </span>
+                @endif
+            </div>
             <div class="d-flex gap-2">
                 <a href="{{ route('production_receipts.download_pdf', $receipt->id) }}" class="btn btn-primary" target="_blank">
                     <i class="ri ri-download-line me-1"></i> Download
@@ -33,7 +40,14 @@
                     <div class="row g-3">
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Job Card No</label>
-                            <p>{{ $receipt->jobCard->job_card_no ?? '-' }}</p>
+                            <p>
+                                <span class="fw-semibold text-dark">{{ $receipt->jobCard->job_card_no ?? '-' }}</span>
+                                @if($receipt->is_additional && $receipt->additionalBatch)
+                                    <span class="badge bg-warning text-white ms-1" style="font-size: 11px;">Additional: +{{ intval($receipt->additionalBatch->batch_total_qty ?? $receipt->additionalBatch->total_qty) }} pcs</span>
+                                @elseif($receipt->is_additional && $receipt->jobCard && floatval($receipt->jobCard->additional_qty) > 0)
+                                    <span class="badge bg-warning text-white ms-1" style="font-size: 11px;">Additional: +{{ intval($receipt->jobCard->additional_qty) }} pcs</span>
+                                @endif
+                            </p>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Receipt Date</label>

@@ -274,14 +274,14 @@ class WarehouseReportController extends Controller
             $data = [];
             $brandName = $request->brand_name ?? '';
             foreach ($styles as $item) {
-                $sId = $item->style_id;
+                $sId = $item->style_id ?? 0;
                 $sName = addslashes($item->style_name);
                 $bId = $brandId ?? 0;
                 $bNameEsc = addslashes($brandName);
 
                 $data[] = [
                     'DT_RowAttr' => [
-                        'onclick' => "drillDownToArtNo({$bId}, '{$bNameEsc}', {$sId}, '{$sName}')",
+                        'onclick' => "drillDownToArtNo({$bId}, '" . htmlspecialchars($bNameEsc, ENT_QUOTES) . "', {$sId}, '" . htmlspecialchars($sName, ENT_QUOTES) . "')",
                         'style' => 'cursor: pointer;'
                     ],
                     'brand' => '<strong class="text-uppercase">' . htmlspecialchars($item->style_name) . '</strong>',
@@ -531,7 +531,14 @@ class WarehouseReportController extends Controller
             ->whereNull('stock_entry_items.deleted_at');
 
         if ($styleId !== null && $styleId !== '') {
-            $stockQuery->where('stock_entry_items.style_id', $styleId);
+            if ($styleId === 0 || $styleId === '0') {
+                $stockQuery->where(function($q) {
+                    $q->whereNull('stock_entry_items.style_id')
+                      ->orWhere('stock_entry_items.style_id', 0);
+                });
+            } else {
+                $stockQuery->where('stock_entry_items.style_id', $styleId);
+            }
         }
 
         if ($brandId !== null && $brandId !== '' && $brandId != 0) {

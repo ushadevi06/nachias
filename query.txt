@@ -14,3 +14,71 @@ ALTER TABLE `settings`
 ADD COLUMN `ip_address` VARCHAR(255) NULL AFTER `email`;
 
 ALTER TABLE `purchase_orders` ADD `remarks` TEXT NULL DEFAULT NULL AFTER `payment_terms`;
+
+
+
+03-09
+DROP TABLE IF EXISTS `warehouses`;
+CREATE TABLE `warehouses` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `warehouse_name` varchar(100) NOT NULL,
+  `code` varchar(50) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `status` enum('Active','Inactive') NOT NULL DEFAULT 'Active',
+  `created_by` bigint(20) unsigned DEFAULT NULL,
+  `updated_by` bigint(20) unsigned DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS `warehouse_brand_capacities`;
+CREATE TABLE  `warehouse_brand_capacities` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `warehouse_id` bigint(20) unsigned NOT NULL,
+  `brand_id` bigint(20) unsigned NOT NULL,
+  `style_id` bigint(20) unsigned DEFAULT NULL,
+  `capacity_pcs` int(11) NOT NULL DEFAULT 0,
+  `status` enum('Active','Inactive') NOT NULL DEFAULT 'Active',
+  `created_by` bigint(20) unsigned DEFAULT NULL,
+  `updated_by` bigint(20) unsigned DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `wh_brand_capacity_unique` (`warehouse_id`,`brand_id`,`deleted_at`),
+  KEY `warehouse_brand_capacities_brand_id_foreign` (`brand_id`),
+  CONSTRAINT `warehouse_brand_capacities_brand_id_foreign` FOREIGN KEY (`brand_id`) REFERENCES `brands` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `warehouse_brand_capacities_warehouse_id_foreign` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `stock_entries`
+ADD COLUMN `store_type_id` BIGINT UNSIGNED NULL AFTER `warehouse_id`,
+ADD INDEX `stock_entries_store_type_id_index` (`store_type_id`);
+
+ALTER TABLE `stock_entry_items`
+ADD COLUMN `store_type_id` BIGINT UNSIGNED NULL AFTER `store_location_id`,
+ADD INDEX `stock_entry_items_store_type_id_index` (`store_type_id`);
+
+ALTER TABLE `production_receipts`
+ADD COLUMN `warehouse_id` BIGINT UNSIGNED NULL AFTER `store_location_id`,
+ADD CONSTRAINT `production_receipts_warehouse_id_foreign`
+FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`)
+ON DELETE SET NULL;
+
+ALTER TABLE `stock_entry_items`
+ADD COLUMN `warehouse_id` BIGINT UNSIGNED NULL AFTER `store_location_id`,
+ADD CONSTRAINT `stock_entry_items_warehouse_id_foreign`
+FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`)
+ON DELETE SET NULL;
+
+ALTER TABLE `fg_min_stocks`
+ADD COLUMN `max_stock` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `min_stock`;
+
+
+ALTER TABLE `stock_entries`
+ADD COLUMN `warehouse_id` BIGINT UNSIGNED NULL AFTER `grn_entry_id`,
+ADD CONSTRAINT `stock_entries_warehouse_id_foreign`
+FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`)
+ON DELETE SET NULL;

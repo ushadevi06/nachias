@@ -112,7 +112,7 @@
         </tr>
         <tr>
             <td style="width: 18%; font-weight: bold;">Job Card No #</td>
-            <td style="width: 32%;">: {{ $receipt->jobCard->job_card_no ?? '-' }}</td>
+            <td style="width: 32%;">: {{ $receipt->jobCard->job_card_no ?? '-' }}{{ ($receipt->is_additional && $receipt->additionalBatch) ? ' [Additional: +' . intval($receipt->additionalBatch->batch_total_qty ?? $receipt->additionalBatch->total_qty) . ' pcs]' : (($receipt->is_additional && $receipt->jobCard && floatval($receipt->jobCard->additional_qty) > 0) ? ' [Additional: +' . intval($receipt->jobCard->additional_qty) . ' pcs]' : '') }}</td>
             <td style="width: 18%; font-weight: bold;">Warehouse</td>
             <td style="width: 32%;">: {{ $receipt->warehouse->warehouse_name ?? '-' }}</td>
         </tr>

@@ -1,149 +1,107 @@
 @extends('layouts.common')
-@section('title', 'Task Management Board - ' . env('WEBSITE_NAME'))
+@section('title', 'Task Management List - ' . env('WEBSITE_NAME'))
 @section('content')
-<link rel="stylesheet" href="{{ url('assets/css/jkanban.css') }}">
-<link rel="stylesheet" href="{{ url('assets/css/app-kanban.css') }}">
-<!-- Content -->
-<div class="container-xxl section-padding container-p-y" style="margin-top: 50px !important;">
-  <div class="app-kanban">
-    <!-- Add new board -->
-    <div class="row mt-5">
-      <div class="col-lg-12"> 
-        <div class="table-header-box d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-            <h4 class="mb-0 text-primary fw-bold">Task Management</h4>
-            <div class="d-flex align-items-center gap-2">
-                <div class="input-group" style="width: 300px;">
-                    <span class="input-group-text"><i class="ri ri-search-line"></i></span>
-                    <input type="text" id="kanban-search" class="form-control" placeholder="Search task, job card, stage...">
+<div class="container-xxl section-padding">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="table-header-box">
+                <h4>Task Management List</h4>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="filter-box mb-4">
+                        <div class="row g-3">
+                            <div class="col-lg-12">
+                                <h5>Filter</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filter_status" class="form-select select2" data-placeholder="Select Status">
+                                    <option value=""></option>
+                                    <option value="Planned">Planned</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Hold">Hold</option>
+                                    <option value="Completed">Completed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-primary" id="filter_btn">Filter</button>
+                                <button type="button" class="btn btn-secondary" id="reset_btn">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-datatable">
+                        <table class="datatables-products table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Task No</th>
+                                    <th>Plant</th>
+                                    <th>Stage</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
                 </div>
-                @if(auth()->id() == 1 || auth()->user()->can('create task-management'))
-                <form class="kanban-add-new-board m-0 p-0" style="float: right !important;">
-                  <label class="kanban-add-board-btn mb-0" style="cursor: pointer;" for="kanban-add-board-input">
-                  </label>
-                  <input type="text" class="form-control w-px-250 kanban-add-board-input d-none" placeholder="Add Board Title" id="kanban-add-board-input" required />
-                  <div class="kanban-add-board-input d-none">
-                    <button class="btn btn-primary btn-sm me-3">Add</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm kanban-add-board-cancel-btn">Cancel</button>
-                  </div>
-                </form>
-                @endif
             </div>
         </div>
-      </div>
     </div>
-    @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    @endif
-    <div class="kanban-wrapper">
-        <div class="kanban-add-new-board-column">
-            {{--<div class="kanban-add-board-trigger" id="add-list-trigger">
-                <i class="ri-add-line fs-4 me-1"></i> New list
-            </div> --}}
-            
-            {{--<div class="kanban-new-list-form d-none" id="add-list-form">
-                <h5 class="mb-3 fw-bold">New list</h5>
-                <div class="mb-4">
-                    <label class="form-label-bold small text-uppercase" style="font-weight: 700; display: block; margin-bottom: 0.25rem;">Scope</label>
-                    <small class="form-text-muted mb-2 d-block" style="font-size: 0.8rem; color: #718096;">Issues must match this scope to appear in this list.</small>
-                    <select class="form-select form-select-sm" id="new-list-label">
-                        <option value="">Select a label</option>
-                        @if(isset($allStatuses))
-                            @foreach($allStatuses as $status)
-                                <option value="{{ $status->name }}">{{ $status->name }}</option>
-                            @endforeach
-                        @endif
-                    </select>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary btn-sm px-3" id="btn-add-board-static">Add to board</button>
-                    <button class="btn btn-label-secondary btn-sm px-3" id="btn-cancel-board-static">Cancel</button>
-                </div>
-            </div> --}}
-        </div>
-    </div>
-  </div>
 </div>
 @endsection
-
 @section('scripts')
-<script src="{{ url('assets/js/jkanban.js') }}"></script>
-<script src="{{ url('assets/js/quill.min.js') }}"></script>
 <script>
-  window.csrfToken = "{{ csrf_token() }}";
-  window.kanbanUpdateStatusUrl = "{{ route('task_management.update_status') }}";
-  window.kanbanAddUrl = "{{ url('task_management/add') }}";
-  window.kanbanListViewUrl = "{{ url('task_management') }}";
-  window.kanbanViewUrl = "{{ route('task_management.fetch') }}";
-  window.canEditTask = @json(auth()->id() == 1 || auth()->user()->can('edit task-management'));
-  window.canViewTask = @json(auth()->id() == 1 || auth()->user()->can('view_details task-management'));
-  window.canCreateTask = @json(auth()->id() == 1 || auth()->user()->can('create task-management'));
-</script>
-<script src="{{ url('assets/js/app-kanban.js') }}?v={{ time() }}"></script>
-<script>
-$(document).ready(function() {
-  const $trigger = $('#add-list-trigger');
-  const $form = $('#add-list-form');
-  const $btnAdd = $('#btn-add-board-static');
-  const $btnCancel = $('#btn-cancel-board-static');
-  const $addListCol = $('.kanban-add-new-board-column');
+    $(document).ready(function() {
+        if ($('.datatables-products').length) {
+            $('.datatables-products').DataTable({
+                responsive: true,
+                paging: true,
+                autoWidth: false,
+                searching: true,
+                ordering: true,
+                info: true,
+                lengthChange: true,
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ url('task_management') }}",
+                    data: function(d) {
+                        d.status = $('#filter_status').val();
+                    }
+                },
+                columns: [
+                    {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
+                    {data: 'task_no', name: 'task_no'},
+                    {data: 'plant', name: 'plant'},
+                    {data: 'stage_dept', name: 'stage_dept'},
+                    {data: 'start_date', name: 'start_date'},
+                    {data: 'end_date', name: 'end_date'},
+                    {data: 'status', name: 'status'},
+                    {data: 'action', name: 'action', orderable: false, searchable: false},
+                ],
+                order: [[1, 'desc']],
+                dom: '<"d-flex justify-content-between align-items-center mx-0 row pt-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"d-flex justify-content-between mx-0 row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                displayLength: 10,
+                lengthMenu: [10, 25, 50, 75, 100],
+            });
+        }
 
-    const repositionNewList = () => {
-      const $container = $('.kanban-container');
-      if ($container.length) {
-        $container.append($addListCol);
-      } else {
-        setTimeout(repositionNewList, 100);
-      }
-    };
-    repositionNewList();
+        $('#filter_btn').on('click', function() {
+            $('.datatables-products').DataTable().ajax.reload();
+        });
 
-    $trigger.on('click', function() {
-      $(this).addClass('d-none');
-      $form.removeClass('d-none');
-    });
-
-    $btnCancel.on('click', function() {
-      $form.addClass('d-none');
-      $trigger.removeClass('d-none');
-    });
-
-    $btnAdd.on('click', function() {
-      const labelValue = $('#new-list-label').val() || 'New List';
-      const boardId = 'board-' + Date.now();
-        
-      if (window.kanban) {
-        window.kanban.addBoards([{
-          id: boardId,
-          title: labelValue,
-          item: []
-        }]);
-
-        setTimeout(() => {
-          const $container = $('.kanban-container');
-          const $addListCol = $('.kanban-add-new-board-column');
-          $container.append($addListCol);
-        }, 50);
-      }
-
-      $form.addClass('d-none');
-      $trigger.removeClass('d-none');
-      $('#new-list-label').val(''); 
-    });
-
-    $('#kanban-search').on('keyup', function() {
-        var query = $(this).val().toLowerCase().trim();
-        $('.kanban-item').each(function() {
-            var text = $(this).text().toLowerCase();
-            if (text.indexOf(query) !== -1) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
+        $('#reset_btn').on('click', function() {
+            $('#filter_status').val('').trigger('change');
+            $('.datatables-products').DataTable().ajax.reload();
         });
     });
-});
+
+    function delete_data(url) {
+        if (confirm("Are you sure you want to delete this task?")) {
+            window.location.href = url;
+        }
+    }
 </script>
 @endsection

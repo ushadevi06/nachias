@@ -567,7 +567,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/barcode-matrix/{id}', [JobCardEntryController::class, 'barcodeMatrix'])->name('job_card_entries.barcode_matrix');
     Route::get('job_card_entries/barcode-preview/{id}', [JobCardEntryController::class, 'barcodePreview'])->name('job_card_entries.barcode_preview');
     Route::get('job_card_entries/additional-qty/{id}', [JobCardEntryController::class, 'additional_qty'])->name('job_card_entries.additional_qty');
+    Route::get('job_card_entries/additional-qty-history/{id}', [JobCardEntryController::class, 'additionalQtyHistory'])->name('job_card_entries.additional_qty_history');
+    Route::get('job_card_entries/additional-qty-view/{id}', [JobCardEntryController::class, 'additionalQtyView'])->name('job_card_entries.additional_qty_view');
     Route::post('job_card_entries/add-additional-qty/{id}', [JobCardEntryController::class, 'storeAdditionalQty'])->name('job_card_entries.add_additional_qty');
+    Route::post('job_card_entries/additional-qty/{id}/update-batch/{batchId}', [JobCardEntryController::class, 'updateAdditionalBatch'])->name('job_card_entries.update_additional_batch');
+    Route::post('job_card_entries/additional-qty/{id}/delete-batch/{batchId}', [JobCardEntryController::class, 'deleteAdditionalBatch'])->name('job_card_entries.delete_additional_batch');
 
     /* Task Management */
     Route::get('task_management', [TaskManagementController::class, 'index']);

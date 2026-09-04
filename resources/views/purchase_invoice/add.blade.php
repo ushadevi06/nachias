@@ -37,32 +37,50 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="purchase_order_id" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" {{ isset($invoice) ? 'disabled' : '' }}>
-                                        <option value="">Select Purchase Order</option>
-                                        @foreach($purchaseOrders as $po)
-                                            <option value="{{ $po->id }}" {{ old('purchase_order_id', $invoice->purchase_order_id ?? '') == $po->id ? 'selected' : '' }}>{{ $po->po_number }} - ({{ $po->supplier->name }} - {{ $po->supplier->code ?? '' }})
-                                            </option>
+                                    <select name="supplier_id" id="supplier_id" class="form-select select2 @error('supplier_id') is-invalid @enderror" data-placeholder="Select Supplier" {{ isset($invoice) ? 'disabled' : '' }}>
+                                        <option value="">Select Supplier</option>
+                                        @foreach($suppliers as $supplier)
+                                            <option value="{{ $supplier->id }}" {{ old('supplier_id', $invoice->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }} - {{ $supplier->code ?? '' }}</option>
                                         @endforeach
                                     </select>
                                     @if(isset($invoice))
-                                        <input type="hidden" name="purchase_order_id" value="{{ $invoice->purchase_order_id }}">
+                                        <input type="hidden" name="supplier_id" value="{{ $invoice->supplier_id }}">
                                     @endif
-                                    <label for="purchase_order">Purchase Order No <span class="text-danger">*</span></label>
+                                    <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', isset($invoice) && $invoice->supplier ? $invoice->supplier->name . ($invoice->supplier->code ? ' - ' . $invoice->supplier->code : '') : '') }}">
+                                    <label for="supplier_id">Supplier <span class="text-danger">*</span></label>
                                 </div>
-                                @error('purchase_order_id')
+                                @error('supplier_id')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('supplier_name') is-invalid @enderror" id="supplier_name" readonly value="{{ old('supplier_name', isset($invoice) && $invoice->supplier ? $invoice->supplier->name . ($invoice->supplier->code ? ' - ' . $invoice->supplier->code : '') : '') }}">
-                                    <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', isset($invoice) && $invoice->supplier ? $invoice->supplier->name . ($invoice->supplier->code ? ' - ' . $invoice->supplier->code : '') : '') }}">
-                                    <input type="hidden" name="supplier_id" id="supplier_id" value="{{ old('supplier_id', $invoice->supplier_id ?? '') }}">
-                                    <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
+                                    <select name="purchase_order_id[]" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" multiple="multiple" {{ isset($invoice) ? 'disabled' : '' }}>
+                                        @if(isset($invoice) && isset($purchaseOrders))
+                                            @php
+                                                $selectedPos = old('purchase_order_id', (isset($invoice) && is_string($invoice->po_reference)) ? explode(', ', $invoice->po_reference) : []);
+                                            @endphp
+                                            @foreach($purchaseOrders as $po)
+                                                <option value="{{ $po->id }}" {{ in_array($po->id, (array)$selectedPos) || str_contains($invoice->po_reference ?? '', $po->po_number) ? 'selected' : '' }}>{{ $po->po_number }}
+                                                </option>
+                                            @endforeach
+                                        @endif
+                                    </select>
+                                    @if(isset($invoice))
+                                        @php
+                                            $selectedPos = (isset($invoice) && is_string($invoice->po_reference)) ? explode(', ', $invoice->po_reference) : [];
+                                        @endphp
+                                        @foreach($purchaseOrders as $po)
+                                            @if(str_contains($invoice->po_reference ?? '', $po->po_number) || (isset($invoice->purchase_order_id) && $invoice->purchase_order_id == $po->id))
+                                                <input type="hidden" name="purchase_order_id[]" value="{{ $po->id }}">
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                    <label for="purchase_order">Purchase Order No <span class="text-danger">*</span></label>
                                 </div>
-                                @error('supplier_id')
+                                @error('purchase_order_id')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -164,6 +182,7 @@
                                         <th width="50px">
                                             <input type="checkbox" id="select_all_items" class="form-check-input">
                                         </th>
+                                        <th>PO Number</th>
                                         <th>Store Category</th>
                                         <th>Raw Material</th>
                                         <th>Supplier Design Name</th>
@@ -199,6 +218,10 @@
                                                     <input type="hidden" name="items[{{ $index }}][art_no]" value="{{ $item['art_no'] ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $item['brand_name'] ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $item['fabric_width'] ?? '-' }}">
+                                                </td>
+                                                <td>
+                                                    <input type="hidden" name="items[{{ $index }}][po_number]" value="{{ $item['po_number'] ?? '-' }}">
+                                                    {{ $item['po_number'] ?? '-' }}
                                                 </td>
                                                 <td>{{ $item['store_category_name'] ?? '-' }}</td>
                                                 <td>{{ $item['raw_material_name'] ?? '-' }}</td>
@@ -298,7 +321,10 @@
                                                     <input type="hidden" name="items[{{ $index }}][store_category_id]" value="{{ $invItem->purchaseOrderItem->store_category_id ?? $invItem->rawMaterial->store_category_id ?? 0 }}">
                                                     <input type="hidden" name="items[{{ $index }}][art_no]" value="{{ $invItem->purchaseOrderItem->supplier_design_name ?? '-' }}">
                                                 </td>
-
+                                                <td>
+                                                    <input type="hidden" name="items[{{ $index }}][po_number]" value="{{ $invItem->purchaseOrderItem->purchaseOrder->po_number ?? '-' }}">
+                                                    {{ $invItem->purchaseOrderItem->purchaseOrder->po_number ?? '-' }}
+                                                </td>
                                                 <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? $invItem->rawMaterial->storeCategory->category_name ?? '-' }}</td>
                                                 <td>{{ $invItem->rawMaterial->name ?? '-' }}</td>
                                                 <td>{{ $invItem->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
@@ -957,12 +983,43 @@
             toggleItemFields($(this));
         });
         updateSelectAllState();
-        $('#purchase_order').on('change', function () {
-            let poId = $(this).val();
-            if (poId) {
+
+        $('#supplier_id').on('change', function () {
+            let supplierId = $(this).val();
+            let $poSelect = $('#purchase_order');
+            $poSelect.empty();
+            
+            if (supplierId) {
                 $.ajax({
-                    url: "{{ url('purchase_invoices/get-po-details') }}/" + poId,
+                    url: "{{ url('purchase_invoices/get-pos-by-supplier') }}/" + supplierId,
                     type: "GET",
+                    success: function (response) {
+                        if (response.success && response.purchase_orders) {
+                            response.purchase_orders.forEach(function(po) {
+                                $poSelect.append(new Option(po.po_number, po.id, false, false));
+                            });
+                        }
+                        $poSelect.trigger('change');
+                    },
+                    error: function () {
+                        alert("Failed to load purchase orders");
+                    }
+                });
+            } else {
+                $poSelect.trigger('change');
+            }
+        });
+
+        $('#purchase_order').on('change', function () {
+            let poIds = $(this).val() || [];
+            if (poIds.length > 0) {
+                $.ajax({
+                    url: "{{ url('purchase_invoices/get-po-details-multi') }}",
+                    type: "POST",
+                    data: {
+                        po_ids: poIds,
+                        _token: "{{ csrf_token() }}"
+                    },
                     success: function (response) {
                         if (response.success) {
                             $('#purchase_order_no').val(response.po_number);
@@ -1063,7 +1120,9 @@
                                             <input type="hidden" name="items[${index}][brand_name]" value="${item.brand_name}">
                                             <input type="hidden" name="items[${index}][fabric_width]" value="${item.fabric_width}">
                                             <input type="hidden" name="items[${index}][fabric_type_name]" value="${item.fabric_type_name || '-'}">
+                                            <input type="hidden" name="items[${index}][po_number]" value="${item.po_number}">
                                         </td>
+                                         <td>${item.po_number}</td>
                                         <td>${item.store_category_name}</td>
                                         <td>${item.raw_material_name}</td>
                                         <td>${item.art_no || '-'}</td>

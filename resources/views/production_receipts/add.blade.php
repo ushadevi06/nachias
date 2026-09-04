@@ -20,7 +20,32 @@
                                     <select name="job_card_id" id="job_card_id" class="form-select select2" data-placeholder="Select Job Card No">
                                         <option value="">Select Job Card No</option>
                                         @foreach($jobCards as $jobCard)
-                                            <option value="{{ $jobCard->id }}" {{ old('job_card_id', $receipt->job_card_id ?? '') == $jobCard->id ? 'selected' : '' }}>{{ $jobCard->job_card_no }}</option>
+                                            @php
+                                                $additionalBatches = $jobCard->fabricDetails
+                                                    ? $jobCard->fabricDetails->where('is_additional', 1)->groupBy(function($item) {
+                                                        return $item->additional_batch_no ?? ($item->created_at ? $item->created_at->format('Y-m-d H:i') : $item->id);
+                                                    })
+                                                    : collect();
+                                            @endphp
+                                            <option value="{{ $jobCard->id }}" {{ old('job_card_id', ($receipt && $receipt->job_card_id == $jobCard->id && !$receipt->job_card_fabric_detail_id) ? $jobCard->id : '') == $jobCard->id ? 'selected' : '' }}>
+                                                {{ $jobCard->job_card_no }}
+                                            </option>
+                                            @foreach($additionalBatches as $batchGroup)
+                                                @php
+                                                    $firstBatchFab = $batchGroup->first();
+                                                    $batchTotalQty = $batchGroup->sum('total_qty');
+                                                    $addVal = $jobCard->id . '_add_' . $firstBatchFab->id;
+                                                    $addQty = (floatval($batchTotalQty) == intval($batchTotalQty)) ? intval($batchTotalQty) : $batchTotalQty;
+                                                    $isBatchSelected = false;
+                                                    if ($receipt && $receipt->job_card_id == $jobCard->id && $receipt->job_card_fabric_detail_id) {
+                                                        $isBatchSelected = $batchGroup->pluck('id')->contains($receipt->job_card_fabric_detail_id);
+                                                    }
+                                                    $isSelected = old('job_card_id', $isBatchSelected ? $addVal : '') == $addVal;
+                                                @endphp
+                                                <option value="{{ $addVal }}" {{ $isSelected ? 'selected' : '' }}>
+                                                    {{ $jobCard->job_card_no }} - Additional {{ $addQty }} qty
+                                                </option>
+                                            @endforeach
                                         @endforeach
                                     </select>
                                     <label for="job_card_id">Job Card No <span class="text-danger">*</span></label>
@@ -103,9 +128,7 @@
                                     <select name="store_location_id" id="store_location_id" class="form-select select2" data-placeholder="Select Location">
                                         <option value="">Select Location</option>
                                         @foreach($storeLocations as $location)
-                                            <option value="{{ $location->id }}" {{ old('store_location_id', $receipt->store_location_id ?? '') == $location->id ? 'selected' : '' }}>
-                                                {{ $location->store_location }}
-                                            </option>
+                                            <option value="{{ $location->id }}" {{ old('store_location_id', $receipt->store_location_id ?? '') == $location->id ? 'selected' : '' }}>{{ $location->store_location }}</option>
                                         @endforeach
                                     </select>
                                     <label for="store_location_id">Store Location <span class="text-danger">*</span></label>
@@ -116,7 +139,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="form-select select2" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Draft" {{ old('status', $receipt->status ?? 'Draft') == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                        <option value="Draft" {{ old('status', $receipt->status ?? '') == 'Draft' ? 'selected' : '' }}>Draft</option>
                                         <option value="Posted" {{ old('status', $receipt->status ?? '') == 'Posted' ? 'selected' : '' }}>Posted</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
@@ -125,21 +148,23 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea name="remarks" id="remarks" class="form-control" placeholder="Enter Remarks" >{{ old('remarks', $receipt->remarks ?? '') }}</textarea>
+                                    <textarea name="remarks" id="remarks" class="form-control" placeholder="Enter Remarks" style="height: 48px;">{{ old('remarks', $receipt->remarks ?? '') }}</textarea>
                                     <label for="remarks">Remarks</label>
                                 </div>
+                                @error('remarks') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="card mb-4" id="items-section" style="display: none;">
+
+                <div class="card" id="items-section" style="display: none;">
                     <div class="card-body">
                         <div class="card-header-box">
                             <h4>Items</h4>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped text-nowrap" id="items-table">
-                                <thead class="bg-primary text-white">
+                        <div class="table-responsive text-nowrap">
+                            <table class="table table-bordered table-hover">
+                                <thead>
                                     <tr>
                                         <th>Item</th>
                                         <th>Art No</th>
@@ -158,16 +183,17 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="mt-4 text-end">
+                            <button type="submit" class="btn btn-primary me-2">Submit</button>
+                            <a href="{{ url('production_receipts') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
                     </div>
-                </div>
-                <div class="col-lg-12 text-end mt-3">
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                    <a href="{{ url('production_receipts') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
-</div>  
+</div>
+
 <div class="modal fade" id="consumptionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
@@ -363,8 +389,8 @@
         });
 
         $('#job_card_id').on('change', function() {
-            var jobCardId = $(this).val();
-            if (!jobCardId) {
+            var rawVal = $(this).val();
+            if (!rawVal) {
                 $('#plant').val('');
                 $('#doc_no').val('');
                 $('#doc_date').val('');
@@ -373,17 +399,36 @@
                 return;
             }
 
+            var jobCardId = rawVal;
+            var fabricDetailId = '';
+            var isAdditional = '0';
+
+            if (rawVal.indexOf('_add_') !== -1) {
+                var parts = rawVal.split('_add_');
+                jobCardId = parts[0];
+                fabricDetailId = parts[1];
+                isAdditional = '1';
+            }
+
             var excludeReceiptId = {{ $receipt ? $receipt->id : 'null' }};
             var url = '{{ url("production_receipts/get-job-card-details") }}/' + jobCardId;
+            var params = [];
             if (excludeReceiptId) {
-                url += '?exclude_receipt_id=' + excludeReceiptId;
+                params.push('exclude_receipt_id=' + excludeReceiptId);
+            }
+            if (fabricDetailId) {
+                params.push('job_card_fabric_detail_id=' + fabricDetailId);
+            } else {
+                params.push('is_additional=' + isAdditional);
+            }
+            if (params.length > 0) {
+                url += '?' + params.join('&');
             }
 
             var oldItems = @json(old('items', []));
             $.ajax({
                 url: url,
                 type: 'GET',
-                data: { exclude_receipt_id: excludeReceiptId },
                 success: function(response) {
                     if (response.success && response.data) {
                         $('#plant').val(response.data.plant_name || '');

@@ -4,7 +4,7 @@
 @section('content')
 
     @php
-        $matrixRows = old('article_matrix', $jobCard ? $jobCard->fabricDetails->toArray() : []);
+        $matrixRows = old('article_matrix', $jobCard ? $jobCard->fabricDetails->filter(fn($f) => empty($f->is_additional))->values()->toArray() : []);
         $matrixItems = old('matrix_items', $jobCard ? $jobCard->cuttingSizeRatios->toArray() : []);
 
         $dynamicSizes = [];
@@ -30,7 +30,7 @@
                 $ratios[] = '';
         }
 
-        $fabrics = old('fabrics', $jobCard ? $jobCard->fabricDetails->toArray() : []);
+        $fabrics = old('fabrics', $jobCard ? $jobCard->fabricDetails->filter(fn($f) => empty($f->is_additional))->values()->toArray() : []);
 
         $activeFs = [];
         $activeHs = [];
@@ -611,13 +611,16 @@
                                                         <textarea name="production_stages[{{ $index }}][remarks]" class="form-control" placeholder="Enter Remarks">{{ $stage['remarks'] ?? '' }}</textarea>
                                                     </td>
                                                     <td>
-                                                        <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
-                                                        @if($jobCard && (auth()->id() == 1 || auth()->user()->can('assign-task job-card')))
                                                         @php
                                                             $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
                                                             $taskData = $stageTaskStatus[$currentStageId] ?? null;
                                                             $hasTask = !empty($taskData);
-
+                                                        @endphp
+                                                        @if(!$hasTask)
+                                                            <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
+                                                        @endif
+                                                        @if($jobCard && (auth()->id() == 1 || auth()->user()->can('assign-task job-card')))
+                                                        @php
                                                             $taskStatus = $taskData['status'] ?? null;
                                                             $taskNo = $taskData['task_no'] ?? null;
                                                             $previousStage = $existingStages[$index - 1] ?? null;
@@ -1137,7 +1140,7 @@
 
         const rawOldMatrix = @json(array_values(old('article_matrix', [])));
         const oldMatrix = rawOldMatrix;
-        const rawExistingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails->values() : []);
+        const rawExistingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails->filter(fn($f) => empty($f->is_additional))->values() : []);
         const existingMatrix = rawExistingMatrix;
         const validationErrors = @json($errors->toArray());
 

@@ -35,8 +35,11 @@
             @endif
 
             @if(auth()->id() == 1 || auth()->user()->can('issue-item job-card') || auth()->user()->can('edit job-card'))
-            <a href="{{ url('job_card_entries/additional-qty/' . $jobCard->id) }}" class="btn btn-warning me-2 fw-semibold">
+            <a href="{{ url('job_card_entries/additional-qty/' . $jobCard->id) }}" class="btn btn-warning me-2 fw-semibold position-relative">
                 <i class="ri ri-add-circle-line me-1"></i> Additional Qty
+                @if($jobCard->additional_qty > 0)
+                <span class="badge bg-danger text-white rounded-pill ms-1">+{{ number_format($jobCard->additional_qty, 0) }} pcs</span>
+                @endif
             </a>
             @endif
             
@@ -74,8 +77,15 @@
         <div class="col-lg-12">
             <div class="card">
                 <div class="card-body">
-                    <div class="card-header-box mb-3">
-                        <h4>Job Card Issue Item</h4>
+                    <div class="card-header-box mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <h4 class="mb-0">Job Card Issue Item</h4>
+                            @if($jobCard->additional_qty > 0)
+                                <span class="badge bg-label-warning text-dark border border-warning fs-6 px-3 py-1">
+                                    <i class="ri ri-add-circle-line me-1"></i> Additional Qty: +{{ number_format($jobCard->additional_qty, 0) }} pcs
+                                </span>
+                            @endif
+                        </div>
                     </div>
                     <div class="row g-4">
                         <div class="col-md-6">
@@ -262,6 +272,9 @@
                                                 <td>{{ $locationName }}</td>
                                                 <td class="fw-bold">
                                                     {{ $item->art_no }}
+                                                    @if($item->is_additional)
+                                                        <span class="badge bg-warning text-dark ms-1" style="font-size: 10px;">Extra Batch</span>
+                                                    @endif
                                                     @if($item->stockEntry)
                                                         <br><small class="text-info">{{ $item->stockEntry->stock_entry_no }}</small>
                                                     @endif

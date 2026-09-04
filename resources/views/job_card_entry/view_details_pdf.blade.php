@@ -566,86 +566,89 @@
                 @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
             </tr>
         </table>
-    @endforeach
 
-    {{-- Quantity Summary --}}
-    <table class="table table-bordered" style="margin-top: 3pt;">
-        <thead>
-            @if($isCanvas)
-            <tr class="bg-light text-center">
-                <th>ART NO</th>
-                @foreach($allSizes as $s) <th>{{ $s }}</th> @endforeach
-                <th>TOTAL</th>
-            </tr>
-            @else
-            <tr class="bg-light text-center">
-                <th rowspan="2" style="width: 10%;">ART NO</th>
-                <th colspan="{{ count($allSizes) }}">F/S</th>
-                <th colspan="{{ count($allSizes) }}">H/S</th>
-                <th rowspan="2" style="width: 8%;">TOTAL</th>
-            </tr>
-            <tr class="bg-light text-center">
-                @foreach($allSizes as $s) <th style="width: {{ 40 / (count($allSizes) ?: 1) }}%;">{{ $s }}</th> @endforeach
-                @foreach($allSizes as $s) <th style="width: {{ 40 / (count($allSizes) ?: 1) }}%;">{{ $s }}</th> @endforeach
-            </tr>
-            @endif
-        </thead>
-        <tbody>
-            @php $grandTotal = 0; @endphp
-            @foreach($fabricDetails as $detail)
-                @php 
-                    $rowTotal = $detail->quantities->sum('total_qty');
-                    $grandTotal += $rowTotal;
-                @endphp
-                <tr class="text-center">
-                    <td class="fw-bold">{{ $detail->art_no }}</td>
+        {{-- Quantity Summary --}}
+        <table class="table table-bordered" style="margin-top: 3pt;">
+            <thead>
+                @if($isCanvas)
+                <tr class="bg-light text-center">
+                    <th>ART NO</th>
+                    @foreach($allSizes as $s) <th>{{ $s }}</th> @endforeach
+                    <th>TOTAL</th>
+                </tr>
+                @else
+                <tr class="bg-light text-center">
+                    <th rowspan="2" style="width: 10%;">ART NO</th>
+                    <th colspan="{{ count($allSizes) }}">F/S</th>
+                    <th colspan="{{ count($allSizes) }}">H/S</th>
+                    <th rowspan="2" style="width: 8%;">TOTAL</th>
+                </tr>
+                <tr class="bg-light text-center">
+                    @foreach($allSizes as $s) <th style="width: {{ 40 / (count($allSizes) ?: 1) }}%;">{{ $s }}</th> @endforeach
+                    @foreach($allSizes as $s) <th style="width: {{ 40 / (count($allSizes) ?: 1) }}%;">{{ $s }}</th> @endforeach
+                </tr>
+                @endif
+            </thead>
+            <tbody>
+                @php $grandTotal = 0; @endphp
+                @foreach($chunk as $detail)
+                    @php 
+                        $rowTotal = $detail->quantities->sum('total_qty');
+                        $grandTotal += $rowTotal;
+                    @endphp
+                    <tr class="text-center">
+                        <td class="fw-bold">{{ $detail->art_no }}</td>
+                        @foreach($allSizes as $s)
+                            @php $q = $detail->quantities->where('size', $s)->first(); @endphp
+                            <td>{{ $q ? (int) $q->qty_fs : '-' }}</td>
+                        @endforeach
+                        @if(!$isCanvas)
+                        @foreach($allSizes as $s)
+                            @php $q = $detail->quantities->where('size', $s)->first(); @endphp
+                            <td>{{ $q ? (int) $q->qty_hs : '-' }}</td>
+                        @endforeach
+                        @endif
+                        <td class="fw-bold">{{ (int) $rowTotal }}</td>
+                    </tr>
+                @endforeach
+                <tr class="bg-light text-center fw-bold">
+                    <td>TOTAL</td>
                     @foreach($allSizes as $s)
-                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
-                        <td>{{ $q ? (int) $q->qty_fs : '-' }}</td>
+                        <td>
+                            @php
+                                $sumFs = 0;
+                                foreach ($chunk as $detail) {
+                                    if ($isCanvas || ($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+                                        $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
+                                    }
+                                }
+                            @endphp
+                            {{ $sumFs ?: '-' }}
+                        </td>
                     @endforeach
                     @if(!$isCanvas)
                     @foreach($allSizes as $s)
-                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
-                        <td>{{ $q ? (int) $q->qty_hs : '-' }}</td>
+                        <td>
+                            @php
+                                $sumHs = 0;
+                                foreach ($chunk as $detail) {
+                                    if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+                                        $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
+                                    }
+                                }
+                            @endphp
+                            {{ $sumHs ?: '-' }}
+                        </td>
                     @endforeach
                     @endif
-                    <td class="fw-bold">{{ (int) $rowTotal }}</td>
+                    <td>{{ (int) $grandTotal }}</td>
                 </tr>
-            @endforeach
-            <tr class="bg-light text-center fw-bold">
-                <td>TOTAL</td>
-                @foreach($allSizes as $s)
-                    <td>
-                        @php
-                            $sumFs = 0;
-                            foreach ($fabricDetails as $detail) {
-                                if ($isCanvas || ($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-                                    $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
-                                }
-                            }
-                        @endphp
-                        {{ $sumFs ?: '-' }}
-                    </td>
-                @endforeach
-                @if(!$isCanvas)
-                @foreach($allSizes as $s)
-                    <td>
-                        @php
-                            $sumHs = 0;
-                            foreach ($fabricDetails as $detail) {
-                                if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-                                    $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
-                                }
-                            }
-                        @endphp
-                        {{ $sumHs ?: '-' }}
-                    </td>
-                @endforeach
-                @endif
-                <td>{{ (int) $grandTotal }}</td>
-            </tr>
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+        @if(!$loop->last)
+            <div class="page-break"></div>
+        @endif
+    @endforeach
 
 
     {{-- Production Stages @if($jobCard->operations && $jobCard->operations->count() > 0)

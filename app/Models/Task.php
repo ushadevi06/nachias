@@ -15,6 +15,8 @@ class Task extends Model
         'job_card_entry_id',
         'job_card_no',
         'stage_id',
+        'is_additional',
+        'job_card_fabric_detail_id',
         'services',
         'issued_to',
         'issue_date',
@@ -32,18 +34,18 @@ class Task extends Model
         'services' => 'array'
     ];
 
-
-
     public function jobCard()
     {
         return $this->belongsTo(JobCardEntry::class, 'job_card_entry_id');
     }
 
+    public function additionalBatch()
+    {
+        return $this->belongsTo(JobCardFabricDetail::class, 'job_card_fabric_detail_id');
+    }
+
     public function stage()
     {
-        // Use withTrashed so that soft-deleted ProcessSchedule records
-        // are still resolved (tasks retain their stage info even after
-        // the schedule is archived/soft-deleted).
         return $this->belongsTo(ProcessSchedule::class, 'stage_id')->withTrashed();
     }
 
@@ -77,12 +79,12 @@ class Task extends Model
     public function operationStage()
     {
         return $this->hasOneThrough(
-            OperationStage::class,   // final model
-            ProcessSchedule::class,  // intermediate model
-            'id',                    // FK on process_schedules that matches tasks.stage_id
-            'id',                    // FK on operation_stages
-            'stage_id',              // local key on tasks
-            'operation_stage_id'     // local key on process_schedules → operation_stages
+            OperationStage::class,  
+            ProcessSchedule::class,  
+            'id',                   
+            'id',                   
+            'stage_id',             
+            'operation_stage_id'     
         );
     }
 

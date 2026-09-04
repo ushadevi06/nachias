@@ -55,6 +55,7 @@
                                         <th>PO Number</th>
                                         <th>Invoice Date</th>
                                         <th>Supplier Name</th>
+                                        <th>Total Qty</th>
                                         <th>Total Amount</th>
                                         <th>Status</th>
                                         <th>Actions</th>
@@ -157,6 +158,10 @@
                 {
                     data: 'supplier_name',
                     name: 'supplier_name'
+                },
+                {
+                    data: 'total_qty',
+                    name: 'total_qty'
                 },
                 {
                     data: 'total_amount',

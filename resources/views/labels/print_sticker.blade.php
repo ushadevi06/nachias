@@ -106,7 +106,7 @@
         .main-content {
             display: flex;
             justify-content: space-between;
-            padding: 2.5mm 1mm 1mm 4mm;
+            padding: 2.5mm 1mm 1mm 1mm;
             height: 35.5mm;
             position: relative;
         }
@@ -138,7 +138,7 @@
         .details-table td {
             padding: 0.6mm 0;
             vertical-align: middle;
-            font-size: 6.7pt;
+            font-size: 8px;
             line-height: 1.20;
             font-weight: 600;
             color: #000000;
@@ -156,28 +156,19 @@
         
         .sticker-qr {
             position: absolute;
-            right: 23mm;
-            top: 5.5mm;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            right: 19mm;
+            top: 6mm;
+            text-align:center;
+        }
+        .qrcode-text {
+            font-size: 5px;
+            margin: 0;
+            line-height: 10px;
+            font-weight: 600;
         }
         .sticker-qr img, .sticker-qr svg {
-            width: 10.5mm;
-            height: 10.5mm;
-            display: block;
-        }
-        .sticker-qr .qr-no-text {
-            font-size: 5pt;
-            font-weight: 700;
-            color: #000000;
-            margin-top: 0.5mm;
-            text-align: center;
-            letter-spacing: 0.3px;
-            line-height: 1.1;
-            white-space: nowrap;
+            width: 11mm;
+            height: 11mm;
         }
         
         .size-wrapper {
@@ -278,7 +269,7 @@
             <div class="sticker-container">
                 <div class="main-content">
                     <div class="left-col">
-                        <div style="display: flex; margin-bottom: auto;">
+                        <div style="display: flex; margin-bottom: auto; gap:10px;">
                             <table class="details-table" style="width: auto; margin-right: 2mm;">
                                 <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
                                 <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
@@ -289,7 +280,7 @@
                             </table>
                             <div class="sticker-qr">
                                 {!! QrCode::size(60)->generate($qrString) !!}
-                                <div class="qr-no-text">{{ $qrString }}</div>
+                                <p class="qrcode-text">{{ $qrString }}</p>
                             </div>
                         </div>
                         <div class="art-no-box">
@@ -307,13 +298,13 @@
                             <div class="lot-vertical">Lot, {{ $labelData['lot_no'] ?? '' }}</div>
                         </div>
                         
-                        <div style="margin-top: auto; width: 100%; text-align: left; padding-left: 0mm;">
+                        <div style="margin-top: auto; width: 100%; text-align: right; padding-left: 0mm;">
                             <span class="fw-bold" style="font-size: 7.5pt; color: #000;">Sleeve: <span style="font-size: 11pt;">{{ $sText }}</span></span>
                         </div>
                         <div class="mrp-section" style="margin-top: 1mm;">
-                            <div class="fw-bold" style="font-size: 4pt; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 4pt;">(inclusive of all taxes)</span></div>
+                            <div class="fw-bold" style="font-size: 5px; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 5px;">(inclusive of all taxes)</span></div>
                             <div class="fw-bold" style="font-size: 12pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
-                            <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 4pt;">MADE IN INDIA WITH PRIDE</div>
+                            <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 5px;">MADE IN INDIA WITH PRIDE</div>
                         </div>
                     </div>
                 </div>

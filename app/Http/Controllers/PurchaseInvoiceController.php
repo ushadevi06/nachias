@@ -110,7 +110,8 @@ class PurchaseInvoiceController extends Controller
                     $action .= '<a href="' . url('purchase_invoices/add/' . $invoice->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 $action .= '</div>';
-
+            
+                $totalQty = $invoice->items ? $invoice->items->sum('quantity') : 0;
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'invoice_no' => $invoice->invoice_no,
@@ -118,6 +119,7 @@ class PurchaseInvoiceController extends Controller
                     'invoice_date' => $invoice->invoice_date->format('d-m-Y'),
                     'supplier_name' => $invoice->supplier ? $invoice->supplier->name . ' <a href="' . url('suppliers/view_details/' . $invoice->supplier->id) . '" target="_blank"><span class="mini-title">(' . $invoice->supplier->code . ')</span></a>' : '-',
                     'destination' => $invoice->destination ?? '-',
+                    'total_qty' => number_format($totalQty, 2),
                     'total_amount' => '₹' . number_format($invoice->grand_total, 2),
                     'status' => $statusDropdown,
                     'action' => $action,
@@ -175,7 +177,8 @@ class PurchaseInvoiceController extends Controller
             $rules = [
                 'invoice_no' => [($id ? 'nullable' : 'required'), 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'invoice_date' => 'required|date_format:d-m-Y',
-                'purchase_order_id' => 'required|exists:purchase_orders,id',
+                'purchase_order_id' => 'required|array|min:1',
+                'purchase_order_id.*' => 'exists:purchase_orders,id',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'po_reference' => 'nullable|string|min:3|max:50',
                 'transport' => 'nullable|string|max:100',
@@ -255,7 +258,7 @@ class PurchaseInvoiceController extends Controller
             ];
 
             $validated = $request->validate($rules, $messages);
-            $purchaseOrder = PurchaseOrder::with('items')->findOrFail($request->purchase_order_id);
+            $purchaseOrders = PurchaseOrder::with('items')->whereIn('id', $request->purchase_order_id)->get();
 
             $errors = [];
             $hasSelectedItems = false;
@@ -269,7 +272,7 @@ class PurchaseInvoiceController extends Controller
                     $errors["items.$index.quantity"] = 'This field is required.';
                     continue;
                 }
-                $poItem = $purchaseOrder->items()->where('id', $item['purchase_order_item_id'])->first();
+               $poItem = \App\Models\PurchaseOrderItem::whereIn('purchase_order_id', $request->purchase_order_id)->where('id', $item['purchase_order_item_id'])->first();
 
                 if ($poItem) {
                     $alreadyInvoiced = PurchaseInvoiceItem::where('purchase_order_item_id', $poItem->id)->sum('quantity');
@@ -405,10 +408,12 @@ class PurchaseInvoiceController extends Controller
 
             DB::beginTransaction();
             try {
+                $firstPoId = is_array($request->purchase_order_id) && count($request->purchase_order_id) > 0 ? $request->purchase_order_id[0] : null;
+
                 $invoiceData = [
                     'invoice_no' => $request->invoice_no,
                     'invoice_date' => Carbon::createFromFormat('d-m-Y', $request->invoice_date)->format('Y-m-d'),
-                    'purchase_order_id' => $request->purchase_order_id,
+                    'purchase_order_id' => $firstPoId,
                     'purchase_order_no' => $request->purchase_order_no,
                     'supplier_id' => $request->supplier_id,
                     'po_reference' => $request->po_reference,
@@ -633,38 +638,45 @@ class PurchaseInvoiceController extends Controller
             }
         }
 
-        $purchaseOrders = PurchaseOrder::with('supplier')
-            ->where('purchase_orders.status', '!=', 'Draft')
-            ->where(function ($query) use ($invoice) {
-                $query->where(function ($sub) {
-                    $sub->where('purchase_orders.is_self_closed', 0)
-                        ->whereIn(
-                            'purchase_orders.id',
-                            function ($q) {
-                                $q->select('purchase_order_items.purchase_order_id')
-                                    ->from('purchase_order_items')
-                                    ->leftJoin(
-                                        'purchase_invoice_items',
-                                        'purchase_invoice_items.purchase_order_item_id',
-                                        '=',
-                                        'purchase_order_items.id'
-                                    )
-                                    ->groupBy(
-                                        'purchase_order_items.id',
-                                        'purchase_order_items.quantity',
-                                        'purchase_order_items.purchase_order_id'
-                                    )
-                                    ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
-                            }
-                        );
-                });
+        $purchaseOrders = collect();
+        if ($invoice) {
+            $purchaseOrders = PurchaseOrder::with('supplier')
+                ->where('supplier_id', $invoice->supplier_id)
+                ->where(function ($query) use ($invoice) {
+                    $query->where(function ($sub) {
+                        $sub->where('purchase_orders.status', 'Approved')
+                            ->where('purchase_orders.is_self_closed', 0)
+                            ->whereIn(
+                                'purchase_orders.id',
+                                function ($q) {
+                                    $q->select('purchase_order_items.purchase_order_id')
+                                        ->from('purchase_order_items')
+                                        ->leftJoin(
+                                            'purchase_invoice_items',
+                                            'purchase_invoice_items.purchase_order_item_id',
+                                            '=',
+                                            'purchase_order_items.id'
+                                        )
+                                        ->groupBy(
+                                            'purchase_order_items.id',
+                                            'purchase_order_items.quantity',
+                                            'purchase_order_items.purchase_order_id'
+                                        )
+                                        ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
+                                }
+                            );
+                    });
 
-                if ($invoice) {
-                    $query->orWhere('purchase_orders.id', $invoice->purchase_order_id);
-                }
-            })
-            ->orderBy('purchase_orders.id', 'desc')
-            ->get();
+                    if ($invoice && $invoice->po_reference) {
+                        $poNumbers = explode(', ', $invoice->po_reference);
+                        $query->orWhereIn('purchase_orders.po_number', $poNumbers);
+                    } elseif ($invoice && $invoice->purchase_order_id) {
+                        $query->orWhere('purchase_orders.id', $invoice->purchase_order_id);
+                    }
+                })
+                ->orderBy('purchase_orders.id', 'asc')
+                ->get();
+        }
         $brands = Brand::active()->orderBy('brand_name')->get();
         $fabricSizes = FabricSize::active()->orderBy('width')->get();
         $fabricTypes = FabricType::active()->orderBy('fabric_type')->get();
@@ -806,6 +818,113 @@ class PurchaseInvoiceController extends Controller
                 return ['id' => $f->id, 'name' => $f->fabric_type];
             }),
             'items' => $items,
+        ]);
+    }
+    public function getPurchaseOrdersBySupplier($supplier_id)
+    {
+        $purchaseOrders = PurchaseOrder::where('status', 'Approved')
+            ->where('supplier_id', $supplier_id)
+            ->where(function ($query) {
+                $query->whereDoesntHave('items', function ($query) {
+                    $query->join('purchase_invoice_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id');
+                })
+                ->orWhereHas('items', function ($query) {
+                    $query->select('purchase_order_items.id', 'purchase_order_items.quantity', 'purchase_order_items.purchase_order_id')
+                        ->join('purchase_invoice_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id')
+                        ->groupBy('purchase_order_items.id', 'purchase_order_items.quantity', 'purchase_order_items.purchase_order_id')
+                        ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
+                });
+            })
+            ->orderBy('id', 'desc')
+            ->get(['id', 'po_number']);
+
+        return response()->json([
+            'success' => true,
+            'purchase_orders' => $purchaseOrders
+        ]);
+    }
+ public function getPurchaseOrderDetailsMulti(Request $request)
+    {
+        $poIds = $request->po_ids ?? [];
+        if (empty($poIds)) {
+            return response()->json(['success' => false, 'message' => 'No Purchase Orders provided.']);
+        }
+
+        $purchaseOrders = PurchaseOrder::with([
+            'supplier',
+            'items.rawMaterial',
+            'items.uom',
+            'items.storeCategory',
+            'items.brand',
+            'items.fabricWidth',
+            'items.fabricType',
+            'purchaseCommissionAgent'
+        ])->whereIn('id', $poIds)->get();
+
+        if ($purchaseOrders->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Purchase Orders not found.']);
+        }
+
+        $firstPo = $purchaseOrders->first();
+        $allItems = collect();
+        $poNumbers = [];
+
+        foreach ($purchaseOrders as $purchaseOrder) {
+            $poNumbers[] = $purchaseOrder->po_number;
+            $items = $purchaseOrder->items->map(function ($item) use ($purchaseOrder) {
+                $alreadyInvoicedQty = PurchaseInvoiceItem::where('purchase_order_item_id', $item->id)->sum('quantity');
+                $balanceQty = round($item->quantity - $alreadyInvoicedQty, 3);
+                if ($balanceQty <= 0) return null;
+
+                return [
+                    'id' => $item->id,
+                    'store_category_id' => $item->store_category_id,
+                    'store_category_name' => $item->storeCategory->category_name ?? '-',
+                    'raw_material_id' => $item->raw_material_id,
+                    'raw_material_name' => $item->rawMaterial->name,
+                    'art_no' => $item->supplier_design_name,
+                    'hsn_code' => $item->rawMaterial->hsn_code ?? '',
+                    'brand_id' => $item->brand_id,
+                    'brand_name' => $item->brand->brand_name ?? '-',
+                    'fabric_width_id' => $item->fabric_width_id,
+                    'fabric_width' => $item->fabricWidth->width ?? '-',
+                    'fabric_type_id' => $item->fabric_type_id,
+                    'fabric_type_name' => $item->fabricType->fabric_type ?? '-',
+                    'quantity' => $balanceQty,
+                    'qty_ordered' => $item->quantity,
+                    'qty_invoiced' => $alreadyInvoicedQty,
+                    'balance_qty' => $balanceQty,
+                    'uom_id' => $item->uom_id,
+                    'uom_code' => $item->uom->uom_code,
+                    'rate' => $item->rate,
+                    'amount' => $item->amount,
+                    'po_number' => $purchaseOrder->po_number // add PO number for display
+                ];
+            })->filter();
+
+            $allItems = $allItems->concat($items);
+        }
+
+        return response()->json([
+            'success' => true,
+            'po_numbers' => implode(', ', $poNumbers),
+            'supplier_id' => $firstPo->supplier_id,
+            'supplier_state_id' => $firstPo->supplier->state_id ?? null,
+            'supplier_name' => $firstPo->supplier->name . ($firstPo->supplier->code ? ' - ' . $firstPo->supplier->code : ''),
+            'discount_percent' => $firstPo->discount_percent,
+            'commission' => $firstPo->commission ?? 0,
+            'purchase_commission_agent_id' => $firstPo->purchase_commission_agent_id,
+            'purchase_commission_agent_name' => $firstPo->purchaseCommissionAgent->name ?? '',
+            'agent_commission_percentage' => $firstPo->supplier->commission_percentage ?? 0,
+            'round_off' => $firstPo->round_off,
+            'round_off_type' => $firstPo->round_off_type,
+            'igst_percent' => $firstPo->igst_percent,
+            'cgst_percent' => $firstPo->cgst_percent,
+            'sgst_percent' => $firstPo->sgst_percent,
+            'all_brands' => Brand::orderBy('brand_name')->get()->map(function($b) { return ['id' => $b->id, 'name' => $b->brand_name]; }),
+            'all_fabric_widths' => FabricSize::orderBy('width')->get()->map(function($f) { return ['id' => $f->id, 'name' => $f->width]; }),
+            'all_fabric_types' => FabricType::orderBy('fabric_type')->get()->map(function($f) { return ['id' => $f->id, 'name' => $f->fabric_type]; }),
+            'items' => $allItems->values(),
         ]);
     }
 

@@ -11,6 +11,8 @@ class ProductionReceipt extends Model
 
     protected $fillable = [
         'job_card_id',
+        'is_additional',
+        'job_card_fabric_detail_id',
         'employee_id',
         'order_due_date',
         'receipt_no',
@@ -25,6 +27,11 @@ class ProductionReceipt extends Model
         'created_by',
         'updated_by',
     ];
+
+    public function additionalBatch()
+    {
+        return $this->belongsTo(JobCardFabricDetail::class, 'job_card_fabric_detail_id');
+    }
 
     public function employee()
     {

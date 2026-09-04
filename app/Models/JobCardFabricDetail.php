@@ -12,7 +12,7 @@ class JobCardFabricDetail extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_entry_id', 'art_no', 'stock_entry_id',
+        'job_card_entry_id', 'is_additional', 'additional_batch_no', 'art_no', 'stock_entry_id',
         'width', 'mtr', 'stock_total_qty', 'in_out', 'n_patti', 'row_total',
         'fs_qty', 'hs_qty', 'total_qty', 'used_qty', 'remaining_qty', 'grn_image'
     ];
@@ -57,5 +57,48 @@ class JobCardFabricDetail extends Model
     public function layMarks()
     {
         return $this->hasMany(JobCardLayMark::class, 'job_card_fabric_detail_id');
+    }
+
+    public function productionReceipts()
+    {
+        return $this->hasMany(ProductionReceipt::class, 'job_card_fabric_detail_id');
+    }
+
+    public function isPostedToWarehouse(): bool
+    {
+        return $this->productionReceipts()->where('status', 'Posted')->exists();
+    }
+
+    public function getBatchTotalQtyAttribute(): float
+    {
+        if ($this->is_additional && !empty($this->additional_batch_no)) {
+            return (float) static::where('job_card_entry_id', $this->job_card_entry_id)
+                ->where('is_additional', 1)
+                ->where('additional_batch_no', $this->additional_batch_no)
+                ->sum('total_qty');
+        }
+        return (float) ($this->total_qty ?? 0);
+    }
+
+    public function getBatchFsQtyAttribute(): float
+    {
+        if ($this->is_additional && !empty($this->additional_batch_no)) {
+            return (float) static::where('job_card_entry_id', $this->job_card_entry_id)
+                ->where('is_additional', 1)
+                ->where('additional_batch_no', $this->additional_batch_no)
+                ->sum('fs_qty');
+        }
+        return (float) ($this->fs_qty ?? 0);
+    }
+
+    public function getBatchHsQtyAttribute(): float
+    {
+        if ($this->is_additional && !empty($this->additional_batch_no)) {
+            return (float) static::where('job_card_entry_id', $this->job_card_entry_id)
+                ->where('is_additional', 1)
+                ->where('additional_batch_no', $this->additional_batch_no)
+                ->sum('hs_qty');
+        }
+        return (float) ($this->hs_qty ?? 0);
     }
 }

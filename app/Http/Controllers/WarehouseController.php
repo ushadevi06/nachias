@@ -100,8 +100,8 @@ class WarehouseController extends Controller
         }
 
         $warehouse = $id ? Warehouse::with(['brandCapacities.brand', 'brandCapacities.style'])->findOrFail($id) : null;
-        $brands = Brand::where('status', 'Active')->orderBy('brand_name','asc')->get();
-        $styles = Style::where('status', 'Active')->orderBy('style_name','asc')->get();
+        $brands = Brand::where('status', 'Active')->orderBy('id','desc')->get();
+        $styles = Style::where('status', 'Active')->orderBy('id','desc')->get();
 
         if ($request->isMethod('post')) {
             $hasBrandBlocks = $request->has('brand_blocks');
@@ -265,6 +265,19 @@ class WarehouseController extends Controller
             return unauthorizedRedirect();
         }
         $warehouse = Warehouse::findOrFail($id);
+
+        if (\App\Models\ProductionReceipt::where('warehouse_id', $id)->exists()) {
+            return redirect('warehouses')->with('danger', 'This warehouse is currently referenced in Production Receipts and cannot be deleted.');
+        }
+
+        if (\App\Models\StockEntry::where('warehouse_id', $id)->exists()) {
+            return redirect('warehouses')->with('danger', 'This warehouse is currently referenced in Stock Entries and cannot be deleted.');
+        }
+
+        if (\App\Models\StockEntryItem::where('warehouse_id', $id)->exists()) {
+            return redirect('warehouses')->with('danger', 'This warehouse is currently referenced in Stock Entry Items and cannot be deleted.');
+        }
+
         $oldData = $warehouse->toArray();
         WarehouseBrandCapacity::where('warehouse_id', $id)->delete();
         $warehouse->delete();

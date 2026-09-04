@@ -105,12 +105,21 @@
                             <input type="hidden" name="production_id" value="{{ $production->id ?? ($task->production_id ?? '') }}">
                             <input type="hidden" name="production_no" value="{{ $production->production_no ?? ($task->production_no ?? '') }}">
                             <input type="hidden" name="job_card_entry_id" value="{{ $jobCard->id ?? ($task->job_card_entry_id ?? '') }}">
-                            <input type="hidden" name="job_card_no" value="{{ $jobCard->job_card_no ?? ($task->job_card_no ?? '') }}"> 
+                            <input type="hidden" name="job_card_no" value="{{ $jobCard->job_card_no ?? ($task->job_card_no ?? '') }}">
+                            <input type="hidden" name="is_additional" value="{{ ($isAdditional ?? false) ? 1 : 0 }}">
+                            <input type="hidden" name="job_card_fabric_detail_id" value="{{ $batchId ?? ($task->job_card_fabric_detail_id ?? '') }}">
                             <div class="card border-0 shadow-sm section-card">
-                                <div class="card-header border-bottom py-3 bg-label-primary bg-opacity-10">
+                                <div class="card-header border-bottom py-3 bg-label-primary bg-opacity-10 d-flex justify-content-between align-items-center">
                                     <div class="d-flex align-items-center">
                                         <div class="section-icon bg-primary text-white me-3"><i class="ri ri-upload-2-line"></i></div>
-                                        <h5 class="mb-0 fw-bold text-primary">{{ isset($task) ? 'Edit Task' : 'New Task Issue' }}</h5>
+                                        <h5 class="mb-0 fw-bold text-primary d-flex align-items-center gap-2">
+                                            {{ isset($task) ? 'Edit Task' : 'New Task Issue' }}
+                                            @if($isAdditional ?? false)
+                                                <span class="badge bg-warning text-dark fs-6 px-3 py-1">
+                                                    <i class="ri ri-add-circle-line me-1"></i> Additional Qty {{ $additionalBatch ? ('(+'.intval($additionalBatch->batch_total_qty ?? $additionalBatch->total_qty).' pcs)') : '' }}
+                                                </span>
+                                            @endif
+                                        </h5>
                                     </div>
                                 </div>
                                 <div class="card-body pt-4">
