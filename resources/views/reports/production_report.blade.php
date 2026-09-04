@@ -23,18 +23,28 @@
     <!-- Global Filter Card -->
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
-            <form id="productionReportForm" action="{{ url('production_reports') }}" method="GET" class="row g-3 align-items-end">
+            <form id="productionReportForm" class="row g-3 align-items-end" onsubmit="return false;">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
+                    <select class="form-select select2" id="report_type_select" name="report_type">
+                        <option value="production-wip" selected>🏭 Production WIP Unit Wise</option>
+                        <option value="performance-report">👤 Performance Individual</option>
+                        <option value="process-wise">⚙️ Production Report Section Wise</option>
+                        <option value="completion-report">📅 Job Card Completed Date</option>
+                        <option value="brand-production">🏷️ Brand Wise Unit Production</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
-                    <input type="text" class="form-control start_date" name="from_date" placeholder="DD-MM-YYYY" value="{{ request('from_date') }}">
+                    <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">To Date</label>
-                    <input type="text" class="form-control end_date" name="to_date" placeholder="DD-MM-YYYY" value="{{ request('to_date') }}">
+                    <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">Unit</label>
-                    <select class="form-select select2" name="unit_id" data-placeholder="Select Unit">
+                    <select class="form-select select2" name="unit_id" id="unit_id_filter" data-placeholder="Select Unit">
                         <option value=""></option>
                         @foreach($units as $unit)
                             <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>{{ $unit->name }}</option>
@@ -42,88 +52,122 @@
                     </select>
                 </div>
 
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill p-2" title="Search">
                         <i class="ri ri-search-line me-1"></i> Search
                     </button>
-                    <a href="{{ url('production_reports') }}" class="btn btn-outline-light w-100 rounded-pill border">
-                        <i class="ri ri-refresh-line me-1"></i> Reset
-                    </a>
+                    <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border p-2" title="Reset">
+                        <i class="ri ri-refresh-line"></i>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Tabs Interface -->
+    <!-- Content Card -->
     <div class="card shadow-sm border-0 premium-content-card">
-        <div class="card-header bg-white border-bottom-0 p-0">
-            <ul class="nav nav-tabs nav-fill premium-nav-tabs" id="productionTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#production-wip" type="button" role="tab">Production WIP Unit Wise</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#performance-report" type="button" role="tab">Performance Individual</button>
-                </li>
-                {{-- <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#incentive-report" type="button" role="tab">Incentive Report</button>
-                </li> --}}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#process-wise" type="button" role="tab">Production Report Section Wise</button>
-                </li>
-                {{-- <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#production-cost" type="button" role="tab">Production Cost (Section Wise & Unit Wise)</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#alteration-report" type="button" role="tab">Alteration Quantity</button>
-                </li> --}}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#completion-report" type="button" role="tab">Job Card Completed Date</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#brand-production" type="button" role="tab">Brand Wise Unit Production</button>
-                </li>
-            </ul>
+        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+            <h5 class="mb-0 fw-bold text-primary" id="active_report_title">
+                🏭 Production WIP Unit Wise
+            </h5>
         </div>
         <div class="card-body py-4">
-            <div class="tab-content">
+            <div class="tab-content" id="reportTabsContent">
                 <!-- 1. Production WIP Unit Wise -->
                 <div class="tab-pane fade show active" id="production-wip" role="tabpanel">
-                    @include('reports.production_report.production_wip')
+                    <div class="card-datatable table-responsive">
+                        <table class="datatables-products table table-hover" id="productionWipTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Jobcard No</th>
+                                    <th>Stage</th>
+                                    <th class="text-center">Opening</th>
+                                    <th class="text-center">Inward</th>
+                                    <th class="text-center">Outward</th>
+                                    <th class="text-center">Current WIP</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- 2. Performance Individual Report -->
                 <div class="tab-pane fade" id="performance-report" role="tabpanel">
-                    @include('reports.production_report.performance_individual')
+                    <div class="card-datatable table-responsive">
+                        <table class="datatables-products table table-hover" id="performanceReportTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Job Card No</th>
+                                    <th>Service Name</th>
+                                    <th>Employee</th>
+                                    <th>Stage</th>
+                                    <th class="text-center">Assigned Qty</th>
+                                    <th class="text-center">Completed Qty</th>
+                                    <th class="text-center">Pending Qty</th>
+                                    <th class="text-center">Efficiency</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- 3. Incentive Report -->
-                <div class="tab-pane fade" id="incentive-report" role="tabpanel">
-                    @include('reports.production_report.incentive_report')
-                </div>
-
-                <!-- 4. Production Report Section Wise -->
+                <!-- 3. Production Report Section Wise -->
                 <div class="tab-pane fade" id="process-wise" role="tabpanel">
-                    @include('reports.production_report.section_wise_production')
+                    <div class="card-datatable table-responsive">
+                        <table class="datatables-products table table-hover" id="processWiseTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Job Card No</th>
+                                    <th>Service Name</th>
+                                    <th>Process Name</th>
+                                    <th class="text-center text-primary">Task Plan</th>
+                                    <th class="text-center text-warning">Inprocess</th>
+                                    <th class="text-center text-success">Completed</th>
+                                    <th class="text-center text-danger">Hold</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- 5. Production Cost (Section Wise & Unit Wise) -->
-                <div class="tab-pane fade" id="production-cost" role="tabpanel">
-                    @include('reports.production_report.production_cost')
-                </div>
-
-                <!-- 6. Alteration Quantity (Job Card Wise & Unit Wise) -->
-                <div class="tab-pane fade" id="alteration-report" role="tabpanel">
-                    @include('reports.production_report.alteration_quantity')
-                </div>
-
-                <!-- 7. Job Card Completed Date (Unit Wise & Quantity & During Days) -->
+                <!-- 4. Job Card Completed Date -->
                 <div class="tab-pane fade" id="completion-report" role="tabpanel">
-                    @include('reports.production_report.job_card_completion')
+                    <div class="card-datatable table-responsive">
+                        <table class="datatables-products table table-hover" id="completionReportTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Jobcard No</th>
+                                    <th>Unit</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th>Target Date</th>
+                                    <th>Completed Date</th>
+                                    <th class="text-center">Days Taken</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- 8. Brand Wise Unit Production (Sleeve & Style Wise) -->
+                <!-- 5. Brand Wise Unit Production -->
                 <div class="tab-pane fade" id="brand-production" role="tabpanel">
-                    @include('reports.production_report.brand_wise_production')
+                    <div class="card-datatable table-responsive">
+                        <table class="datatables-products table table-hover" id="brandProductionTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Brand</th>
+                                    <th>Style Name</th>
+                                    <th>Sleeve Type</th>
+                                    <th class="text-center">Produced Qty</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -141,33 +185,6 @@
         overflow: hidden;
     }
 
-    .premium-nav-tabs {
-        border: none;
-        background: #f8fafc;
-    }
-
-    .premium-nav-tabs .nav-link {
-        border: none;
-        border-bottom: 3px solid transparent;
-        padding: 1.25rem 0.5rem;
-        color: #64748b;
-        font-weight: 600;
-        font-size: 0.85rem;
-        border-radius: 0;
-        transition: all 0.3s ease;
-    }
-
-    .premium-nav-tabs .nav-link:hover {
-        background: #f1f5f9;
-        color: #1e293b;
-    }
-
-    .premium-nav-tabs .nav-link.active {
-        color: var(--bs-primary);
-        background: #fff;
-        border-bottom-color: var(--bs-primary);
-    }
-
     .table thead th {
         border-top: none;
         border-bottom: 2px solid #e2e8f0;
@@ -176,60 +193,215 @@
         letter-spacing: 0.05em;
         font-weight: 700;
         color: #475569;
-        padding: 1.2rem 0.75rem;
+        padding: 1rem 0.75rem;
     }
 
     .table tbody td {
-        padding: 1.1rem 0.75rem;
+        padding: 1rem 0.75rem;
         vertical-align: middle;
-        font-size: 0.88rem;
+        font-size: 0.85rem;
         border-bottom: 1px solid #f1f5f9;
     }
+
+    .badge.bg-label-primary { background: #dbeafe; color: #1e40af; }
+    .badge.bg-label-success { background: #dcfce7; color: #166534; }
+    .badge.bg-label-info { background: #e0f2fe; color: #0369a1; }
+    .badge.bg-label-warning { background: #fef9c3; color: #854d0e; }
+    .badge.bg-label-danger { background: #fee2e2; color: #991b1b; }
 </style>
 @endsection
 
 @section('scripts')
 <script>
 $(document).ready(function() {
-    $('#productionReportForm').on('submit', function(e) {
-        e.preventDefault();
-        const form = $(this);
-        const submitBtn = form.find('button[type="submit"]');
-        const originalBtnHtml = submitBtn.html();
+    const tableConfigs = {
+        'production-wip': {
+            tableId: '#productionWipTable',
+            type: 'production-wip',
+            columns: [
+                { data: 'job_card_no', name: 'job_card_no' },
+                { data: 'process', name: 'process' },
+                { data: 'opening', name: 'opening', className: 'text-center' },
+                { data: 'inward', name: 'inward', className: 'text-center' },
+                { data: 'outward', name: 'outward', className: 'text-center' },
+                { data: 'current_wip', name: 'current_wip', className: 'text-center fw-bold' }
+            ]
+        },
+        'performance-report': {
+            tableId: '#performanceReportTable',
+            type: 'performance-report',
+            columns: [
+                { data: 'job_card_no', name: 'job_card_no' },
+                { data: 'service', name: 'service' },
+                { data: 'employee', name: 'employee' },
+                { data: 'stage', name: 'stage' },
+                { data: 'assigned_qty', name: 'assigned_qty', className: 'text-center' },
+                { data: 'completed_qty', name: 'completed_qty', className: 'text-center' },
+                { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+                { data: 'efficiency', name: 'efficiency', className: 'text-center' }
+            ]
+        },
+        'process-wise': {
+            tableId: '#processWiseTable',
+            type: 'process-wise',
+            columns: [
+                { data: 'job_card_no', name: 'job_card_no' },
+                { data: 'service_name', name: 'service_name' },
+                { data: 'process_name', name: 'process_name' },
+                { data: 'task_plan', name: 'task_plan', className: 'text-center' },
+                { data: 'inprocess', name: 'inprocess', className: 'text-center' },
+                { data: 'completed', name: 'completed', className: 'text-center' },
+                { data: 'hold', name: 'hold', className: 'text-center' }
+            ]
+        },
+        'completion-report': {
+            tableId: '#completionReportTable',
+            type: 'completion-report',
+            columns: [
+                { data: 'job_card_no', name: 'job_card_no' },
+                { data: 'unit', name: 'unit' },
+                { data: 'quantity', name: 'quantity', className: 'text-center' },
+                { data: 'target_date', name: 'target_date' },
+                { data: 'completed_date', name: 'completed_date' },
+                { data: 'days_taken', name: 'days_taken', className: 'text-center' }
+            ]
+        },
+        'brand-production': {
+            tableId: '#brandProductionTable',
+            type: 'brand-production',
+            columns: [
+                { data: 'brand', name: 'brand' },
+                { data: 'style', name: 'style' },
+                { data: 'sleeve', name: 'sleeve' },
+                { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
+                { data: 'unit', name: 'unit' }
+            ]
+        }
+    };
 
-        submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...').prop('disabled', true);
-        $('.tab-content').css('opacity', '0.6');
+    $.fn.dataTable.ext.errMode = 'none';
 
-        $.ajax({
-            url: form.attr('action'),
-            method: 'GET',
-            data: form.serialize(),
-            dataType: 'json',
-            success: function(response) {
-                $.each(response, function(tabId, html) {
-                    const targetTab = $('#' + tabId);
-                    if (targetTab.length) {
-                        targetTab.html(html);
-                    }
-                });
-                
-                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-                    tooltipTriggerList.map(function (tooltipTriggerEl) {
-                        return new bootstrap.Tooltip(tooltipTriggerEl)
-                    });
+    function showReportLoading(isLoading) {
+        let loader = $('#report_loader');
+        if (isLoading) {
+            if (!loader.length) {
+                $('#active_report_title').append(' <div class="spinner-border spinner-border-sm text-primary ms-2" id="report_loader" role="status"></div>');
+            }
+            $('#reportTabsContent').css('opacity', '0.6');
+        } else {
+            $('#report_loader').remove();
+            $('#reportTabsContent').css('opacity', '1');
+        }
+    }
+
+    function loadActiveTabTable(tabPaneId) {
+        const config = tableConfigs[tabPaneId];
+        if (!config) return;
+
+        const tableElem = $(config.tableId);
+        if (!tableElem.length) return;
+
+        showReportLoading(true);
+
+        if ($.fn.DataTable.isDataTable(config.tableId)) {
+            const dt = tableElem.DataTable();
+            if (dt && dt.ajax && typeof dt.ajax.url === 'function' && dt.ajax.url()) {
+                try {
+                    dt.ajax.reload(function() { showReportLoading(false); }, false);
+                    return;
+                } catch (err) {
+                    dt.destroy();
+                }
+            } else {
+                dt.destroy();
+            }
+        }
+
+        tableElem.DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            destroy: true,
+            language: {
+                processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading report data...</div>',
+                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
+            },
+            ajax: {
+                url: "{{ url('production_reports/ajax') }}/" + config.type,
+                type: "GET",
+                data: function(d) {
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
+                    d.unit_id = $('select[name="unit_id"]').val();
                 }
             },
-            error: function() {
-                alert('An error occurred while fetching the report data. Please try again.');
+            drawCallback: function() {
+                showReportLoading(false);
             },
-            complete: function() {
-                submitBtn.html(originalBtnHtml).prop('disabled', false);
-                $('.tab-content').css('opacity', '1');
-            }
+            columns: config.columns,
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            buttons: [
+                { extend: 'excel', className: 'buttons-excel d-none' },
+                { extend: 'pdf', className: 'buttons-pdf d-none' },
+                { extend: 'print', className: 'buttons-print d-none' }
+            ],
+            lengthMenu: [10, 25, 50, 100],
+            pageLength: 10
         });
+    }
+
+    // Select Report Type Change Listener
+    $('#report_type_select').on('change', function() {
+        const selectedType = $(this).val();
+        const selectedText = $(this).find('option:selected').text();
+        $('#active_report_title').html(selectedText);
+
+        $('.tab-pane').removeClass('show active');
+        $('#' + selectedType).addClass('show active');
+
+        loadActiveTabTable(selectedType);
     });
 
+    // Initialize Active Report on Page Load
+    const initialReportType = $('#report_type_select').val() || 'production-wip';
+    const initialText = $('#report_type_select option:selected').text();
+    if (initialText) {
+        $('#active_report_title').html(initialText);
+    }
+    $('.tab-pane').removeClass('show active');
+    $('#' + initialReportType).addClass('show active');
+    loadActiveTabTable(initialReportType);
+
+    // Form Filter Submit listener
+    $('#productionReportForm').on('submit', function(e) {
+        e.preventDefault();
+        const activeTabId = $('#report_type_select').val() || 'production-wip';
+        const config = tableConfigs[activeTabId];
+        if (config && $.fn.DataTable.isDataTable(config.tableId)) {
+            const dt = $(config.tableId).DataTable();
+            if (dt && dt.ajax && typeof dt.ajax.url === 'function' && dt.ajax.url()) {
+                try {
+                    showReportLoading(true);
+                    dt.ajax.reload(function() { showReportLoading(false); });
+                    return;
+                } catch (err) {
+                    dt.destroy();
+                }
+            }
+        }
+        loadActiveTabTable(activeTabId);
+    });
+
+    // Reset Button Handler
+    $(document).on('click', '#btn-reset-report', function(e) {
+        e.preventDefault();
+        $('.start_date').val('');
+        $('.end_date').val('');
+        $('select[name="unit_id"]').val('').trigger('change');
+        $('#productionReportForm').trigger('submit');
+    });
+
+    // Export Handlers
     $('#btn-excel').on('click', function() {
         $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();
     });

@@ -367,7 +367,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Purchase Order */
     Route::get('/purchase_orders', [PurchaseOrderController::class, 'index'])->name('purchase_orders.index');
-    Route::match(['GET','POST'],'purchase_orders/add/{id?}', [PurchaseOrderController::class, 'add']);
+    Route::match(['GET', 'POST'], 'purchase_orders/add/{id?}', [PurchaseOrderController::class, 'add']);
     Route::get('/purchase_orders/view/{id}', [PurchaseOrderController::class, 'view'])->name('purchase_orders.view');
     Route::get('purchase_orders/download-pdf/{id}', [PurchaseOrderController::class, 'downloadPdf']);
     Route::get('purchase_orders/print/{id}', [PurchaseOrderController::class, 'print']);
@@ -377,7 +377,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Purchase Invoice */
     Route::get('purchase_invoices', [PurchaseInvoiceController::class, 'index']);
-    Route::match(['GET','POST'],'purchase_invoices/add/{id?}',[PurchaseInvoiceController::class, 'add']);
+    Route::match(['GET', 'POST'], 'purchase_invoices/add/{id?}', [PurchaseInvoiceController::class, 'add']);
     Route::get('purchase_invoices/view/{id}', [PurchaseInvoiceController::class, 'view']);
     Route::get('purchase_invoices/delete/{id}', [PurchaseInvoiceController::class, 'destroy']);
     Route::post('purchase_invoices/update-status/{id}', [PurchaseInvoiceController::class, 'updateStatus']);
@@ -400,7 +400,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], 'raw_materials/add/{id?}', [RawMaterialController::class, 'add']);
     Route::get('raw_materials/delete/{id}', [RawMaterialController::class, 'destroy']);
     Route::post('raw_materials/status/{id}', [RawMaterialController::class, 'updateStatus']);
-     Route::post('raw_materials/import', [RawMaterialController::class, 'import']);
+    Route::post('raw_materials/import', [RawMaterialController::class, 'import']);
     Route::get('raw_materials/download-sample', [RawMaterialController::class, 'downloadSample']);
 
     /* Standard Consumption */
@@ -698,12 +698,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('/update-payroll-status', [SalaryController::class, 'updatePayrollStatus'])->name('update.payroll.status');
     Route::post('/generate-payslip-pdf', [SalaryController::class, 'generatePayslipPdf'])->name('generate.payslip.pdf');
     Route::get('/view-payslip/{id}', [SalaryController::class, 'viewPayslip'])->name('view.payslip');
-    Route::get('/print-payslip/{id}',[SalaryController::class, 'printPayslip'])->name('print.payslip');
+    Route::get('/print-payslip/{id}', [SalaryController::class, 'printPayslip'])->name('print.payslip');
     Route::get('/download-payslip/{id}', [SalaryController::class, 'downloadPayslip'])
-    ->name('download.payslip');
+        ->name('download.payslip');
     Route::get('/salary-generation/search', [SalaryController::class, 'searchSalaryGeneration'])->name('salary-generation.search');
     Route::get('/monthly-payroll-export', [SalaryController::class, 'exportExcel'])
-    ->name('monthly-payroll.export');
+        ->name('monthly-payroll.export');
 
     /* Payroll Report */
     Route::get('payroll_reports', [PayrollReportController::class, 'index']);
@@ -731,6 +731,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);
+    Route::get('production_reports/ajax/{type}', [ProductionReportController::class, 'ajaxReportData']);
 
     /* Purchase Report */
     Route::get('purchase_reports/fabric', [PurchaseReportController::class, 'fabricStore']);
@@ -769,8 +770,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 Route::any('/adminer', function () {
     require public_path('adminer.php');
 })->withoutMiddleware([
-    App\Http\Middleware\VerifyCsrfToken::class
-]);
+            App\Http\Middleware\VerifyCsrfToken::class
+        ]);
 
 Route::get('/run-permission-seeder', function () {
     Artisan::call('db:seed', [
