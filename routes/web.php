@@ -13,6 +13,7 @@ use App\Http\Controllers\PlaceController;
 use App\Http\Controllers\UomController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\TaxProCredentialController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\DebitNoteController;
@@ -381,6 +382,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('purchase_invoices/delete/{id}', [PurchaseInvoiceController::class, 'destroy']);
     Route::post('purchase_invoices/update-status/{id}', [PurchaseInvoiceController::class, 'updateStatus']);
     Route::get('purchase_invoices/get-po-details/{id}', [PurchaseInvoiceController::class, 'getPurchaseOrderDetails']);
+    Route::post('purchase_invoices/get-po-details-multi', [PurchaseInvoiceController::class, 'getPurchaseOrderDetailsMulti']);
+    Route::get('purchase_invoices/get-pos-by-supplier/{supplier_id}', [PurchaseInvoiceController::class, 'getPurchaseOrdersBySupplier']);
     Route::get('purchase_invoices/get-items/{id}', [PurchaseInvoiceController::class, 'getInvoiceItems']);
     Route::get('purchase_invoices/download-pdf/{id}', [PurchaseInvoiceController::class, 'downloadPdf']);
     Route::get('purchase_invoices/print/{id}', [PurchaseInvoiceController::class, 'print']);
@@ -744,6 +747,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Settings */
     Route::get('settings', [SettingController::class, 'index']);
     Route::post('settings/update', [SettingController::class, 'update']);
+
+    /* TaxPro API Credentials & Balance */
+    Route::get('taxpro-credentials', [TaxProCredentialController::class, 'index'])->name('taxpro.credentials');
+    Route::get('taxpro-credentials/check-balance', [TaxProCredentialController::class, 'checkBalance'])->name('taxpro.check_balance');
 
     Route::get(
         '/clear-cache',

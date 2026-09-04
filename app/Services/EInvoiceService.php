@@ -914,4 +914,71 @@ class EInvoiceService
 
         return ['success' => false, 'message' => 'API Error: ' . $errorMessage, 'response' => $apiData];
     }
+
+    /**
+     * Fetch TaxPro API Balance (GetApiBalance)
+     */
+    public function getApiBalance()
+    {
+        try {
+            $aspId = env('EINV_ASP_ID');
+            $aspPassword = env('EINV_ASP_PASSWORD');
+            
+            // Determine balance endpoint based on configured environment or explicit config
+            $isSandbox = str_contains(env('EINV_AUTH_URL', ''), 'sandbox');
+            $defaultUrl = $isSandbox 
+                ? 'https://gstsandbox.charteredinfo.com/aspapi/v1.1/getapibalance'
+                : 'https://einvapi.charteredinfo.com/aspapi/v1.1/getapibalance';
+                
+            $balanceUrl = env('EINV_BALANCE_URL', $defaultUrl);
+
+            $response = Http::timeout(15)->withHeaders([
+                'aspid' => $aspId,
+                'password' => $aspPassword,
+            ])->get($balanceUrl, [
+                'aspid' => $aspId,
+                'password' => $aspPassword,
+            ]);
+
+            // If sandbox URL returns error, try the primary production endpoint as fallback
+            if (!$response->successful() && $isSandbox) {
+                $response = Http::timeout(15)->withHeaders([
+                    'aspid' => $aspId,
+                    'password' => $aspPassword,
+                ])->get('https://einvapi.charteredinfo.com/aspapi/v1.1/getapibalance', [
+                    'aspid' => $aspId,
+                    'password' => $aspPassword,
+                ]);
+            }
+
+            $data = $response->json();
+
+            if ($response->successful() && is_array($data)) {
+                $ewbApiBal = $data['EWBApiBal'] ?? $data['ApiBal'] ?? $data['Balance'] ?? null;
+                $ewbApiBalExpDt = $data['EWBApiBalExpDt'] ?? $data['ApiBalExpDt'] ?? $data['ExpDate'] ?? null;
+
+                return [
+                    'success' => true,
+                    'ewb_api_bal' => $ewbApiBal,
+                    'ewb_api_bal_exp_dt' => $ewbApiBalExpDt,
+                    'raw_data' => $data,
+                    'status_code' => $response->status(),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $data['message'] ?? $data['ErrorMessage'] ?? 'Failed to retrieve API balance (HTTP ' . $response->status() . ')',
+                'raw_data' => $data ?? $response->body(),
+                'status_code' => $response->status(),
+            ];
+        } catch (\Exception $e) {
+            \Log::error('TaxPro getApiBalance Exception', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'Exception occurred: ' . $e->getMessage(),
+            ];
+        }
+    }
 }
+

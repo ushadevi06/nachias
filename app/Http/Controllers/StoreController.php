@@ -34,18 +34,23 @@ class StoreController extends Controller
                 </label>
                 <div class="status_msg_' . $row->id . ' mt-1"></div>';
 
+                $nameLower = strtolower(trim($row->store_type_name));
+                $allowActions = str_contains($nameLower, 'sample') || str_contains($nameLower, 'cutting');
+
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit stores')) {
-                    $action .= '<a href="' . url('stores/add/' . $row->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
-                }
+                if ($allowActions) {
+                    if (auth()->id() == 1 || auth()->user()->can('edit stores')) {
+                        $action .= '<a href="' . url('stores/add/' . $row->id) . '" class="btn btn-edit">
+                                        <i class="icon-base ri ri-edit-box-line"></i>
+                                    </a>';
+                    }
 
-                if ((auth()->id() == 1 || auth()->user()->can('delete stores')) && !in_array($row->id, [1, 2])) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('stores/delete/' . $row->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    if (auth()->id() == 1 || auth()->user()->can('delete stores')) {
+                        $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('stores/delete/' . $row->id) . '\')">
+                                <i class="icon-base ri ri-delete-bin-line"></i>
+                            </a>';
+                    }
                 }
 
                 $action .= '</div>';
@@ -76,6 +81,12 @@ class StoreController extends Controller
         }
 
         $storeType = $id ? StoreType::findOrFail($id) : null;
+        if ($storeType) {
+            $nameLower = strtolower(trim($storeType->store_type_name));
+            if (!str_contains($nameLower, 'sample') && !str_contains($nameLower, 'cutting')) {
+                return redirect('stores')->with('danger', 'This store is protected and cannot be edited.');
+            }
+        }
 
         if ($request->isMethod('post')) {
             $rules = [
@@ -143,6 +154,10 @@ class StoreController extends Controller
         }
 
         $storeType = StoreType::findOrFail($id);
+        $nameLower = strtolower(trim($storeType->store_type_name));
+        if (!str_contains($nameLower, 'sample') && !str_contains($nameLower, 'cutting')) {
+            return redirect('stores')->with('danger', 'This store is protected and cannot be deleted.');
+        }
 
         if (PurchaseOrder::where('store_type_id', $id)->exists()) {
             return redirect('stores')->with('danger', 'This store is currently referenced in Purchase Order\'s and cannot be deleted.');

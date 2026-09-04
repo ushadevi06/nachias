@@ -903,6 +903,23 @@ $isSuper = $user->id == 1;
                                         </a>
                                     </li>
                                 @endif
+                                <!-- TaxPro Credentials -->
+                                @php
+                                    $canAccessTaxPro = $user && (
+                                        $isSuper 
+                                        || $user->can('view settings')
+                                        || $user->hasRole(['Admin', 'Super Admin', 'ADMIN', 'SUPER ADMIN', 'MANAGING DIRECTOR', 'IT INCHARGE', 'ACCOUNTANT', 'Accountant', 'accountant'])
+                                        || ($user->role && in_array(strtoupper($user->role->name), ['ADMIN', 'SUPER ADMIN', 'MANAGING DIRECTOR', 'IT INCHARGE', 'ACCOUNTANT']))
+                                    );
+                                @endphp
+                                @if($canAccessTaxPro)
+                                    <li class="menu-item {{ request()->is('taxpro-credentials*') ? 'active' : '' }}">
+                                        <a href="{{ url('taxpro-credentials') }}" class="menu-link">
+                                            <i class="menu-icon icon-base ri ri-shield-keyhole-line"></i>
+                                            <div>TaxPro Credentials</div>
+                                        </a>
+                                    </li>
+                                @endif
                                 <!-- Spacer to prevent last item from being hidden by the next arrow -->
                                 <li class="menu-item d-none d-lg-block" style="width: 50px; pointer-events: none; visibility: hidden;"></li>
                             </ul>
