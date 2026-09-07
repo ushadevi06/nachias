@@ -10,6 +10,8 @@ use App\Models\ServiceProvider;
 use App\Models\Task;
 use App\Models\TaskAssignEmployee;
 use App\Models\StockEntryItem;
+use App\Models\OperationStage;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ProductionReportController extends Controller
@@ -558,6 +560,296 @@ class ProductionReportController extends Controller
                                 'alteration_pc' => '3%'
                             ]
                         ]
+                    ]);
+
+                case 'department-efficiency':
+                    $stages = OperationStage::active()->orderBy('id', 'asc')->get();
+                    $rows = [];
+                    $totalTarget = 0;
+                    $totalPlan = 0;
+                    $totalActual = 0;
+
+                    foreach ($stages as $stage) {
+                        $tasksQuery = Task::with(['jobCard.serviceProvider', 'assignments', 'stage'])
+                            ->whereHas('stage', function($q) use ($stage) {
+                                $q->where('operation_stage_id', $stage->id);
+                            });
+
+                        if ($fromDate) {
+                            $tasksQuery->where(function($q) use ($fromDate) {
+                                $q->where('issue_date', '>=', $fromDate)
+                                  ->orWhere(function($sub) use ($fromDate) {
+                                      $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                                  });
+                            });
+                        }
+                        if ($toDate) {
+                            $tasksQuery->where(function($q) use ($toDate) {
+                                $q->where('issue_date', '<=', $toDate)
+                                  ->orWhere(function($sub) use ($toDate) {
+                                      $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                                  });
+                            });
+                        }
+                        if ($unitId) {
+                            $tasksQuery->whereHas('jobCard', function($q) use ($unitId) {
+                                $q->where('service_provider_id', $unitId);
+                            });
+                        }
+
+                        $tasks = $tasksQuery->get();
+
+                        $stagePlan = 0;
+                        $stageActual = 0;
+                        $delayedCount = 0;
+
+                        foreach ($tasks as $task) {
+                            $taskPlan = (float) ($task->issue_qty ?? 0);
+                            
+                            $taskActual = 0;
+                            if ($task->status === 'Completed') {
+                                $taskActual = $taskPlan;
+                            } elseif ($task->assignments->isNotEmpty()) {
+                                $services = $task->assignments->groupBy('service_id');
+                                if ($services->isNotEmpty()) {
+                                    $taskActual = (float) $services->map(function($grp) {
+                                        return $grp->sum('completed_qty');
+                                    })->min();
+                                } else {
+                                    $taskActual = (float) $task->assignments->sum('completed_qty');
+                                }
+                            }
+
+                            $stagePlan += $taskPlan;
+                            $stageActual += $taskActual;
+
+                            // Check if delayed
+                            $isDelayed = false;
+                            if ($task->due_date) {
+                                $dueDate = Carbon::parse($task->due_date)->startOfDay();
+                                $now = Carbon::now()->startOfDay();
+                                if ($task->status === 'Completed') {
+                                    $completedDate = Carbon::parse($task->updated_at)->startOfDay();
+                                    if ($completedDate->gt($dueDate)) {
+                                        $isDelayed = true;
+                                    }
+                                } else {
+                                    if ($now->gt($dueDate)) {
+                                        $isDelayed = true;
+                                    }
+                                }
+                            }
+                            if ($isDelayed || $task->status === 'Hold') {
+                                $delayedCount++;
+                            }
+                        }
+
+                        $targetVal = $stage->target !== null ? (float)$stage->target : null;
+                        if ($targetVal !== null) {
+                            $totalTarget += $targetVal;
+                        }
+                        $totalPlan += $stagePlan;
+                        $totalActual += $stageActual;
+
+                        $stageEfficiency = ($stagePlan > 0) ? round(($stageActual / $stagePlan) * 100, 1) : 0;
+                        
+                        $effBadgeClass = 'bg-label-danger';
+                        if ($stageEfficiency >= 95) $effBadgeClass = 'bg-label-success';
+                        elseif ($stageEfficiency >= 75) $effBadgeClass = 'bg-label-warning';
+
+                        $tasksCount = $tasks->count();
+                        if ($tasksCount === 0) {
+                            $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '"><i class="ri-file-list-line me-1"></i> No Tasks</button>';
+                        } else {
+                            if ($delayedCount > 0) {
+                                $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '" title="Click to view ' . $delayedCount . ' delayed tasks"><i class="ri-alarm-warning-line me-1"></i> ' . $delayedCount . ' Delayed / View (' . $tasksCount . ')</button>';
+                            } else {
+                                $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '" title="Click to view tasks & delay status"><i class="ri-eye-line me-1"></i> View Tasks (' . $tasksCount . ')</button>';
+                            }
+                        }
+
+                        $deptHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-dept-tasks text-decoration-none" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '">' . htmlspecialchars($stage->operation_stage_name) . ' <i class="ri-external-link-line small opacity-75 ms-1"></i></a>';
+
+                        $rows[] = [
+                            'stage_id' => $stage->id,
+                            'operation' => $deptHtml,
+                            'target' => $targetVal !== null ? number_format($targetVal) . ' Pcs' : '<span class="text-muted">-</span>',
+                            'plan' => '<span class="text-primary fw-bold">' . number_format($stagePlan) . ' Pcs</span>',
+                            'actual' => '<span class="text-success fw-bold">' . number_format($stageActual) . ' Pcs</span>',
+                            'efficiency' => '<span class="badge ' . $effBadgeClass . ' rounded-pill px-3 py-1 fs-6">' . $stageEfficiency . '%</span>',
+                            'working_hours' => '<span class="fw-semibold">8</span>',
+                            'delay_details' => $delayDetailsHtml,
+                            '_search_text' => strtolower($stage->operation_stage_name . ' ' . $stageEfficiency . '%')
+                        ];
+                    }
+
+                    $totalRecords = count($rows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $rows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = array_slice($filteredRows, $start, $length);
+
+                    $overallEfficiency = ($totalPlan > 0) ? round(($totalActual / $totalPlan) * 100, 1) : 0;
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'meta' => [
+                            'total_target' => number_format($totalTarget) . ' Pcs',
+                            'total_plan' => number_format($totalPlan) . ' Pcs',
+                            'total_actual' => number_format($totalActual) . ' Pcs',
+                            'overall_efficiency' => $overallEfficiency . '%',
+                            'efficiency_val' => $overallEfficiency
+                        ]
+                    ]);
+
+                case 'department-tasks':
+                    $stageId = intval($request->stage_id ?? 0);
+                    $stage = OperationStage::find($stageId);
+                    if (!$stage) {
+                        return response()->json(['success' => false, 'message' => 'Operation stage not found'], 404);
+                    }
+
+                    $tasksQuery = Task::with(['jobCard.serviceProvider', 'assignments', 'stage'])
+                        ->whereHas('stage', function($q) use ($stageId) {
+                            $q->where('operation_stage_id', $stageId);
+                        });
+
+                    if ($fromDate) {
+                        $tasksQuery->where(function($q) use ($fromDate) {
+                            $q->where('issue_date', '>=', $fromDate)
+                              ->orWhere(function($sub) use ($fromDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                              });
+                        });
+                    }
+                    if ($toDate) {
+                        $tasksQuery->where(function($q) use ($toDate) {
+                            $q->where('issue_date', '<=', $toDate)
+                              ->orWhere(function($sub) use ($toDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                              });
+                        });
+                    }
+                    if ($unitId) {
+                        $tasksQuery->whereHas('jobCard', function($q) use ($unitId) {
+                            $q->where('service_provider_id', $unitId);
+                        });
+                    }
+
+                    $tasks = $tasksQuery->orderBy('id', 'desc')->get();
+
+                    $tasksData = [];
+                    $totalPlan = 0;
+                    $totalActual = 0;
+
+                    foreach ($tasks as $task) {
+                        $taskPlan = (float) ($task->issue_qty ?? 0);
+                        
+                        $taskActual = 0;
+                        if ($task->status === 'Completed') {
+                            $taskActual = $taskPlan;
+                        } elseif ($task->assignments->isNotEmpty()) {
+                            $services = $task->assignments->groupBy('service_id');
+                            if ($services->isNotEmpty()) {
+                                $taskActual = (float) $services->map(function($grp) {
+                                    return $grp->sum('completed_qty');
+                                })->min();
+                            } else {
+                                $taskActual = (float) $task->assignments->sum('completed_qty');
+                            }
+                        }
+
+                        $efficiency = ($taskPlan > 0) ? round(($taskActual / $taskPlan) * 100, 1) : 0;
+                        $totalPlan += $taskPlan;
+                        $totalActual += $taskActual;
+
+                        // Reason / Delay Calculation
+                        $delayReason = '-';
+                        $delayBadge = 'secondary';
+                        
+                        if (!empty($task->remarks)) {
+                            $delayReason = $task->remarks;
+                            $delayBadge = 'info';
+                        } elseif ($task->jobCard && !empty($task->jobCard->remarks)) {
+                            $delayReason = $task->jobCard->remarks;
+                            $delayBadge = 'info';
+                        } elseif ($task->status === 'Hold') {
+                            $delayReason = 'On Hold';
+                            $delayBadge = 'warning';
+                        } elseif ($task->due_date) {
+                            $dueDate = Carbon::parse($task->due_date)->startOfDay();
+                            $now = Carbon::now()->startOfDay();
+                            if ($task->status === 'Completed') {
+                                $completedDate = Carbon::parse($task->updated_at)->startOfDay();
+                                if ($completedDate->gt($dueDate)) {
+                                    $diff = $completedDate->diffInDays($dueDate);
+                                    $delayReason = "Delayed by {$diff} day" . ($diff > 1 ? 's' : '');
+                                    $delayBadge = 'danger';
+                                } else {
+                                    $delayReason = "Completed on time";
+                                    $delayBadge = 'success';
+                                }
+                            } else {
+                                if ($now->gt($dueDate)) {
+                                    $diff = $now->diffInDays($dueDate);
+                                    $delayReason = "Overdue by {$diff} day" . ($diff > 1 ? 's' : '');
+                                    $delayBadge = 'danger';
+                                } else {
+                                    $delayReason = "On Track";
+                                    $delayBadge = 'primary';
+                                }
+                            }
+                        } elseif ($task->status === 'Completed') {
+                            $delayReason = 'Completed';
+                            $delayBadge = 'success';
+                        }
+
+                        $statusBadge = 'secondary';
+                        if ($task->status === 'Completed') $statusBadge = 'success';
+                        elseif ($task->status === 'In Progress') $statusBadge = 'primary';
+                        elseif ($task->status === 'Hold') $statusBadge = 'warning';
+                        elseif ($task->status === 'Planned') $statusBadge = 'info';
+
+                        $tasksData[] = [
+                            'id' => $task->id,
+                            'task_no' => $task->task_no,
+                            'job_card_no' => $task->job_card_no ?? 'N/A',
+                            'unit' => $task->jobCard && $task->jobCard->serviceProvider ? $task->jobCard->serviceProvider->name : 'N/A',
+                            'issue_date' => $task->issue_date ? Carbon::parse($task->issue_date)->format('d-m-Y') : '-',
+                            'due_date' => $task->due_date ? Carbon::parse($task->due_date)->format('d-m-Y') : '-',
+                            'plan' => number_format($taskPlan) . ' Pcs',
+                            'actual' => number_format($taskActual) . ' Pcs',
+                            'efficiency' => $efficiency . '%',
+                            'status' => $task->status ?: 'Planned',
+                            'status_badge' => $statusBadge,
+                            'delay_reason' => $delayReason,
+                            'delay_badge' => $delayBadge,
+                            'view_url' => url('task_management/view_details/' . $task->id)
+                        ];
+                    }
+
+                    $deptEfficiency = ($totalPlan > 0) ? round(($totalActual / $totalPlan) * 100, 1) : 0;
+
+                    return response()->json([
+                        'success' => true,
+                        'stage_name' => $stage->operation_stage_name,
+                        'stage_target' => $stage->target !== null ? number_format($stage->target) . ' Pcs' : '-',
+                        'summary' => [
+                            'total_tasks' => count($tasksData),
+                            'total_plan' => number_format($totalPlan) . ' Pcs',
+                            'total_actual' => number_format($totalActual) . ' Pcs',
+                            'efficiency' => $deptEfficiency . '%'
+                        ],
+                        'tasks' => $tasksData
                     ]);
 
                 default:

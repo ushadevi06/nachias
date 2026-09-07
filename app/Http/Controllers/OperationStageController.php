@@ -50,6 +50,7 @@ class OperationStageController extends Controller
                     'DT_RowIndex' => $count++,
                     'operation_stage_name' => $stage->operation_stage_name,
                     'working_days' => $stage->working_days ?? 0,
+                    'target' => $stage->target,
                     'cost' => isset($stage->cost) ? number_format($stage->cost, 2) : '0.00',
                     'status' => $status,
                     'action' => $action,
@@ -92,6 +93,7 @@ class OperationStageController extends Controller
                 ],
                 'working_days' => 'nullable|integer|min:0|max:999',
                 'cost' => 'nullable|numeric|min:0',
+                'target' => 'nullable|integer|min:0',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -106,6 +108,7 @@ class OperationStageController extends Controller
                 'operation_stage_name' => $request->operation_stage_name,
                 'working_days' => $request->working_days ?? 0,
                 'cost' => $request->cost ?? 0,
+                'target' => $request->target !== null && $request->target !== '' ? (int) $request->target : null,
                 'status' => $request->status
             ];
             if ($id) {

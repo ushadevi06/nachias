@@ -14,6 +14,7 @@ class OperationStage extends Model
         'operation_stage_name',
         'working_days',
         'cost',
+        'target',
         'status',
         'created_by',
         'updated_by',

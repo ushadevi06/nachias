@@ -2,100 +2,102 @@
 @section('title', 'Operation Stages - ' . env('WEBSITE_NAME'))
 
 @section('content')
-<div class="container-xxl section-padding">
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="table-header-box">
-                <h4 class="mb-0">Operation Stages</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create operation-stages'))
-                <a class="btn btn-primary" href="{{ url('operation_stages/add') }}">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
-                @endif
-            </div>
-
+    <div class="container-xxl section-padding">
+        <div class="row">
             <div class="col-lg-12">
-                @include('flash_messages')
-            </div>
+                <div class="table-header-box">
+                    <h4 class="mb-0">Operation Stages</h4>
+                    @if(auth()->id() == 1 || auth()->user()->can('create operation-stages'))
+                        <a class="btn btn-primary" href="{{ url('operation_stages/add') }}">
+                            <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                        </a>
+                    @endif
+                </div>
 
-            <div class="card">
-                <div class="card-body">
-                    <div class="card-datatable">
-                        <table class="table" id="operationStagesTable">
-                            <thead>
-                                <tr>
-                                    <th>S.NO</th>
-                                    <th>Operation Stage name</th>
-                                    <th>Working Days</th>
-                                    <th>Cost</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            </tbody>
-                        </table>
+                <div class="col-lg-12">
+                    @include('flash_messages')
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-datatable">
+                            <table class="table" id="operationStagesTable">
+                                <thead>
+                                    <tr>
+                                        <th>S.NO</th>
+                                        <th>Operation Stage name</th>
+                                        <th>Working Days</th>
+                                        <th>Cost</th>
+                                        <th>Target</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
 
 @section('scripts')
-<script>
-    $(document).ready(function() {
-        let table = $('#operationStagesTable').DataTable({
-            responsive: true,
-            paging: true,
-            autoWidth: false,
-            searching: true,
-            ordering: true,
-            info: true,
-            lengthChange: true,
-            processing: true,
-            ajax: {
-                url: "{{ url('operation_stages') }}",
-                type: "GET"
-            },
-            columns: [
-                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                { data: 'operation_stage_name', name: 'operation_stage_name' },
-                { data: 'working_days', name: 'working_days' },
-                { data: 'cost', name: 'cost', defaultContent: '0.00' },
-                { data: 'status', name: 'status', orderable: false, searchable: false },
-                { data: 'action', name: 'action', orderable: false, searchable: false },
-            ]
-        });
-
-        $(document).on('change', '.operation-stage-status-toggle', function() {
-            let stageId = $(this).data('id');
-            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
-
-            $.ajax({
-                url: "{{ url('operation_stages/status') }}/" + stageId,
-                type: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    status: status
+    <script>
+        $(document).ready(function () {
+            let table = $('#operationStagesTable').DataTable({
+                responsive: true,
+                paging: true,
+                autoWidth: false,
+                searching: true,
+                ordering: true,
+                info: true,
+                lengthChange: true,
+                processing: true,
+                ajax: {
+                    url: "{{ url('operation_stages') }}",
+                    type: "GET"
                 },
-                success: function(response) {
-                    if (response.success) {
-                        let msg = response.status === 'Active' ?
-                            '<span class="text-success">Activated</span>' :
-                            '<span class="text-danger">Deactivated</span>';
+                columns: [
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'operation_stage_name', name: 'operation_stage_name' },
+                    { data: 'working_days', name: 'working_days' },
+                    { data: 'cost', name: 'cost', defaultContent: '0.00' },
+                    { data: 'target', name: 'target', defaultContent: '0' },
+                    { data: 'status', name: 'status', orderable: false, searchable: false },
+                    { data: 'action', name: 'action', orderable: false, searchable: false },
+                ]
+            });
 
-                        $('.status_msg_' + stageId).html(msg).fadeIn().delay(1200).fadeOut();
-                    } else {
-                        alert('Status update failed');
+            $(document).on('change', '.operation-stage-status-toggle', function () {
+                let stageId = $(this).data('id');
+                let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+                $.ajax({
+                    url: "{{ url('operation_stages/status') }}/" + stageId,
+                    type: "POST",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        status: status
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            let msg = response.status === 'Active' ?
+                                '<span class="text-success">Activated</span>' :
+                                '<span class="text-danger">Deactivated</span>';
+
+                            $('.status_msg_' + stageId).html(msg).fadeIn().delay(1200).fadeOut();
+                        } else {
+                            alert('Status update failed');
+                        }
+                    },
+                    error: function () {
+                        alert('Error updating status');
                     }
-                },
-                error: function() {
-                    alert('Error updating status');
-                }
+                });
             });
         });
-    });
-</script>
+    </script>
 @endsection
