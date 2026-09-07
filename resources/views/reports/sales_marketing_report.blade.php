@@ -28,6 +28,7 @@
                     <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
                     <select class="form-select select2" id="report_type_select" name="report_type">
                         <option value="order-report" selected>📦 Order Report</option>
+                        <option value="invoice-report">🧾 Invoice Report</option>
                         <option value="pending-report">⏳ Pending Orders</option>
                         <option value="incentive-report">🗺️ Zone Wise Incentive</option>
                         <option value="comparison-report">📊 Sales Comparison</option>
@@ -93,62 +94,67 @@
                     @include('reports.sales_marketing_reports._order_report')
                 </div>
 
-                <!-- 2. Pending Order Report -->
+                <!-- 2. Invoice Report -->
+                <div class="tab-pane fade" id="invoice-report" role="tabpanel">
+                    @include('reports.sales_marketing_reports._invoice_report')
+                </div>
+
+                <!-- 3. Pending Order Report -->
                 <div class="tab-pane fade" id="pending-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._pending_report')
                 </div>
 
-                <!-- 3. Zonewise Incentive Report -->
+                <!-- 4. Zonewise Incentive Report -->
                 <div class="tab-pane fade" id="incentive-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._incentive_report')
                 </div>
 
-                <!-- 4. Sales Comparison -->
+                <!-- 5. Sales Comparison -->
                 <div class="tab-pane fade" id="comparison-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._comparison_report')
                 </div>
 
-                <!-- 12. Credit Note Report -->
+                <!-- 6. Credit Note Report -->
                 <div class="tab-pane fade" id="credit-note-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._credit_note_report')
                 </div>
 
-                <!-- 13. Despatch Tracking Report -->
+                <!-- 7. Despatch Tracking Report -->
                 <div class="tab-pane fade" id="despatch-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._despatch_tracking_report')
                 </div>
 
-                <!-- 5. Zonewise Outstanding Report -->
+                <!-- 8. Zonewise Outstanding Report -->
                 <div class="tab-pane fade" id="outstanding-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._outstanding_report')
                 </div>
 
-                <!-- 6. Sales Executive Tracker -->
+                <!-- 9. Sales Executive Tracker -->
                 <div class="tab-pane fade" id="tracker-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._tracker_report')
                 </div>
 
-                <!-- 7. Sales Executive Location Tracking -->
+                <!-- 10. Sales Executive Location Tracking -->
                 <div class="tab-pane fade" id="location-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._location_report')
                 </div>
 
-                <!-- 8. Sales Executive Trip Sheet -->
+                <!-- 11. Sales Executive Trip Sheet -->
                 <div class="tab-pane fade" id="trip-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._trip_report')
                 </div>
 
-                <!-- 9. Sales Executive Expenses Cost Sheet -->
+                <!-- 12. Sales Executive Expenses Cost Sheet -->
                 <div class="tab-pane fade" id="expense-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._expense_report')
                 </div>
 
-                <!-- 10. Swatch Card In & Out -->
+                <!-- 13. Swatch Card In & Out -->
                 <div class="tab-pane fade" id="swatch-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._swatch_report')
                 </div>
 
-                <!-- 11. Sales Complaint Report -->
+                <!-- 14. Sales Complaint Report -->
                 <div class="tab-pane fade" id="complaint-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._complaint_report')
                 </div>
@@ -335,6 +341,18 @@ $(document).ready(function() {
                 { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
                 { data: 'status', name: 'status', className: 'text-center' },
                 { data: 'action', name: 'action', className: 'text-center', orderable: false }
+            ]
+        },
+        'invoice-report': {
+            tableId: '#invoiceReportTable',
+            type: 'invoice-report',
+            columns: [
+                { data: 'inv_no', name: 'inv_no', className: 'fw-bold text-primary' },
+                { data: 'inv_date', name: 'inv_date', className: 'text-nowrap' },
+                { data: 'customer', name: 'customer' },
+                { data: 'einvoice', name: 'einvoice', className: 'text-center' },
+                { data: 'ewaybill', name: 'ewaybill', className: 'text-center' },
+                { data: 'dispatch', name: 'dispatch', className: 'text-center' }
             ]
         },
         'pending-report': {

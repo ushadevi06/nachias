@@ -103,12 +103,13 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="store_type_id" name="store_type_id" class="select2 form-select @error('store_type_id') is-invalid @enderror" data-placeholder="Select Store Type">
+                                    <select id="store_type_id" class="select2 form-select @error('store_type_id') is-invalid @enderror" disabled data-placeholder="Select Store Type">
                                         <option value="">Select Store Type</option>
                                         @foreach($storeTypes as $storeType)
                                             <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>{{ $storeType->store_type_name }}</option>
                                         @endforeach
                                     </select>
+                                    <input type="hidden" name="store_type_id" id="store_type_id_hidden" value="{{ old('store_type_id', $purchaseOrder->store_type_id ?? '') }}">
                                     <label for="store_type_id">Store Type <span class="text-danger">*</span></label>
                                 </div>
                                 @error('store_type_id')
@@ -185,12 +186,13 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
+                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" {{ $index > 0 ? 'disabled' : '' }} data-							placeholder="Select Brand">
                                                         <option value="">Select Brand</option>
                                                         @foreach($brands as $brand)
                                                             <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}({{ $brand->code }})</option>
                                                         @endforeach
                                                     </select>
+                                                    <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand_hidden" value="{{ $item['brand_id'] ?? '' }}" {{ $index == 0 ? 'disabled' : '' }}>
                                                     @error('items.' . $index . '.brand_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -361,13 +363,14 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
+                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" {{ $index > 0 ? 'disabled' : '' }} data-							placeholder="Select Brand">
                                                         <option value="">Select Brand</option>
                                                         @foreach($brands as $brand)
                                                             <option value="{{ $brand->id }}" {{ ($item->brand_id ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})
                                                             </option>
                                                         @endforeach
                                                     </select>
+                                                    <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand_hidden" value="{{ $item->brand_id ?? '' }}" {{ $index == 0 ? 'disabled' : '' }}>
                                                     @error('items.' . $index . '.brand_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -538,13 +541,14 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td>
+                                           <td>
                                                 <select class="select2 form-select brand" name="items[0][brand_id]" data-placeholder="Select Brand">
                                                     <option value="">Select Brand</option>
                                                     @foreach($brands as $brand)
                                                         <option value="{{ $brand->id }}">{{ $brand->brand_name }} ({{ $brand->code }})</option>
                                                     @endforeach
                                                 </select>
+                                                <input type="hidden" name="items[0][brand_id]" class="brand_hidden" value="" disabled>
                                             </td>
                                             <td>
                                                 <select class="select2 form-select material" name="items[0][raw_material_id]" data-placeholder="Select Raw Material">
@@ -913,6 +917,14 @@
     opacity: 1;
     cursor: not-allowed;
 }
+.select2-container--default.select2-container--disabled .select2-selection--single,
+.select2-container--default.select2-container--disabled .select2-selection--multiple {
+    background-color: transparent !important;
+}
+.select2-container--disabled .select2-selection {
+    background-color: #efefef !important;
+    cursor: not-allowed !important;
+}
 </style>
 @endsection
 
@@ -936,12 +948,13 @@
                         </select>
                     </td>
                     <td>
-                        <select class="select2 form-select brand" name="items[${itemIndex}][brand_id]" data-placeholder="Select Brand">
+                        <select class="select2 form-select brand" name="items[${itemIndex}][brand_id]" disabled data-placeholder="Select Brand">
                             <option value="">Select Brand</option>
                             @foreach($brands as $brand)
                                 <option value="{{ $brand->id }}">{{ $brand->brand_name }} ({{ $brand->code }})</option>
                             @endforeach
                         </select>
+                        <input type="hidden" name="items[${itemIndex}][brand_id]" class="brand_hidden" value="">
                     </td>
                     <td>
                         <select class="select2 form-select material" name="items[${itemIndex}][raw_material_id]" data-placeholder="Select Raw Material">
@@ -1036,15 +1049,26 @@
                         </button>
                     </td>
                 </tr>`;
+                
+                let firstRowBrandVal = $('#item-rows tbody tr:first').find('.brand').val() || $('#item-rows tbody tr:first').find('.brand_hidden').val();
 
                 $('#item-rows tbody').append(rowHtml);
+
+                let lastRow = $('#item-rows tbody tr:last');
+                if (firstRowBrandVal) {
+                    lastRow.find('.brand').val(firstRowBrandVal);
+                    lastRow.find('.brand_hidden').val(firstRowBrandVal);
+                }
+                lastRow.find('.brand').prop('disabled', true);
+                lastRow.find('.brand_hidden').prop('disabled', false);
+
                 initSelect2Fields();
                 
                 let storeTypeId = $('#store_type_id').val();
                 if (storeTypeId) {
-                    $('#item-rows tbody tr:last').find('.po_store_category').val(storeTypeId).trigger('change.select2').trigger('change');
+                    lastRow.find('.po_store_category').val(storeTypeId).trigger('change.select2').trigger('change');
                 }
-
+        
                 itemIndex++;
                 toggleTaxDivs();
                 calculateTotals();
@@ -1139,13 +1163,65 @@
 
             $(document).on('click', '.delete_item', function () {
                 if ($('#item-rows tbody tr').length > 1) {
+                    let isFirstRow = $(this).closest('tr').is(':first-child');
                     $(this).closest('tr').remove();
+                    if (isFirstRow) {
+                        updateBrandRowStates();
+                    }
                     calculateTotals();
 
                 } else {
                     alert('At least one item is required');
                 }
             });
+        
+            $(document).on('change', '#item-rows tbody tr:first .brand', function () {
+                let brandId = $(this).val();
+                $('#item-rows tbody tr:first .brand_hidden').val(brandId);
+                $('#item-rows tbody tr:not(:first)').each(function () {
+                    let rowBrand = $(this).find('.brand');
+                    rowBrand.val(brandId).trigger('change.select2');
+                    $(this).find('.brand_hidden').val(brandId);
+                });
+            });
+
+            function updateBrandRowStates() {
+                let rows = $('#item-rows tbody tr');
+                if (!rows.length) return;
+
+                let firstBrandVal = rows.first().find('.brand').val() || rows.first().find('.brand_hidden').val();
+
+                rows.each(function (index) {
+                    let brandSelect = $(this).find('.brand');
+                    let brandHidden = $(this).find('.brand_hidden');
+
+                    if (index === 0) {
+                        brandSelect.prop('disabled', false);
+                        brandHidden.prop('disabled', true);
+                        if (brandSelect.hasClass('select2-hidden-accessible')) {
+                            brandSelect.select2('destroy');
+                            brandSelect.select2({
+                                dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
+                                width: '100%'
+                            });
+                        }
+                    } else {
+                        if (firstBrandVal) {
+                            brandSelect.val(firstBrandVal).trigger('change.select2');
+                            brandHidden.val(firstBrandVal);
+                        }
+                        brandSelect.prop('disabled', true);
+                        brandHidden.prop('disabled', false);
+                        if (brandSelect.hasClass('select2-hidden-accessible')) {
+                            brandSelect.select2('destroy');
+                            brandSelect.select2({
+                                dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
+                                width: '100%'
+                            });
+                        }
+                    }
+                });
+            }
 
             $(document).on('input', '.quantity, .rate, .cgst_percent, .sgst_percent, .igst_percent', function () {
                 let row = $(this).closest('tr');
@@ -1188,6 +1264,22 @@
             $('form.common-form').on('submit', function (e) {
                 calculateTotals();
 
+                $('#store_type_id_hidden').val($('#store_type_id').val());
+
+                let firstBrandVal = $('#item-rows tbody tr:first').find('.brand').val() || $('#item-rows tbody tr:first').find('.brand_hidden').val();
+                $('#item-rows tbody tr').each(function (index) {
+                    if (index === 0) {
+                        $(this).find('.brand').prop('disabled', false);
+                        $(this).find('.brand_hidden').prop('disabled', true);
+                    } else {
+                        if (firstBrandVal) {
+                            $(this).find('.brand').val(firstBrandVal);
+                            $(this).find('.brand_hidden').val(firstBrandVal);
+                        }
+                        $(this).find('.brand').prop('disabled', true);
+                        $(this).find('.brand_hidden').prop('disabled', false);
+                    }
+                });
                 let discountPercent = parseFloat($('#discount_percent').val()) || 0;
                 let commissionPercent = parseFloat($('#commission').val()) || 0;
 
@@ -1424,8 +1516,10 @@
                 let storeTypeId = selected.data('store-id');
                 if (storeTypeId) {
                     $('#store_type_id').val(storeTypeId).trigger('change.select2').trigger('change');
+                    $('#store_type_id_hidden').val(storeTypeId);
                 } else {
                     $('#store_type_id').val('').trigger('change.select2').trigger('change');
+                    $('#store_type_id_hidden').val('');
                 }
 
                 if (supplierStateId && companyStateId) {
@@ -1588,6 +1682,7 @@
 
             $(document).on('change', '#store_type_id', function() {
                 let storeTypeId = $(this).val();
+                $('#store_type_id_hidden').val(storeTypeId);
                 if (storeTypeId) {
                     $('.po_store_category').val(storeTypeId).trigger('change.select2').trigger('change');
                 } else {
@@ -1632,8 +1727,7 @@
             initSelect2Fields();
             toggleTaxDivs();
             calculateTotals();
-            
-            // Re-run after Select2 is fully initialized to fix edit mode GST column visibility
+            updateBrandRowStates();
             setTimeout(function() {
                 toggleTaxDivs();
                 calculateTotals();

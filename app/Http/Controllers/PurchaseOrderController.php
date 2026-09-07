@@ -202,6 +202,19 @@ class PurchaseOrderController extends Controller
 
         if (request()->isMethod('post')) {
             $request = request();
+            if (!$id && \App\Models\PurchaseOrder::where('po_number', $request->po_number)->exists()) {
+                $setting = \App\Models\Setting::first();
+                if ($setting && $setting->po_prefix && str_starts_with($request->po_number, $setting->po_prefix)) {
+                    $prefix = $setting->po_prefix;
+                    $lastPo = \App\Models\PurchaseOrder::where('po_number', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
+                    if ($lastPo) {
+                        $lastNumberStr = substr($lastPo->po_number, strlen($prefix));
+                        $lastNumber = intval($lastNumberStr);
+                        $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
+                        $request->merge(['po_number' => $prefix . $nextNumber]);
+                    }
+                }
+            }
 
             $rules = [
                 'po_number' => ['required', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:purchase_orders,po_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],

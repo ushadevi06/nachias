@@ -296,7 +296,55 @@ class SalesMarketingReportController extends Controller
                         'data' => $comparisonData
                     ]);
 
+                case 'invoice-report':
+                    $countQuery = SalesInvoice::whereNull('deleted_at');
+                    if ($fromDate) $countQuery->where('inv_date', '>=', $fromDate);
+                    if ($toDate) $countQuery->where('inv_date', '<=', $toDate);
+                    if ($customerId) $countQuery->where('customer_id', $customerId);
+                    if ($agentId) $countQuery->where('agent_id', $agentId);
+                    if ($search) {
+                        $countQuery->where(function($q) use ($search) {
+                            $q->where('inv_no', 'like', "%{$search}%")
+                              ->orWhereHas('customer', function($c) use ($search) {
+                                  $c->where('name', 'like', "%{$search}%");
+                              });
+                        });
+                    }
 
+                    $totalRecords = $countQuery->count();
+                    $invoices = $countQuery->with(['customer', 'salesOrder'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+
+                    $data = [];
+                    foreach ($invoices as $invoice) {
+                        $einvoice_generated = (!empty($invoice->einvoice_status) && strtolower((string)$invoice->einvoice_status) == 'generated') ? true : false;
+                        $ewaybill_generated = (!empty($invoice->eway_bill_no)) ? true : false;
+                        
+                        $soDispatched = $invoice->salesOrder && strtolower((string)$invoice->salesOrder->status) == 'dispatched';
+                        $dispatched = (!empty($invoice->delivery_status) && strtolower((string)$invoice->delivery_status) == 'dispatched') || $soDispatched ? true : false;
+                        
+                        $tickHtml = '<span class="text-success fw-bold fs-4"><i class="ri ri-check-line"></i></span>';
+                        $crossHtml = '<span class="text-danger fw-bold fs-4"><i class="ri ri-close-line"></i></span>';
+                        
+                        $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
+                        $custStr = htmlspecialchars((string)(optional($invoice->customer)->name ?? '-'));
+                        $invDateStr = $invoice->inv_date ? date('d-M-Y', strtotime((string)$invoice->inv_date)) : '-';
+
+                        $data[] = [
+                            'inv_no' => '<span class="text-primary fw-bold">' . $invNoStr . '</span>',
+                            'inv_date' => $invDateStr,
+                            'customer' => $custStr,
+                            'einvoice' => $einvoice_generated ? $tickHtml : $crossHtml,
+                            'ewaybill' => $ewaybill_generated ? $tickHtml : $crossHtml,
+                            'dispatch' => $dispatched ? $tickHtml : $crossHtml,
+                        ];
+                    }
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $totalRecords,
+                        'data' => $data
+                    ]);
 
                 case 'incentive-report':
                     $agents = SalesAgent::whereIn('status', ['active', 'Active'])->get();

@@ -1493,7 +1493,7 @@
             let dispTaxableAmt = taxableAmount >= 0 ? taxableAmount : 0;
             $('#total').text(dispTaxableAmt.toFixed(2));
             $('#taxable_amount_input').val(dispTaxableAmt.toFixed(2));
-
+            
             updateNegativeWarning(taxableAmount);
 
             let taxAmount = 0;
@@ -1501,7 +1501,7 @@
             if (taxableAmount >= 0) {
                 if ($('input[name="other_state"]:checked').val() === 'Y') {
                     let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                    let igstAmount = (dispTaxableAmt * igstPercent) / 100;
+                   let igstAmount = parseFloat(((dispTaxableAmt * igstPercent) / 100).toFixed(2));
 
                     $('#igst_amt').text(igstAmount.toFixed(2));
                     $('#igst_amount_input').val(igstAmount.toFixed(2));
@@ -1517,8 +1517,8 @@
                     let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                     let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
 
-                    let cgstAmount = (dispTaxableAmt * cgstPercent) / 100;
-                    let sgstAmount = (dispTaxableAmt * sgstPercent) / 100;
+                    let cgstAmount = parseFloat(((dispTaxableAmt * cgstPercent) / 100).toFixed(2));
+                    let sgstAmount = parseFloat(((dispTaxableAmt * sgstPercent) / 100).toFixed(2));
 
                     $('#cgst_amt').text(cgstAmount.toFixed(2));
                     $('#sgst_amt').text(sgstAmount.toFixed(2));
@@ -1551,7 +1551,8 @@
             $('#post_gst_total_display').text(postGstCharges.toFixed(2));
             $('#other_charges_input').val(postGstCharges.toFixed(2));
 
-            let totalBeforeRoundOff = parseFloat((dispTaxableAmt + taxAmount + postGstCharges).toFixed(2));
+            // let totalBeforeRoundOff = parseFloat((dispTaxableAmt + taxAmount + postGstCharges).toFixed(2));
+            let totalBeforeRoundOff = dispTaxableAmt + taxAmount + postGstCharges;
 
             let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
             let roundOffType = $('input[name="round_off_type"]:checked').val();

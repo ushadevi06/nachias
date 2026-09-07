@@ -87,14 +87,12 @@ class JobCardEntryController extends Controller
                 $query->where('job_card_type', $request->job_card_type);
             }
             if ($request->has('status') && !empty($request->status)) {
-                if ($request->status == 'In Progress') {
-                    $query->where(function($q) {
-                        $q->where('status', 'like', '%process%')->orWhere('status', 'like', '%production%');
-                    });
+                if ($request->status == 'In Progress' || $request->status == 'In_progress') {
+                    $query->whereIn('status', ['In_progress', 'In Progress', 'Production In Progress', 'Inprogress']);
                 } elseif ($request->status == 'Hold') {
-                    $query->where('status', 'like', '%hold%');
+                    $query->whereIn('status', ['Hold', 'Production Hold']);
                 } elseif ($request->status == 'Completed') {
-                    $query->where('status', 'like', '%complet%');
+                    $query->whereIn('status', ['Completed', 'Production Completed']);
                 } else {
                     $query->where('status', $request->status);
                 }
