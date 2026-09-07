@@ -177,39 +177,63 @@ class ProductionReceiptController extends Controller
 
         if ($id) {
             $currentReceipt = ProductionReceipt::find($id);
-            $jobCards = JobCardEntry::with(['serviceProvider', 'fabricDetails' => function($q) {
-                $q->where('is_additional', 1);
-            }])
+            $jobCards = JobCardEntry::with(['serviceProvider', 'fabricDetails', 'tasks'])
                 ->where(function ($query) use ($currentReceipt, $fullyReceivedJobCardIds) {
-                $query->whereNotIn('id', $fullyReceivedJobCardIds);
-                if ($currentReceipt && $currentReceipt->job_card_id) {
-                    $query->orWhere('id', $currentReceipt->job_card_id);
-                }
-            })->orderBy('id', 'desc')->get();
-        }
-        else {
-            $jobCards = JobCardEntry::with(['serviceProvider', 'fabricDetails' => function($q) {
-                $q->where('is_additional', 1);
-            }])
+                    $query->where(function ($sub) use ($fullyReceivedJobCardIds) {
+                        $sub->whereNotIn('id', $fullyReceivedJobCardIds)
+                            ->whereHas('tasks')
+                            ->whereDoesntHave('tasks', function ($t) {
+                                $t->where('status', '!=', 'Completed');
+                            });
+                    });
+                    if ($currentReceipt && $currentReceipt->job_card_id) {
+                        $query->orWhere('id', $currentReceipt->job_card_id);
+                    }
+                })->orderBy('id', 'desc')->get();
+        } else {
+            $jobCards = JobCardEntry::with(['serviceProvider', 'fabricDetails', 'tasks'])
                 ->whereNotIn('id', $fullyReceivedJobCardIds)
+                ->whereHas('tasks')
+                ->whereDoesntHave('tasks', function ($t) {
+                    $t->where('status', '!=', 'Completed');
+                })
                 ->orderBy('id', 'desc')->get();
+        }
+
+        $jobCardReceipts = ProductionReceipt::with('items')
+            ->whereIn('job_card_id', $jobCards->pluck('id'))
+            ->when($id, fn($q) => $q->where('id', '!=', $id))
+            ->get();
+
+        $receiptsSummary = [];
+        foreach ($jobCardReceipts as $r) {
+            $jcId = $r->job_card_id;
+            $qty = $r->items->sum('qty_to_receive');
+            if ($r->is_additional && $r->job_card_fabric_detail_id) {
+                $receiptsSummary[$jcId]['additional'][$r->job_card_fabric_detail_id] = ($receiptsSummary[$jcId]['additional'][$r->job_card_fabric_detail_id] ?? 0) + $qty;
+            } else {
+                $receiptsSummary[$jcId]['base'] = ($receiptsSummary[$jcId]['base'] ?? 0) + $qty;
+            }
         }
         $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('id','desc')->get();
         $employees = User::where('status', 'Active')->where('id', '!=', 1)->orderBy('id','desc')->get();
 
         if ($request->isMethod('post')) {
+            $rawJobCardInput = $request->job_card_id;
             if (is_string($request->job_card_id) && str_contains($request->job_card_id, '_add_')) {
                 $parts = explode('_add_', $request->job_card_id);
                 $request->merge([
                     'job_card_id' => $parts[0],
                     'job_card_fabric_detail_id' => $parts[1],
-                    'is_additional' => 1
+                    'is_additional' => 1,
+                    'job_card_id_raw' => $rawJobCardInput
                 ]);
             } else {
                 $request->merge([
                     'is_additional' => 0,
-                    'job_card_fabric_detail_id' => null
+                    'job_card_fabric_detail_id' => null,
+                    'job_card_id_raw' => $rawJobCardInput
                 ]);
             }
 
@@ -233,6 +257,18 @@ class ProductionReceiptController extends Controller
             ];
 
             $request->validate($rules, $messages);
+
+            if (!$id && $request->job_card_id) {
+                $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)->exists();
+                $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
+                    ->where('status', '!=', 'Completed')
+                    ->exists();
+                if (!$hasTasks || $hasIncompleteTasks) {
+                    return redirect()->back()->withInput()->withErrors([
+                        'job_card_id' => 'Cannot create Production Receipt: All production stage tasks for this Job Card must be assigned and Completed.'
+                    ]);
+                }
+            }
 
             $capacityError = $this->validateWarehouseBrandStyleCapacity($request, $id);
             if ($capacityError) {
@@ -400,7 +436,7 @@ class ProductionReceiptController extends Controller
 
         $warehouses = \App\Models\Warehouse::where('status', 'Active')->orderBy('warehouse_name')->get();
 
-        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations', 'employees', 'warehouses'));
+        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations', 'employees', 'warehouses', 'receiptsSummary'));
     }
 
     private function resolveReceiptItemArtNo($jobCard, array $itemData): ?string
@@ -831,35 +867,70 @@ class ProductionReceiptController extends Controller
             return [];
         }
 
-        $jobCards = JobCardEntry::whereIn('id', $usedJobCardIds)->get();
+        $jobCards = JobCardEntry::with(['fabricDetails'])->whereIn('id', $usedJobCardIds)->get();
         $fullyReceivedIds = [];
 
         foreach ($jobCards as $jc) {
-            $totalOrdered = \DB::table('job_card_matrix_quantities as jmq')
-                ->join('job_card_fabric_details as jfd', 'jmq.job_card_fabric_detail_id', '=', 'jfd.id')
-                ->where('jfd.job_card_entry_id', $jc->id)
-                ->sum(\DB::raw('jmq.qty_fs + jmq.qty_hs'));
-
-            if ($totalOrdered <= 0) {
-                $totalOrdered = ($jc->total_qty_fs ?? 0) + ($jc->total_qty_hs ?? 0);
-                if ($totalOrdered <= 0) {
-                    $totalOrdered = $jc->grand_total_qty ?? 0;
+            // 1. Check Base Portion
+            $baseOrdered = max(0, floatval($jc->grand_total_qty) - floatval($jc->additional_qty ?? 0));
+            if ($baseOrdered <= 0) {
+                $baseFabrics = $jc->fabricDetails->where('is_additional', 0);
+                if ($baseFabrics->isNotEmpty() && $baseFabrics->first()->quantities) {
+                    $baseOrdered = $baseFabrics->first()->quantities->sum('total_qty');
                 }
             }
-
-            if ($totalOrdered <= 0) {
-                continue;
+            if ($baseOrdered <= 0) {
+                $baseOrdered = ($jc->total_qty_fs ?? 0) + ($jc->total_qty_hs ?? 0);
+            }
+            if ($baseOrdered <= 0) {
+                $baseOrdered = floatval($jc->grand_total_qty ?? 0);
             }
 
-            $totalReceived = \DB::table('production_receipt_items as pri')
+            $baseReceived = \DB::table('production_receipt_items as pri')
                 ->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')
                 ->where('pr.job_card_id', $jc->id)
+                ->where(function ($q) {
+                    $q->where('pr.is_additional', 0)
+                      ->orWhereNull('pr.is_additional')
+                      ->orWhereNull('pr.job_card_fabric_detail_id');
+                })
                 ->when($excludeReceiptId, function ($q) use ($excludeReceiptId) {
                     return $q->where('pr.id', '!=', $excludeReceiptId);
                 })
                 ->sum('pri.qty_to_receive');
 
-            if ($totalReceived >= $totalOrdered) {
+            $isBaseFullyReceived = ($baseOrdered <= 0 || $baseReceived >= ($baseOrdered - 0.001));
+
+            // 2. Check Additional Batches
+            $additionalBatches = $jc->fabricDetails->where('is_additional', 1)->groupBy(function ($item) {
+                return $item->additional_batch_no ?? ($item->created_at ? $item->created_at->format('Y-m-d H:i') : $item->id);
+            });
+
+            $allBatchesFullyReceived = true;
+            foreach ($additionalBatches as $batchGroup) {
+                $firstFab = $batchGroup->first();
+                $bOrdered = ($firstFab && $firstFab->quantities) ? $firstFab->quantities->sum('total_qty') : 0;
+                if ($bOrdered <= 0) {
+                    $bOrdered = $batchGroup->sum('total_qty');
+                }
+                $bIds = $batchGroup->pluck('id')->toArray();
+                $bReceived = \DB::table('production_receipt_items as pri')
+                    ->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')
+                    ->where('pr.job_card_id', $jc->id)
+                    ->where('pr.is_additional', 1)
+                    ->whereIn('pr.job_card_fabric_detail_id', $bIds)
+                    ->when($excludeReceiptId, function ($q) use ($excludeReceiptId) {
+                        return $q->where('pr.id', '!=', $excludeReceiptId);
+                    })
+                    ->sum('pri.qty_to_receive');
+
+                if ($bOrdered > 0 && $bReceived < ($bOrdered - 0.001)) {
+                    $allBatchesFullyReceived = false;
+                    break;
+                }
+            }
+
+            if ($isBaseFullyReceived && $allBatchesFullyReceived) {
                 $fullyReceivedIds[] = $jc->id;
             }
         }

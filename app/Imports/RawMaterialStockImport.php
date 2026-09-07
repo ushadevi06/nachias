@@ -12,6 +12,7 @@ use App\Models\Style;
 use App\Models\FabricSize;
 use App\Models\Color;
 use App\Models\Brand;
+use App\Models\Warehouse;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -56,6 +57,19 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                 $stockDate = $this->parseExcelDate($stockDateStr);
                 if (!$stockDate) {
                     $rowErrors[] = "Row {$rowNumber}: Stock Date '{$stockDateStr}' is invalid. Please use DD-MM-YYYY format.";
+                }
+            }
+
+            $warehouseName = trim((string)($row['warehouse'] ?? $row['warehouse_name'] ?? $row['warehouse_code'] ?? ''));
+            $warehouse = null;
+            if (empty($warehouseName)) {
+                $rowErrors[] = "Row {$rowNumber}: Warehouse is required.";
+            } else {
+                $warehouse = Warehouse::where('warehouse_name', $warehouseName)
+                    ->orWhere('code', $warehouseName)
+                    ->first();
+                if (!$warehouse) {
+                    $rowErrors[] = "Row {$rowNumber}: Warehouse '{$warehouseName}' does not exist in master table.";
                 }
             }
 
@@ -196,6 +210,7 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
             if (empty($rowErrors)) {
                 $validData[] = [
                     'stock_date' => $stockDate ? $stockDate->format('Y-m-d') : null,
+                    'warehouse_id' => $warehouse ? $warehouse->id : null,
                     'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                     'store_category_id' => $storeCategory ? $storeCategory->id : null,
                     'store_location_id' => $storeLocation ? $storeLocation->id : null,
@@ -222,10 +237,12 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
         foreach ($validData as $data) {
             $key =
                 $data['stock_date'] . '_' .
+                ($data['warehouse_id'] ?? 'null') . '_' .
                 ($data['remarks'] ?? '');
             if (!isset($grouped[$key])) {
                 $grouped[$key] = [
                     'stock_date' => $data['stock_date'],
+                    'warehouse_id' => $data['warehouse_id'],
                     'remarks' => $data['remarks'],
                     'items' => []
                 ];
@@ -246,6 +263,7 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                 $stockEntry = StockEntry::create([
                     'stock_entry_no' => $stockEntryNo,
                     'stock_date' => $group['stock_date'],
+                    'warehouse_id' => $group['warehouse_id'],
                     'entry_type' => 'Raw Material',
                     'remarks' => $group['remarks'],
                     'status' => 'Posted', 
@@ -260,6 +278,7 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                         'raw_material_id' => $itemData['raw_material_id'],
                         'store_category_id' => $itemData['store_category_id'],
                         'store_location_id' => $itemData['store_location_id'],
+                        'warehouse_id' => $itemData['warehouse_id'],
                         'style_id' => $itemData['style_id'],
                         'fabric_width_id' => $itemData['fabric_width_id'],
                         'color_id' => $itemData['color_id'],

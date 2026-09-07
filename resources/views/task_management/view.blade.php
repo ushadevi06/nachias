@@ -7,6 +7,9 @@
             <div class="table-header-box">
                 <h4>Task Management List</h4>
             </div>
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card">
                 <div class="card-body">
                     <div class="filter-box mb-4">
@@ -29,8 +32,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
+                    <div class="card-datatable table-responsive">
+                        <table class="datatables-task-mgmt table table-hover">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -54,47 +57,45 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
-        if ($('.datatables-products').length) {
-            $('.datatables-products').DataTable({
-                responsive: true,
-                paging: true,
-                autoWidth: false,
-                searching: true,
-                ordering: true,
-                info: true,
-                lengthChange: true,
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: "{{ url('task_management') }}",
-                    data: function(d) {
-                        d.status = $('#filter_status').val();
-                    }
-                },
-                columns: [
-                    {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-                    {data: 'task_no', name: 'task_no'},
-                    {data: 'plant', name: 'plant'},
-                    {data: 'stage_dept', name: 'stage_dept'},
-                    {data: 'start_date', name: 'start_date'},
-                    {data: 'end_date', name: 'end_date'},
-                    {data: 'status', name: 'status'},
-                    {data: 'action', name: 'action', orderable: false, searchable: false},
-                ],
-                order: [[1, 'desc']],
-                dom: '<"d-flex justify-content-between align-items-center mx-0 row pt-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"d-flex justify-content-between mx-0 row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-                displayLength: 10,
-                lengthMenu: [10, 25, 50, 75, 100],
-            });
-        }
+        var taskTable = $('.datatables-task-mgmt').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ url('task_management') }}",
+                data: function(d) {
+                    d.status = $('#filter_status').val();
+                }
+            },
+            columns: [
+                {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
+                {data: 'task_no', name: 'task_no'},
+                {data: 'plant', name: 'plant'},
+                {data: 'stage_dept', name: 'stage_dept'},
+                {data: 'start_date', name: 'start_date'},
+                {data: 'end_date', name: 'end_date'},
+                {data: 'status', name: 'status'},
+                {data: 'action', name: 'action', orderable: false, searchable: false},
+            ],
+            order: [[1, 'desc']],
+            dom: '<"d-flex justify-content-between align-items-center mx-0 row pt-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"d-flex justify-content-between mx-0 row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            displayLength: 10,
+            lengthMenu: [10, 25, 50, 75, 100],
+        });
 
         $('#filter_btn').on('click', function() {
-            $('.datatables-products').DataTable().ajax.reload();
+            taskTable.ajax.reload();
         });
 
         $('#reset_btn').on('click', function() {
             $('#filter_status').val('').trigger('change');
-            $('.datatables-products').DataTable().ajax.reload();
+            taskTable.ajax.reload();
         });
     });
 

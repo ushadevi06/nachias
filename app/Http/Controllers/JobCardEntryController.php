@@ -142,8 +142,10 @@ class JobCardEntryController extends Controller
                     $action .= '<a href="' . url('job_card_entries/view-item/' . $jc->id) . '" class="dropdown-item d-flex align-items-center justify-content-between"><span class="d-flex align-items-center"><i class="icon-base ri ri-list-check-2 me-2"></i>Issue Item</span>' . $issueBadge . '</a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('issue-item job-card') || auth()->user()->can('edit job-card')) {
-                    $addBadge = ($jc->additional_qty > 0) ? ' <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size: 10px;">+' . $jc->additional_qty . '</span>' : '';
-                    $action .= '<a href="' . url('job_card_entries/additional-qty/' . $jc->id) . '" class="dropdown-item d-flex align-items-center justify-content-between"><span class="d-flex align-items-center"><i class="icon-base ri ri-add-circle-line me-2"></i>Additional Qty</span>' . $addBadge . '</a>';
+                    if ($displayStatus !== 'Completed') {
+                        $addBadge = ($jc->additional_qty > 0) ? ' <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size: 10px;">+' . $jc->additional_qty . '</span>' : '';
+                        $action .= '<a href="' . url('job_card_entries/additional-qty/' . $jc->id) . '" class="dropdown-item d-flex align-items-center justify-content-between"><span class="d-flex align-items-center"><i class="icon-base ri ri-add-circle-line me-2"></i>Additional Qty</span>' . $addBadge . '</a>';
+                    }
                 }
 
                 $action .= '</div></div>';
@@ -151,10 +153,14 @@ class JobCardEntryController extends Controller
                 $totalMeter = 0;
                 if ($jc->fabricDetails) {
                     foreach ($jc->fabricDetails as $fabric) {
-                        if ($fabric->layMarks) {
+                        if ($fabric->layMarks && $fabric->layMarks->count() > 0) {
                             foreach ($fabric->layMarks as $lm) {
-                                $totalMeter += floatval($lm->lay_mark_meter);
+                                $lay = floatval($lm->no_of_lay);
+                                if ($lay <= 0) $lay = 1;
+                                $totalMeter += (floatval($lm->lay_mark_meter) * $lay);
                             }
+                        } elseif (!empty($fabric->total_meter)) {
+                            $totalMeter += floatval($fabric->total_meter);
                         }
                     }
                 }
@@ -169,7 +175,7 @@ class JobCardEntryController extends Controller
                     'season' => $jc->season->name ?? '-',
                     'process_group' => $jc->processGroup->name ?? '-',
                     'total_meter' => number_format($totalMeter, 2),
-                    'total_qty' => ($jc->additional_qty > 0) ? ($jc->grand_total_qty . ' <br><span class="badge bg-label-warning text-dark" style="font-size: 10px;">(+' . $jc->additional_qty . ' extra)</span>') : $jc->grand_total_qty,
+                    'total_qty' => $jc->grand_total_qty,
                     'job_card_type' => $jc->job_card_type ?? 'Regular',
                     'status' => $status,
                     'action' => $action
@@ -1207,13 +1213,13 @@ class JobCardEntryController extends Controller
                         $unitPrice = 0;
                         $firstStockItemId = null;
                         if ($artNo && $totalToDeduct > 0) {
-                            $query = StockEntryItem::whereRaw('(qty_in - COALESCE(qty_out, 0)) > 0')->orderBy('id', 'asc');
-                            if ($matrix->stock_entry_id) {
-                                $query->where('stock_entry_id', $matrix->stock_entry_id);
+                            $query = StockEntryItem::where('stock_type', 'raw_material')
+                                ->whereRaw('(qty_in - COALESCE(qty_out, 0)) > 0')
+                                ->orderBy('id', 'asc');
+                            if ($matrix && $matrix->stock_entry_id) {
+                                $query->orderByRaw("CASE WHEN stock_entry_id = " . intval($matrix->stock_entry_id) . " OR id = " . intval($matrix->stock_entry_id) . " THEN 0 ELSE 1 END");
                             } elseif (!empty($seIds)) {
-                                $query->whereIn('stock_entry_id', $seIds);
-                            } elseif ($jobCard->purchase_order_id) {
-                                $query->whereIn('grn_entry_item_id', $grnItemIds);
+                                $query->orderByRaw("CASE WHEN stock_entry_id IN (" . implode(',', array_map('intval', $seIds)) . ") THEN 0 ELSE 1 END");
                             }
 
                             $query->where(function ($q) use ($artNo) {
@@ -1521,6 +1527,39 @@ class JobCardEntryController extends Controller
     }
 
     /**
+     * Get available stock meters for a given raw material / fabric Art No
+     */
+    public static function getAvailableStockForArtNo($artNo, $stockEntryId = null)
+    {
+        $artNo = trim($artNo);
+        if (!$artNo) return 0.0;
+
+        $query = StockEntryItem::where('stock_type', 'raw_material')
+            ->whereRaw('(qty_in - COALESCE(qty_out, 0)) > 0');
+        if ($stockEntryId) {
+            $query->where(function($sq) use ($stockEntryId, $artNo) {
+                $sq->where('stock_entry_id', $stockEntryId)
+                   ->orWhere('id', $stockEntryId)
+                   ->orWhere('art_no', $artNo);
+            });
+        }
+        $query->where(function ($q) use ($artNo) {
+            $q->where('art_no', $artNo)
+                ->orWhereHas('grnEntryItem', function ($q2) use ($artNo) {
+                    $q2->where('art_no', $artNo);
+                })
+                ->orWhereHas('rawMaterial', function ($q2) use ($artNo) {
+                    $q2->where('code', $artNo)->orWhere('name', $artNo);
+                })
+                ->orWhereHas('grnEntryItem.purchaseInvoiceItem.purchaseOrderItem', function ($q2) use ($artNo) {
+                    $q2->where('art_no', $artNo);
+                });
+        });
+
+        return round(floatval($query->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'))), 2);
+    }
+
+    /**
      * Display Additional Quantity / Supplementary Cutting Page
      */
     public function additional_qty($id)
@@ -1543,6 +1582,10 @@ class JobCardEntryController extends Controller
             'operations.serviceProvider',
             'images'
         ])->findOrFail($id);
+
+        if (str_contains(strtolower($jobCard->status ?? ''), 'complet')) {
+            return redirect('job_card_entries')->with('warning', 'Cannot add or edit Additional Quantity for a Completed Job Card.');
+        }
 
         $plants = ServiceProvider::active()->orderBy('id', 'desc')->get();
         if ($plants->isEmpty()) {
@@ -1607,7 +1650,26 @@ class JobCardEntryController extends Controller
                 ];
             }
         }
-        $hasIssuedItems = $jobCard->issueItems()->exists();
+        $baseFabricsList = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) 
+            ? $editingBatchGroup 
+            : ($editingBatch ? collect([$editingBatch]) : $jobCard->fabricDetails->where('is_additional', 0)->values());
+        if ($baseFabricsList->isEmpty()) {
+            $baseFabricsList = $jobCard->fabricDetails->values();
+        }
+
+        $artStockMap = [];
+        foreach ($baseFabricsList as $bf) {
+            $artStockMap[$bf->art_no] = self::getAvailableStockForArtNo($bf->art_no);
+        }
+
+        if ($editingBatch) {
+            $batchFabricIds = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) 
+                ? $editingBatchGroup->pluck('id')->toArray() 
+                : [$editingBatch->id];
+            $hasIssuedItems = \App\Models\JobCardIssueItem::whereIn('job_card_article_matrix_id', $batchFabricIds)->exists();
+        } else {
+            $hasIssuedItems = false;
+        }
 
         return view('job_card_entry.additional_qty', compact(
             'jobCard', 
@@ -1620,7 +1682,8 @@ class JobCardEntryController extends Controller
             'editingBatchGroup',
             'batchIndex',
             'stageTaskStatus',
-            'hasIssuedItems'
+            'hasIssuedItems',
+            'artStockMap'
         ));
     }
 
@@ -1763,6 +1826,13 @@ class JobCardEntryController extends Controller
 
         $jobCard = JobCardEntry::with(['fabricDetails', 'cuttingSizeRatios', 'operations'])->findOrFail($id);
 
+        if (str_contains(strtolower($jobCard->status ?? ''), 'complet')) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Cannot add Additional Quantity for a Completed Job Card.'], 422);
+            }
+            return redirect('job_card_entries')->with('warning', 'Cannot add Additional Quantity for a Completed Job Card.');
+        }
+
         $fabricsData = $request->input('fabrics', []);
         if (empty($fabricsData) && $request->has('art_no')) {
             $fabricsData = [
@@ -1814,12 +1884,61 @@ class JobCardEntryController extends Controller
             }
         }
 
-        if ($totalGrandExtraQty <= 0 && $totalGrandFabricMeters <= 0) {
-            $msg = 'Please enter additional pieces in the Cutting Size Ratio matrix or fabric meters.';
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $msg], 422);
+        // Server-Side Field Level Validation
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'production_stages' => 'required|array|min:1',
+            'production_stages.*.stage_id' => 'required',
+            'production_stages.*.service_provider_id' => 'required',
+            'production_stages.*.issue_date' => 'required',
+            'production_stages.*.deadline_date' => 'required',
+        ], [
+            'production_stages.*.stage_id.required' => 'This field is required',
+            'production_stages.*.service_provider_id.required' => 'This field is required',
+            'production_stages.*.issue_date.required' => 'This field is required',
+            'production_stages.*.deadline_date.required' => 'This field is required',
+        ]);
+
+        // Validate Lay Marks per fabric
+        foreach ($fabricsData as $fIdx => $fData) {
+            if (isset($fData['lay_marks']) && is_array($fData['lay_marks'])) {
+                foreach ($fData['lay_marks'] as $lmIdx => $lm) {
+                    if (empty($lm['sizes'])) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.sizes", "This field is required");
+                    }
+                    if (empty($lm['sleeve'])) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.sleeve", "This field is required");
+                    }
+                    if (!isset($lm['meter']) || $lm['meter'] === '' || floatval($lm['meter']) <= 0) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.meter", "This field is required");
+                    }
+                    if (!isset($lm['no_of_lay']) || $lm['no_of_lay'] === '' || intval($lm['no_of_lay']) <= 0) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.no_of_lay", "This field is required");
+                    }
+                }
             }
-            return back()->withInput()->with('danger', $msg);
+        }
+
+        // Validate Stock Availability for each fabric
+        foreach ($validFabrics as $idx => $fData) {
+            $artNo = trim($fData['art_no'] ?? '');
+            $reqMtr = floatval($fData['calc_mtr'] ?? 0);
+            if ($reqMtr > 0 && $artNo) {
+                $availStock = self::getAvailableStockForArtNo($artNo);
+                if ($reqMtr > $availStock + 0.0001) {
+                    $validator->errors()->add("fabrics.{$idx}.total_fabric_meters", "Exceeds available stock (" . number_format($availStock, 2) . " MTR available)");
+                }
+            }
+        }
+
+        if ($totalGrandExtraQty <= 0 && $totalGrandFabricMeters <= 0) {
+            $validator->errors()->add("matrix_error", "Please enter additional pieces in the Article Quantity Matrix or Fabric Lay Marks.");
+        }
+
+        if ($validator->errors()->isNotEmpty()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+            }
+            return back()->withErrors($validator)->withInput();
         }
 
         DB::beginTransaction();
@@ -1936,14 +2055,6 @@ class JobCardEntryController extends Controller
                                 'no_of_lay' => $lm['no_of_lay'] ?? null,
                             ]);
                         }
-                    }
-                }
-
-                // Deduct from warehouse stock item if available
-                if ($stockEntryId && $fData['calc_mtr'] > 0) {
-                    $stockItem = StockEntryItem::find($stockEntryId);
-                    if ($stockItem) {
-                        $stockItem->increment('qty_out', $fData['calc_mtr']);
                     }
                 }
             }
@@ -2095,12 +2206,73 @@ class JobCardEntryController extends Controller
             }
         }
 
-        if ($totalGrandExtraQty <= 0 && $totalGrandFabricMeters <= 0) {
-            $msg = 'Please enter additional pieces in the Cutting Size Ratio matrix or fabric meters.';
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $msg], 422);
+        // Server-Side Field Level Validation
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'production_stages' => 'required|array|min:1',
+            'production_stages.*.stage_id' => 'required',
+            'production_stages.*.service_provider_id' => 'required',
+            'production_stages.*.issue_date' => 'required',
+            'production_stages.*.deadline_date' => 'required',
+        ], [
+            'production_stages.*.stage_id.required' => 'This field is required',
+            'production_stages.*.service_provider_id.required' => 'This field is required',
+            'production_stages.*.issue_date.required' => 'This field is required',
+            'production_stages.*.deadline_date.required' => 'This field is required',
+        ]);
+
+        // Validate Lay Marks per fabric
+        foreach ($fabricsData as $fIdx => $fData) {
+            if (isset($fData['lay_marks']) && is_array($fData['lay_marks'])) {
+                foreach ($fData['lay_marks'] as $lmIdx => $lm) {
+                    if (empty($lm['sizes'])) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.sizes", "This field is required");
+                    }
+                    if (empty($lm['sleeve'])) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.sleeve", "This field is required");
+                    }
+                    if (!isset($lm['meter']) || $lm['meter'] === '' || floatval($lm['meter']) <= 0) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.meter", "This field is required");
+                    }
+                    if (!isset($lm['no_of_lay']) || $lm['no_of_lay'] === '' || intval($lm['no_of_lay']) <= 0) {
+                        $validator->errors()->add("fabrics.{$fIdx}.lay_marks.{$lmIdx}.no_of_lay", "This field is required");
+                    }
+                }
             }
-            return back()->withInput()->with('danger', $msg);
+        }
+
+        // Validate stock availability for fabrics with increased meters
+        $batchGroup = collect([$batch]);
+        if (!empty($batch->additional_batch_no)) {
+            $batchGroup = JobCardFabricDetail::where('job_card_entry_id', $jobCard->id)
+                ->where('is_additional', 1)
+                ->where('additional_batch_no', $batch->additional_batch_no)
+                ->get();
+        }
+
+        foreach ($validFabrics as $idx => $fData) {
+            $artNo = trim($fData['art_no'] ?? '');
+            $reqMtr = floatval($fData['calc_mtr'] ?? 0);
+            $existingFab = $batchGroup->firstWhere('art_no', $artNo);
+            $oldMtr = $existingFab ? floatval($existingFab->mtr) : 0;
+            $diffMtr = $reqMtr - $oldMtr;
+
+            if ($diffMtr > 0 && $artNo) {
+                $availStock = self::getAvailableStockForArtNo($artNo);
+                if ($diffMtr > $availStock + 0.0001) {
+                    $validator->errors()->add("fabrics.{$idx}.total_fabric_meters", "Insufficient stock for Art No: {$artNo}. Additional required: " . number_format($diffMtr, 2) . " MTR, Available in Stock: " . number_format($availStock, 2) . " MTR.");
+                }
+            }
+        }
+
+        if ($totalGrandExtraQty <= 0 && $totalGrandFabricMeters <= 0) {
+            $validator->errors()->add("matrix_error", "Please enter additional pieces in the Article Quantity Matrix or Fabric Lay Marks.");
+        }
+
+        if ($validator->errors()->isNotEmpty()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+            }
+            return back()->withErrors($validator)->withInput();
         }
 
         DB::beginTransaction();
@@ -2108,7 +2280,6 @@ class JobCardEntryController extends Controller
             $oldData = $jobCard->toArray();
 
             // Find all fabrics in this batch group
-            $batchGroup = collect([$batch]);
             if (!empty($batch->additional_batch_no)) {
                 $batchGroup = JobCardFabricDetail::with(['quantities', 'layMarks'])
                     ->where('job_card_entry_id', $jobCard->id)
@@ -2120,74 +2291,67 @@ class JobCardEntryController extends Controller
             $oldBatchQty = $batchGroup->sum('total_qty');
             $oldBatchFs = $batchGroup->sum('fs_qty');
             $oldBatchHs = $batchGroup->sum('hs_qty');
-            $oldBatchMtr = $batchGroup->sum('mtr');
             $additionalBatchNo = $batch->additional_batch_no ?? ('BATCH-' . time() . '-' . $batch->id);
 
-            // 1. Subtract old batch sizes from Cutting Size Ratios
+            // 1. Revert Old Cutting Size Ratios for this batch group
             foreach ($batchGroup as $oldFab) {
-                foreach ($oldFab->quantities as $oldMq) {
+                foreach ($oldFab->quantities as $oldQ) {
                     $ratio = JobCardCuttingSizeRatio::where('job_card_entry_id', $jobCard->id)
-                        ->where('size', $oldMq->size)
+                        ->where('size', $oldQ->size)
                         ->first();
                     if ($ratio) {
-                        $ratio->qty_fs = max(0, intval($ratio->qty_fs) - intval($oldMq->qty_fs));
-                        $ratio->qty_hs = max(0, intval($ratio->qty_hs) - intval($oldMq->qty_hs));
-                        $ratio->total_qty = max(0, intval($ratio->total_qty) - intval($oldMq->total_qty));
+                        $ratio->qty_fs = max(0, intval($ratio->qty_fs) - intval($oldQ->qty_fs));
+                        $ratio->qty_hs = max(0, intval($ratio->qty_hs) - intval($oldQ->qty_hs));
+                        $ratio->total_qty = max(0, intval($ratio->total_qty) - intval($oldQ->total_qty));
                         $ratio->save();
                     }
                 }
             }
 
-            // 2. Aggregate new sizes across all fabrics and add to Cutting Size Ratios
-            $aggregatedSizes = [];
+            // 2. Add New Cutting Size Ratios for all fabrics
             foreach ($validFabrics as $fData) {
                 if (isset($fData['sizes']) && is_array($fData['sizes'])) {
                     foreach ($fData['sizes'] as $s) {
-                        $szName = trim($s['size'] ?? '');
-                        if ($szName === '') continue;
-                        if (!isset($aggregatedSizes[$szName])) {
-                            $aggregatedSizes[$szName] = ['fs' => 0, 'hs' => 0, 'ratio' => $s['ratio'] ?? 0];
+                        $sizeName = trim($s['size'] ?? '');
+                        $fs = intval($s['qty_fs'] ?? 0);
+                        $hs = intval($s['qty_hs'] ?? 0);
+                        $tot = $fs + $hs;
+
+                        if ($sizeName !== '') {
+                            $ratio = JobCardCuttingSizeRatio::where('job_card_entry_id', $jobCard->id)
+                                ->where('size', $sizeName)
+                                ->first();
+
+                            if ($ratio) {
+                                $ratio->qty_fs = intval($ratio->qty_fs) + $fs;
+                                $ratio->qty_hs = intval($ratio->qty_hs) + $hs;
+                                $ratio->total_qty = intval($ratio->total_qty) + $tot;
+                                $ratio->save();
+                            } elseif ($tot > 0) {
+                                JobCardCuttingSizeRatio::create([
+                                    'job_card_entry_id' => $jobCard->id,
+                                    'size' => $sizeName,
+                                    'ratio' => $s['ratio'] ?? 0,
+                                    'qty_fs' => $fs,
+                                    'qty_hs' => $hs,
+                                    'total_qty' => $tot,
+                                ]);
+                            }
                         }
-                        $aggregatedSizes[$szName]['fs'] += intval($s['qty_fs'] ?? 0);
-                        $aggregatedSizes[$szName]['hs'] += intval($s['qty_hs'] ?? 0);
                     }
                 }
             }
 
-            foreach ($aggregatedSizes as $szName => $szData) {
-                $fs = $szData['fs'];
-                $hs = $szData['hs'];
-                $tot = $fs + $hs;
-                $ratio = JobCardCuttingSizeRatio::where('job_card_entry_id', $jobCard->id)
-                    ->where('size', $szName)
-                    ->first();
-
-                if ($ratio) {
-                    $ratio->qty_fs = intval($ratio->qty_fs) + $fs;
-                    $ratio->qty_hs = intval($ratio->qty_hs) + $hs;
-                    $ratio->total_qty = intval($ratio->total_qty) + $tot;
-                    $ratio->save();
-                } elseif ($tot > 0) {
-                    JobCardCuttingSizeRatio::create([
-                        'job_card_entry_id' => $jobCard->id,
-                        'size' => $szName,
-                        'ratio' => $szData['ratio'] ?? 0,
-                        'qty_fs' => $fs,
-                        'qty_hs' => $hs,
-                        'total_qty' => $tot,
-                    ]);
-                }
-            }
-
-            // 3. Update / Create fabric details for each fabric in the batch
+            // 3. Update or Create JobCardFabricDetails in this batch group
             foreach ($validFabrics as $idx => $fData) {
                 $artNo = $fData['art_no'];
-                $stockEntryId = $fData['stock_entry_id'] ?? null;
-                $width = $fData['width'] ?? null;
-                $inOut = $fData['in_out'] ?? 'NO';
-                $nPatti = $fData['n_patti'] ?? 'WHITE';
-
                 $fabDetail = $batchGroup->firstWhere('art_no', $artNo);
+                
+                $baseFabric = $jobCard->fabricDetails->where('art_no', $artNo)->first() ?? $jobCard->fabricDetails->first();
+                $stockEntryId = !empty($fData['stock_entry_id']) ? $fData['stock_entry_id'] : ($baseFabric ? $baseFabric->stock_entry_id : null);
+                $width = !empty($fData['width']) ? $fData['width'] : ($baseFabric ? $baseFabric->width : null);
+                $inOut = $fData['in_out'] ?? ($fabDetail ? $fabDetail->in_out : 'NO');
+                $nPatti = $fData['n_patti'] ?? ($fabDetail ? $fabDetail->n_patti : 'WHITE');
 
                 $imagePath = $fabDetail ? $fabDetail->grn_image : null;
                 if ($request->hasFile("fabrics.{$idx}.fabric_image")) {
@@ -2278,14 +2442,6 @@ class JobCardEntryController extends Controller
                 // Update Batch Task Targets by difference if assigned
                 if ($diffFabQty != 0) {
                     Task::where('job_card_fabric_detail_id', $fabDetail->id)->increment('issue_qty', $diffFabQty);
-                }
-
-                // Adjust warehouse stock item by difference
-                if ($stockEntryId && $diffFabMtr != 0) {
-                    $stockItem = StockEntryItem::find($stockEntryId);
-                    if ($stockItem) {
-                        $stockItem->increment('qty_out', $diffFabMtr);
-                    }
                 }
             }
 
@@ -2413,15 +2569,7 @@ class JobCardEntryController extends Controller
             // 2. Delete Associated Batch Tasks if any
             Task::where('job_card_fabric_detail_id', $batch->id)->delete();
 
-            // 3. Revert warehouse stock deduction
-            if ($batchMtr > 0 && $batch->stock_entry_id) {
-                $stockItem = StockEntryItem::find($batch->stock_entry_id);
-                if ($stockItem) {
-                    $stockItem->decrement('qty_out', min($stockItem->qty_out, $batchMtr));
-                }
-            }
-
-            // 4. Delete the batch record
+            // 3. Delete the batch record
             $batch->delete();
 
             // 5. Revert JobCardEntry grand totals and additional_qty

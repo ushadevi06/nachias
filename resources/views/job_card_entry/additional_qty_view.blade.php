@@ -65,8 +65,12 @@
                         Added on: <strong>{{ $batch->created_at ? $batch->created_at->format('d-m-Y h:i A') : '-' }}</strong> &nbsp;|&nbsp;
                         @if($batchGroup->count() == 1)
                             Art No: <strong>{{ $batch->art_no ?? '-' }}</strong> &nbsp;|&nbsp;
-                        @else
+                        @elseif($batchGroup->count() <= 3)
                             Art Nos: <strong>{{ $batchGroup->pluck('art_no')->implode(', ') }}</strong> ({{ $batchGroup->count() }} Fabrics) &nbsp;|&nbsp;
+                        @else
+                            Art Nos: <strong>{{ $batchGroup->pluck('art_no')->take(3)->implode(', ') }}</strong> 
+                            <span class="badge bg-label-dark fs-7" title="{{ $batchGroup->pluck('art_no')->implode(', ') }}">+{{ $batchGroup->count() - 3 }} more</span>
+                            ({{ $batchGroup->count() }} Fabrics) &nbsp;|&nbsp;
                         @endif
                         Extra Pieces: <strong class="text-success">+{{ number_format($batchTotalQty, 0) }} pcs</strong>
                     </span>

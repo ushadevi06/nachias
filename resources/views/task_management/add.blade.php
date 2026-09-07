@@ -494,7 +494,7 @@
                                                                         <div class="row g-3">
                                                                             <div class="col-6">
                                                                                 <label class="form-label small fw-bold text-muted">Assigned Qty</label>
-                                                                                <div class="form-control form-control-sm bg-light fw-bold row-assigned-qty">{{ number_format($assign->issue_qty, 2) }}</div>
+                                                                                <div class="form-control form-control-sm bg-light fw-bold row-assigned-qty" data-raw-qty="{{ $assign->issue_qty }}">{{ number_format($assign->issue_qty, 2) }}</div>
                                                                             </div>
                                                                             <div class="col-6">
                                                                                 <label class="form-label small fw-bold text-muted text-success">Completed Qty</label>
@@ -1773,10 +1773,20 @@
     @section('scripts')
     <script>
         $(document).ready(function() {
+            function getAssignedQty(row) {
+                var $el = row.find('.row-assigned-qty');
+                var raw = $el.attr('data-raw-qty') || $el.data('raw-qty');
+                if (raw !== undefined && raw !== null && raw !== '') {
+                    return parseFloat(raw) || 0;
+                }
+                var txt = String($el.text()).replace(/,/g, '').trim();
+                return parseFloat(txt) || 0;
+            }
+
             function calculateRow(row) {
-                var assignedQty = parseFloat(row.find('.row-assigned-qty').text()) || 0;
-                var completedQty = parseFloat(row.find('.row-completed-qty').val()) || 0;
-                var wastageQty = parseFloat(row.find('.row-wastage-qty').val()) || 0;
+                var assignedQty = getAssignedQty(row);
+                var completedQty = parseFloat(String(row.find('.row-completed-qty').val()).replace(/,/g, '')) || 0;
+                var wastageQty = parseFloat(String(row.find('.row-wastage-qty').val()).replace(/,/g, '')) || 0;
 
                 var inprogressInput = row.find('.row-inprogress-qty');
                 var statusInput = row.find('.row-status');
@@ -1854,6 +1864,16 @@
                 }
             }
 
+            $(document).on('paste', '.row-completed-qty, .row-wastage-qty, .row-qc-checked, .row-qc-passed, .bulk-qty-input', function(e) {
+                var pastedData = (e.originalEvent || e).clipboardData ? (e.originalEvent || e).clipboardData.getData('text/plain') : '';
+                if (pastedData && pastedData.indexOf(',') !== -1) {
+                    e.preventDefault();
+                    var cleanData = pastedData.replace(/,/g, '').trim();
+                    document.execCommand('insertText', false, cleanData);
+                    $(this).trigger('input');
+                }
+            });
+
             $(document).on('input', '.row-completed-qty, .row-wastage-qty, .row-qc-checked, .row-qc-passed', function(e) {
                 if (e.originalEvent) {
                     $(this).attr('data-user-modified', 'true');
@@ -1870,9 +1890,9 @@
                     var row = $(this);
                     row.find('.row-validation-error').remove(); // Clear previous error
 
-                    var assignedQty = parseFloat(row.find('.row-assigned-qty').text()) || 0;
-                    var completedQty = parseFloat(row.find('.row-completed-qty').val()) || 0;
-                    var wastageQty = parseFloat(row.find('.row-wastage-qty').val()) || 0;
+                    var assignedQty = getAssignedQty(row);
+                    var completedQty = parseFloat(String(row.find('.row-completed-qty').val()).replace(/,/g, '')) || 0;
+                    var wastageQty = parseFloat(String(row.find('.row-wastage-qty').val()).replace(/,/g, '')) || 0;
 
                     var isValid = true;
                     var errorMsg = "";

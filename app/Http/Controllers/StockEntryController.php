@@ -837,6 +837,7 @@ class StockEntryController extends Controller
     {
         $headers = [
             'Stock Date',
+            'Warehouse',
             'Store Category',
             'Raw Material',
             'Style',
@@ -857,6 +858,7 @@ class StockEntryController extends Controller
             fputcsv($file, $headers);
             fputcsv($file, [
                 date('d-m-Y'),
+                'HEAD OFFICE',
                 'Category Code / Name',
                 'Raw Material Code / Name',
                 'PRINT',

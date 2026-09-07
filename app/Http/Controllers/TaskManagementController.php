@@ -853,6 +853,18 @@ class TaskManagementController extends Controller
 
     public function update_task_progress(Request $request)
     {
+        if ($request->has('assignments') && is_array($request->assignments)) {
+            $cleanedAssignments = $request->assignments;
+            foreach ($cleanedAssignments as &$assignData) {
+                foreach (['completed_qty', 'inprogress_qty', 'wastage_qty', 'qc_checked_qty', 'qc_passed_qty', 'qc_rejected_qty'] as $qtyField) {
+                    if (isset($assignData[$qtyField]) && is_string($assignData[$qtyField])) {
+                        $assignData[$qtyField] = str_replace(',', '', trim($assignData[$qtyField]));
+                    }
+                }
+            }
+            $request->merge(['assignments' => $cleanedAssignments]);
+        }
+
         $request->validate([
             'task_id' => 'required|exists:tasks,id',
             'assignments' => 'required|array',

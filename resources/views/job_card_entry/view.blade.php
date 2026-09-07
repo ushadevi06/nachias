@@ -62,7 +62,7 @@
                             </div>
                         </div>
                         <div class="card-datatable table-responsive">
-                            <table class="table datatables-jc">
+                            <table class="table datatables-jc nowrap w-100">
                                 <thead>
                                     <tr>
                                          <th>#</th>

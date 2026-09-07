@@ -130,12 +130,31 @@
                                                 N.Patti: <strong>{{ $firstFabric->n_patti ?? 'WHITE' }}</strong>
                                             </div>
                                         @else
+                                            @php
+                                                $allArtsText = $batchGroup->map(function($b) {
+                                                    return $b->art_no . ' (' . number_format($b->mtr, 2) . 'm / +' . $b->total_qty . 'pcs)';
+                                                })->implode(', ');
+                                            @endphp
                                             <div class="d-flex flex-wrap gap-1 justify-content-center">
-                                                @foreach($batchGroup as $bf)
-                                                    <span class="badge bg-label-primary px-2 py-1 fs-6 fw-bold border">
-                                                        {{ $bf->art_no }} <small class="text-muted">({{ number_format($bf->mtr, 2) }}m / +{{ $bf->total_qty }}pcs)</small>
+                                                @if($batchGroup->count() <= 3)
+                                                    @foreach($batchGroup as $bf)
+                                                        <span class="badge bg-label-primary px-2 py-1 fs-6 fw-bold border">
+                                                            {{ $bf->art_no }} <small class="text-muted">({{ number_format($bf->mtr, 2) }}m / +{{ $bf->total_qty }}pcs)</small>
+                                                        </span>
+                                                    @endforeach
+                                                @else
+                                                    @foreach($batchGroup->take(3) as $bf)
+                                                        <span class="badge bg-label-primary px-2 py-1 fs-6 fw-bold border">
+                                                            {{ $bf->art_no }} <small class="text-muted">({{ number_format($bf->mtr, 2) }}m / +{{ $bf->total_qty }}pcs)</small>
+                                                        </span>
+                                                    @endforeach
+                                                    <span class="badge bg-secondary px-2 py-1 fs-6 fw-bold border" data-bs-toggle="tooltip" title="{{ $allArtsText }}">
+                                                        +{{ $batchGroup->count() - 3 }} more
                                                     </span>
-                                                @endforeach
+                                                    <span class="badge bg-label-dark px-2 py-1 fs-7 fw-normal">
+                                                        {{ $batchGroup->count() }} Fabrics
+                                                    </span>
+                                                @endif
                                             </div>
                                             <div class="text-muted small mt-1">
                                                 In/Out: <strong>{{ $firstFabric->in_out ?? 'NO' }}</strong> &nbsp;|&nbsp; 

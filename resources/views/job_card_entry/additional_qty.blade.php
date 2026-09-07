@@ -39,10 +39,16 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
+            @php
+                $uniqueBatchCount = $jobCard->fabricDetails->where('is_additional', 1)
+                    ->groupBy(function($item) {
+                        return $item->additional_batch_no ?? ($item->created_at ? $item->created_at->format('Y-m-d H:i') : $item->id);
+                    })->count();
+            @endphp
             <a href="{{ route('job_card_entries.additional_qty_history', $jobCard->id) }}" class="btn btn-dark d-flex align-items-center gap-1 shadow-sm">
                 <i class="ri ri-history-line"></i> Addition History 
-                @if(!empty($additionalBatches) && count($additionalBatches) > 0)
-                    <span class="badge bg-warning text-dark rounded-pill ms-1">{{ count($additionalBatches) }}</span>
+                @if($uniqueBatchCount > 0)
+                    <span class="badge bg-warning text-dark rounded-pill ms-1">{{ $uniqueBatchCount }}</span>
                 @endif
             </a>
             <a href="{{ route('job_card_entries.view-item', $jobCard->id) }}" class="btn btn-outline-primary d-flex align-items-center gap-1">
@@ -63,17 +69,28 @@
         @php
             $editBatchTotalQty = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) ? $editingBatchGroup->sum('total_qty') : $editingBatch->total_qty;
             $editBatchTotalMtr = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) ? $editingBatchGroup->sum('mtr') : $editingBatch->mtr;
-            $editBatchArtList = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) ? $editingBatchGroup->pluck('art_no')->implode(', ') : $editingBatch->art_no;
+            $editBatchArts = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) ? $editingBatchGroup->pluck('art_no')->unique()->filter()->values() : collect([$editingBatch->art_no]);
+            $artCount = $editBatchArts->count();
         @endphp
         <!-- Edit Mode Banner -->
-        <div class="alert alert-warning border-0 shadow-sm d-flex justify-content-between align-items-center mb-4 p-3 rounded-3">
+        <div class="alert alert-warning border-0 shadow-sm d-flex justify-content-between align-items-center mb-4 p-3 rounded-3 flex-wrap gap-2">
             <div class="d-flex align-items-center gap-3">
                 <div class="bg-warning text-dark p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
                     <i class="ri ri-edit-2-line fs-5"></i>
                 </div>
                 <div>
-                    <h5 class="mb-0 fw-bold text-dark">Editing Addition Batch #{{ $batchIndex }} ({{ $editBatchArtList }})</h5>
-                    <div class="small text-muted">
+                    <h5 class="mb-0 fw-bold text-dark d-flex align-items-center flex-wrap gap-1">
+                        <span>Editing Addition Batch #{{ $batchIndex }}</span>
+                        @if($artCount <= 3)
+                            <span class="text-muted fs-6 fw-normal">({{ $editBatchArts->implode(', ') }})</span>
+                        @else
+                            <span class="text-muted fs-6 fw-normal">({{ $editBatchArts->take(3)->implode(', ') }}</span>
+                            <span class="badge bg-label-dark fs-7" title="{{ $editBatchArts->implode(', ') }}">+{{ $artCount - 3 }} more</span>
+                            <span class="text-muted fs-6 fw-normal">)</span>
+                            <span class="badge bg-label-primary fs-7 ms-1">{{ $artCount }} Fabrics</span>
+                        @endif
+                    </h5>
+                    <div class="small text-muted mt-1">
                         Added on: <strong>{{ $editingBatch->created_at ? $editingBatch->created_at->format('d-m-Y h:i A') : '-' }}</strong> | 
                         Current Batch Qty: <strong class="text-primary">+{{ $editBatchTotalQty }} pcs</strong> ({{ number_format($editBatchTotalMtr, 2) }} Mtr)
                     </div>
@@ -111,6 +128,7 @@
     <form id="formAdditionalQty" method="POST" action="{{ $editingBatch ? route('job_card_entries.update_additional_batch', [$jobCard->id, $editingBatch->id]) : route('job_card_entries.add_additional_qty', $jobCard->id) }}" enctype="multipart/form-data" novalidate>
         @csrf
 
+
         <!-- 1. Fabric Details Section (Side-by-Side Columns for All Fabrics) -->
         <div class="card mb-4 shadow-sm border-0">
             <div class="card-body">
@@ -141,11 +159,26 @@
                             <!-- ART NO Row -->
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
+                                    @php
+                                        $availStock = floatval($artStockMap[$bf->art_no] ?? 0);
+                                    @endphp
                                     <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">ART NO</td>
                                     <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
-                                        <input type="text" class="form-control form-control-sm text-center fw-bold" value="{{ $bf->art_no }}" readonly>
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <input type="text" class="form-control form-control-sm text-center fw-bold" value="{{ $bf->art_no }}" readonly style="max-width: 320px;">
+                                            @if($availStock > 0)
+                                                <span class="badge bg-success py-2 px-3 fs-7 shadow-sm" title="Available stock in warehouse">
+                                                    <i class="ri ri-checkbox-circle-line me-1"></i> Available Stock: {{ number_format($availStock, 2) }} MTR
+                                                </span>
+                                            @else
+                                                <span class="badge bg-danger py-2 px-3 fs-7 shadow-sm" title="Out of stock in warehouse">
+                                                    <i class="ri ri-error-warning-line me-1"></i> Out of Stock (0.00 MTR)
+                                                </span>
+                                            @endif
+                                        </div>
                                         <input type="hidden" name="fabrics[{{ $idx }}][art_no]" value="{{ $bf->art_no }}">
                                         <input type="hidden" name="fabrics[{{ $idx }}][stock_entry_id]" value="{{ $bf->stock_entry_id }}">
+                                        <input type="hidden" id="avail_stock_{{ $idx }}" value="{{ $availStock }}">
                                     </td>
                                 @endforeach
                             </tr>
@@ -179,10 +212,13 @@
                                     <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">ISSUED METERS</td>
                                     <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <div class="d-flex justify-content-center align-items-center gap-2">
-                                            <input type="number" step="0.01" min="0" name="fabrics[{{ $idx }}][total_fabric_meters]" id="issued_meters_{{ $idx }}" class="form-control form-control-sm text-center fw-bold issued-meters-input" data-fabric-index="{{ $idx }}" value="{{ $mtrVal }}" placeholder="0.00" readonly>
+                                            <input type="number" step="0.01" min="0" name="fabrics[{{ $idx }}][total_fabric_meters]" id="issued_meters_{{ $idx }}" class="form-control form-control-sm text-center fw-bold issued-meters-input @error("fabrics.{$idx}.total_fabric_meters") is-invalid @enderror" data-fabric-index="{{ $idx }}" value="{{ old("fabrics.{$idx}.total_fabric_meters", $mtrVal) }}" placeholder="0.00" readonly>
                                             <button type="button" class="btn btn-sm btn-outline-primary btn-recalc-fabric-meters" data-fabric-index="{{ $idx }}" title="Recalculate Fabric Meters"><i class="ri ri-refresh-line"></i></button>
                                         </div>
-                                        <div class="small text-muted mt-1 matrix-need-caption" id="matrix_need_caption_{{ $idx }}">Matrix Need: {{ number_format(floatval($mtrVal), 2) }} MTR</div>
+                                        @error("fabrics.{$idx}.total_fabric_meters")
+                                            <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                        @enderror
+                                        <div class="small text-muted mt-1 matrix-need-caption" id="matrix_need_caption_{{ $idx }}">Matrix Need: {{ number_format(floatval(old("fabrics.{$idx}.total_fabric_meters", $mtrVal)), 2) }} MTR</div>
                                     </td>
                                 @endforeach
                             </tr>
@@ -195,7 +231,7 @@
                                     @endphp
                                     <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">IN/OUT</td>
                                     <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
-                                        <input type="text" name="fabrics[{{ $idx }}][in_out]" class="form-control form-control-sm text-center in-out-input" value="{{ $inOutVal }}">
+                                        <input type="text" name="fabrics[{{ $idx }}][in_out]" class="form-control form-control-sm text-center in-out-input" value="{{ old("fabrics.{$idx}.in_out", $inOutVal) }}">
                                     </td>
                                 @endforeach
                             </tr>
@@ -208,7 +244,7 @@
                                     @endphp
                                     <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">N.PATTI</td>
                                     <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
-                                        <input type="text" name="fabrics[{{ $idx }}][n_patti]" class="form-control form-control-sm text-center n-patti-input" value="{{ $nPattiVal }}">
+                                        <input type="text" name="fabrics[{{ $idx }}][n_patti]" class="form-control form-control-sm text-center n-patti-input" value="{{ old("fabrics.{$idx}.n_patti", $nPattiVal) }}">
                                     </td>
                                 @endforeach
                             </tr>
@@ -242,27 +278,41 @@
                                                     @foreach($batchLayMarks as $lmIdx => $lm)
                                                         @php
                                                             $selectedLmSizes = is_array($lm->sizes) ? $lm->sizes : (is_string($lm->sizes) ? json_decode($lm->sizes, true) ?? explode(',', $lm->sizes) : []);
+                                                            $oldSizes = old("fabrics.{$idx}.lay_marks.{$lmIdx}.sizes", $selectedLmSizes);
+                                                            if (!is_array($oldSizes)) $oldSizes = [$oldSizes];
                                                         @endphp
                                                         <tr class="lay-mark-row" data-fabric-index="{{ $idx }}">
                                                             <td class="fw-bold mark-no">{{ $lmIdx + 1 }}</td>
                                                             <td>
-                                                                <select class="form-select form-select-sm select2-multi-sizes select-lay-sizes" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][sizes][]" multiple="multiple" style="width: 100%;">
+                                                                <select class="form-select form-select-sm select2-multi-sizes select-lay-sizes @error("fabrics.{$idx}.lay_marks.{$lmIdx}.sizes") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][sizes][]" multiple="multiple" style="width: 100%;">
                                                                     @foreach($allSizes as $sz)
-                                                                        <option value="{{ $sz }}" {{ in_array((string)$sz, array_map('strval', $selectedLmSizes)) ? 'selected' : '' }}>{{ $sz }}</option>
+                                                                        <option value="{{ $sz }}" {{ in_array((string)$sz, array_map('strval', $oldSizes)) ? 'selected' : '' }}>{{ $sz }}</option>
                                                                     @endforeach
                                                                 </select>
+                                                                @error("fabrics.{$idx}.lay_marks.{$lmIdx}.sizes")
+                                                                    <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                                @enderror
                                                             </td>
                                                             <td>
-                                                                <select class="form-select form-select-sm select-lay-sleeve select2" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][sleeve]" data-placeholder="Select Sleeve">
-                                                                    <option value="F/S" {{ ($lm->sleeve_type == 'F/S') ? 'selected' : '' }}>F/S</option>
-                                                                    <option value="H/S" {{ ($lm->sleeve_type == 'H/S') ? 'selected' : '' }}>H/S</option>
+                                                                <select class="form-select form-select-sm select-lay-sleeve select2 @error("fabrics.{$idx}.lay_marks.{$lmIdx}.sleeve") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][sleeve]" data-placeholder="Select Sleeve">
+                                                                    <option value="F/S" {{ old("fabrics.{$idx}.lay_marks.{$lmIdx}.sleeve", $lm->sleeve_type ?? 'F/S') == 'F/S' ? 'selected' : '' }}>F/S</option>
+                                                                    <option value="H/S" {{ old("fabrics.{$idx}.lay_marks.{$lmIdx}.sleeve", $lm->sleeve_type ?? '') == 'H/S' ? 'selected' : '' }}>H/S</option>
                                                                 </select>
+                                                                @error("fabrics.{$idx}.lay_marks.{$lmIdx}.sleeve")
+                                                                    <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                                @enderror
                                                             </td>
                                                             <td>
-                                                                <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center input-lay-meter" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][meter]" placeholder="0.00" value="{{ $lm->lay_mark_meter }}">
+                                                                <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center input-lay-meter @error("fabrics.{$idx}.lay_marks.{$lmIdx}.meter") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][meter]" placeholder="0.00" value="{{ old("fabrics.{$idx}.lay_marks.{$lmIdx}.meter", $lm->lay_mark_meter ?? '') }}">
+                                                                @error("fabrics.{$idx}.lay_marks.{$lmIdx}.meter")
+                                                                    <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                                @enderror
                                                             </td>
                                                             <td>
-                                                                <input type="number" step="1" min="0" class="form-control form-control-sm text-center input-no-of-lay" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][no_of_lay]" placeholder="0" value="{{ $lm->no_of_lay }}">
+                                                                <input type="number" step="1" min="0" class="form-control form-control-sm text-center input-no-of-lay @error("fabrics.{$idx}.lay_marks.{$lmIdx}.no_of_lay") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][{{ $lmIdx }}][no_of_lay]" placeholder="0" value="{{ old("fabrics.{$idx}.lay_marks.{$lmIdx}.no_of_lay", $lm->no_of_lay ?? '') }}">
+                                                                @error("fabrics.{$idx}.lay_marks.{$lmIdx}.no_of_lay")
+                                                                    <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                                @enderror
                                                             </td>
                                                             <td>
                                                                 <button type="button" class="btn btn-sm btn-icon btn-danger remove-lay-mark"><i class="ri ri-delete-bin-line"></i></button>
@@ -270,26 +320,42 @@
                                                         </tr>
                                                     @endforeach
                                                 @else
+                                                    @php
+                                                        $oldSizes0 = old("fabrics.{$idx}.lay_marks.0.sizes", []);
+                                                        if (!is_array($oldSizes0)) $oldSizes0 = [$oldSizes0];
+                                                    @endphp
                                                     <tr class="lay-mark-row" data-fabric-index="{{ $idx }}">
                                                         <td class="fw-bold mark-no">1</td>
                                                         <td>
-                                                            <select class="form-select form-select-sm select2-multi-sizes select-lay-sizes" name="fabrics[{{ $idx }}][lay_marks][0][sizes][]" multiple="multiple" style="width: 100%;">
+                                                            <select class="form-select form-select-sm select2-multi-sizes select-lay-sizes @error("fabrics.{$idx}.lay_marks.0.sizes") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][0][sizes][]" multiple="multiple" style="width: 100%;">
                                                                 @foreach($allSizes as $sz)
-                                                                    <option value="{{ $sz }}">{{ $sz }}</option>
+                                                                    <option value="{{ $sz }}" {{ in_array((string)$sz, array_map('strval', $oldSizes0)) ? 'selected' : '' }}>{{ $sz }}</option>
                                                                 @endforeach
                                                             </select>
+                                                            @error("fabrics.{$idx}.lay_marks.0.sizes")
+                                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                            @enderror
                                                         </td>
                                                         <td>
-                                                            <select class="form-select form-select-sm select-lay-sleeve select2" name="fabrics[{{ $idx }}][lay_marks][0][sleeve]" data-placeholder="Select Sleeve">
-                                                                <option value="F/S">F/S</option>
-                                                                <option value="H/S">H/S</option>
+                                                            <select class="form-select form-select-sm select-lay-sleeve select2 @error("fabrics.{$idx}.lay_marks.0.sleeve") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][0][sleeve]" data-placeholder="Select Sleeve">
+                                                                <option value="F/S" {{ old("fabrics.{$idx}.lay_marks.0.sleeve", 'F/S') == 'F/S' ? 'selected' : '' }}>F/S</option>
+                                                                <option value="H/S" {{ old("fabrics.{$idx}.lay_marks.0.sleeve") == 'H/S' ? 'selected' : '' }}>H/S</option>
                                                             </select>
+                                                            @error("fabrics.{$idx}.lay_marks.0.sleeve")
+                                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                            @enderror
                                                         </td>
                                                         <td>
-                                                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center input-lay-meter" name="fabrics[{{ $idx }}][lay_marks][0][meter]" placeholder="0.00" value="">
+                                                            <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center input-lay-meter @error("fabrics.{$idx}.lay_marks.0.meter") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][0][meter]" placeholder="0.00" value="{{ old("fabrics.{$idx}.lay_marks.0.meter", '') }}">
+                                                            @error("fabrics.{$idx}.lay_marks.0.meter")
+                                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                            @enderror
                                                         </td>
                                                         <td>
-                                                            <input type="number" step="1" min="0" class="form-control form-control-sm text-center input-no-of-lay" name="fabrics[{{ $idx }}][lay_marks][0][no_of_lay]" placeholder="0" value="">
+                                                            <input type="number" step="1" min="0" class="form-control form-control-sm text-center input-no-of-lay @error("fabrics.{$idx}.lay_marks.0.no_of_lay") is-invalid @enderror" name="fabrics[{{ $idx }}][lay_marks][0][no_of_lay]" placeholder="0" value="{{ old("fabrics.{$idx}.lay_marks.0.no_of_lay", '') }}">
+                                                            @error("fabrics.{$idx}.lay_marks.0.no_of_lay")
+                                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                                            @enderror
                                                         </td>
                                                         <td>
                                                             <button type="button" class="btn btn-sm btn-icon btn-danger remove-lay-mark"><i class="ri ri-delete-bin-line"></i></button>
@@ -346,36 +412,48 @@
                                 @foreach($existingOps as $stIdx => $op)
                                     <tr class="stage-row">
                                         <td>
-                                            <select name="production_stages[{{ $stIdx }}][stage_id]" class="form-select form-select-sm select2 stage-select" data-placeholder="Select Stage">
+                                            <select name="production_stages[{{ $stIdx }}][stage_id]" class="form-select form-select-sm select2 stage-select @error("production_stages.{$stIdx}.stage_id") is-invalid @enderror" data-placeholder="Select Stage">
                                                 <option value="">Select Stage</option>
                                                 @foreach($operationStages as $os)
-                                                    <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ ($op->operation_stage_id == $os->id) ? 'selected' : '' }}>
+                                                    <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ (old("production_stages.{$stIdx}.stage_id", $op->operation_stage_id ?? '') == $os->id) ? 'selected' : '' }}>
                                                         {{ $os->operation_stage_name }}
                                                     </option>
                                                 @endforeach
                                             </select>
+                                            @error("production_stages.{$stIdx}.stage_id")
+                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                            @enderror
                                         </td>
                                         <td>
-                                            <select name="production_stages[{{ $stIdx }}][service_provider_id]" class="form-select form-select-sm select2 plant-select" data-placeholder="Select Unit">
+                                            <select name="production_stages[{{ $stIdx }}][service_provider_id]" class="form-select form-select-sm select2 plant-select @error("production_stages.{$stIdx}.service_provider_id") is-invalid @enderror" data-placeholder="Select Unit">
                                                 <option value="">Select Unit</option>
                                                 @foreach($plants as $p)
-                                                    <option value="{{ $p->id }}" {{ ($op->service_provider_id == $p->id) ? 'selected' : '' }}>
+                                                    <option value="{{ $p->id }}" {{ (old("production_stages.{$stIdx}.service_provider_id", $op->service_provider_id ?? '') == $p->id) ? 'selected' : '' }}>
                                                         {{ $p->name }}
                                                     </option>
                                                 @endforeach
                                             </select>
+                                            @error("production_stages.{$stIdx}.service_provider_id")
+                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                            @enderror
                                         </td>
                                         <td>
-                                            <input type="number" step="0.01" min="0" name="production_stages[{{ $stIdx }}][rate]" class="form-control form-control-sm text-center stage-rate bg-light" value="{{ number_format(floatval($op->rate ?? 0), 2, '.', '') }}" readonly>
+                                            <input type="number" step="0.01" min="0" name="production_stages[{{ $stIdx }}][rate]" class="form-control form-control-sm text-center stage-rate bg-light" value="{{ old("production_stages.{$stIdx}.rate", number_format(floatval($op->rate ?? 0), 2, '.', '')) }}" readonly>
                                         </td>
                                         <td>
-                                            <input type="text" name="production_stages[{{ $stIdx }}][issue_date]" class="form-control form-control-sm text-center flatpickr-date issue-date" placeholder="Enter Issue Date" value="{{ $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '' }}">
+                                            <input type="text" name="production_stages[{{ $stIdx }}][issue_date]" class="form-control form-control-sm text-center flatpickr-date issue-date @error("production_stages.{$stIdx}.issue_date") is-invalid @enderror" placeholder="Enter Issue Date" value="{{ old("production_stages.{$stIdx}.issue_date", $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '') }}">
+                                            @error("production_stages.{$stIdx}.issue_date")
+                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                            @enderror
                                         </td>
                                         <td>
-                                            <input type="text" name="production_stages[{{ $stIdx }}][deadline_date]" class="form-control form-control-sm text-center flatpickr-date deadline-date" placeholder="Enter Deadline Date" value="{{ $op->deadline_date ? date('d-m-Y', strtotime($op->deadline_date)) : '' }}">
+                                            <input type="text" name="production_stages[{{ $stIdx }}][deadline_date]" class="form-control form-control-sm text-center flatpickr-date deadline-date @error("production_stages.{$stIdx}.deadline_date") is-invalid @enderror" placeholder="Enter Deadline Date" value="{{ old("production_stages.{$stIdx}.deadline_date", $op->deadline_date ? date('d-m-Y', strtotime($op->deadline_date)) : '') }}">
+                                            @error("production_stages.{$stIdx}.deadline_date")
+                                                <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                            @enderror
                                         </td>
                                         <td>
-                                            <input type="text" name="production_stages[{{ $stIdx }}][remarks]" class="form-control form-control-sm" placeholder="Enter Remarks" value="{{ $op->remarks ?? '' }}">
+                                            <input type="text" name="production_stages[{{ $stIdx }}][remarks]" class="form-control form-control-sm" placeholder="Enter Remarks" value="{{ old("production_stages.{$stIdx}.remarks", $op->remarks ?? '') }}">
                                         </td>
                                         <td class="text-center text-nowrap">
                                             <div class="d-flex align-items-center justify-content-center gap-1">
@@ -398,11 +476,11 @@
                                                     } else {
                                                         $previousTaskAssigned = true;
                                                     }
-                                                    $canAssignCurrentStage = ($hasIssuedItems ?? true) && $previousTaskAssigned && !$hasTask;
+                                                    $canAssignCurrentStage = !empty($hasIssuedItems) && $previousTaskAssigned && !$hasTask;
                                                     $buttonText = $hasTask ? 'Assigned (#' . $taskNo . ')' : 'Assign Task';
 
-                                                    if (!($hasIssuedItems ?? true) && !$hasTask) {
-                                                        $buttonTitle = 'Materials not yet issued';
+                                                    if (empty($hasIssuedItems) && !$hasTask) {
+                                                        $buttonTitle = 'Materials not yet issued for this batch (Please issue extra batch fabric in Issue Items first)';
                                                     } elseif (!$previousTaskAssigned) {
                                                         $buttonTitle = 'Previous stage task not assigned';
                                                     } elseif ($hasTask) {
@@ -422,36 +500,48 @@
                             @else
                                 <tr class="stage-row">
                                     <td>
-                                        <select name="production_stages[0][stage_id]" class="form-select form-select-sm select2 stage-select" data-placeholder="Select Stage">
+                                        <select name="production_stages[0][stage_id]" class="form-select form-select-sm select2 stage-select @error('production_stages.0.stage_id') is-invalid @enderror" data-placeholder="Select Stage">
                                             <option value="">Select Stage</option>
                                             @foreach($operationStages as $innerOs)
-                                                <option value="{{ $innerOs->id }}" data-cost="{{ $innerOs->cost }}">
+                                                <option value="{{ $innerOs->id }}" data-cost="{{ $innerOs->cost }}" {{ (old('production_stages.0.stage_id') == $innerOs->id) ? 'selected' : '' }}>
                                                     {{ $innerOs->operation_stage_name }}
                                                 </option>
                                             @endforeach
                                         </select>
+                                        @error('production_stages.0.stage_id')
+                                            <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                        @enderror
                                     </td>
                                     <td>
-                                        <select name="production_stages[0][service_provider_id]" class="form-select form-select-sm select2 plant-select" data-placeholder="Select Unit">
+                                        <select name="production_stages[0][service_provider_id]" class="form-select form-select-sm select2 plant-select @error('production_stages.0.service_provider_id') is-invalid @enderror" data-placeholder="Select Unit">
                                             <option value="">Select Unit</option>
                                             @foreach($plants as $p)
-                                                <option value="{{ $p->id }}" {{ ($jobCard->service_provider_id == $p->id) ? 'selected' : '' }}>
+                                                <option value="{{ $p->id }}" {{ (old('production_stages.0.service_provider_id', $jobCard->service_provider_id) == $p->id) ? 'selected' : '' }}>
                                                     {{ $p->name }}
                                                 </option>
                                             @endforeach
                                         </select>
+                                        @error('production_stages.0.service_provider_id')
+                                            <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                        @enderror
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="production_stages[0][rate]" class="form-control form-control-sm text-center stage-rate bg-light" value="0.00" readonly>
+                                        <input type="number" step="0.01" min="0" name="production_stages[0][rate]" class="form-control form-control-sm text-center stage-rate bg-light" value="{{ old('production_stages.0.rate', '0.00') }}" readonly>
                                     </td>
                                     <td>
-                                        <input type="text" name="production_stages[0][issue_date]" class="form-control form-control-sm text-center flatpickr-date issue-date" placeholder="Enter Issue Date" value="">
+                                        <input type="text" name="production_stages[0][issue_date]" class="form-control form-control-sm text-center flatpickr-date issue-date @error('production_stages.0.issue_date') is-invalid @enderror" placeholder="Enter Issue Date" value="{{ old('production_stages.0.issue_date', '') }}">
+                                        @error('production_stages.0.issue_date')
+                                            <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                        @enderror
                                     </td>
                                     <td>
-                                        <input type="text" name="production_stages[0][deadline_date]" class="form-control form-control-sm text-center flatpickr-date deadline-date" placeholder="Enter Deadline Date" value="">
+                                        <input type="text" name="production_stages[0][deadline_date]" class="form-control form-control-sm text-center flatpickr-date deadline-date @error('production_stages.0.deadline_date') is-invalid @enderror" placeholder="Enter Deadline Date" value="{{ old('production_stages.0.deadline_date', '') }}">
+                                        @error('production_stages.0.deadline_date')
+                                            <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                        @enderror
                                     </td>
                                     <td>
-                                        <input type="text" name="production_stages[0][remarks]" class="form-control form-control-sm" placeholder="Enter Remarks" value="">
+                                        <input type="text" name="production_stages[0][remarks]" class="form-control form-control-sm" placeholder="Enter Remarks" value="{{ old('production_stages.0.remarks', '') }}">
                                     </td>
                                     <td class="text-center text-nowrap">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
@@ -578,6 +668,11 @@
                         </tfoot>
                     </table>
                 </div>
+                @error('matrix_error')
+                    <div class="alert alert-danger border-0 shadow-sm mt-3 mb-0 p-2 text-center small fw-bold">
+                        <i class="ri ri-error-warning-line me-1"></i> {{ $message }}
+                    </div>
+                @enderror
             </div>
         </div>
 
@@ -731,8 +826,6 @@ $(document).ready(function() {
         if ($('#production-stages-tbody tr').length > 1) {
             $(this).closest('tr').remove();
             renumberStageRows();
-        } else {
-            Swal.fire({ icon: 'info', text: 'At least one production stage is required.' });
         }
     });
 
@@ -744,7 +837,7 @@ $(document).ready(function() {
         let jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
 
         if (!stageId) {
-            Swal.fire({ icon: 'warning', text: 'Please select a Stage before assigning.' });
+            alert('Please select a Stage before assigning.');
             return;
         }
 
@@ -768,7 +861,7 @@ $(document).ready(function() {
         });
     }
 
-    function addLayMarkRowToFabric(fIdx) {
+    function addLayMarkRowToFabric(fIdx, doRecalc = true) {
         const $tbody = $(`#consumption-lay-tbody-${fIdx}`);
         const markNum = $tbody.find('tr.lay-mark-row').length + 1;
         const markIdx = markNum - 1;
@@ -822,19 +915,81 @@ $(document).ready(function() {
         $tbody.find('tr:last-child .select2').select2({ width: '100%' });
         $tbody.find('tr:last-child .select2-multi-sizes').select2({ width: '100%', placeholder: 'Select Sizes' });
         updateLayMarkRowNumbers(fIdx);
-        recalcFabricMeters(fIdx);
-        syncCuttingRatioFromLayMarks(fIdx);
+        if (doRecalc) {
+            recalcFabricMeters(fIdx);
+            syncCuttingRatioFromLayMarks(fIdx);
+        }
+    }
+
+    // Auto-Sync from Fabric 0 to all other Fabrics
+    function syncAllLayMarksFromFabric0() {
+        if (isSyncing) return;
+        isSyncing = true;
+        try {
+            const $rows0 = $('#consumption-lay-tbody-0 tr.lay-mark-row');
+            const rowCount0 = $rows0.length;
+
+            $('.lay-mark-table').each(function() {
+                const fIdx = parseInt($(this).data('fabric-index'));
+                if (isNaN(fIdx) || fIdx === 0) return;
+
+                const $tbody = $(`#consumption-lay-tbody-${fIdx}`);
+                let currentRows = $tbody.find('tr.lay-mark-row');
+
+                // Adjust row count to match Fabric 0
+                while (currentRows.length < rowCount0) {
+                    addLayMarkRowToFabric(fIdx, false);
+                    currentRows = $tbody.find('tr.lay-mark-row');
+                }
+                while (currentRows.length > rowCount0 && currentRows.length > 1) {
+                    currentRows.last().remove();
+                    currentRows = $tbody.find('tr.lay-mark-row');
+                }
+
+                // Copy values for each row
+                $rows0.each(function(rowIndex) {
+                    const $r0 = $(this);
+                    const $rTarget = $tbody.find('tr.lay-mark-row').eq(rowIndex);
+                    if (!$rTarget.length) return;
+
+                    const sizesVal = $r0.find('.select-lay-sizes').val() || [];
+                    const sleeveVal = $r0.find('.select-lay-sleeve').val() || 'F/S';
+                    const meterVal = $r0.find('.input-lay-meter').val() || '';
+                    const noOfLayVal = $r0.find('.input-no-of-lay').val() || '';
+
+                    const $targetSizes = $rTarget.find('.select-lay-sizes');
+                    const $targetSleeve = $rTarget.find('.select-lay-sleeve');
+                    const $targetMeter = $rTarget.find('.input-lay-meter');
+                    const $targetNoOfLay = $rTarget.find('.input-no-of-lay');
+
+                    $targetSizes.val(sizesVal).trigger('change.select2');
+                    $targetSleeve.val(sleeveVal).trigger('change.select2');
+                    $targetMeter.val(meterVal);
+                    $targetNoOfLay.val(noOfLayVal);
+                });
+
+                updateLayMarkRowNumbers(fIdx);
+                recalcFabricMeters(fIdx);
+                syncCuttingRatioFromLayMarks(fIdx);
+            });
+        } finally {
+            isSyncing = false;
+        }
     }
 
     // Add Lay Mark Row for clicked fabric
     $(document).on('click', '.add-lay-mark-btn', function() {
         const fIdx = $(this).data('fabric-index');
         addLayMarkRowToFabric(fIdx);
+        if (fIdx === 0) {
+            syncAllLayMarksFromFabric0();
+        }
     });
 
     // Remove Lay Mark Row for clicked fabric
     $(document).on('click', '.remove-lay-mark', function() {
         const $row = $(this).closest('tr');
+        const rowIndex = $row.index();
         const $containerTable = $(this).closest('.lay-mark-table');
         const fabricIndex = $containerTable.data('fabric-index');
         const $tbody = $row.closest('tbody');
@@ -844,47 +999,28 @@ $(document).ready(function() {
             updateLayMarkRowNumbers(fabricIndex);
             recalcFabricMeters(fabricIndex);
             syncCuttingRatioFromLayMarks(fabricIndex);
+
+            if (fabricIndex === 0) {
+                // Also remove the same row index from other fabrics
+                $('.lay-mark-table').each(function() {
+                    const otherFIdx = parseInt($(this).data('fabric-index'));
+                    if (isNaN(otherFIdx) || otherFIdx === 0) return;
+                    const $otherTbody = $(`#consumption-lay-tbody-${otherFIdx}`);
+                    const $otherRow = $otherTbody.find('tr.lay-mark-row').eq(rowIndex);
+                    if ($otherRow.length && $otherTbody.find('tr.lay-mark-row').length > 1) {
+                        $otherRow.remove();
+                        updateLayMarkRowNumbers(otherFIdx);
+                        recalcFabricMeters(otherFIdx);
+                        syncCuttingRatioFromLayMarks(otherFIdx);
+                    }
+                });
+            }
         }
     });
 
-    // Auto-Sync from Art 0 (First Fabric) to All Other Fabrics
-    $(document).on('input change', '.lay-mark-table[id$="-art-0"] input, .lay-mark-table[id$="-art-0"] select', function() {
-        if (isSyncing) return;
-        isSyncing = true;
-        try {
-            const $el = $(this);
-            const $row = $el.closest('tr');
-            const rowIndex = $row.index();
-            const name = $el.attr('name');
-            if (!name) return;
-
-            const suffix = name.replace(/^fabrics\[0\]\[lay_marks\]\[\d+\]/, '');
-
-            $('.lay-mark-table').each(function() {
-                const fabricIndex = $(this).data('fabric-index');
-                if (fabricIndex === 0) return;
-
-                const targetName = `fabrics[${fabricIndex}][lay_marks][${rowIndex}]${suffix}`;
-                const $target = $(`[name="${targetName}"]`);
-
-                if ($target.length) {
-                    if ($el.is('select[multiple]')) {
-                        const val = $el.val();
-                        $target.val(val).trigger('change.select2');
-                    } else if ($el.is('select')) {
-                        const val = $el.val();
-                        $target.val(val).trigger('change.select2');
-                    } else {
-                        $target.val($el.val());
-                    }
-                }
-
-                recalcFabricMeters(fabricIndex);
-                syncCuttingRatioFromLayMarks(fabricIndex);
-            });
-        } finally {
-            isSyncing = false;
-        }
+    // Auto-Sync from Art 0 (First Fabric) to All Other Fabrics on any input/select change
+    $(document).on('input change select2:select select2:unselect', '.lay-mark-table[id$="-art-0"] input, .lay-mark-table[id$="-art-0"] select', function() {
+        syncAllLayMarksFromFabric0();
     });
 
     // Calculate Fabric Meters from Lay Mark Rows for a specific Fabric
@@ -898,7 +1034,17 @@ $(document).ready(function() {
             }
         });
         $(`#issued_meters_${fIdx}`).val(totalMtrs.toFixed(2));
-        $(`#matrix_need_caption_${fIdx}`).text('Matrix Need: ' + totalMtrs.toFixed(2) + ' MTR');
+
+        const avail = parseFloat($(`#avail_stock_${fIdx}`).val()) || 0;
+        const $caption = $(`#matrix_need_caption_${fIdx}`);
+        const $input = $(`#issued_meters_${fIdx}`);
+        if (totalMtrs > avail + 0.0001) {
+            $caption.html(`<span class="text-danger fw-bold"><i class="ri ri-error-warning-line"></i> Matrix Need: ${totalMtrs.toFixed(2)} MTR (Exceeds Available Stock: ${avail.toFixed(2)} MTR)</span>`);
+            $input.addClass('is-invalid border-danger text-danger bg-danger-subtle');
+        } else {
+            $caption.html(`Matrix Need: ${totalMtrs.toFixed(2)} MTR ${avail > 0 ? '<span class="text-success fw-semibold ms-1">(In Stock)</span>' : ''}`);
+            $input.removeClass('is-invalid border-danger text-danger bg-danger-subtle');
+        }
     }
 
     $(document).on('click', '.btn-recalc-fabric-meters', function() {
@@ -1021,131 +1167,18 @@ $(document).ready(function() {
     // Initial calculation on page load
     recalcMatrixTotals();
 
-    // Helper to display inline validation error message
-    function showFieldError($elem, message = 'This field is required') {
-        $elem.addClass('is-invalid');
-        const $parent = $elem.closest('td, .form-floating, .form-group');
-        $parent.find('.validation-error').remove();
-        $parent.append(`<div class="text-danger small validation-error fw-bold mt-1">${message}</div>`);
+    // Smooth scroll to the first validation error if any returned from server
+    const $firstError = $('.text-danger.fw-bold.small').first();
+    if ($firstError.length && $firstError.offset().top > 0) {
+        $('html, body').animate({
+            scrollTop: $firstError.offset().top - 180
+        }, 400);
     }
 
-    // Clear validation errors on interaction
-    $(document).on('input change', 'input, select', function() {
-        $(this).removeClass('is-invalid');
-        $(this).closest('td, .form-floating, .form-group').find('.validation-error').remove();
-        $('#matrix-validation-error').remove();
-    });
-
-    // Form Submission via AJAX
-    $('#formAdditionalQty').on('submit', function(e) {
-        e.preventDefault();
-        $('.validation-error').remove();
-        $('.is-invalid').removeClass('is-invalid');
-
-        let hasError = false;
-
-        // 1. Validate Production Stages
-        $('#production-stages-tbody tr.stage-row').each(function() {
-            const $stage = $(this).find('.stage-select');
-            if (!$stage.val()) {
-                showFieldError($stage, 'This field is required');
-                hasError = true;
-            }
-
-            const $unit = $(this).find('.plant-select');
-            if (!$unit.val()) {
-                showFieldError($unit, 'This field is required');
-                hasError = true;
-            }
-
-            const $issueDate = $(this).find('.issue-date');
-            if (!$issueDate.val()) {
-                showFieldError($issueDate, 'This field is required');
-                hasError = true;
-            }
-
-            const $deadlineDate = $(this).find('.deadline-date');
-            if (!$deadlineDate.val()) {
-                showFieldError($deadlineDate, 'This field is required');
-                hasError = true;
-            }
-        });
-
-        // 2. Validate Cutting Size Ratio Matrix Total
-        let totalExtra = 0;
-        $('.matrix-art-row').each(function() {
-            availableSizes.forEach(s => {
-                const fsVal = parseInt($(this).find(`.input-size-fs[data-size="${s}"]`).val()) || 0;
-                const hsVal = parseInt($(this).find(`.input-size-hs[data-size="${s}"]`).val()) || 0;
-                totalExtra += (fsVal + hsVal);
-            });
-        });
-
-        let totalMtrsEntered = 0;
-        $('.issued-meters-input').each(function() {
-            totalMtrsEntered += (parseFloat($(this).val()) || 0);
-        });
-
-        if (totalExtra <= 0 && totalMtrsEntered <= 0) {
-            $('#cutting-size-matrix-table').after('<div id="matrix-validation-error" class="text-danger small validation-error fw-bold mt-2 text-center">Please enter additional pieces in the Article Quantity Matrix or Fabric Lay Marks</div>');
-            hasError = true;
-        }
-
-        if (hasError) {
-            const $firstErr = $('.validation-error').first();
-            if ($firstErr.length) {
-                $('html, body').animate({
-                    scrollTop: $firstErr.offset().top - 140
-                }, 300);
-            }
-            return;
-        }
-
+    // Standard Normal Form Submission (Shows spinner upon submit, no JS blocking)
+    $('#formAdditionalQty').on('submit', function() {
         const btn = $('#btnSubmitForm');
-        const origText = btn.html();
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
-
-        const formData = new FormData($('#formAdditionalQty')[0]);
-
-        $.ajax({
-            url: $('#formAdditionalQty').attr('action'),
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            dataType: "json",
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || '{{ csrf_token() }}'
-            },
-            success: function(res) {
-                if (res.success) {
-                    window.location.href = res.redirect || '{{ url("job_card_entries") }}';
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Validation Error',
-                        text: res.message || 'Unable to update additional quantity.',
-                        confirmButtonColor: '#d33'
-                    });
-                    btn.prop('disabled', false).html(origText);
-                }
-            },
-            error: function(xhr) {
-                let msg = 'An unexpected error occurred.';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    msg = xhr.responseJSON.message;
-                } else if (xhr.responseText) {
-                    msg = xhr.responseText;
-                }
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: msg,
-                    confirmButtonColor: '#d33'
-                });
-                btn.prop('disabled', false).html(origText);
-            }
-        });
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Submitting...');
     });
 });
 </script>

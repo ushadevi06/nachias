@@ -82,3 +82,5 @@ ADD COLUMN `warehouse_id` BIGINT UNSIGNED NULL AFTER `grn_entry_id`,
 ADD CONSTRAINT `stock_entries_warehouse_id_foreign`
 FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`)
 ON DELETE SET NULL;
+
+07-09

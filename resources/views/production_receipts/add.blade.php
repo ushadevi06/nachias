@@ -17,34 +17,82 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    @php
+                                        $oldRawVal = old('job_card_id_raw', old('job_card_id'));
+                                        $oldFabId = old('job_card_fabric_detail_id');
+                                        if ($oldRawVal && !str_contains((string)$oldRawVal, '_add_') && $oldFabId) {
+                                            $oldRawVal = $oldRawVal . '_add_' . $oldFabId;
+                                        }
+                                    @endphp
+                                    <input type="hidden" name="job_card_id_raw" id="job_card_id_raw" value="{{ $oldRawVal }}">
                                     <select name="job_card_id" id="job_card_id" class="form-select select2" data-placeholder="Select Job Card No">
                                         <option value="">Select Job Card No</option>
                                         @foreach($jobCards as $jobCard)
                                             @php
+                                                $baseOrdered = max(0, floatval($jobCard->grand_total_qty) - floatval($jobCard->additional_qty ?? 0));
+                                                if ($baseOrdered <= 0) {
+                                                    $baseFabrics = $jobCard->fabricDetails ? $jobCard->fabricDetails->where('is_additional', 0) : collect();
+                                                    if ($baseFabrics->isNotEmpty() && $baseFabrics->first()->quantities) {
+                                                        $baseOrdered = $baseFabrics->first()->quantities->sum('total_qty');
+                                                    }
+                                                }
+                                                if ($baseOrdered <= 0) {
+                                                    $baseOrdered = ($jobCard->total_qty_fs ?? 0) + ($jobCard->total_qty_hs ?? 0);
+                                                }
+                                                if ($baseOrdered <= 0) {
+                                                    $baseOrdered = floatval($jobCard->grand_total_qty ?? 0);
+                                                }
+
+                                                $baseReceived = $receiptsSummary[$jobCard->id]['base'] ?? 0;
+                                                $isBaseDone = ($baseOrdered > 0 && $baseReceived >= ($baseOrdered - 0.001));
+                                                $isCurrentBaseSelected = ($receipt && $receipt->job_card_id == $jobCard->id && !$receipt->job_card_fabric_detail_id);
+                                                $isBaseOptionSelected = ($oldRawVal == (string)$jobCard->id && empty($oldFabId) && !str_contains((string)$oldRawVal, '_add_')) || (empty($oldRawVal) && $isCurrentBaseSelected);
+
                                                 $additionalBatches = $jobCard->fabricDetails
                                                     ? $jobCard->fabricDetails->where('is_additional', 1)->groupBy(function($item) {
                                                         return $item->additional_batch_no ?? ($item->created_at ? $item->created_at->format('Y-m-d H:i') : $item->id);
                                                     })
                                                     : collect();
                                             @endphp
-                                            <option value="{{ $jobCard->id }}" {{ old('job_card_id', ($receipt && $receipt->job_card_id == $jobCard->id && !$receipt->job_card_fabric_detail_id) ? $jobCard->id : '') == $jobCard->id ? 'selected' : '' }}>
-                                                {{ $jobCard->job_card_no }}
-                                            </option>
+
+                                            @if(!$isBaseDone || $isCurrentBaseSelected || $isBaseOptionSelected)
+                                                <option value="{{ $jobCard->id }}" {{ $isBaseOptionSelected ? 'selected' : '' }}>
+                                                    {{ $jobCard->job_card_no }}
+                                                </option>
+                                            @endif
+
                                             @foreach($additionalBatches as $batchGroup)
                                                 @php
                                                     $firstBatchFab = $batchGroup->first();
-                                                    $batchTotalQty = $batchGroup->sum('total_qty');
+                                                    $batchTotalQty = ($firstBatchFab && $firstBatchFab->quantities) ? $firstBatchFab->quantities->sum('total_qty') : 0;
+                                                    if ($batchTotalQty <= 0) {
+                                                        $batchTotalQty = $batchGroup->sum('total_qty');
+                                                    }
                                                     $addVal = $jobCard->id . '_add_' . $firstBatchFab->id;
                                                     $addQty = (floatval($batchTotalQty) == intval($batchTotalQty)) ? intval($batchTotalQty) : $batchTotalQty;
+
+                                                    $batchIds = $batchGroup->pluck('id')->toArray();
+                                                    $batchReceived = 0;
+                                                    foreach ($batchIds as $bId) {
+                                                        $batchReceived += ($receiptsSummary[$jobCard->id]['additional'][$bId] ?? 0);
+                                                    }
+                                                    $isBatchDone = ($batchTotalQty > 0 && $batchReceived >= ($batchTotalQty - 0.001));
+
                                                     $isBatchSelected = false;
                                                     if ($receipt && $receipt->job_card_id == $jobCard->id && $receipt->job_card_fabric_detail_id) {
-                                                        $isBatchSelected = $batchGroup->pluck('id')->contains($receipt->job_card_fabric_detail_id);
+                                                        $isBatchSelected = in_array($receipt->job_card_fabric_detail_id, $batchIds);
                                                     }
-                                                    $isSelected = old('job_card_id', $isBatchSelected ? $addVal : '') == $addVal;
+
+                                                    $isOptionSelected = ($oldRawVal == $addVal) ||
+                                                        ($oldRawVal == (string)$jobCard->id && $oldFabId && in_array($oldFabId, $batchIds)) ||
+                                                        (empty($oldRawVal) && $isBatchSelected);
                                                 @endphp
-                                                <option value="{{ $addVal }}" {{ $isSelected ? 'selected' : '' }}>
-                                                    {{ $jobCard->job_card_no }} - Additional {{ $addQty }} qty
-                                                </option>
+
+                                                @if(!$isBatchDone || $isBatchSelected || $isOptionSelected)
+                                                    <option value="{{ $addVal }}" {{ $isOptionSelected ? 'selected' : '' }}>
+                                                        {{ $jobCard->job_card_no }} - Additional {{ $addQty }} qty
+                                                    </option>
+                                                @endif
                                             @endforeach
                                         @endforeach
                                     </select>
@@ -390,6 +438,7 @@
 
         $('#job_card_id').on('change', function() {
             var rawVal = $(this).val();
+            $('#job_card_id_raw').val(rawVal || '');
             if (!rawVal) {
                 $('#plant').val('');
                 $('#doc_no').val('');
@@ -442,12 +491,12 @@
                             if (oldItems && Object.keys(oldItems).length > 0) {
                                 responseItems.forEach(function(item) {
                                     var match = Object.values(oldItems).find(function(oi) {
-                                        return oi.item_id == item.item_id &&
-                                            oi.art_no == item.art_no &&
-                                            oi.size_variant == item.size_variant &&
-                                            (oi.color_id == item.color_id || oi.color == item.color);
+                                        return (oi.item_id == item.item_id || !oi.item_id) &&
+                                            (oi.art_no == item.art_no || !oi.art_no) &&
+                                            (oi.size_variant == item.size_variant || oi.size == item.size) &&
+                                            (oi.color_id == item.color_id || oi.color == item.color || !oi.color);
                                     });
-                                    if (match) {
+                                    if (match && typeof match.scan_qty !== 'undefined') {
                                         item.scan_qty = match.scan_qty;
                                     }
                                 });
