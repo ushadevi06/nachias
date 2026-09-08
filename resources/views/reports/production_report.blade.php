@@ -332,17 +332,25 @@
                             <!-- Table of Tasks & Delay Reasons -->
                             <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
                                 <div
-                                    class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+                                    class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                                     <h6 class="mb-0 fw-bold text-dark"><i class="ri-file-list-3-line me-1 text-primary"></i>
                                         Linked Job Cards & Tasks</h6>
-                                    <button type="button"
-                                        class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-dept-report">
-                                        <i class="ri-arrow-left-line me-1"></i> Back to Report
-                                    </button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" id="btn-detail-excel" class="btn btn-outline-primary btn-sm rounded-pill"><i
+                                                class="ri ri-file-excel-line me-1"></i> Excel</button>
+                                        <button type="button" id="btn-detail-pdf" class="btn btn-outline-danger btn-sm rounded-pill"><i
+                                                class="ri ri-file-pdf-line me-1"></i> PDF</button>
+                                        <button type="button" id="btn-detail-print" class="btn btn-primary btn-sm rounded-pill px-3"><i
+                                                class="ri ri-printer-line me-1"></i> Print</button>
+                                        <button type="button"
+                                            class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-dept-report ms-1">
+                                            <i class="ri-arrow-left-line me-1"></i> Back to Report
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover align-middle mb-0" id="detailTasksTable">
+                                <div class="card-body py-4">
+                                    <div class="card-datatable table-responsive">
+                                        <table class="table table-hover align-middle mb-0" id="detailTasksTable" style="width: 100%;">
                                             <thead class="bg-light">
                                                 <tr>
                                                     <th>Job Card No</th>
@@ -350,15 +358,15 @@
                                                     <th>Unit</th>
                                                     <th>Issue Date</th>
                                                     <th>Due Date</th>
-                                                    <th class="text-center text-primary">Plan</th>
-                                                    <th class="text-center text-success">Actual</th>
+                                                    <th class="text-center">Plan</th>
+                                                    <th class="text-center">Actual</th>
                                                     <th class="text-center">Efficiency</th>
                                                     <th class="text-center">Status</th>
                                                     <th>Delay Reason</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="detailTasksTableBody">
-                                                <!-- Populated dynamically via AJAX -->
+                                                <!-- Populated dynamically via AJAX DataTable -->
                                             </tbody>
                                         </table>
                                     </div>
@@ -662,7 +670,249 @@
                 });
             }
 
-            // In-Page Department Detail View Switcher (Task 3)
+            // Universal Server-side Export Action to export all records
+            function serverSideExportAction(e, dt, button, config) {
+                var self = this;
+                var oldStart = dt.settings()[0]._iDisplayStart;
+                
+                showReportLoading(true);
+
+                dt.one('preXhr', function (e, s, data) {
+                    // Load ALL data for export
+                    data.start = 0;
+                    data.length = -1;
+                    data.export = 1;
+
+                    dt.one('preDraw', function (e, settings) {
+                        var btnType = config.extend || '';
+                        if (btnType === 'excel' || button.hasClass('buttons-excel') || button.hasClass('detail-buttons-excel')) {
+                            if ($.fn.dataTable.ext.buttons.excelHtml5.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.excelHtml5.action.call(self, e, dt, button, config);
+                            } else if ($.fn.dataTable.ext.buttons.excelFlash && $.fn.dataTable.ext.buttons.excelFlash.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.excelFlash.action.call(self, e, dt, button, config);
+                            }
+                        } else if (btnType === 'pdf' || button.hasClass('buttons-pdf') || button.hasClass('detail-buttons-pdf')) {
+                            if ($.fn.dataTable.ext.buttons.pdfHtml5.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.pdfHtml5.action.call(self, e, dt, button, config);
+                            } else if ($.fn.dataTable.ext.buttons.pdfFlash && $.fn.dataTable.ext.buttons.pdfFlash.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.pdfFlash.action.call(self, e, dt, button, config);
+                            }
+                        } else if (btnType === 'print' || button.hasClass('buttons-print') || button.hasClass('detail-buttons-print')) {
+                            $.fn.dataTable.ext.buttons.print.action.call(self, e, dt, button, config);
+                        }
+
+                        // Restore original start and clear export flag
+                        dt.one('preXhr', function (e, s, data) {
+                            settings._iDisplayStart = oldStart;
+                            data.start = oldStart;
+                            delete data.export;
+                        });
+
+                        // Reload the current page in background
+                        setTimeout(function () {
+                            dt.ajax.reload(function () {
+                                showReportLoading(false);
+                            }, false);
+                        }, 0);
+
+                        return false; // Prevent rendering all rows into the HTML DOM
+                    });
+                });
+
+                dt.ajax.reload();
+            }
+
+            let detailTasksDataTable = null;
+
+            function initDetailTasksDataTable(stageId) {
+                if ($.fn.DataTable.isDataTable('#detailTasksTable')) {
+                    var dt = $('#detailTasksTable').DataTable();
+                    dt.ajax.reload(null, true);
+                    return;
+                }
+
+                detailTasksDataTable = $('#detailTasksTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    autoWidth: false,
+                    destroy: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    language: {
+                        processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading task & delay details...</div>',
+                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No tasks found for this department with the selected filters.</div>',
+                        zeroRecords: '<div class="text-center py-3 text-muted">No matching records found</div>'
+                    },
+                    ajax: {
+                        url: "{{ url('production_reports/ajax/department-tasks') }}",
+                        type: "GET",
+                        data: function (d) {
+                            d.stage_id = activeDetailStageId;
+                            d.from_date = $('.start_date').val();
+                            d.to_date = $('.end_date').val();
+                            d.unit_id = $('select[name="unit_id"]').val();
+                        },
+                        dataSrc: function (json) {
+                            if (json && json.summary) {
+                                $('#detailTotalTasks').text(json.summary.total_tasks != null ? json.summary.total_tasks : 0);
+                                $('#detailTotalPlan').text(json.summary.total_plan || '0 Pcs');
+                                $('#detailTotalActual').text(json.summary.total_actual || '0 Pcs');
+                                $('#detailStageEfficiency').text(json.summary.efficiency || '0%');
+                            }
+                            return json.data || [];
+                        }
+                    },
+                    columns: [
+                        {
+                            data: 'job_card_no',
+                            name: 'job_card_no',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    return '<strong class="text-dark">' + (data || 'N/A') + '</strong>';
+                                }
+                                return data || 'N/A';
+                            }
+                        },
+                        {
+                            data: 'task_no',
+                            name: 'task_no',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    return '<span class="badge bg-label-secondary font-monospace">' + (data || 'N/A') + '</span>';
+                                }
+                                return data || 'N/A';
+                            }
+                        },
+                        {
+                            data: 'unit',
+                            name: 'unit',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    return '<small class="text-muted">' + (data || 'N/A') + '</small>';
+                                }
+                                return data || 'N/A';
+                            }
+                        },
+                        {
+                            data: 'issue_date',
+                            name: 'issue_date',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    return '<small>' + (data || '-') + '</small>';
+                                }
+                                return data || '-';
+                            }
+                        },
+                        {
+                            data: 'due_date',
+                            name: 'due_date',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    var cls = (row.delay_badge === 'danger') ? 'text-danger fw-bold' : '';
+                                    return '<small class="' + cls + '">' + (data || '-') + '</small>';
+                                }
+                                return data || '-';
+                            }
+                        },
+                        {
+                            data: 'plan',
+                            name: 'plan',
+                            className: 'text-center',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    return '<span class="text-primary fw-semibold">' + (data || '0 Pcs') + '</span>';
+                                }
+                                return data || '0 Pcs';
+                            }
+                        },
+                        {
+                            data: 'actual',
+                            name: 'actual',
+                            className: 'text-center',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    return '<span class="text-success fw-semibold">' + (data || '0 Pcs') + '</span>';
+                                }
+                                return data || '0 Pcs';
+                            }
+                        },
+                        {
+                            data: 'efficiency',
+                            name: 'efficiency',
+                            className: 'text-center',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    return '<span class="badge bg-label-info rounded-pill">' + (data || '0%') + '</span>';
+                                }
+                                return data || '0%';
+                            }
+                        },
+                        {
+                            data: 'status',
+                            name: 'status',
+                            className: 'text-center',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    var badge = row.status_badge || 'secondary';
+                                    return '<span class="badge bg-label-' + badge + ' rounded-pill">' + (data || 'Planned') + '</span>';
+                                }
+                                return data || 'Planned';
+                            }
+                        },
+                        {
+                            data: 'delay_reason',
+                            name: 'delay_reason',
+                            render: function (data, type, row) {
+                                if (type === 'display') {
+                                    var badge = row.delay_badge || 'secondary';
+                                    return '<span class="badge bg-label-' + badge + ' rounded-pill">' + (data || '-') + '</span>';
+                                }
+                                return data || '-';
+                            }
+                        }
+                    ],
+                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                    buttons: [
+                        {
+                            extend: 'excel',
+                            className: 'detail-buttons-excel d-none',
+                            title: function () {
+                                return (activeDetailStageName ? activeDetailStageName + ' - Task & Delay Details' : 'Department Tasks Report');
+                            },
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            action: serverSideExportAction
+                        },
+                        {
+                            extend: 'pdf',
+                            className: 'detail-buttons-pdf d-none',
+                            title: function () {
+                                return (activeDetailStageName ? activeDetailStageName + ' - Task & Delay Details' : 'Department Tasks Report');
+                            },
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            action: serverSideExportAction
+                        },
+                        {
+                            extend: 'print',
+                            className: 'detail-buttons-print d-none',
+                            title: function () {
+                                return (activeDetailStageName ? activeDetailStageName + ' - Task & Delay Details' : 'Department Tasks Report');
+                            },
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            action: serverSideExportAction
+                        }
+                    ]
+                });
+            }
+
+            // In-Page Department Detail View Switcher
             function openDeptDetailView(stageId, stageName, pushHistory) {
                 activeDetailStageId = stageId;
                 activeDetailStageName = stageName || 'Department';
@@ -685,9 +935,6 @@
                 $('#detailTotalActual').text('-');
                 $('#detailStageEfficiency').text('-');
 
-                // Show spinner in table
-                $('#detailTasksTableBody').html('<tr><td colspan="11" class="text-center py-4 text-primary"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading task & delay details...</td></tr>');
-
                 // Switch views in-page
                 $('#deptEfficiencyMainView').addClass('d-none');
                 $('#deptEfficiencyDetailView').removeClass('d-none');
@@ -700,52 +947,8 @@
                 // Smooth scroll to top of table card
                 $('html, body').animate({ scrollTop: $('#deptEfficiencyDetailView').offset().top - 80 }, 200);
 
-                // Fetch data via AJAX
-                $.ajax({
-                    url: "{{ url('production_reports/ajax/department-tasks') }}",
-                    type: 'GET',
-                    data: {
-                        stage_id: stageId,
-                        from_date: $('.start_date').val(),
-                        to_date: $('.end_date').val(),
-                        unit_id: $('select[name="unit_id"]').val()
-                    },
-                    success: function (res) {
-                        if (res.success && res.tasks) {
-                            $('#detailTotalTasks').text(res.summary.total_tasks);
-                            $('#detailTotalPlan').text(res.summary.total_plan);
-                            $('#detailTotalActual').text(res.summary.total_actual);
-                            $('#detailStageEfficiency').text(res.summary.efficiency);
-
-                            if (res.tasks.length === 0) {
-                                $('#detailTasksTableBody').html('<tr><td colspan="11" class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1 text-secondary"></i>No tasks found for this department with the selected filters.</td></tr>');
-                                return;
-                            }
-
-                            let rowsHtml = '';
-                            res.tasks.forEach(function (t) {
-                                rowsHtml += `<tr>
-                                            <td><strong class="text-dark">${t.job_card_no}</strong></td>
-                                            <td><span class="badge bg-label-secondary font-monospace">${t.task_no}</span></td>
-                                            <td><small class="text-muted">${t.unit}</small></td>
-                                            <td><small>${t.issue_date}</small></td>
-                                            <td><small class="${t.delay_badge === 'danger' ? 'text-danger fw-bold' : ''}">${t.due_date}</small></td>
-                                            <td class="text-center text-primary fw-semibold">${t.plan}</td>
-                                            <td class="text-center text-success fw-semibold">${t.actual}</td>
-                                            <td class="text-center"><span class="badge bg-label-info rounded-pill">${t.efficiency}</span></td>
-                                            <td class="text-center"><span class="badge bg-label-${t.status_badge} rounded-pill">${t.status}</span></td>
-                                            <td><span class="badge bg-label-${t.delay_badge} rounded-pill">${t.delay_reason}</span></td>
-                                        </tr>`;
-                            });
-                            $('#detailTasksTableBody').html(rowsHtml);
-                        } else {
-                            $('#detailTasksTableBody').html('<tr><td colspan="11" class="text-center py-4 text-danger">Failed to load department task details.</td></tr>');
-                        }
-                    },
-                    error: function () {
-                        $('#detailTasksTableBody').html('<tr><td colspan="11" class="text-center py-4 text-danger">An error occurred while fetching task details.</td></tr>');
-                    }
-                });
+                // Initialize/load DataTables with AJAX pagination and export
+                initDetailTasksDataTable(stageId);
             }
 
             // Return to Normal Department Report View
@@ -830,7 +1033,12 @@
 
                 // If currently viewing department detail, refresh detail view with new filters
                 if (activeTabId === 'department-efficiency' && activeDetailStageId && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
-                    openDeptDetailView(activeDetailStageId, activeDetailStageName, false);
+                    if (detailTasksDataTable) {
+                        detailTasksDataTable.ajax.reload(null, false);
+                    } else {
+                        initDetailTasksDataTable(activeDetailStageId);
+                    }
+                    return;
                 }
 
                 const config = tableConfigs[activeTabId];
@@ -859,14 +1067,52 @@
                 $('#productionReportForm').trigger('submit');
             });
 
-            // Export Handlers
+            // Detail Card Export Buttons Handlers
+            $(document).on('click', '#btn-detail-excel', function (e) {
+                e.preventDefault();
+                if (detailTasksDataTable) {
+                    detailTasksDataTable.button('.detail-buttons-excel').trigger();
+                }
+            });
+            $(document).on('click', '#btn-detail-pdf', function (e) {
+                e.preventDefault();
+                if (detailTasksDataTable) {
+                    detailTasksDataTable.button('.detail-buttons-pdf').trigger();
+                }
+            });
+            $(document).on('click', '#btn-detail-print', function (e) {
+                e.preventDefault();
+                if (detailTasksDataTable) {
+                    detailTasksDataTable.button('.detail-buttons-print').trigger();
+                }
+            });
+
+            // Top Header Export Handlers
             $('#btn-excel').on('click', function () {
+                if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
+                    if (detailTasksDataTable) {
+                        detailTasksDataTable.button('.detail-buttons-excel').trigger();
+                        return;
+                    }
+                }
                 $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();
             });
             $('#btn-pdf').on('click', function () {
+                if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
+                    if (detailTasksDataTable) {
+                        detailTasksDataTable.button('.detail-buttons-pdf').trigger();
+                        return;
+                    }
+                }
                 $('.tab-pane.active .datatables-products').DataTable().button('.buttons-pdf').trigger();
             });
             $('#btn-print').on('click', function () {
+                if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
+                    if (detailTasksDataTable) {
+                        detailTasksDataTable.button('.detail-buttons-print').trigger();
+                        return;
+                    }
+                }
                 $('.tab-pane.active .datatables-products').DataTable().button('.buttons-print').trigger();
             });
         });

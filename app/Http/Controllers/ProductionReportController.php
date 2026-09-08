@@ -31,7 +31,8 @@ class ProductionReportController extends Controller
     {
         $draw = intval($request->draw ?? 1);
         $start = intval($request->start ?? 0);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLength = $request->get('length');
+        $length = ($rawLength !== null && intval($rawLength) == -1) ? -1 : intval($rawLength > 0 ? $rawLength : 10);
         $searchVal = $request->search;
         $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
         $search = trim($search);
@@ -819,13 +820,19 @@ class ProductionReportController extends Controller
                         elseif ($task->status === 'Hold') $statusBadge = 'warning';
                         elseif ($task->status === 'Planned') $statusBadge = 'info';
 
+                        $jcNo = $task->job_card_no ?? ($task->jobCard->job_card_no ?? 'N/A');
+                        $unitName = $task->jobCard && $task->jobCard->serviceProvider ? $task->jobCard->serviceProvider->name : 'N/A';
+                        $taskNo = $task->task_no ?? 'N/A';
+                        $issueDateFormatted = $task->issue_date ? Carbon::parse($task->issue_date)->format('d-m-Y') : '-';
+                        $dueDateFormatted = $task->due_date ? Carbon::parse($task->due_date)->format('d-m-Y') : '-';
+
                         $tasksData[] = [
                             'id' => $task->id,
-                            'task_no' => $task->task_no,
-                            'job_card_no' => $task->job_card_no ?? 'N/A',
-                            'unit' => $task->jobCard && $task->jobCard->serviceProvider ? $task->jobCard->serviceProvider->name : 'N/A',
-                            'issue_date' => $task->issue_date ? Carbon::parse($task->issue_date)->format('d-m-Y') : '-',
-                            'due_date' => $task->due_date ? Carbon::parse($task->due_date)->format('d-m-Y') : '-',
+                            'task_no' => $taskNo,
+                            'job_card_no' => $jcNo,
+                            'unit' => $unitName,
+                            'issue_date' => $issueDateFormatted,
+                            'due_date' => $dueDateFormatted,
                             'plan' => number_format($taskPlan) . ' Pcs',
                             'actual' => number_format($taskActual) . ' Pcs',
                             'efficiency' => $efficiency . '%',
@@ -833,23 +840,46 @@ class ProductionReportController extends Controller
                             'status_badge' => $statusBadge,
                             'delay_reason' => $delayReason,
                             'delay_badge' => $delayBadge,
-                            'view_url' => url('task_management/view_details/' . $task->id)
+                            'view_url' => url('task_management/view_details/' . $task->id),
+                            '_search_text' => strtolower($taskNo . ' ' . $jcNo . ' ' . $unitName . ' ' . $issueDateFormatted . ' ' . $dueDateFormatted . ' ' . ($task->status ?: 'Planned') . ' ' . $delayReason)
                         ];
+                    }
+
+                    $totalRecords = count($tasksData);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($tasksData, function($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $tasksData;
+                    }
+                    $recordsFiltered = count($filteredRows);
+
+                    $isExport = ($request->get('export') == 1) || ($request->get('all') == 1) || ($length < 0);
+                    if ($isExport) {
+                        $pageData = $filteredRows;
+                    } else {
+                        $pageData = array_slice($filteredRows, $start, $length);
                     }
 
                     $deptEfficiency = ($totalPlan > 0) ? round(($totalActual / $totalPlan) * 100, 1) : 0;
 
                     return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
                         'success' => true,
                         'stage_name' => $stage->operation_stage_name,
                         'stage_target' => $stage->target !== null ? number_format($stage->target) . ' Pcs' : '-',
                         'summary' => [
-                            'total_tasks' => count($tasksData),
+                            'total_tasks' => $totalRecords,
                             'total_plan' => number_format($totalPlan) . ' Pcs',
                             'total_actual' => number_format($totalActual) . ' Pcs',
                             'efficiency' => $deptEfficiency . '%'
                         ],
-                        'tasks' => $tasksData
+                        'tasks' => $filteredRows
                     ]);
 
                 default:
