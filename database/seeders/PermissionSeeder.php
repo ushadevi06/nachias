@@ -142,19 +142,24 @@ class PermissionSeeder extends Seeder
                         'module' => $module,
                         'action' => $action,
                         'label'  => ucfirst($action) . ' ' . ucwords(str_replace('-', ' ', $module)),
-                    ]
+                    ]   
                 );
             }
         }
         $dashboardPerms = [ 
-            ['action' => 'view-sales-order',           'label' => 'Sales & Order Dashboard'],
-            ['action' => 'view-attendance',            'label' => 'Attendance Dashboard'],
-            ['action' => 'view-accounts-financial',    'label' => 'Accounts & Financial Dashboard'],
-            ['action' => 'view-production',            'label' => 'Production Dashboard'],
-            ['action' => 'view-maintenance',           'label' => 'Maintenance Dashboard'],
+            ['action' => 'view-sales-orders',          'label' => '1. Sales & Orders Dashboard'],
+            ['action' => 'view-finance-hr',             'label' => '2. Finance & HR Dashboard'],
+            ['action' => 'view-production',             'label' => '3. Production Dashboard'],
+            ['action' => 'view-stock-material',         'label' => '4. Stock & Material Dashboard'],
+            ['action' => 'view-suppliers-maintenance',  'label' => '5. Suppliers & Maintenance Dashboard'],
         ];
+        
+        // Clean up legacy dashboard permissions
+        $validNames = array_map(function($dp) { return $dp['action'] . ' dashboard'; }, $dashboardPerms);
+        Permission::where('module', 'dashboard')->whereNotIn('name', $validNames)->delete();
+
         foreach ($dashboardPerms as $dp) {
-            Permission::firstOrCreate(
+            Permission::updateOrCreate(
                 ['name' => $dp['action'] . ' dashboard', 'guard_name' => 'web'],
                 ['module' => 'dashboard', 'action' => $dp['action'], 'label' => $dp['label']]
             );

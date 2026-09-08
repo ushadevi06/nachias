@@ -17,3 +17,4 @@ ALTER TABLE `tasks`
 ALTER TABLE `production_receipts`
     ADD COLUMN `is_additional` TINYINT NOT NULL DEFAULT 0 AFTER `job_card_id`,
     ADD COLUMN `job_card_fabric_detail_id` BIGINT UNSIGNED NULL AFTER `is_additional`;
+ALTER TABLE `job_card_fabric_details` ADD `additional_batch_no` VARCHAR(50) NULL AFTER `is_additional`;

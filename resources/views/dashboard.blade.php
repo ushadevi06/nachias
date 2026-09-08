@@ -26,30 +26,46 @@
         </div>
     </div>
 
+    @php
+        $canSalesOrders = auth()->id() == 1 || auth()->user()->can('view-sales-orders dashboard') || auth()->user()->can('view-sales-order dashboard');
+        $canFinanceHr = auth()->id() == 1 || auth()->user()->can('view-finance-hr dashboard') || auth()->user()->can('view-accounts-financial dashboard') || auth()->user()->can('view-attendance dashboard');
+        $canProduction = auth()->id() == 1 || auth()->user()->can('view-production dashboard');
+        $canStockMaterial = auth()->id() == 1 || auth()->user()->can('view-stock-material dashboard');
+        $canSuppliersMaint = auth()->id() == 1 || auth()->user()->can('view-suppliers-maintenance dashboard') || auth()->user()->can('view-maintenance dashboard');
+    @endphp
+
     <!-- 5-TAB SEGMENTED NAVIGATION BAR (EXACTLY 5 TABS) -->
+    @if($canSalesOrders || $canFinanceHr || $canProduction || $canStockMaterial || $canSuppliersMaint)
     <div class="mb-4">
         <ul class="nav nav-pills dashboard-nav-pills p-2 bg-white rounded-3 shadow-sm border flex-nowrap overflow-auto" id="dashboardTabs" role="tablist" style="scrollbar-width: thin; gap: 8px;">
+            @if($canSalesOrders)
             <!-- Tab 1: Sales & Orders -->
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold px-3 py-2 text-nowrap" id="tab-sales-orders-tab" data-bs-toggle="tab" data-bs-target="#tab-sales-orders" type="button" role="tab" aria-controls="tab-sales-orders" aria-selected="true">
+                <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-sales-orders-tab" data-bs-toggle="tab" data-bs-target="#tab-sales-orders" type="button" role="tab" aria-controls="tab-sales-orders" aria-selected="false">
                     <i class="ri ri-shopping-bag-3-line me-1 text-primary"></i> 1. Sales & Orders
                 </button>
             </li>
+            @endif
 
+            @if($canFinanceHr)
             <!-- Tab 2: Finance & HR -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-finance-hr-tab" data-bs-toggle="tab" data-bs-target="#tab-finance-hr" type="button" role="tab" aria-controls="tab-finance-hr" aria-selected="false">
                     <i class="ri ri-bank-card-line me-1 text-success"></i> 2. Finance & HR
                 </button>
             </li>
+            @endif
 
+            @if($canProduction)
             <!-- Tab 3: Production -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-production-tab" data-bs-toggle="tab" data-bs-target="#tab-production" type="button" role="tab" aria-controls="tab-production" aria-selected="false">
                     <i class="ri ri-loader-line me-1 text-warning"></i> 3. Production
                 </button>
             </li>
+            @endif
 
+            @if($canStockMaterial)
             <!-- Tab 4: Stock & Material -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-stock-material-tab" data-bs-toggle="tab" data-bs-target="#tab-stock-material" type="button" role="tab" aria-controls="tab-stock-material" aria-selected="false">
@@ -59,24 +75,38 @@
                     @endif
                 </button>
             </li>
+            @endif
 
+            @if($canSuppliersMaint)
             <!-- Tab 5: Suppliers & Maintenance -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-suppliers-maintenance-tab" data-bs-toggle="tab" data-bs-target="#tab-suppliers-maintenance" type="button" role="tab" aria-controls="tab-suppliers-maintenance" aria-selected="false">
                     <i class="ri ri-truck-line me-1 text-danger"></i> 5. Suppliers & Maintenance
                 </button>
             </li>
+            @endif
         </ul>
     </div>
+    @endif
 
     <!-- 5-TAB CONTENT CONTAINER -->
     <div class="tab-content" id="erpDashboardTabsContent">
 
+        @if(!$canSalesOrders && !$canFinanceHr && !$canProduction && !$canStockMaterial && !$canSuppliersMaint)
+        <div class="card border-0 shadow-sm p-4 text-center my-4">
+            <div class="py-5">
+                <i class="ri ri-lock-2-line text-muted" style="font-size: 3rem;"></i>
+                <h5 class="mt-3 text-muted">No Dashboard Access</h5>
+                <p class="text-muted small mb-0">You do not have permission to view any dashboard tabs. Please contact your administrator.</p>
+            </div>
+        </div>
+        @endif
+
+        @if($canSalesOrders)
         <!-- ========================================================================================= -->
         <!-- TAB 1: SALES & ORDERS                                                                     -->
         <!-- ========================================================================================= -->
-        <div class="tab-pane fade show active" id="tab-sales-orders" role="tabpanel" aria-labelledby="tab-sales-orders-tab">
-            @if(auth()->id() == 1 || auth()->user()->can('view-sales-order dashboard'))
+        <div class="tab-pane fade" id="tab-sales-orders" role="tabpanel" aria-labelledby="tab-sales-orders-tab">
             <!-- Section 1: Sales & Order Dashboard KPIs -->
             <div class="mb-4">
                 <div class="d-flex align-items-center mb-3">
@@ -253,17 +283,15 @@
                     </div>
                 </div>
             </div>
-            @else
-            <div class="alert alert-soft-warning">You do not have permission to view the Sales & Order Dashboard.</div>
-            @endif
         </div> <!-- /#tab-sales-orders -->
+        @endif
 
+        @if($canFinanceHr)
         <!-- ========================================================================================= -->
         <!-- TAB 2: FINANCE & HR                                                                       -->
         <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-finance-hr" role="tabpanel" aria-labelledby="tab-finance-hr-tab">
             <!-- PART A: ACCOUNTS & FINANCIAL DASHBOARD -->
-            @if(auth()->id() == 1 || auth()->user()->can('view-accounts-financial dashboard'))
             <div class="mb-5">
                 <div class="d-flex align-items-center mb-3">
                     <div class="section-indicator bg-success me-2"></div>
@@ -444,10 +472,8 @@
                     </div>
                 </div>
             </div>
-            @endif
 
             <!-- PART B: EMPLOYEE'S ATTENDANCE DASHBOARD -->
-            @if(auth()->id() == 1 || auth()->user()->can('view-attendance dashboard'))
             <div class="mb-4">
                 <div class="d-flex align-items-center mb-3">
                     <div class="section-indicator bg-secondary me-2"></div>
@@ -547,14 +573,14 @@
                     </div>
                 </div>
             </div>
-            @endif
         </div> <!-- /#tab-finance-hr -->
+        @endif
 
+        @if($canProduction)
         <!-- ========================================================================================= -->
         <!-- TAB 3: PRODUCTION                                                                         -->
         <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-production" role="tabpanel" aria-labelledby="tab-production-tab">
-            @if(auth()->id() == 1 || auth()->user()->can('view-production dashboard'))
             <div class="mb-4">
                 <div class="d-flex align-items-center mb-3">
                     <div class="section-indicator bg-warning me-2"></div>
@@ -752,16 +778,14 @@
                     </div>
                 </div>
             </div>
-            @else
-            <div class="alert alert-soft-warning">You do not have permission to view the Production Dashboard.</div>
-            @endif
         </div> <!-- /#tab-production -->
+        @endif
 
+        @if($canStockMaterial)
         <!-- ========================================================================================= -->
         <!-- TAB 4: STOCK & MATERIAL                                                                   -->
         <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-stock-material" role="tabpanel" aria-labelledby="tab-stock-material-tab">
-            @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view warehouse-report') || auth()->user()->can('view stock-entry-raw-materials'))
             <!-- Section 1: Fabric & Store Stock Dashboard -->
             <div class="mb-5">
                 <div class="d-flex align-items-center mb-3">
@@ -1347,17 +1371,15 @@
                     </div>
                 </div>
             </div>
-            @else
-            <div class="alert alert-soft-warning">You do not have permission to view the Stock & Material Dashboard.</div>
-            @endif
         </div> <!-- /#tab-stock-material -->
+        @endif
 
+        @if($canSuppliersMaint)
         <!-- ========================================================================================= -->
         <!-- TAB 5: SUPPLIERS & MAINTENANCE                                                            -->
         <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-suppliers-maintenance" role="tabpanel" aria-labelledby="tab-suppliers-maintenance-tab">
             <!-- SECTION 1: SUPPLIER PERFORMANCE DASHBOARD -->
-            @if(auth()->id() == 1 || auth()->user()->can('view purchase-report') || auth()->user()->can('view suppliers'))
             <div class="mb-5" id="supplierPerformanceSection">
                 <div class="d-flex align-items-center mb-3">
                     <div class="section-indicator bg-info me-2"></div>
@@ -1466,10 +1488,8 @@
                     </div>
                 </div>
             </div>
-            @endif
 
             <!-- SECTION 2: MAINTENANCE & COMPLIANCE DASHBOARD -->
-            @if(auth()->id() == 1 || auth()->user()->can('view-maintenance dashboard'))
             <div class="mb-4">
                 <div class="d-flex align-items-center mb-3">
                     <div class="section-indicator bg-danger me-2"></div>
@@ -1568,8 +1588,8 @@
                     </div>
                 </div>
             </div>
-            @endif
         </div> <!-- /#tab-suppliers-maintenance -->
+        @endif
 
     </div> <!-- /#erpDashboardTabsContent -->
 </div> <!-- /.container-xxl -->
@@ -1732,10 +1752,15 @@
             activateErpTab(target);
         });
 
-        // Initialize active tab from URL hash or localStorage
-        var initialTab = window.location.hash || localStorage.getItem('activeErpTab') || '#tab-sales-orders';
-        if (!$(initialTab).length) initialTab = '#tab-sales-orders';
-        activateErpTab(initialTab);
+        // Initialize active tab from URL hash, localStorage, or first available permitted tab
+        var initialTab = window.location.hash || localStorage.getItem('activeErpTab') || '';
+        if (!initialTab || !$(initialTab).length || !$('#dashboardTabs [data-bs-target="' + initialTab + '"]').length) {
+            var $firstBtn = $('#dashboardTabs .nav-link').first();
+            initialTab = $firstBtn.length ? ($firstBtn.attr('data-bs-target') || '#tab-sales-orders') : '';
+        }
+        if (initialTab) {
+            activateErpTab(initialTab);
+        }
 
         // WIP table search
         const wipSearchInput = document.getElementById('wipSearchInput');

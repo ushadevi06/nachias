@@ -476,6 +476,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('sales_orders/update-delay-reason/{id}', [SalesOrderController::class, 'updateDelayReason']);
     Route::get('sales_orders/search-stock-items', [SalesOrderController::class, 'searchStockItems']);
     Route::get('sales_orders/sync-orderaxe', [SalesOrderController::class, 'syncOrderaxe']);
+    Route::get('sales_orders/update-request-dates', [SalesOrderController::class, 'updateRequestDatesByMonth']);
     Route::get('sales_orders/clean-addresses', [SalesOrderController::class, 'cleanAddresses']);
     Route::get('stock_entries/export-finished-goods', [StockEntryController::class, 'exportFinishedGoods']);
     Route::get('stock_entries/export-barcode', [StockEntryController::class, 'exportBarcode']);
@@ -508,6 +509,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('sales_invoices/complete-dispatch/{id}', [SalesInvoiceController::class, 'completeDispatch'])->name('sales_invoices.complete_dispatch');
     Route::post('sales_invoices/update_delivery_status', [SalesInvoiceController::class, 'updateDeliveryStatus'])->name('sales_invoices.update_delivery_status');
     Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
+    Route::post('sales_invoices/get-irn/{id}', [SalesInvoiceController::class, 'getIrn']);
     Route::post('sales_invoices/generate-ewaybill/{id}', [SalesInvoiceController::class, 'generateEWayBill']);
     Route::post('sales_invoices/cancel-einvoice/{id}', [SalesInvoiceController::class, 'cancelEInvoice']);
     Route::post('sales_invoices/cancel-ewaybill/{id}', [SalesInvoiceController::class, 'cancelEWayBill']);

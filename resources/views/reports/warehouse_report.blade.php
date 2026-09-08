@@ -277,6 +277,129 @@
 <script>
 $.extend(true, $.fn.dataTable.defaults, {
     processing: true,
+    buttons: [
+        {
+            extend: 'excel',
+            className: 'buttons-excel d-none',
+            footer: true,
+            title: function () {
+                var title = $('#active_report_title').text().trim() || 'Warehouse Report';
+                // Only use breadcrumb text when the drill-down breadcrumb nav is visible
+                var $breadcrumbEl = $('#warehouseSummaryBreadcrumbText span.text-primary');
+                if ($breadcrumbEl.length && $('#warehouseSummaryBreadcrumbs').is(':visible')) {
+                    title += ' - ' + $breadcrumbEl.text().trim();
+                }
+                return title.replace(/[^\w\s\-_]/gi, '').trim();
+            },
+            exportOptions: {
+                columns: ':not(.no-export)',
+                format: {
+                    body: function (data, row, column, node) {
+                        if (typeof data === 'string') {
+                            var temp = $('<div>').html(data);
+                            temp.find('.no-export, .d-none, button, i, script').remove();
+                            return temp.text().trim();
+                        }
+                        return data;
+                    },
+                    footer: function (data, row, column, node) {
+                        // Use data-export attribute if set (e.g. utilization cell)
+                        var exportVal = node ? $(node).attr('data-export') : undefined;
+                        if (exportVal !== undefined) {
+                            // Prefix zero-width space so DataTables doesn't convert "12.26%" to 0.1226
+                            return exportVal.indexOf('%') !== -1 ? '\u200B' + exportVal : exportVal;
+                        }
+                        if (typeof data === 'string') {
+                            var temp = $('<div>').html(data);
+                            temp.find('.no-export, .d-none, button, i, script').remove();
+                            var txt = temp.text().trim();
+                            // Prevent % → decimal conversion by DataTables
+                            return txt.indexOf('%') !== -1 ? '\u200B' + txt : txt;
+                        }
+                        return data;
+                    }
+                }
+            },
+            customize: function (xlsx) {
+                var sheet   = xlsx.xl.worksheets['sheet1.xml'];
+                var styles  = xlsx.xl['styles.xml'];
+                var ZWS     = '\u200B'; // zero-width space prefix we added in format functions
+
+                // Collect all numFmtIds that represent percentage formats
+                var pctFmtIds = [9, 10]; // built-in: 9="0%", 10="0.00%"
+                $('numFmt', styles).each(function () {
+                    var code = $(this).attr('formatCode') || '';
+                    if (code.indexOf('%') !== -1) {
+                        pctFmtIds.push(parseInt($(this).attr('numFmtId'), 10));
+                    }
+                });
+
+                // Build array: xf index → numFmtId
+                var xfs = [];
+                $('cellXfs xf', styles).each(function () {
+                    xfs.push(parseInt($(this).attr('numFmtId') || 0, 10));
+                });
+
+                $('row c', sheet).each(function () {
+                    var s     = parseInt($(this).attr('s') || 0, 10);
+                    var fmtId = xfs[s] || 0;
+
+                    if (pctFmtIds.indexOf(fmtId) !== -1) {
+                        // Body rows: percentage-formatted numeric cell → convert to "X.XX%" string
+                        var raw = parseFloat($('v', this).text());
+                        if (!isNaN(raw)) {
+                            var pctStr = parseFloat((raw * 100).toFixed(2)) + '%';
+                            $(this).attr('t', 'str').removeAttr('s');
+                            $(this).find('v').remove();
+                            $(this).append('<v>' + pctStr + '</v>');
+                        }
+                    } else if ($(this).attr('t') === 'str') {
+                        // Footer rows: strip the zero-width space prefix we added
+                        var vEl = $(this).find('v');
+                        if (vEl.length && vEl.text().charAt(0) === ZWS) {
+                            vEl.text(vEl.text().substring(1));
+                        }
+                    }
+                });
+            }
+        },
+        {
+            extend: 'pdf',
+            className: 'buttons-pdf d-none',
+            footer: true,
+            title: function () {
+                var title = $('#active_report_title').text().trim() || 'Warehouse Report';
+                // Only use breadcrumb text when the drill-down breadcrumb nav is visible
+                var $breadcrumbEl = $('#warehouseSummaryBreadcrumbText span.text-primary');
+                if ($breadcrumbEl.length && $('#warehouseSummaryBreadcrumbs').is(':visible')) {
+                    title += ' - ' + $breadcrumbEl.text().trim();
+                }
+                return title.replace(/[^\w\s\-_]/gi, '').trim();
+            },
+            orientation: 'landscape',
+            pageSize: 'A4',
+            exportOptions: {
+                columns: ':not(.no-export)'
+            }
+        },
+        {
+            extend: 'print',
+            className: 'buttons-print d-none',
+            footer: true,
+            title: function () {
+                var title = $('#active_report_title').text().trim() || 'Warehouse Report';
+                // Only use breadcrumb text when the drill-down breadcrumb nav is visible
+                var $breadcrumbEl = $('#warehouseSummaryBreadcrumbText span.text-primary');
+                if ($breadcrumbEl.length && $('#warehouseSummaryBreadcrumbs').is(':visible')) {
+                    title += ' - ' + $breadcrumbEl.text().trim();
+                }
+                return title.replace(/[^\w\s\-_]/gi, '').trim();
+            },
+            exportOptions: {
+                columns: ':not(.no-export)'
+            }
+        }
+    ]
 });
 
 $(document).ready(function() {
@@ -401,14 +524,69 @@ $(document).ready(function() {
     // Auto-trigger initial search on load
     $('#warehouseReportForm').trigger('submit');
 
+    function triggerWarehouseExport(buttonClass) {
+        var $activeTab = $('.tab-pane.active');
+        if (!$activeTab.length) {
+            $activeTab = $('#' + $('#report_type_select').val());
+        }
+
+        // Find the relevant visible/active DataTable
+        var targetDt = null;
+        var tables = $activeTab.find('table:visible');
+        if (!tables.length) {
+            tables = $activeTab.find('.card-datatable:not([style*="display: none"]) table, table');
+        }
+        tables.each(function() {
+            if ($.fn.DataTable.isDataTable(this)) {
+                var dt = $(this).DataTable();
+                if (dt.button && dt.button(buttonClass).length) {
+                    targetDt = dt;
+                    return false;
+                }
+            }
+        });
+        if (!targetDt) {
+            $activeTab.find('table').each(function() {
+                if ($.fn.DataTable.isDataTable(this)) {
+                    var dt = $(this).DataTable();
+                    if (dt.button && dt.button(buttonClass).length) {
+                        targetDt = dt;
+                        return false;
+                    }
+                }
+            });
+        }
+
+        if (!targetDt) return;
+
+        var isServerSide = targetDt.settings()[0].oFeatures.bServerSide;
+
+        if (isServerSide) {
+            // Server-side table: fetch ALL records before exporting
+            var origLen = targetDt.page.len();
+            showWarehouseReportLoading(true);
+            targetDt.one('draw', function() {
+                showWarehouseReportLoading(false);
+                targetDt.button(buttonClass).trigger();
+                // Restore original page length after a short delay
+                setTimeout(function() {
+                    targetDt.page.len(origLen).draw();
+                }, 300);
+            });
+            targetDt.page.len(-1).draw();
+        } else {
+            targetDt.button(buttonClass).trigger();
+        }
+    }
+
     $('#btn-excel').on('click', function() {
-        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();
+        triggerWarehouseExport('.buttons-excel');
     });
     $('#btn-pdf').on('click', function() {
-        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-pdf').trigger();
+        triggerWarehouseExport('.buttons-pdf');
     });
     $('#btn-print').on('click', function() {
-        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-print').trigger();
+        triggerWarehouseExport('.buttons-print');
     });
 
     $(document).on('click', '#btn-reset-report', function(e) {

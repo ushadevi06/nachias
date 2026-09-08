@@ -24,7 +24,7 @@
                 <tr onclick="drillDownToWarehouseSummaryStyle({{ $row['brand_id'] }}, '{{ addslashes($row['brand_name']) }}')" class="clickable-brand-row" data-brand-id="{{ $row['brand_id'] }}" data-brand-name="{{ $row['brand_name'] }}">
                     <td class="fw-bold text-start">
                         <span class="text-primary fw-bold text-decoration-none view-brand-style-link">
-                            {{ $row['brand_name'] }} <i class="ri-arrow-right-s-line small"></i>
+                            {{ $row['brand_name'] }} <i class="ri ri-arrow-right-s-line small"></i>
                         </span>
                     </td>
                     <td class="text-center fw-semibold">{{ number_format($row['capacity_pcs']) }}</td>
@@ -215,7 +215,10 @@ function loadWarehouseSummaryStylesTable(brandId, brandName) {
                 $('#whSumStyleFootSetwise').text(json.totals.setwise_stock || '0');
                 $('#whSumStyleFootSingle').text(json.totals.single_store_stock || '0');
                 $('#whSumStyleFootTotal').text(json.totals.total_stock || '0');
-                $('#whSumStyleFootUtil').html(json.totals.utilization || '<span class="badge bg-primary px-3 py-2 fs-6">0%</span>');
+                let utilText = json.totals.utilization_text || '0%';
+                $('#whSumStyleFootUtil')
+                    .html(json.totals.utilization || '<span class="badge bg-primary px-3 py-2 fs-6">0%</span>')
+                    .attr('data-export', utilText);
                 $('#whSumStyleFootDamage').text(json.totals.damage_stock || '0');
             }
         }

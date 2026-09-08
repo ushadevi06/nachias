@@ -329,6 +329,88 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @section('scripts')
 <script>
+$.extend(true, $.fn.dataTable.defaults, {
+    processing: true,
+    buttons: [
+        {
+            extend: 'excel',
+            className: 'buttons-excel d-none',
+            footer: true,
+            title: function () {
+                var title = $('#active_report_title').text().trim() || 'Sales & Marketing Report';
+                return title.replace(/[^\w\s\-_]/gi, '').trim();
+            },
+            exportOptions: {
+                columns: ':not(.no-export)',
+                format: {
+                    body: function (data, row, column, node) {
+                        if (typeof data === 'string') {
+                            var temp = $('<div>').html(data);
+                            temp.find('.no-export, .d-none, button, i, script').remove();
+                            return temp.text().trim();
+                        }
+                        return data;
+                    },
+                    footer: function (data, row, column, node) {
+                        if (typeof data === 'string') {
+                            var temp = $('<div>').html(data);
+                            temp.find('.no-export, .d-none, button, i, script').remove();
+                            return temp.text().trim();
+                        }
+                        return data;
+                    }
+                }
+            }
+        },
+        {
+            extend: 'pdf',
+            className: 'buttons-pdf d-none',
+            footer: true,
+            title: function () {
+                var title = $('#active_report_title').text().trim() || 'Sales & Marketing Report';
+                return title.replace(/[^\w\s\-_]/gi, '').trim();
+            },
+            orientation: 'landscape',
+            pageSize: 'A4',
+            exportOptions: {
+                columns: ':not(.no-export)',
+                format: {
+                    body: function (data, row, column, node) {
+                        if (typeof data === 'string') {
+                            var temp = $('<div>').html(data);
+                            temp.find('.no-export, .d-none, button, i, script').remove();
+                            return temp.text().trim();
+                        }
+                        return data;
+                    }
+                }
+            }
+        },
+        {
+            extend: 'print',
+            className: 'buttons-print d-none',
+            footer: true,
+            title: function () {
+                var title = $('#active_report_title').text().trim() || 'Sales & Marketing Report';
+                return title.replace(/[^\w\s\-_]/gi, '').trim();
+            },
+            exportOptions: {
+                columns: ':not(.no-export)',
+                format: {
+                    body: function (data, row, column, node) {
+                        if (typeof data === 'string') {
+                            var temp = $('<div>').html(data);
+                            temp.find('.no-export, .d-none, button, i, script').remove();
+                            return temp.text().trim();
+                        }
+                        return data;
+                    }
+                }
+            }
+        }
+    ]
+});
+
 $(document).ready(function() {
     const tableConfigs = {
         'order-report': {
@@ -339,8 +421,7 @@ $(document).ready(function() {
                 { data: 'so_date', name: 'so_date', className: 'text-nowrap' },
                 { data: 'customer', name: 'customer' },
                 { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
-                { data: 'status', name: 'status', className: 'text-center' },
-                { data: 'action', name: 'action', className: 'text-center', orderable: false }
+                { data: 'status', name: 'status', className: 'text-center' }
             ]
         },
         'invoice-report': {
@@ -762,14 +843,67 @@ $(document).ready(function() {
     });
 
     // Export Handlers
+    function triggerSalesMarketingExport(buttonClass) {
+        var $activeTab = $('.tab-pane.active');
+        var targetDt = null;
+
+        $activeTab.find('.datatables-products').each(function() {
+            if ($.fn.DataTable.isDataTable(this)) {
+                var dt = $(this).DataTable();
+                if (dt.button && dt.button(buttonClass).length) {
+                    targetDt = dt;
+                    return false;
+                }
+            }
+        });
+        if (!targetDt) {
+            $activeTab.find('table').each(function() {
+                if ($.fn.DataTable.isDataTable(this)) {
+                    var dt = $(this).DataTable();
+                    if (dt.button && dt.button(buttonClass).length) {
+                        targetDt = dt;
+                        return false;
+                    }
+                }
+            });
+        }
+
+        if (!targetDt) {
+            var $tbl = $activeTab.find('table');
+            if ($tbl.length && !$.fn.DataTable.isDataTable($tbl[0])) {
+                $tbl.DataTable();
+                targetDt = $tbl.DataTable();
+            }
+        }
+
+        if (!targetDt) return;
+
+        var isServerSide = targetDt.settings()[0] && targetDt.settings()[0].oFeatures && targetDt.settings()[0].oFeatures.bServerSide;
+
+        if (isServerSide) {
+            var origLen = targetDt.page.len();
+            showReportLoading(true);
+            targetDt.one('draw', function() {
+                showReportLoading(false);
+                targetDt.button(buttonClass).trigger();
+                setTimeout(function() {
+                    targetDt.page.len(origLen).draw();
+                }, 300);
+            });
+            targetDt.page.len(-1).draw();
+        } else {
+            targetDt.button(buttonClass).trigger();
+        }
+    }
+
     $('#btn-excel').on('click', function() {
-        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();
+        triggerSalesMarketingExport('.buttons-excel');
     });
     $('#btn-pdf').on('click', function() {
-        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-pdf').trigger();
+        triggerSalesMarketingExport('.buttons-pdf');
     });
     $('#btn-print').on('click', function() {
-        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-print').trigger();
+        triggerSalesMarketingExport('.buttons-print');
     });
 });
 </script>

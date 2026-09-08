@@ -1150,4 +1150,128 @@ class SalesOrderController extends Controller
         }
     }
 
+    public function updateRequestDatesByMonth(Request $request)
+    {
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
+
+        $monthParam = strtolower(trim((string)$request->query('month', 'july')));
+        $dryRun = filter_var($request->query('dry_run', false), FILTER_VALIDATE_BOOLEAN);
+
+        // Normalize month
+        $monthMap = [
+            'july' => '2026-07',
+            'jul' => '2026-07',
+            '7' => '2026-07',
+            '07' => '2026-07',
+            'august' => '2026-08',
+            'aug' => '2026-08',
+            '8' => '2026-08',
+            '08' => '2026-08',
+            'september' => '2026-09',
+            'sep' => '2026-09',
+            '9' => '2026-09',
+            '09' => '2026-09',
+        ];
+
+        $targetMonth = $monthMap[$monthParam] ?? (preg_match('/^\d{4}-\d{2}$/', $monthParam) ? $monthParam : '2026-07');
+
+        $jsonPath = base_path('orderaxe_all_responses.json');
+        if (!file_exists($jsonPath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'orderaxe_all_responses.json not found in root directory.'
+            ], 404);
+        }
+
+        $jsonContent = file_get_contents($jsonPath);
+        $orders = json_decode($jsonContent, true);
+
+        if (!is_array($orders)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid JSON structure in orderaxe_all_responses.json.'
+            ], 400);
+        }
+
+        $totalInFile = count($orders);
+        $monthMatched = 0;
+        $dbFound = 0;
+        $updated = 0;
+        $alreadyCorrect = 0;
+        $samples = [];
+
+        foreach ($orders as $ord) {
+            $orderNo = $ord['order_no'] ?? null;
+            $orderAxeId = $ord['_id'] ?? null;
+
+            if (!$orderNo && !$orderAxeId) {
+                continue;
+            }
+
+            // Extract order date from Orderaxe
+            $orderDateMs = $ord['order_date'] ?? $ord['created_at'] ?? $ord['submitted_on'] ?? 0;
+            if ($orderDateMs <= 0) {
+                continue;
+            }
+
+            $cDt = new \DateTime('@' . (int)($orderDateMs / 1000));
+            $cDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+            $orderDate = $cDt->format('Y-m-d');
+            $orderMonth = $cDt->format('Y-m');
+
+            if ($orderMonth !== $targetMonth) {
+                continue;
+            }
+
+            $monthMatched++;
+
+            // Find in local DB
+            $existingSo = null;
+            if ($orderNo) {
+                $existingSo = SalesOrder::where('order_no', $orderNo)->first();
+            }
+            if (!$existingSo && $orderAxeId) {
+                $existingSo = SalesOrder::where('orderaxe_id', $orderAxeId)->first();
+            }
+
+            if ($existingSo) {
+                $dbFound++;
+                $oldRequestDate = $existingSo->request_date ? Carbon::parse($existingSo->request_date)->format('Y-m-d') : null;
+
+                if ($oldRequestDate !== $orderDate) {
+                    if (!$dryRun) {
+                        $existingSo->update(['request_date' => $orderDate]);
+                    }
+                    $updated++;
+                    if (count($samples) < 20) {
+                        $samples[] = [
+                            'so_no' => $existingSo->so_no,
+                            'order_no' => $existingSo->order_no,
+                            'old_request_date' => $oldRequestDate,
+                            'new_request_date' => $orderDate,
+                            'status' => $dryRun ? 'will_update' : 'updated'
+                        ];
+                    }
+                } else {
+                    $alreadyCorrect++;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'target_month' => $targetMonth,
+            'dry_run' => $dryRun,
+            'total_in_file' => $totalInFile,
+            'month_orders_in_file' => $monthMatched,
+            'matched_in_database' => $dbFound,
+            'updated_count' => $updated,
+            'already_matching_count' => $alreadyCorrect,
+            'sample_changes' => $samples,
+            'message' => $dryRun 
+                ? "DRY RUN for $targetMonth: $updated records will be updated out of $dbFound matched." 
+                : "SUCCESS for $targetMonth: $updated records updated to match Orderaxe order_date."
+        ], 200, [], JSON_PRETTY_PRINT);
+    }
 }

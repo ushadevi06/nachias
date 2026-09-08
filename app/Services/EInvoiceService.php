@@ -12,6 +12,20 @@ class EInvoiceService
 {
     public function generateEInvoice(SalesInvoice $invoice, array $transporterData = [])
     {
+        // 1. Do NOT generate a new IRN if the invoice already has an IRN in the database
+        if (!empty($invoice->irn)) {
+            return [
+                'success' => true,
+                'message' => 'E-Invoice already generated for this invoice.',
+                'data' => [
+                    'Irn' => $invoice->irn,
+                    'AckNo' => $invoice->ack_no,
+                    'AckDt' => $invoice->ack_date,
+                    'SignedQRCode' => $invoice->signed_qr_code,
+                ]
+            ];
+        }
+
         $invoice->load(['customer.state', 'customer.city', 'items.uom', 'items.item', 'items.stockEntryItem']);
 
         if (empty($invoice->customer->gst_no)) {
@@ -122,7 +136,6 @@ class EInvoiceService
         
         $totInvVal = round($expectedTot + $rndOffAmt, 2);
         
-        dd($totInvVal);
         if (abs($totInvVal - $grandTotal) > 0.01) {
             \Log::error('E-Invoice Mismatch Detail', [
                 'invoice_id' => $invoice->id,
@@ -241,9 +254,92 @@ class EInvoiceService
             ];
         }
     
+        $isDuplicateIrn = false;
+        $dupErrorCode = null;
+        $dupErrorMessage = null;
+
+        if (isset($apiData['ErrorDetails']) && is_array($apiData['ErrorDetails'])) {
+            foreach ($apiData['ErrorDetails'] as $err) {
+                if (isset($err['ErrorCode']) && (string)$err['ErrorCode'] === '2150') {
+                    $isDuplicateIrn = true;
+                    $dupErrorCode = (string)$err['ErrorCode'];
+                    $dupErrorMessage = $err['ErrorMessage'] ?? 'Duplicate IRN';
+                    break;
+                }
+            }
+        }
+
+        if ($isDuplicateIrn && !empty($apiData['InfoDtls']) && is_array($apiData['InfoDtls'])) {
+            $dupDesc = $apiData['InfoDtls'][0]['Desc'] ?? null;
+            if (is_string($dupDesc)) {
+                $dupDesc = json_decode($dupDesc, true);
+            }
+
+            if (is_array($dupDesc) && !empty($dupDesc['Irn'])) {
+                $recoveredIrn = $dupDesc['Irn'];
+                $recoveredAckNo = $dupDesc['AckNo'] ?? null;
+                $recoveredAckDt = $dupDesc['AckDt'] ?? Carbon::now()->format('Y-m-d H:i:s');
+                $recoveredSignedQr = $dupDesc['SignedQRCode'] ?? null;
+
+                // Log initial recovery details
+                \Log::info('E-Invoice Duplicate IRN Recovered from TaxPro InfoDtls', [
+                    'http_status' => $response->status(),
+                    'invoice_id' => $invoice->id,
+                    'invoice_no' => $invoice->inv_no,
+                    'error_code' => $dupErrorCode,
+                    'error_message' => $dupErrorMessage,
+                    'recovered_irn' => $recoveredIrn,
+                    'ack_no' => $recoveredAckNo,
+                    'ack_date' => $recoveredAckDt,
+                ]);
+
+                // Query TaxPro GetEInvoiceByIrn to retrieve the full SignedQRCode and SignedInvoice
+                $irnDetails = $this->getEInvoiceByIrn($recoveredIrn);
+                if ($irnDetails['success'] && !empty($irnDetails['data'])) {
+                    $recoveredSignedQr = $irnDetails['data']['SignedQRCode'] ?? $recoveredSignedQr;
+                    $recoveredAckNo = $irnDetails['data']['AckNo'] ?? $recoveredAckNo;
+                    $recoveredAckDt = $irnDetails['data']['AckDt'] ?? $recoveredAckDt;
+                }
+
+                \DB::table('sales_invoices')->where('id', $invoice->id)->update([
+                    'irn' => $recoveredIrn,
+                    'ack_no' => $recoveredAckNo,
+                    'ack_date' => $recoveredAckDt,
+                    'signed_qr_code' => $recoveredSignedQr,
+                    'einvoice_status' => 'generated',
+                ]);
+                $invoice->refresh();
+
+                $ewayBillResult = null;
+                if ($invoice->grand_total >= 50000 && !empty($transporterData) && (
+                    !empty($transporterData['vehicle_no']) || 
+                    (!empty($transporterData['transporter_id']) && !empty($transporterData['tran_doc_no']))
+                )) {
+                    $ewayBillResult = $this->generateEWayBill($invoice, $transporterData);
+                } elseif ($invoice->grand_total < 50000) {
+                    $ewayBillResult = ['success' => false, 'message' => 'Invoice value is under 50,000. E-Way Bill must be generated manually.'];
+                }
+
+                return [
+                    'success' => true,
+                    'message' => 'E-Invoice already generated on IRP (Duplicate IRN). Existing IRN & QR Code recovered successfully.',
+                    'data' => [
+                        'Irn' => $recoveredIrn,
+                        'AckNo' => $recoveredAckNo,
+                        'AckDt' => $recoveredAckDt,
+                        'SignedQRCode' => $recoveredSignedQr,
+                    ],
+                    'eway_bill' => $ewayBillResult
+                ];
+            }
+        }
+
         $errorMessage = 'Failed to generate E-Invoice';
         
         \Log::error('E-Invoice Failure', [
+            'http_status' => $response->status(),
+            'invoice_id' => $invoice->id,
+            'invoice_no' => $invoice->inv_no,
             'payload' => $payload,
             'response' => $apiData
         ]);
@@ -264,6 +360,164 @@ class EInvoiceService
 
         return ['success' => false, 'message' => 'API Error: ' . $errorMessage, 'response' => $apiData];
     }
+
+    /**
+     * Fetch complete E-Invoice details (SignedQRCode, SignedInvoice, AckNo, AckDt) from TaxPro by IRN.
+     */
+    public function getEInvoiceByIrn(string $irn)
+    {
+        if (empty($irn)) {
+            return ['success' => false, 'message' => 'IRN is required.'];
+        }
+
+        $setting = Setting::first();
+        $authData = $this->authenticate($setting);
+        if (!$authData['success']) {
+            return $authData;
+        }
+
+        $headers = [
+            'aspid' => env('EINV_ASP_ID'),
+            'password' => env('EINV_ASP_PASSWORD'),
+            'Gstin' => env('EINV_GSTIN'),
+            'gstin' => env('EINV_GSTIN'),
+            'User_Name' => env('EINV_USERNAME'),
+            'user_name' => env('EINV_USERNAME'),
+            'AuthToken' => $authData['token'],
+            'authtoken' => $authData['token'],
+            'irn' => $irn,
+            'Irn' => $irn,
+            'Content-Type' => 'application/json',
+        ];
+
+        $baseUrl = rtrim(env('EINV_API_URL'), '/');
+        $parentUrl = dirname($baseUrl);
+
+        // List of endpoint URLs and HTTP methods to try for TaxPro / CharteredInfo
+        $attempts = [
+            ['method' => 'GET',  'url' => $baseUrl . '/GetEInvoiceByIrn', 'params' => ['irn' => $irn, 'param1' => $irn]],
+            ['method' => 'GET',  'url' => $baseUrl . '/GetIrn',           'params' => ['irn' => $irn, 'param1' => $irn]],
+            ['method' => 'GET',  'url' => $baseUrl . '/GetEInvoice',      'params' => ['irn' => $irn, 'param1' => $irn]],
+            ['method' => 'GET',  'url' => $baseUrl,                       'params' => ['irn' => $irn, 'param1' => $irn]],
+            ['method' => 'GET',  'url' => $baseUrl . '/irn/' . $irn,      'params' => []],
+            ['method' => 'GET',  'url' => $parentUrl . '/GetEInvoiceByIrn','params' => ['irn' => $irn]],
+            ['method' => 'POST', 'url' => $baseUrl . '/GetEInvoiceByIrn', 'body' => ['Irn' => $irn, 'irn' => $irn]],
+            ['method' => 'POST', 'url' => $baseUrl . '/GetIrn',           'body' => ['Irn' => $irn, 'irn' => $irn]],
+            ['method' => 'POST', 'url' => $baseUrl . '/GetEInvoice',      'body' => ['Irn' => $irn, 'irn' => $irn]],
+        ];
+
+        $lastError = 'Failed to fetch E-Invoice by IRN';
+        $lastResponse = null;
+
+        foreach ($attempts as $attempt) {
+            try {
+                if ($attempt['method'] === 'GET') {
+                    $response = Http::timeout(15)->withHeaders($headers)->get($attempt['url'], $attempt['params'] ?? []);
+                } else {
+                    $response = Http::timeout(15)->withHeaders($headers)->post($attempt['url'], $attempt['body'] ?? []);
+                }
+
+                $apiData = $response->json();
+
+                \Log::info('TaxPro GetEInvoice Attempt', [
+                    'url' => $attempt['url'],
+                    'method' => $attempt['method'],
+                    'status' => $response->status(),
+                    'response' => $apiData
+                ]);
+
+                if ($response->successful() && is_array($apiData)) {
+                    $responseData = is_string($apiData['Data'] ?? null) 
+                        ? json_decode($apiData['Data'], true) 
+                        : ($apiData['Data'] ?? $apiData);
+
+                    $signedQr = $responseData['SignedQRCode'] 
+                        ?? $responseData['signedQRCode'] 
+                        ?? $responseData['SignedQrCode'] 
+                        ?? $responseData['signed_qr_code'] 
+                        ?? $responseData['SignedInvoice'] 
+                        ?? null;
+
+                    if (!empty($signedQr) || (isset($apiData['Status']) && (int)$apiData['Status'] === 1 && !empty($responseData['Irn']))) {
+                        return [
+                            'success' => true,
+                            'message' => 'E-Invoice details fetched successfully',
+                            'data' => is_array($responseData) ? $responseData : ['SignedQRCode' => $signedQr, 'Irn' => $irn],
+                            'raw_response' => $apiData
+                        ];
+                    }
+
+                    if (isset($apiData['ErrorDetails'][0]['ErrorMessage'])) {
+                        $lastError = $apiData['ErrorDetails'][0]['ErrorMessage'];
+                    } elseif (isset($apiData['message'])) {
+                        $lastError = $apiData['message'];
+                    }
+                }
+                $lastResponse = $apiData ?? $response->body();
+            } catch (\Exception $e) {
+                \Log::warning('TaxPro GetEInvoice Attempt Exception', ['url' => $attempt['url'], 'error' => $e->getMessage()]);
+            }
+        }
+
+        return [
+            'success' => false,
+            'message' => 'API Error: ' . $lastError,
+            'response' => $lastResponse
+        ];
+    }
+
+    /**
+     * Get or Sync IRN from TaxPro for an invoice where IRN is not yet in the database,
+     * or refresh Signed QR Code and Ack details if IRN already exists.
+     */
+    public function getOrSyncIRN(SalesInvoice $invoice)
+    {
+        if (!empty($invoice->irn)) {
+            $irnDetails = $this->getEInvoiceByIrn($invoice->irn);
+
+            if ($irnDetails['success'] && !empty($irnDetails['data'])) {
+                $data = $irnDetails['data'];
+                $signedQr = $data['SignedQRCode'] ?? $invoice->signed_qr_code;
+                $ackNo = $data['AckNo'] ?? $invoice->ack_no;
+                $ackDt = $data['AckDt'] ?? $invoice->ack_date;
+
+                \DB::table('sales_invoices')->where('id', $invoice->id)->update([
+                    'ack_no' => $ackNo,
+                    'ack_date' => $ackDt,
+                    'signed_qr_code' => $signedQr,
+                    'einvoice_status' => 'generated',
+                ]);
+                $invoice->refresh();
+
+                return [
+                    'success' => true,
+                    'message' => 'E-Invoice IRN & Signed QR Code synced successfully from TaxPro.',
+                    'data' => [
+                        'Irn' => $invoice->irn,
+                        'AckNo' => $invoice->ack_no,
+                        'AckDt' => $invoice->ack_date,
+                        'SignedQRCode' => $invoice->signed_qr_code,
+                    ]
+                ];
+            }
+
+            return [
+                'success' => true,
+                'message' => 'E-Invoice IRN is present in database.' . ($irnDetails['success'] ? '' : ' (' . ($irnDetails['message'] ?? 'Could not refresh QR code') . ')'),
+                'data' => [
+                    'Irn' => $invoice->irn,
+                    'AckNo' => $invoice->ack_no,
+                    'AckDt' => $invoice->ack_date,
+                    'SignedQRCode' => $invoice->signed_qr_code,
+                ]
+            ];
+        }
+
+        // Calling generateEInvoice will either generate a fresh IRN or
+        // automatically recover the existing IRN from TaxPro InfoDtls (ErrorCode 2150)
+        return $this->generateEInvoice($invoice);
+    }
+
     public function authenticate($setting)
     {
         try {

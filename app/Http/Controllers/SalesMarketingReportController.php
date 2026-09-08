@@ -34,7 +34,8 @@ class SalesMarketingReportController extends Controller
     {
         $draw = intval($request->draw ?? 1);
         $start = intval($request->start ?? 0);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLen = intval($request->length);
+        $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $searchVal = $request->search;
         $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
 
@@ -79,7 +80,11 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $orders = $dataQuery->with(['customer', 'items.stockEntryItem', 'salesInvoices.items'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    $ordersQuery = $dataQuery->with(['customer', 'items.stockEntryItem', 'salesInvoices.items'])->orderBy('id', 'desc');
+                    if ($length !== -1) {
+                        $ordersQuery->offset($start)->limit($length);
+                    }
+                    $orders = $ordersQuery->get();
 
                     $data = [];
                     foreach ($orders as $order) {
@@ -180,13 +185,14 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $orders = $dataQuery->with(['customer', 'items.stockEntryItem'])
+                    $ordersQuery = $dataQuery->with(['customer', 'items.stockEntryItem'])
                         ->select('sales_orders.*')
                         ->selectSub($deliveredQtySubquery, 'delivered_qty')
-                        ->orderBy('id', 'desc')
-                        ->offset($start)
-                        ->limit($length)
-                        ->get();
+                        ->orderBy('id', 'desc');
+                    if ($length !== -1) {
+                        $ordersQuery->offset($start)->limit($length);
+                    }
+                    $orders = $ordersQuery->get();
 
                     $data = [];
                     foreach ($orders as $order) {
@@ -312,7 +318,11 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = $countQuery->count();
-                    $invoices = $countQuery->with(['customer', 'salesOrder'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    $invoicesQuery = $countQuery->with(['customer', 'salesOrder'])->orderBy('id', 'desc');
+                    if ($length !== -1) {
+                        $invoicesQuery->offset($start)->limit($length);
+                    }
+                    $invoices = $invoicesQuery->get();
 
                     $data = [];
                     foreach ($invoices as $invoice) {
@@ -390,7 +400,7 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = count($incentiveReport);
-                    $pagedIncentives = $length > 0 ? array_slice($incentiveReport, $start, $length) : $incentiveReport;
+                    $pagedIncentives = ($length > 0 && $length !== -1) ? array_slice($incentiveReport, $start, $length) : $incentiveReport;
 
                     return response()->json([
                         'draw' => $draw,
@@ -417,7 +427,11 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $notes = $dataQuery->with(['customer', 'salesAgent', 'zone'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    $notesQuery = $dataQuery->with(['customer', 'salesAgent', 'zone'])->orderBy('id', 'desc');
+                    if ($length !== -1) {
+                        $notesQuery->offset($start)->limit($length);
+                    }
+                    $notes = $notesQuery->get();
 
                     $data = [];
                     foreach ($notes as $note) {
@@ -466,7 +480,11 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $orders = $dataQuery->with(['customer.city', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices.items'])->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    $ordersQuery = $dataQuery->with(['customer.city', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices.items'])->orderBy('id', 'desc');
+                    if ($length !== -1) {
+                        $ordersQuery->offset($start)->limit($length);
+                    }
+                    $orders = $ordersQuery->get();
 
                     $data = [];
                     $sno = $start + 1;
@@ -603,7 +621,7 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = count($outstandingReport);
-                    $pagedData = $length > 0 ? array_slice($outstandingReport, $start, $length) : $outstandingReport;
+                    $pagedData = ($length > 0 && $length !== -1) ? array_slice($outstandingReport, $start, $length) : $outstandingReport;
 
                     return response()->json([
                         'draw' => $draw,

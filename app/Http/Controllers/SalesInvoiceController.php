@@ -230,6 +230,7 @@ class SalesInvoiceController extends Controller
                     }
                 } else {
                     $eInvoiceBtn = '<button type="button" class="btn btn-info einvoice-generate-btn" data-id="' . $inv->id . '" title="Generate E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
+                    $eInvoiceBtn .= '<button type="button" class="btn btn-primary einvoice-get-irn-btn" data-id="' . $inv->id . '" title="Get / Sync IRN from TaxPro" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-refresh-line"></i></button>';
                 }
 
                 $editBtn = '';
@@ -1620,6 +1621,27 @@ class SalesInvoiceController extends Controller
             if (function_exists('addLog')) {
                 $invoice->refresh();
                 addLog('generate_einvoice', 'Sales Invoice E-Invoice Generated', 'sales_invoices', $invoice->id, null, $invoice->toArray());
+            }
+        }
+
+        return response()->json($result);
+    }
+
+    public function getIrn(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+        if ($invoice->einvoice_status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This E-Invoice has been cancelled on IRP. You cannot get IRN for a cancelled invoice.'
+            ]);
+        }
+        
+        $result = $eInvoiceService->getOrSyncIRN($invoice);
+        if ($result['success']) {
+            if (function_exists('addLog')) {
+                $invoice->refresh();
+                addLog('get_irn', 'Sales Invoice IRN Synced / Recovered from TaxPro', 'sales_invoices', $invoice->id, null, $invoice->toArray());
             }
         }
 

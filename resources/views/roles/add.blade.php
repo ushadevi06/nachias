@@ -103,12 +103,12 @@
                                                     });
                                                     @endphp
                                                     @if($others->isNotEmpty())
-                                                    @foreach($others as $other)
-                                                    <div class="form-check mb-2">
-                                                        <input type="checkbox" class="permission form-check-input" data-sub="{{ $main }}" name="permissions[]" value="{{ $other->name }}" {{ in_array($other->name, $rolePermissions ?? []) ? 'checked' : '' }}>
-                                                        <p class="small">{{ ucwords(preg_replace('/\s+/', ' ', str_replace(['-', '_'], ' ', $other->name))) }}</p>
-                                                    </div>
-                                                    @endforeach
+                                                     @foreach($others as $other)
+                                                     <div class="form-check mb-2">
+                                                         <input type="checkbox" class="permission form-check-input" id="perm_{{ $other->id }}" data-sub="{{ $main }}" name="permissions[]" value="{{ $other->name }}" {{ in_array($other->name, $rolePermissions ?? []) ? 'checked' : '' }}>
+                                                         <label class="form-check-label small" for="perm_{{ $other->id }}">{{ $other->label ?: ucwords(preg_replace('/\s+/', ' ', str_replace(['-', '_'], ' ', $other->name))) }}</label>
+                                                     </div>
+                                                     @endforeach
                                                     @else
                                                     —
                                                     @endif

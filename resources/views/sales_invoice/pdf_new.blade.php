@@ -324,6 +324,12 @@ if ($showPrice) $colsAfterQty++;
         } catch (\Exception $e) {
             \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
         }
+    } elseif (!empty($invoice->irn)) {
+        try {
+            $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->irn));
+        } catch (\Exception $e) {
+            \Log::error('E-Invoice QR Generation from IRN failed: ' . $e->getMessage());
+        }
     }
     @endphp
     @foreach($pages as $pageIndex => $pageItems)

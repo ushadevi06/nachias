@@ -970,7 +970,7 @@ class TaskManagementController extends Controller
             }
 
             $newStatus = $task->status;
-            if ($allCompleted || ($totalAssigned > 0 && $totalCompleted >= $totalAssigned)) {
+            if ($allCompleted) {
                 $newStatus = 'Completed';
             } elseif ($anyStarted || $totalCompleted > 0) {
                 $newStatus = 'In Progress';

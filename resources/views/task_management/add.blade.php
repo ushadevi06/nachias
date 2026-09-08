@@ -378,7 +378,7 @@
                         </form>
                     </div>
                     <div class="tab-pane fade" id="content-receive" role="tabpanel">
-                        <form action="{{ route('task_management.update_progress') }}" method="POST" class="common-form" autocomplete="off">
+                        <form action="{{ route('task_management.update_progress') }}" method="POST" class="common-form" autocomplete="off" novalidate>
                             @csrf
                             <input type="hidden" name="task_id" value="{{ $task->id ?? '' }}">
                             <div class="card border-0 shadow-sm section-card">

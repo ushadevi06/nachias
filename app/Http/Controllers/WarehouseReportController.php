@@ -56,6 +56,9 @@ class WarehouseReportController extends Controller
                 $totalSingle = 0;
                 $totalTotalStock = 0;
                 $totalDamage = 0;
+                // For utilization: only count brands that have a configured capacity
+                $utilCapacity = 0;
+                $utilStock = 0;
 
                 foreach ($activeBrands as $brand) {
                     $capacityPcs = $capacities[$brand->id] ?? 0;
@@ -100,6 +103,12 @@ class WarehouseReportController extends Controller
                     $totalTotalStock += $totalStock;
                     $totalDamage += $damageStock;
 
+                    // Only count brands with configured capacity towards utilization %
+                    if ($capacityPcs > 0) {
+                        $utilCapacity += $capacityPcs;
+                        $utilStock    += $totalStock;
+                    }
+
                     $reportData[] = [
                         'brand_id' => $brand->id,
                         'brand_name' => $brand->brand_name,
@@ -112,7 +121,8 @@ class WarehouseReportController extends Controller
                     ];
                 }
 
-                $totalUtilizationPct = $totalCapacity > 0 ? round(($totalTotalStock / $totalCapacity) * 100, 2) : 0;
+                // Utilization % based only on brands with configured capacity
+                $totalUtilizationPct = $utilCapacity > 0 ? round(($utilStock / $utilCapacity) * 100, 2) : 0;
 
                 $totals = [
                     'capacity_pcs' => $totalCapacity,
@@ -210,7 +220,7 @@ class WarehouseReportController extends Controller
     {
         $draw = intval($request->draw);
         $start = intval($request->start);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLen = intval($request->length); $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $searchVal = $request->search;
         $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
 
@@ -309,7 +319,7 @@ class WarehouseReportController extends Controller
     {
         $draw = intval($request->draw);
         $start = intval($request->start);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLen = intval($request->length); $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $searchVal = $request->search;
         $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
 
@@ -360,6 +370,9 @@ class WarehouseReportController extends Controller
         $totalSingle = 0;
         $totalTotalStock = 0;
         $totalDamage = 0;
+        // For utilization %: only count styles with configured capacity
+        $utilCapacity = 0;
+        $utilStock = 0;
 
         foreach ($targetStyles as $style) {
             if ($search && stripos($style->style_name, $search) === false) {
@@ -405,6 +418,11 @@ class WarehouseReportController extends Controller
             $totalSingle += $singleStoreStock;
             $totalTotalStock += $totalStock;
             $totalDamage += $damageStock;
+
+            if ($capPcs > 0) {
+                $utilCapacity += $capPcs;
+                $utilStock    += $totalStock;
+            }
 
             $data[] = [
                 'style_name' => '<strong class="text-uppercase text-dark">' . e($style->style_name) . '</strong>',
@@ -458,6 +476,10 @@ class WarehouseReportController extends Controller
                 $totalTotalStock += $totalStock;
                 $totalDamage += $damageStock;
 
+                // nullCapPcs > 0 is already guaranteed by the outer if; include in utilization
+                $utilCapacity += $nullCapPcs;
+                $utilStock    += $totalStock;
+
                 $data[] = [
                     'style_name' => '<strong class="text-muted fst-italic">General / Unassigned</strong>',
                     'capacity_pcs' => number_format($nullCapPcs),
@@ -470,7 +492,8 @@ class WarehouseReportController extends Controller
             }
         }
 
-        $totalUtilPct = $totalCapacity > 0 ? round(($totalTotalStock / $totalCapacity) * 100, 2) : 0;
+        // Utilization % only for styles with configured capacity
+        $totalUtilPct = $utilCapacity > 0 ? round(($utilStock / $utilCapacity) * 100, 2) : 0;
         $totBadgeClass = $totalUtilPct > 95 ? 'bg-danger' : ($totalUtilPct > 80 ? 'bg-warning text-dark' : 'bg-primary');
 
         $totals = [
@@ -479,6 +502,7 @@ class WarehouseReportController extends Controller
             'single_store_stock' => number_format($totalSingle),
             'total_stock' => number_format($totalTotalStock),
             'utilization' => '<span class="badge ' . $totBadgeClass . ' px-3 py-2 fs-6">' . $totalUtilPct . '%</span>',
+            'utilization_text' => $totalUtilPct . '%',
             'damage_stock' => number_format($totalDamage),
         ];
 
@@ -504,7 +528,7 @@ class WarehouseReportController extends Controller
     {
         $draw = intval($request->draw);
         $start = intval($request->start);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLen = intval($request->length); $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $searchVal = $request->search;
         $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
 
@@ -3094,7 +3118,7 @@ class WarehouseReportController extends Controller
     {
         $draw = intval($request->draw);
         $start = intval($request->start);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLen = intval($request->length); $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $search = $request->search['value'] ?? '';
 
         $brandName = $request->brand_name;
@@ -3367,7 +3391,7 @@ class WarehouseReportController extends Controller
     {
         $draw = intval($request->draw);
         $start = intval($request->start);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLen = intval($request->length); $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $search = $request->search['value'] ?? '';
 
         $brandId = $request->brand_id;
@@ -3677,7 +3701,7 @@ class WarehouseReportController extends Controller
     {
         $draw = intval($request->draw);
         $start = intval($request->start);
-        $length = intval($request->length > 0 ? $request->length : 10);
+        $rawLen = intval($request->length); $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $search = $request->search['value'] ?? '';
 
         $brandId = $request->brand_id;

@@ -355,6 +355,76 @@
             });
         });
 
+        $(document).on('click', '.einvoice-get-irn-btn', function() {
+            let invoiceId = $(this).data('id');
+            Swal.fire({
+                title: 'Get / Sync IRN?',
+                text: "Do you want to fetch and sync the existing IRN from TaxPro for this Sales Invoice?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, Get IRN!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let btn = $(this);
+                    let originalHtml = btn.html();
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    
+                    Swal.fire({
+                        title: 'Fetching IRN...',
+                        text: 'Please wait while we check and sync IRN from TaxPro.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('sales_invoices/get-irn') }}/" + invoiceId,
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'IRN Synced!',
+                                    text: response.message || 'IRN successfully retrieved and updated in database.',
+                                    timer: 3000,
+                                    showConfirmButton: false
+                                });
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Sync Failed',
+                                    html: response.message
+                                });
+                                btn.prop('disabled', false).html(originalHtml);
+                            }
+                        },
+                        error: function(xhr) {
+                            if (xhr.status === 419) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Session Expired',
+                                    text: 'Your session has expired. Please reload the page.',
+                                    confirmButtonText: 'Reload Page'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', 'An error occurred while fetching IRN. Please try again.', 'error');
+                            }
+                            btn.prop('disabled', false).html(originalHtml);
+                        }
+                    });
+                }
+            });
+        });
+
         $(document).on('click', '.einvoice-cancel-btn', function() {
             let invoiceId = $(this).data('id');
             Swal.fire({
