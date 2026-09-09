@@ -1,7 +1,9 @@
 @extends('layouts.common')
 @section('title', 'Dashboard - ' . env('WEBSITE_NAME'))
 @section('content')
-<div class="container-xxl section-padding">
+
+
+<div class="container-xxl flex-grow-1 container-p-y">
     <!-- TOP HEADER WITH BREADCRUMB & DATE CONTROLS -->
     <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
         <div>
@@ -105,7 +107,6 @@
         @if($canSalesOrders)
         <!-- ========================================================================================= -->
         <!-- TAB 1: SALES & ORDERS                                                                     -->
-        <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-sales-orders" role="tabpanel" aria-labelledby="tab-sales-orders-tab">
             <!-- Section 1: Sales & Order Dashboard KPIs -->
             <div class="mb-4">
@@ -283,13 +284,13 @@
                     </div>
                 </div>
             </div>
+
         </div> <!-- /#tab-sales-orders -->
         @endif
 
         @if($canFinanceHr)
         <!-- ========================================================================================= -->
         <!-- TAB 2: FINANCE & HR                                                                       -->
-        <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-finance-hr" role="tabpanel" aria-labelledby="tab-finance-hr-tab">
             <!-- PART A: ACCOUNTS & FINANCIAL DASHBOARD -->
             <div class="mb-5">
@@ -573,13 +574,13 @@
                     </div>
                 </div>
             </div>
+
         </div> <!-- /#tab-finance-hr -->
         @endif
 
         @if($canProduction)
         <!-- ========================================================================================= -->
         <!-- TAB 3: PRODUCTION                                                                         -->
-        <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-production" role="tabpanel" aria-labelledby="tab-production-tab">
             <div class="mb-4">
                 <div class="d-flex align-items-center mb-3">
@@ -778,13 +779,13 @@
                     </div>
                 </div>
             </div>
+
         </div> <!-- /#tab-production -->
         @endif
 
         @if($canStockMaterial)
         <!-- ========================================================================================= -->
         <!-- TAB 4: STOCK & MATERIAL                                                                   -->
-        <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-stock-material" role="tabpanel" aria-labelledby="tab-stock-material-tab">
             <!-- Section 1: Fabric & Store Stock Dashboard -->
             <div class="mb-5">
@@ -864,131 +865,70 @@
                     </div>
                 </div>
 
-                <!-- Brand-wise Stock & Min Stock Table -->
-                <div class="card border-0 shadow-sm mb-5">
+                <!-- Brand-wise Stock & Min Stock Table with 3-Level Drill-Down -->
+                <div class="card border-0 shadow-sm mb-5" id="fabricInventoryCard">
                     <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div>
                             <h6 class="mb-0 fw-bold text-dark">
                                 <i class="ri ri-store-2-line me-2 text-info"></i>Fabric Inventory Dashboard
                             </h6>
-                            <small class="text-muted">Consolidated overview of fabric stock, valuation, warehouse ageing, and shortage/excess</small>
-                        </div>
-                        <div class="search-box">
-                            <input type="text" id="fabricStockSearchInput" class="form-control form-control-sm" placeholder="Search Brand..." style="width: 220px;">
+                            <small class="text-muted">Click brand or style to drill down into deeper levels</small>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 440px; overflow-y: auto;">
-                            <table class="table table-hover align-middle mb-0" id="fabricStockTable">
-                                <thead class="bg-light sticky-top" style="z-index: 2;">
-                                    <tr>
-                                        <th style="width: 45px;">#</th>
-                                        <th>BRAND</th>
-                                        <th class="text-end">STOCK</th>
-                                        <th class="text-end">STOCK VALUE</th>
-                                        <th class="text-center">DAYS IN WAREHOUSE</th>
-                                        <th class="text-center">MIN STOCK REQ.</th>
-                                        <th class="text-center">SHORTAGE</th>
-                                        <th class="text-center">EXCESS</th>
-                                        <th class="text-center">STATUS</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="small">
-                                    @php
-                                        $totStock = 0;
-                                        $totVal = 0;
-                                        $totMin = 0;
-                                        $totShort = 0;
-                                        $totExc = 0;
-                                    @endphp
-                                    @if(!empty($fabric_stock_summary) && count($fabric_stock_summary) > 0)
-                                        @foreach($fabric_stock_summary as $idx => $row)
-                                        @php
-                                            $totStock += $row['stock'];
-                                            $totVal += $row['stock_value'];
-                                            $totMin += $row['min_stock'];
-                                            $totShort += $row['shortage'];
-                                            $totExc += $row['excess'];
-                                        @endphp
-                                        <tr class="fabric-stock-row">
-                                            <td class="text-muted fw-bold">{{ $idx + 1 }}</td>
-                                            <td>
-                                                <span class="fw-bold text-dark fabric-brand-name">{{ $row['brand_name'] }}</span>
-                                            </td>
-                                            <td class="text-end fw-bold text-dark">{{ number_format($row['stock'], 2) }}</td>
-                                            <td class="text-end fw-bold text-success">₹{{ number_format($row['stock_value'], 2) }}</td>
-                                            <td class="text-center">
-                                                <span class="badge bg-light text-dark border px-2 py-1">
-                                                    {{ $row['days_in_warehouse'] }} Days
-                                                </span>
-                                            </td>
-                                            <td class="text-center fw-bold">{{ number_format($row['min_stock'], 2) }}</td>
-                                            <td class="text-center">
-                                                @if($row['shortage'] > 0)
-                                                    <span class="badge bg-warning text-dark fw-bold px-2 py-1">
-                                                        {{ number_format($row['shortage'], 2) }}
-                                                    </span>
-                                                @else
-                                                    <span class="text-muted">-</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                @if($row['excess'] > 0)
-                                                    <span class="badge bg-danger text-white fw-bold px-2 py-1">
-                                                        {{ number_format($row['excess'], 2) }}
-                                                    </span>
-                                                @else
-                                                    <span class="text-muted">-</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                @if($row['shortage'] > 0)
-                                                    <span class="badge bg-warning text-dark"><i class="ri-alert-line"></i> Reorder</span>
-                                                @elseif($row['excess'] > 0)
-                                                    <span class="badge bg-danger text-white">Excess</span>
-                                                @else
-                                                    <span class="badge bg-success text-white">Optimal</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    @else
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted py-4">No fabric stock data available.</td>
-                                        </tr>
-                                    @endif
-                                </tbody>
-                                <tfoot class="bg-light fw-bold" style="position: sticky; bottom: 0; z-index: 2;">
-                                    <tr>
-                                        <td colspan="2" class="text-end">TOTAL:</td>
-                                        <td class="text-end text-dark">{{ number_format($totStock, 2) }}</td>
-                                        <td class="text-end text-success">₹{{ number_format($totVal, 2) }}</td>
-                                        <td class="text-center">-</td>
-                                        <td class="text-center">{{ number_format($totMin, 2) }}</td>
-                                        <td class="text-center text-warning">
-                                            @if($totShort > 0)
-                                                <span class="badge bg-warning text-dark fw-bold px-2 py-1">{{ number_format($totShort, 2) }}</span>
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                        <td class="text-center text-danger">
-                                            @if($totExc > 0)
-                                                <span class="badge bg-danger text-white fw-bold px-2 py-1">{{ number_format($totExc, 2) }}</span>
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+
+                    <!-- Breadcrumb Navigation (hidden at level 1) -->
+                    <div id="fabricBreadcrumbBar" class="px-3 pt-2 pb-1 border-bottom bg-light" style="display:none;">
+                        <nav class="d-flex align-items-center gap-1 small flex-wrap">
+                            <a href="#" id="fabricBcRoot" class="text-info fw-semibold text-decoration-none">
+                                <i class="ri ri-store-2-line me-1"></i>Fabric Inventory
+                            </a>
+                            <i class="ri ri-arrow-right-s-line text-muted"></i>
+                            <a href="#" id="fabricBcBrand" class="text-primary fw-semibold text-decoration-none" style="display:none;"></a>
+                            <span id="fabricBcBrandPlain" class="text-muted" style="display:none;"></span>
+                            <span id="fabricBcStyleSep" class="text-muted" style="display:none;"><i class="ri ri-arrow-right-s-line"></i></span>
+                            <span id="fabricBcStyle" class="text-dark fw-semibold" style="display:none;"></span>
+                        </nav>
+                    </div>
+
+                    <div class="card-datatable table-responsive px-3 pb-3">
+                        <table class="table table-hover align-middle mb-0 small" id="fabricDrilldownTable" style="width: 100%;">
+                        </table>
                     </div>
                 </div>
-            </div>
+
+                <!-- Brand-wise Stock & Min Stock Table for Accessories with Drill-Down -->
+                <div class="card border-0 shadow-sm mb-5" id="accessoriesInventoryCard">
+                    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark">
+                                <i class="ri ri-scissors-2-line me-2 text-primary"></i>Accessories Inventory Dashboard
+                            </h6>
+                            <small class="text-muted">Click brand to drill down into raw materials</small>
+                        </div>
+                    </div>
+
+                    <!-- Breadcrumb Navigation (hidden at level 1) -->
+                    <div id="accessoriesBreadcrumbBar" class="px-3 pt-2 pb-1 border-bottom bg-light" style="display:none;">
+                        <nav class="d-flex align-items-center gap-1 small flex-wrap">
+                            <a href="#" id="accessoriesBcRoot" class="text-info fw-semibold text-decoration-none">
+                                <i class="ri ri-scissors-2-line me-1"></i>Accessories Inventory
+                            </a>
+                            <i class="ri ri-arrow-right-s-line text-muted"></i>
+                            <a href="#" id="accessoriesBcBrand" class="text-primary fw-semibold text-decoration-none" style="display:none;"></a>
+                            <span id="accessoriesBcBrandPlain" class="text-muted" style="display:none;"></span>
+                            <span id="accessoriesBcStyleSep" class="text-muted" style="display:none;"><i class="ri ri-arrow-right-s-line"></i></span>
+                            <span id="accessoriesBcStyle" class="text-dark fw-semibold" style="display:none;"></span>
+                        </nav>
+                    </div>
+
+                    <div class="card-datatable table-responsive px-3 pb-3">
+                        <table class="table table-hover align-middle mb-0 small" id="accessoriesDrilldownTable" style="width: 100%;">
+                        </table>
+                    </div>
+                </div>
 
             <!-- Section 2: Core Material Planner Dashboard -->
+
             <div class="mb-5" id="coreMaterialPlannerSection">
                 <div class="d-flex align-items-center mb-3">
                     <div class="section-indicator bg-warning me-2"></div>
@@ -1087,6 +1027,11 @@
                                         <th class="text-end">WIP (M)</th>
                                         <th class="text-end">FG (PCS)</th>
                                         <th class="text-end">TOTAL PIPELINE (M)</th>
+                                        <th class="text-end">DAILY CONSUMPTION</th>
+                                        <th class="text-center">DAYS LEFT</th>
+                                        <th class="text-center">LEAD TIME</th>
+                                        <th class="text-end">SAFETY STOCK</th>
+                                        <th class="text-center">NEXT PO</th>
                                     </tr>
                                 </thead>
                                 <tbody class="small">
@@ -1099,6 +1044,7 @@
                                         <th id="coreFootWip" class="text-end text-warning">0.00</th>
                                         <th id="coreFootFg" class="text-end text-success">0 pcs</th>
                                         <th id="coreFootPipeline" class="text-end text-primary">0.00</th>
+                                        <th colspan="5"></th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -1203,125 +1149,43 @@
                             </h6>
                             <small class="text-muted">Click any brand row to drill down into its job cards, style, plants, and remarks</small>
                         </div>
-                        <div class="search-box">
-                            <input type="text" id="utilBrandSearchInput" class="form-control form-control-sm" placeholder="Search Brand..." style="width: 220px;">
-                        </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 440px; overflow-y: auto;">
-                            <table class="table table-hover align-middle mb-0" id="utilBrandTable">
-                                <thead class="bg-light sticky-top" style="z-index: 2;">
-                                    <tr>
-                                        <th style="width: 45px;">#</th>
-                                        <th>BRAND</th>
-                                        <th>STYLE</th>
-                                        <th>SERVICE PROVIDER (PLANT)</th>
-                                        <th class="text-center">JOB CARDS</th>
-                                        <th class="text-end">FABRIC ISSUED (M)</th>
-                                        <th class="text-end">FABRIC CONSUMED (M)</th>
-                                        <th class="text-end">WASTAGE (M)</th>
-                                        <th class="text-center">UTILISATION %</th>
-                                        <th class="text-center" style="width: 90px;">ACTION</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="small">
-                                    @php
-                                        $totU_Issued = 0;
-                                        $totU_Consumed = 0;
-                                        $totU_Wastage = 0;
-                                        $totU_JCs = 0;
-                                    @endphp
-                                    @if(!empty($fabric_utilisation_summary) && count($fabric_utilisation_summary) > 0)
-                                        @foreach($fabric_utilisation_summary as $uIdx => $uRow)
-                                        @php
-                                            $totU_Issued += $uRow['fabric_issued'];
-                                            $totU_Consumed += $uRow['fabric_consumed'];
-                                            $totU_Wastage += $uRow['wastage'];
-                                            $totU_JCs += $uRow['job_cards_count'];
-                                            $uPct = $uRow['utilisation'];
-                                        @endphp
-                                        <tr class="util-brand-row" style="cursor: pointer;" onclick="drillDownToUtilBrandByIndex({{ $uIdx }})">
-                                            <td class="text-muted fw-bold">{{ $uIdx + 1 }}</td>
-                                            <td>
-                                                <span class="fw-bold text-dark util-brand-name">{{ $uRow['brand_name'] }}</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-label-secondary fw-bold util-style-name">{{ $uRow['style'] }}</span>
-                                            </td>
-                                            <td>
-                                                <span class="fw-bold text-secondary util-sp-name">{{ $uRow['service_provider'] }}</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-label-info fw-bold">{{ $uRow['job_cards_count'] }} JCs</span>
-                                            </td>
-                                            <td class="text-end fw-bold text-dark">{{ number_format($uRow['fabric_issued'], 2) }}</td>
-                                            <td class="text-end fw-bold text-success">{{ number_format($uRow['fabric_consumed'], 2) }}</td>
-                                            <td class="text-end fw-bold {{ $uRow['wastage'] > 0 ? 'text-danger' : 'text-muted' }}">
-                                                {{ number_format($uRow['wastage'], 2) }}
-                                            </td>
-                                            <td class="text-center">
-                                                @if($uPct >= 95)
-                                                    <span class="badge bg-success text-white fw-bold px-3 py-2">{{ $uPct }}%</span>
-                                                @elseif($uPct >= 90)
-                                                    <span class="badge bg-warning text-dark fw-bold px-3 py-2">{{ $uPct }}%</span>
-                                                @else
-                                                    <span class="badge bg-danger text-white fw-bold px-3 py-2">{{ $uPct }}%</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                <button class="btn btn-xs btn-outline-primary py-1 px-2">
-                                                    View <i class="ri ri-arrow-right-s-line"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    @else
-                                        <tr>
-                                            <td colspan="10" class="text-center text-muted py-4">No fabric utilisation data available.</td>
-                                        </tr>
-                                    @endif
-                                </tbody>
-                                <tfoot class="bg-light fw-bold" style="position: sticky; bottom: 0; z-index: 2;">
-                                    <tr>
-                                        <td colspan="4" class="text-end">TOTAL:</td>
-                                        <td class="text-center" id="utilFootJCs">{{ number_format($totU_JCs) }} JCs</td>
-                                        <td class="text-end text-dark" id="utilFootIssued">{{ number_format($totU_Issued, 2) }}</td>
-                                        <td class="text-end text-success" id="utilFootConsumed">{{ number_format($totU_Consumed, 2) }}</td>
-                                        <td class="text-end text-danger" id="utilFootWastage">{{ number_format($totU_Wastage, 2) }}</td>
-                                        <td class="text-center text-primary" id="utilFootUtil">
-                                            <span class="badge bg-label-primary px-3 py-2 fw-bold">
-                                                {{ $totU_Issued > 0 ? round(($totU_Consumed / $totU_Issued) * 100, 1) : 0 }}%
-                                            </span>
-                                        </td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                    <div class="card-datatable table-responsive px-3 pb-3">
+                        <table class="table table-hover align-middle mb-0" id="utilBrandTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th style="width: 45px;">#</th>
+                                    <th>BRAND</th>
+                                    <th>STYLE</th>
+                                    <th>SERVICE PROVIDER (PLANT)</th>
+                                    <th class="text-center">JOB CARDS</th>
+                                    <th class="text-end">CUTTING QTY (PCS)</th>
+                                    <th class="text-end">FABRIC ISSUED (M)</th>
+                                    <th class="text-end">FABRIC CONSUMED (M)</th>
+                                    <th class="text-end">WASTAGE (M)</th>
+                                    <th class="text-center">UTILISATION %</th>
+                                    <th class="text-center" style="width: 90px;">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody class="small">
+                            </tbody>
+                            <tfoot class="bg-light fw-bold">
+                                <tr>
+                                    <td colspan="4" class="text-end">TOTAL:</td>
+                                    <td class="text-center" id="utilFootJCs">0 JCs</td>
+                                    <td class="text-end text-dark" id="utilFootCutting">0 Pcs</td>
+                                    <td class="text-end text-dark" id="utilFootIssued">0.00</td>
+                                    <td class="text-end text-success" id="utilFootConsumed">0.00</td>
+                                    <td class="text-end text-danger" id="utilFootWastage">0.00</td>
+                                    <td class="text-center text-primary" id="utilFootUtil">
+                                        <span class="badge bg-label-primary px-3 py-2 fw-bold">0%</span>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
-                    <!-- Card Footer: AJAX Pagination Controls -->
-                    <div class="card-footer bg-white py-2 d-flex flex-wrap justify-content-between align-items-center border-top">
-                        <div class="small text-muted mb-2 mb-sm-0">
-                            Showing <span id="utilPageFrom" class="fw-bold">1</span> to <span id="utilPageTo" class="fw-bold">10</span> of <span id="utilPageTotal" class="fw-bold">{{ count($fabric_utilisation_summary) }}</span> entries
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <nav aria-label="Fabric Utilisation pagination">
-                                <ul class="pagination pagination-sm mb-0" id="utilPaginationList">
-                                    <li class="page-item" id="utilPrevItem">
-                                        <button class="page-link" id="btnUtilPrev" onclick="changeUtilPage(currentUtilPage - 1)">
-                                            <i class="ri ri-arrow-left-s-line"></i> Prev
-                                        </button>
-                                    </li>
-                                    <li id="utilPageNumbersContainer" class="d-flex"></li>
-                                    <li class="page-item" id="utilNextItem">
-                                        <button class="page-link" id="btnUtilNext" onclick="changeUtilPage(currentUtilPage + 1)">
-                                            Next <i class="ri ri-arrow-right-s-line"></i>
-                                        </button>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
+                </div>
                 </div>
 
                 <!-- Level 2: Detailed Job Cards Container -->
@@ -1344,9 +1208,12 @@
                                     <tr>
                                         <th style="width: 45px;">#</th>
                                         <th>JOB CARD NO</th>
-                                        <th>DATE</th>
+                                        <th>ISSUE DATE</th>
+                                        <th>DELIVERY DATE</th>
+                                        <th class="text-center">NO OF DAYS</th>
                                         <th>SERVICE PROVIDER (PLANT)</th>
                                         <th>STYLE</th>
+                                        <th class="text-end">CUTTING QTY (PCS)</th>
                                         <th class="text-end">FABRIC ISSUED (M)</th>
                                         <th class="text-end">FABRIC CONSUMED (M)</th>
                                         <th class="text-end">WASTAGE (M)</th>
@@ -1358,7 +1225,8 @@
                                 <tbody class="small"></tbody>
                                 <tfoot class="bg-light fw-bold" style="position: sticky; bottom: 0; z-index: 2;">
                                     <tr>
-                                        <td colspan="5" class="text-end">TOTAL:</td>
+                                        <td colspan="7" class="text-end">TOTAL:</td>
+                                        <td id="utilJcFootCutting" class="text-end text-dark">0 Pcs</td>
                                         <td id="utilJcFootIssued" class="text-end text-dark">0.00</td>
                                         <td id="utilJcFootConsumed" class="text-end text-success">0.00</td>
                                         <td id="utilJcFootWastage" class="text-end text-danger">0.00</td>
@@ -1371,13 +1239,13 @@
                     </div>
                 </div>
             </div>
+
         </div> <!-- /#tab-stock-material -->
         @endif
 
         @if($canSuppliersMaint)
         <!-- ========================================================================================= -->
         <!-- TAB 5: SUPPLIERS & MAINTENANCE                                                            -->
-        <!-- ========================================================================================= -->
         <div class="tab-pane fade" id="tab-suppliers-maintenance" role="tabpanel" aria-labelledby="tab-suppliers-maintenance-tab">
             <!-- SECTION 1: SUPPLIER PERFORMANCE DASHBOARD -->
             <div class="mb-5" id="supplierPerformanceSection">
@@ -1457,13 +1325,21 @@
                     </div>
                 </div>
 
+                <!-- Supplier Breadcrumbs (For Drilldown View) -->
+                <div id="supplierBreadcrumbs" class="align-items-center mb-3 text-muted small" style="display: none !important;">
+                    <a href="javascript:;" onclick="showSupplierMainLevel()" class="text-primary me-2 fw-bold" style="text-decoration: none;">
+                        <i class="ri ri-arrow-left-line me-1"></i>Back to Suppliers
+                    </a>
+                    <span class="me-2">/</span>
+                    <span id="supplierBreadcrumbName" class="fw-bold text-dark">Supplier Details</span>
+                </div>
+
                 <!-- Table Container -->
                 <div id="supplierPerformanceContainer" class="card border-0 shadow-sm mb-5">
                     <div class="card-header bg-white py-3">
                         <h6 class="mb-0 fw-bold text-dark">
                             <i class="ri ri-truck-line me-2 text-info"></i>Supplier Reliability & Performance Tracker
                         </h6>
-                        <small class="text-muted">Supplier reliability, delivery delay analysis, and return rates</small>
                     </div>
                     <div class="card-body p-3">
                         <div class="table-responsive">
@@ -1482,6 +1358,28 @@
                                 </thead>
                                 <tbody class="small">
                                     <!-- Populated via DataTables AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drilldown Detail Container -->
+                <div id="supplierDrilldownContainer" class="card border-0 shadow-sm mb-5" style="display: none;">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold text-dark" id="supplierDrilldownTitle">
+                            <i class="ri ri-file-list-3-line me-2 text-primary"></i>Supplier Details
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showSupplierMainLevel()">
+                            <i class="ri ri-arrow-left-line me-1"></i>Back to List
+                        </button>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 w-100" id="supplierDrilldownTable">
+                                <thead class="bg-light" id="supplierDrilldownThead">
+                                </thead>
+                                <tbody id="supplierDrilldownTbody" class="small">
                                 </tbody>
                             </table>
                         </div>
@@ -1525,9 +1423,9 @@
                                                         $isExpired = \Carbon\Carbon::parse($doc->validity_date)->isPast();
                                                     @endphp
                                                     @if($isExpired)
-                                                        <span class="badge bg-danger text-white border px-2 py-1"><i class="ri-close-circle-line me-1"></i> Expired</span>
+                                                        <span class="badge bg-danger text-white border px-2 py-1"><i class="ri ri-close-circle-line me-1"></i> Expired</span>
                                                     @else
-                                                        <span class="badge bg-warning text-dark border px-2 py-1"><i class="ri-time-line me-1"></i> {{ $daysLeft }} Days Left</span>
+                                                        <span class="badge bg-warning text-dark border px-2 py-1"><i class="ri ri-time-line me-1"></i> {{ $daysLeft }} Days Left</span>
                                                     @endif
                                                 </td>
                                             </tr>
@@ -1535,7 +1433,7 @@
                                             @else
                                             <tr>
                                                 <td colspan="3" class="text-center py-4 text-muted small">
-                                                    <i class="ri-checkbox-circle-line text-success fs-3"></i><br>
+                                                    <i class="ri ri-checkbox-circle-line text-success fs-3"></i><br>
                                                     All renewals up to date. No upcoming expirations in the next 90 days.
                                                 </td>
                                             </tr>
@@ -1588,120 +1486,181 @@
                     </div>
                 </div>
             </div>
+
         </div> <!-- /#tab-suppliers-maintenance -->
         @endif
 
     </div> <!-- /#erpDashboardTabsContent -->
 </div> <!-- /.container-xxl -->
-
 <style>
-    /* 5-Tab Segmented Navigation Styling */
-    .dashboard-nav-pills {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-    }
-    .dashboard-nav-pills .nav-link {
-        color: #475569;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 0.88rem;
-        transition: all 0.2s ease-in-out;
-        cursor: pointer;
-    }
-    .dashboard-nav-pills .nav-link:hover {
-        background: #e2e8f0;
-        color: #0f172a;
-        transform: translateY(-1px);
-    }
-    .dashboard-nav-pills .nav-link.active {
-        background: #1e3a8a !important;
-        color: #ffffff !important;
-        border-color: #1e3a8a !important;
-        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
-    }
-    .dashboard-nav-pills .nav-link.active i {
-        color: #ffffff !important;
-    }
+/* 5-Tab Segmented Navigation Styling */
+.dashboard-nav-pills {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
 
-    /* Tab Pane Visibility: Strict Isolation */
-    .tab-content > .tab-pane {
-        display: none;
-    }
-    .tab-content > .tab-pane.active {
-        display: block !important;
-    }
+.dashboard-nav-pills .nav-link {
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
 
-    .section-indicator {
-        width: 12px;
-        height: 24px;
-        border-radius: 4px;
-    }
+.dashboard-nav-pills .nav-link:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
 
-    .kpi-widget {
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-    .kpi-widget:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
-    }
-    .kpi-icon {
-        width: 46px;
-        height: 46px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        font-size: 1.45rem;
-    }
+.dashboard-nav-pills .nav-link.active {
+    background: #1e3a8a !important;
+    color: #ffffff !important;
+    border-color: #1e3a8a !important;
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+}
 
-    /* Color Variances */
-    .bg-light-primary { background: #eef2ff; }
-    .bg-light-info { background: #ecfeff; }
-    .bg-light-success { background: #f0fdf4; }
-    .bg-light-warning { background: #fffbeb; }
-    .bg-light-danger { background: #fef2f2; }
-    .bg-light-secondary { background: #f8fafc; }
-    .bg-light-dark { background: #f1f5f9; }
+.dashboard-nav-pills .nav-link.active i {
+    color: #ffffff !important;
+}
 
-    /* Financial Stat Cards */
-    .financial-stat {
-        background: #fff;
-        border-top: 3px solid #e2e8f0 !important;
-    }
+/* Tab Pane Visibility: Strict Isolation */
+.tab-content>.tab-pane {
+    display: none;
+}
 
-    /* Table Styles */
-    .table thead th {
-        text-transform: uppercase;
-        font-weight: 700;
-        letter-spacing: 0.03em;
-        color: #64748b;
-        border-top: none;
-    }
+.tab-content>.tab-pane.active {
+    display: block !important;
+}
 
-    /* Alert Styling */
-    .alert-soft-danger {
-        background-color: #fef2f2;
-        border: 1px solid #fee2e2;
-        color: #991b1b;
-    }
-    .alert-soft-warning {
-        background-color: #fffbeb;
-        border: 1px solid #fef3c7;
-        color: #92400e;
-    }
+.section-indicator {
+    width: 12px;
+    height: 24px;
+    border-radius: 4px;
+}
 
-    .x-small { font-size: 0.65rem; }
-    .badge.bg-label-success { background: #dcfce7; color: #166534; }
-    .badge.bg-label-primary { background: #dbeafe; color: #1e40af; }
-    .badge.bg-label-warning { background: #fef9c3; color: #854d0e; }
-    .badge.bg-label-info { background: #e0f2fe; color: #0369a1; }
-    .badge.bg-label-secondary { background: #f1f5f9; color: #475569; }
+.kpi-widget {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
 
-    .bg-soft-danger { background-color: #fef2f2; }
-    .bg-soft-warning { background-color: #fffbeb; }
-    .bg-soft-info { background-color: #eff6ff; }
-    .bg-light-danger-soft { background-color: #fff5f5; }
+.kpi-widget:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+.kpi-icon {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.45rem;
+}
+
+/* Color Variances */
+.bg-light-primary {
+    background: #eef2ff;
+}
+
+.bg-light-info {
+    background: #ecfeff;
+}
+
+.bg-light-success {
+    background: #f0fdf4;
+}
+
+.bg-light-warning {
+    background: #fffbeb;
+}
+
+.bg-light-danger {
+    background: #fef2f2;
+}
+
+.bg-light-secondary {
+    background: #f8fafc;
+}
+
+.bg-light-dark {
+    background: #f1f5f9;
+}
+
+/* Financial Stat Cards */
+.financial-stat {
+    background: #fff;
+    border-top: 3px solid #e2e8f0 !important;
+}
+
+/* Table Styles */
+.table thead th {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #64748b;
+    border-top: none;
+}
+
+/* Alert Styling */
+.alert-soft-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fee2e2;
+    color: #991b1b;
+}
+
+.alert-soft-warning {
+    background-color: #fffbeb;
+    border: 1px solid #fef3c7;
+    color: #92400e;
+}
+
+.x-small {
+    font-size: 0.65rem;
+}
+
+.badge.bg-label-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge.bg-label-primary {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge.bg-label-warning {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.badge.bg-label-info {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.badge.bg-label-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.bg-soft-danger {
+    background-color: #fef2f2;
+}
+
+.bg-soft-warning {
+    background-color: #fffbeb;
+}
+
+.bg-soft-info {
+    background-color: #eff6ff;
+}
+
+.bg-light-danger-soft {
+    background-color: #fff5f5;
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -2036,14 +1995,19 @@
                     { data: 'wip', name: 'wip', className: 'text-end', defaultContent: '0.00' },
                     { data: 'fg', name: 'fg', className: 'text-end', defaultContent: '0 pcs' },
                     { 
-                        data: 'total_pipeline', 
-                        name: 'total_pipeline', 
+                        data: 'pipeline', 
+                        name: 'pipeline', 
                         className: 'text-end', 
                         defaultContent: '0.00',
                         render: function(data, type, row) {
-                            return data || row.pipeline || '0.00';
+                            return data || row.total_pipeline || '0.00';
                         }
-                    }
+                    },
+                    { data: 'daily_consumption', name: 'daily_consumption', className: 'text-end', defaultContent: '—' },
+                    { data: 'days_left', name: 'days_left', className: 'text-center', defaultContent: '—' },
+                    { data: 'supplier_lead_time', name: 'supplier_lead_time', className: 'text-center', defaultContent: '—' },
+                    { data: 'safety_stock', name: 'safety_stock', className: 'text-end', defaultContent: '—' },
+                    { data: 'next_po', name: 'next_po', className: 'text-center', defaultContent: '—' }
                 ],
                 dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
                 language: {
@@ -2085,6 +2049,27 @@
                     { data: 'returns', name: 'returns', className: 'text-center', defaultContent: '0' },
                     { data: 'overall_rating', name: 'overall_rating', className: 'text-center', defaultContent: '-' }
                 ],
+                createdRow: function(row, data) {
+                    $(row).css('cursor', 'pointer');
+                    $(row).on('click', function(e) {
+                        // If clicking an existing drilldown badge link, let its own handler run
+                        if ($(e.target).closest('.btn-supplier-orders-drilldown, .btn-supplier-debit-notes-drilldown').length) {
+                            return;
+                        }
+                        let cellIndex = $(e.target).closest('td').index();
+                        let supplierId = data.supplier_id;
+                        let supplierName = data.supplier_name;
+                        if (!supplierId) return;
+
+                        // Column index 6 = RETURNS (DEBIT NOTES) → show debit notes
+                        if (cellIndex === 6) {
+                            window.triggerSupplierDebitNotesDrilldown(supplierId, supplierName);
+                        } else {
+                            // All other columns → show orders
+                            window.triggerSupplierOrdersDrilldown(supplierId, supplierName);
+                        }
+                    });
+                },
                 dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
                 language: {
                     search: "",
@@ -2093,6 +2078,125 @@
                 }
             });
         }
+
+    window.showSupplierMainLevel = function() {
+        document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'none', 'important');
+        document.getElementById('supplierDrilldownContainer').style.display = 'none';
+        document.getElementById('supplierPerformanceContainer').style.display = 'block';
+    };
+
+    // Reusable Supplier Orders Drilldown Function
+    window.triggerSupplierOrdersDrilldown = function(supplierId, supplierName) {
+        document.getElementById('supplierPerformanceContainer').style.display = 'none';
+        document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'flex', 'important');
+        document.getElementById('supplierBreadcrumbName').textContent = supplierName + ' (Orders)';
+        document.getElementById('supplierDrilldownTitle').innerHTML = '<i class="ri-file-list-3-line me-2 text-primary"></i>' + supplierName + ' - Purchase Orders';
+        document.getElementById('supplierDrilldownContainer').style.display = 'block';
+
+        $('#supplierDrilldownThead').html(`
+            <tr>
+                <th style="width: 45px;">#</th>
+                <th>PO NO</th>
+                <th>PO DATE</th>
+                <th>DUE DATE</th>
+                <th class="text-end">TOTAL QTY</th>
+                <th class="text-end">TOTAL AMOUNT</th>
+                <th class="text-center">DELIVERY STATUS</th>
+            </tr>
+        `);
+
+        $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>');
+
+        $.ajax({
+            url: "{{ url('/dashboard/supplier-orders-drilldown') }}",
+            type: "GET",
+            data: { supplier_id: supplierId },
+            success: function(res) {
+                let html = '';
+                if (res.orders && res.orders.length > 0) {
+                    $.each(res.orders, function(idx, o) {
+                        html += `<tr>
+                            <td>${idx + 1}</td>
+                            <td class="fw-bold text-primary">${o.po_number}</td>
+                            <td>${o.po_date}</td>
+                            <td>${o.due_date}</td>
+                            <td class="text-end fw-bold">${o.total_qty}</td>
+                            <td class="text-end fw-bold text-dark">${o.total_amount}</td>
+                            <td class="text-center">${o.delivery_status}</td>
+                        </tr>`;
+                    });
+                } else {
+                    html = `<tr><td colspan="7" class="text-center text-muted py-4">No Purchase Orders found for ${supplierName}.</td></tr>`;
+                }
+                $('#supplierDrilldownTbody').html(html);
+            },
+            error: function() {
+                $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center text-danger py-3">Error loading purchase orders.</td></tr>');
+            }
+        });
+    };
+
+    // Reusable Supplier Debit Notes Drilldown Function
+    window.triggerSupplierDebitNotesDrilldown = function(supplierId, supplierName) {
+        document.getElementById('supplierPerformanceContainer').style.display = 'none';
+        document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'flex', 'important');
+        document.getElementById('supplierBreadcrumbName').textContent = supplierName + ' (Debit Notes)';
+        document.getElementById('supplierDrilldownTitle').innerHTML = '<i class="ri-file-shield-2-line me-2 text-danger"></i>' + supplierName + ' - Debit Notes (Returns)';
+        document.getElementById('supplierDrilldownContainer').style.display = 'block';
+
+        $('#supplierDrilldownThead').html(`
+            <tr>
+                <th style="width: 45px;">#</th>
+                <th>DEBIT NOTE NO</th>
+                <th>DATE</th>
+                <th>REF INVOICE</th>
+                <th class="text-end">GRAND TOTAL</th>
+                <th class="text-center">STATUS</th>
+                <th>REMARKS</th>
+            </tr>
+        `);
+
+        $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-danger" role="status"></div></td></tr>');
+
+        $.ajax({
+            url: "{{ url('/dashboard/supplier-debit-notes-drilldown') }}",
+            type: "GET",
+            data: { supplier_id: supplierId },
+            success: function(res) {
+                let html = '';
+                if (res.debit_notes && res.debit_notes.length > 0) {
+                    $.each(res.debit_notes, function(idx, dn) {
+                        html += `<tr>
+                            <td>${idx + 1}</td>
+                            <td class="fw-bold text-danger">${dn.debit_note_no}</td>
+                            <td>${dn.debit_note_date}</td>
+                            <td>${dn.invoice_no}</td>
+                            <td class="text-end fw-bold text-danger">${dn.grand_total}</td>
+                            <td class="text-center">${dn.status}</td>
+                            <td>${dn.remarks}</td>
+                        </tr>`;
+                    });
+                } else {
+                    html = `<tr><td colspan="7" class="text-center text-muted py-4">No Debit Notes found for ${supplierName}.</td></tr>`;
+                }
+                $('#supplierDrilldownTbody').html(html);
+            },
+            error: function() {
+                $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center text-danger py-3">Error loading debit notes.</td></tr>');
+            }
+        });
+    };
+
+    // Badge click handlers (delegate to shared functions)
+    $(document).on('click', '.btn-supplier-orders-drilldown', function(e) {
+        e.preventDefault();
+        window.triggerSupplierOrdersDrilldown($(this).data('supplier-id'), $(this).data('supplier-name'));
+    });
+
+    $(document).on('click', '.btn-supplier-debit-notes-drilldown', function(e) {
+        e.preventDefault();
+        window.triggerSupplierDebitNotesDrilldown($(this).data('supplier-id'), $(this).data('supplier-name'));
+    });
 
         // 7. Fabric Utilisation Initial Load & Search
         loadFabricUtilisation(1);
@@ -2129,6 +2233,12 @@
     let utilSearchTerm = '';
     let currentUtilData = [];
     let utilSearchTimer = null;
+    let utilPerPage = 10;
+
+    function changeUtilPerPage(val) {
+        utilPerPage = parseInt(val) || 10;
+        loadFabricUtilisation(1);
+    }
 
     function loadFabricUtilisation(page, search) {
         if (page < 1) page = 1;
@@ -2147,7 +2257,7 @@
             type: 'GET',
             data: {
                 page: currentUtilPage,
-                per_page: 10,
+                per_page: utilPerPage,
                 search: utilSearchTerm
             },
             success: function(res) {
@@ -2179,6 +2289,7 @@
                             <td><span class="badge bg-label-secondary fw-bold util-style-name">${row.style}</span></td>
                             <td><span class="fw-bold text-secondary util-sp-name">${row.service_provider}</span></td>
                             <td class="text-center"><span class="badge bg-label-info fw-bold">${row.job_cards_count} JCs</span></td>
+                            <td class="text-end fw-bold text-dark">${parseInt(row.cutting_qty || 0).toLocaleString('en-IN')} Pcs</td>
                             <td class="text-end fw-bold text-dark">${parseFloat(row.fabric_issued || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             <td class="text-end fw-bold text-success">${parseFloat(row.fabric_consumed || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             <td class="text-end fw-bold ${parseFloat(row.wastage || 0) > 0 ? 'text-danger' : 'text-muted'}">${parseFloat(row.wastage || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -2188,17 +2299,19 @@
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No matching fabric utilisation records found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">No matching fabric utilisation records found.</td></tr>';
                 }
 
                 if (res.totals) {
                     const elJCs = document.getElementById('utilFootJCs');
+                    const elCutting = document.getElementById('utilFootCutting');
                     const elIssued = document.getElementById('utilFootIssued');
                     const elConsumed = document.getElementById('utilFootConsumed');
                     const elWastage = document.getElementById('utilFootWastage');
                     const elUtil = document.getElementById('utilFootUtil');
 
                     if (elJCs) elJCs.textContent = res.totals.total_jcs;
+                    if (elCutting) elCutting.textContent = res.totals.total_cutting;
                     if (elIssued) elIssued.textContent = res.totals.total_issued;
                     if (elConsumed) elConsumed.textContent = res.totals.total_consumed;
                     if (elWastage) elWastage.textContent = res.totals.total_wastage;
@@ -2226,11 +2339,41 @@
                 const numContainer = document.getElementById('utilPageNumbersContainer');
                 if (numContainer) {
                     numContainer.innerHTML = '';
-                    for (let i = 1; i <= lastUtilPage; i++) {
+                    let startPage = Math.max(1, currentUtilPage - 2);
+                    let endPage = Math.min(lastUtilPage, currentUtilPage + 2);
+
+                    if (startPage > 1) {
+                        const firstLi = document.createElement('li');
+                        firstLi.className = 'page-item';
+                        firstLi.innerHTML = `<button class="page-link" onclick="changeUtilPage(1)">1</button>`;
+                        numContainer.appendChild(firstLi);
+
+                        if (startPage > 2) {
+                            const ellipsis = document.createElement('li');
+                            ellipsis.className = 'page-item disabled';
+                            ellipsis.innerHTML = `<span class="page-link">...</span>`;
+                            numContainer.appendChild(ellipsis);
+                        }
+                    }
+
+                    for (let i = startPage; i <= endPage; i++) {
                         const li = document.createElement('li');
                         li.className = 'page-item' + (i === currentUtilPage ? ' active' : '');
                         li.innerHTML = `<button class="page-link" onclick="changeUtilPage(${i})">${i}</button>`;
                         numContainer.appendChild(li);
+                    }
+
+                    if (endPage < lastUtilPage) {
+                        if (endPage < lastUtilPage - 1) {
+                            const ellipsis = document.createElement('li');
+                            ellipsis.className = 'page-item disabled';
+                            ellipsis.innerHTML = `<span class="page-link">...</span>`;
+                            numContainer.appendChild(ellipsis);
+                        }
+                        const lastLi = document.createElement('li');
+                        lastLi.className = 'page-item';
+                        lastLi.innerHTML = `<button class="page-link" onclick="changeUtilPage(${lastUtilPage})">${lastUtilPage}</button>`;
+                        numContainer.appendChild(lastLi);
                     }
                 }
             },
@@ -2241,10 +2384,10 @@
         });
     }
 
-    function changeUtilPage(page) {
+    window.changeUtilPage = function(page) {
         if (page < 1 || page > lastUtilPage || page === currentUtilPage) return;
         loadFabricUtilisation(page);
-    }
+    };
 
     function drillDownToUtilBrand(brandName, jobCards) {
         document.getElementById('utilBrandContainer').style.display = 'none';
@@ -2256,12 +2399,14 @@
         const tbody = document.querySelector('#utilJobCardsTable tbody');
         tbody.innerHTML = '';
 
+        let totCutting = 0;
         let totIssued = 0;
         let totConsumed = 0;
         let totWastage = 0;
 
         if (jobCards && jobCards.length > 0) {
             jobCards.forEach(function(jc, index) {
+                totCutting += parseFloat(jc.cutting_qty || 0);
                 totIssued += parseFloat(jc.fabric_issued || 0);
                 totConsumed += parseFloat(jc.fabric_consumed || 0);
                 totWastage += parseFloat(jc.wastage || 0);
@@ -2276,9 +2421,12 @@
                 row.innerHTML = `
                     <td class="text-muted fw-bold">${index + 1}</td>
                     <td class="fw-bold text-primary jc-no">${jc.job_card_no}</td>
-                    <td class="text-muted">${jc.date}</td>
+                    <td class="text-muted">${jc.issue_date || jc.date || '-'}</td>
+                    <td class="text-muted">${jc.delivery_date || '-'}</td>
+                    <td class="text-center"><span class="badge bg-label-info font-monospace fw-bold">${jc.no_of_days || '-'}</span></td>
                     <td class="fw-bold jc-plant">${jc.service_provider}</td>
                     <td><span class="badge bg-label-secondary">${jc.style}</span></td>
+                    <td class="text-end fw-bold text-dark">${parseInt(jc.cutting_qty || 0).toLocaleString('en-IN')} Pcs</td>
                     <td class="text-end fw-bold text-dark">${parseFloat(jc.fabric_issued || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td class="text-end fw-bold text-success">${parseFloat(jc.fabric_consumed || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td class="text-end fw-bold ${parseFloat(jc.wastage || 0) > 0 ? 'text-danger' : 'text-muted'}">${parseFloat(jc.wastage || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -2289,10 +2437,12 @@
                 tbody.appendChild(row);
             });
         } else {
-            tbody.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-4">No job cards found for ${brandName}.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="14" class="text-center text-muted py-4">No job cards found for ${brandName}.</td></tr>`;
         }
 
         const overallPct = totIssued > 0 ? ((totConsumed / totIssued) * 100).toFixed(1) : 0;
+        const elJcFootCutting = document.getElementById('utilJcFootCutting');
+        if (elJcFootCutting) elJcFootCutting.textContent = parseInt(totCutting).toLocaleString('en-IN') + ' Pcs';
         document.getElementById('utilJcFootIssued').textContent = totIssued.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         document.getElementById('utilJcFootConsumed').textContent = totConsumed.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         document.getElementById('utilJcFootWastage').textContent = totWastage.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -2302,10 +2452,481 @@
         if (jcSearch) jcSearch.value = '';
     }
 
-    function showUtilBrandLevel() {
+    window.showUtilBrandLevel = function() {
         document.getElementById('utilBreadcrumbs').style.setProperty('display', 'none', 'important');
         document.getElementById('utilJobCardsContainer').style.display = 'none';
         document.getElementById('utilBrandContainer').style.display = 'block';
+    };
+    
+    // ==========================================
+    // Fabric Inventory Drill-Down Logic (DataTables)
+    // ==========================================
+    let currentFabricLevel = 'brand'; // 'brand', 'style', 'artno'
+    let activeFabricBrandId = null;
+    let activeFabricBrandName = '';
+    let activeFabricStyleId = null;
+    let activeFabricStyleName = '';
+
+    function showFabricLevel1() {
+        currentFabricLevel = 'brand';
+        activeFabricBrandId = null;
+        activeFabricStyleId = null;
+        $('#fabricBcBrand, #fabricBcBrandPlain, #fabricBcStyleSep, #fabricBcStyle').hide();
+        $('#fabricBreadcrumbBar').hide();
+        fetchFabricDrilldown('brand', null, null);
     }
+
+    function loadFabricStyleLevel(brandId, brandName) {
+        currentFabricLevel = 'style';
+        activeFabricBrandId = brandId;
+        activeFabricBrandName = brandName;
+        
+        $('#fabricBreadcrumbBar').show();
+        $('#fabricBcBrand').hide();
+        $('#fabricBcBrandPlain').text(brandName).show();
+        $('#fabricBcStyleSep, #fabricBcStyle').hide();
+        
+        fetchFabricDrilldown('style', brandId, null);
+    }
+
+    function loadFabricArtNoLevel(styleId, styleName) {
+        currentFabricLevel = 'artno';
+        activeFabricStyleId = styleId;
+        activeFabricStyleName = styleName;
+
+        $('#fabricBcBrandPlain').hide();
+        $('#fabricBcBrand').text(activeFabricBrandName).show();
+        $('#fabricBcStyleSep').show();
+        $('#fabricBcStyle').text(styleName).show();
+
+        fetchFabricDrilldown('artno', activeFabricBrandId, styleId);
+    }
+
+    function fetchFabricDrilldown(level, brandId, styleId) {
+        if ($.fn.DataTable.isDataTable('#fabricDrilldownTable')) {
+            $('#fabricDrilldownTable').DataTable().destroy();
+            $('#fabricDrilldownTable').empty();
+        }
+
+        let firstColHeader = 'BRAND <i class="ri ri-arrow-right-s-line text-muted small"></i>';
+        if (level === 'style') {
+            firstColHeader = 'STYLE <i class="ri ri-arrow-right-s-line text-muted small"></i>';
+        } else if (level === 'artno') {
+            firstColHeader = 'RAW MATERIAL';
+        }
+
+        let tableColumns = [
+            {
+                data: null,
+                title: '#',
+                width: '45px',
+                orderable: false,
+                render: function(data, type, row, meta) {
+                    let start = (meta.settings && meta.settings._iDisplayStart !== undefined) ? meta.settings._iDisplayStart : 0;
+                    return '<span class="text-muted fw-bold">' + (meta.row + start + 1) + '</span>';
+                }
+            },
+            {
+                data: 'label',
+                title: firstColHeader,
+                render: function(data) {
+                    if (level === 'brand' || level === 'style') {
+                        return '<span class="fw-bold text-primary d-flex align-items-center gap-1">' + (data || '') + ' <i class="ri ri-arrow-right-circle-line text-muted small"></i></span>';
+                    }
+                    return '<span class="fw-bold text-dark">' + (data || '') + '</span>';
+                }
+            }
+        ];
+
+        if (level === 'artno') {
+            tableColumns.push({
+                data: 'fabric_width',
+                title: 'FABRIC WIDTH',
+                render: function(data) {
+                    return '<span class="badge bg-light text-secondary border">' + (data || '—') + '</span>';
+                }
+            });
+        }
+
+        tableColumns.push(
+            {
+                data: 'stock',
+                title: 'STOCK',
+                className: 'text-end fw-bold text-dark',
+                render: function(data) {
+                    return parseFloat(data || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+            },
+            {
+                data: 'stock_value',
+                title: 'STOCK VALUE',
+                className: 'text-end fw-bold text-success',
+                render: function(data) {
+                    return '₹' + parseFloat(data || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+            },
+            {
+                data: 'days_in_warehouse',
+                title: 'DAYS IN WAREHOUSE',
+                className: 'text-center',
+                render: function(data) {
+                    return '<span class="badge bg-light text-dark border px-2 py-1">' + (data || 0) + ' Days</span>';
+                }
+            },
+            {
+                data: 'min_stock',
+                title: 'MIN STOCK REQ.',
+                className: 'text-center fw-bold',
+                render: function(data) {
+                    let val = parseFloat(data || 0);
+                    return val > 0 ? val.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '—';
+                }
+            },
+            {
+                data: 'shortage',
+                title: 'SHORTAGE',
+                className: 'text-center',
+                render: function(data) {
+                    let val = parseFloat(data || 0);
+                    return val > 0 ? '<span class="badge bg-warning text-dark fw-bold px-2 py-1">' + val.toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</span>' : '<span class="text-muted">—</span>';
+                }
+            },
+            {
+                data: 'excess',
+                title: 'EXCESS',
+                className: 'text-center',
+                render: function(data) {
+                    let val = parseFloat(data || 0);
+                    return val > 0 ? '<span class="badge bg-danger text-white fw-bold px-2 py-1">' + val.toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</span>' : '<span class="text-muted">—</span>';
+                }
+            },
+            {
+                data: null,
+                title: 'STATUS',
+                className: 'text-center',
+                orderable: false,
+                render: function(data, type, row) {
+                    if (row.shortage > 0) return '<span class="badge bg-warning text-dark"><i class="ri ri-alert-line"></i> Reorder</span>';
+                    if (row.excess > 0) return '<span class="badge bg-danger text-white">Excess</span>';
+                    return '<span class="badge bg-success text-white">Optimal</span>';
+                }
+            }
+        );
+
+        $('#fabricDrilldownTable').DataTable({
+            processing: true,
+            serverSide: true,
+            pageLength: 10,
+            autoWidth: false,
+            ajax: {
+                url: "{{ url('/dashboard/fabric-drilldown') }}",
+                type: "GET",
+                data: function(d) {
+                    d.level = level;
+                    d.brand_id = brandId;
+                    d.style_id = styleId;
+                }
+            },
+            columns: tableColumns,
+            createdRow: function(row, data) {
+                if (level === 'brand') {
+                    $(row).css('cursor', 'pointer').on('click', function() {
+                        loadFabricStyleLevel(data.id, data.label);
+                    });
+                } else if (level === 'style') {
+                    $(row).css('cursor', 'pointer').on('click', function() {
+                        loadFabricArtNoLevel(data.id, data.label);
+                    });
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // Accessories Inventory Drill-Down Logic (DataTables)
+    // ==========================================
+    let currentAccessoriesLevel = 'brand'; // 'brand', 'artno'
+    let activeAccessoriesBrandId = null;
+    let activeAccessoriesBrandName = '';
+
+    function showAccessoriesLevel1() {
+        currentAccessoriesLevel = 'brand';
+        activeAccessoriesBrandId = null;
+        $('#accessoriesBcBrand, #accessoriesBcBrandPlain, #accessoriesBcStyleSep, #accessoriesBcStyle').hide();
+        $('#accessoriesBreadcrumbBar').hide();
+        fetchAccessoriesDrilldown('brand', null);
+    }
+
+    function loadAccessoriesArtNoLevel(brandId, brandName) {
+        currentAccessoriesLevel = 'artno';
+        activeAccessoriesBrandId = brandId;
+        activeAccessoriesBrandName = brandName;
+
+        $('#accessoriesBreadcrumbBar').show();
+        $('#accessoriesBcBrandPlain').hide();
+        $('#accessoriesBcBrand').text(brandName).show();
+        $('#accessoriesBcStyleSep, #accessoriesBcStyle').hide();
+
+        fetchAccessoriesDrilldown('artno', brandId);
+    }
+
+    function fetchAccessoriesDrilldown(level, brandId) {
+        if ($.fn.DataTable.isDataTable('#accessoriesDrilldownTable')) {
+            $('#accessoriesDrilldownTable').DataTable().destroy();
+            $('#accessoriesDrilldownTable').empty();
+        }
+
+        let firstColHeader = 'BRAND <i class="ri ri-arrow-right-s-line text-muted small"></i>';
+        if (level === 'artno') {
+            firstColHeader = 'RAW MATERIAL';
+        }
+
+        $('#accessoriesDrilldownTable').DataTable({
+            processing: true,
+            serverSide: true,
+            pageLength: 10,
+            autoWidth: false,
+            ajax: {
+                url: "{{ url('/dashboard/accessories-drilldown') }}",
+                type: "GET",
+                data: function(d) {
+                    d.level = level;
+                    d.brand_id = brandId;
+                }
+            },
+            columns: [
+                {
+                    data: null,
+                    title: '#',
+                    width: '45px',
+                    orderable: false,
+                    render: function(data, type, row, meta) {
+                        let start = (meta.settings && meta.settings._iDisplayStart !== undefined) ? meta.settings._iDisplayStart : 0;
+                        return '<span class="text-muted fw-bold">' + (meta.row + start + 1) + '</span>';
+                    }
+                },
+                {
+                    data: 'label',
+                    title: firstColHeader,
+                    render: function(data) {
+                        if (level === 'brand') {
+                            return '<span class="fw-bold text-primary d-flex align-items-center gap-1">' + (data || '') + ' <i class="ri ri-arrow-right-circle-line text-muted small"></i></span>';
+                        }
+                        return '<span class="fw-bold text-dark">' + (data || '') + '</span>';
+                    }
+                },
+                {
+                    data: 'stock',
+                    title: 'STOCK',
+                    className: 'text-end fw-bold text-dark',
+                    render: function(data) {
+                        return parseFloat(data || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    }
+                },
+                {
+                    data: 'stock_value',
+                    title: 'STOCK VALUE',
+                    className: 'text-end fw-bold text-success',
+                    render: function(data) {
+                        return '₹' + parseFloat(data || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    }
+                },
+                {
+                    data: 'days_in_warehouse',
+                    title: 'DAYS IN WAREHOUSE',
+                    className: 'text-center',
+                    render: function(data) {
+                        return '<span class="badge bg-light text-dark border px-2 py-1">' + (data || 0) + ' Days</span>';
+                    }
+                },
+                {
+                    data: 'min_stock',
+                    title: 'MIN STOCK REQ.',
+                    className: 'text-center fw-bold',
+                    render: function(data) {
+                        let val = parseFloat(data || 0);
+                        return val > 0 ? val.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '—';
+                    }
+                },
+                {
+                    data: 'shortage',
+                    title: 'SHORTAGE',
+                    className: 'text-center',
+                    render: function(data) {
+                        let val = parseFloat(data || 0);
+                        return val > 0 ? '<span class="badge bg-warning text-dark fw-bold px-2 py-1">' + val.toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</span>' : '<span class="text-muted">—</span>';
+                    }
+                },
+                {
+                    data: 'excess',
+                    title: 'EXCESS',
+                    className: 'text-center',
+                    render: function(data) {
+                        let val = parseFloat(data || 0);
+                        return val > 0 ? '<span class="badge bg-danger text-white fw-bold px-2 py-1">' + val.toLocaleString('en-IN', {minimumFractionDigits: 2}) + '</span>' : '<span class="text-muted">—</span>';
+                    }
+                },
+                {
+                    data: null,
+                    title: 'STATUS',
+                    className: 'text-center',
+                    orderable: false,
+                    render: function(data, type, row) {
+                        if (row.shortage > 0) return '<span class="badge bg-warning text-dark"><i class="ri ri-alert-line"></i> Reorder</span>';
+                        if (row.excess > 0) return '<span class="badge bg-danger text-white">Excess</span>';
+                        return '<span class="badge bg-success text-white">Optimal</span>';
+                    }
+                }
+            ],
+            createdRow: function(row, data) {
+                if (level === 'brand') {
+                    $(row).css('cursor', 'pointer').on('click', function() {
+                        loadAccessoriesArtNoLevel(data.id, data.label);
+                    });
+                }
+            }
+        });
+    }
+
+    // Event Listeners for Fabric & Accessories Drilldown
+    $(document).ready(function() {
+        // Initial Load for Level 1 (Brand)
+        showFabricLevel1();
+        showAccessoriesLevel1();
+
+        // Breadcrumb Clicks - Fabric
+        $('#fabricBcRoot').on('click', function(e) {
+            e.preventDefault();
+            showFabricLevel1();
+        });
+
+        $('#fabricBcBrand').on('click', function(e) {
+            e.preventDefault();
+            loadFabricStyleLevel(activeFabricBrandId, activeFabricBrandName);
+        });
+
+        // Breadcrumb Clicks - Accessories
+        $('#accessoriesBcRoot').on('click', function(e) {
+            e.preventDefault();
+            showAccessoriesLevel1();
+        });
+
+        // Initialize DataTable for Fabric Utilisation
+        if ($('#utilBrandTable').length) {
+            $('#utilBrandTable').DataTable({
+                processing: true,
+                serverSide: true,
+                pageLength: 10,
+                autoWidth: false,
+                ajax: {
+                    url: "{{ url('/dashboard/fabric-utilisation') }}",
+                    type: "GET",
+                    dataSrc: function(json) {
+                        if (json.totals) {
+                            $('#utilFootJCs').text(json.totals.total_jcs);
+                            $('#utilFootCutting').text(json.totals.total_cutting);
+                            $('#utilFootIssued').text(json.totals.total_issued);
+                            $('#utilFootConsumed').text(json.totals.total_consumed);
+                            $('#utilFootWastage').text(json.totals.total_wastage);
+                            $('#utilFootUtil').html('<span class="badge bg-label-primary px-3 py-2 fw-bold">' + json.totals.total_utilisation + '</span>');
+                        }
+                        return json.data || [];
+                    }
+                },
+                columns: [
+                    {
+                        data: null,
+                        orderable: false,
+                        render: function(data, type, row, meta) {
+                            let start = (meta.settings && meta.settings._iDisplayStart !== undefined) ? meta.settings._iDisplayStart : 0;
+                            return '<span class="text-muted fw-bold">' + (meta.row + start + 1) + '</span>';
+                        }
+                    },
+                    {
+                        data: 'brand_name',
+                        render: function(data) {
+                            return '<span class="fw-bold text-dark util-brand-name">' + (data || '') + '</span>';
+                        }
+                    },
+                    {
+                        data: 'style',
+                        render: function(data) {
+                            return '<span class="badge bg-label-secondary fw-bold util-style-name">' + (data || '') + '</span>';
+                        }
+                    },
+                    {
+                        data: 'service_provider',
+                        render: function(data) {
+                            return '<span class="fw-bold text-secondary util-sp-name">' + (data || '') + '</span>';
+                        }
+                    },
+                    {
+                        data: 'job_cards_count',
+                        className: 'text-center',
+                        render: function(data) {
+                            return '<span class="badge bg-label-info fw-bold">' + (data || 0) + ' JCs</span>';
+                        }
+                    },
+                    {
+                        data: 'cutting_qty',
+                        className: 'text-end fw-bold text-dark',
+                        render: function(data) {
+                            return (data ? Number(data).toLocaleString('en-IN') : 0) + ' Pcs';
+                        }
+                    },
+                    {
+                        data: 'fabric_issued',
+                        className: 'text-end fw-bold text-dark',
+                        render: function(data) {
+                            return Number(data || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        }
+                    },
+                    {
+                        data: 'fabric_consumed',
+                        className: 'text-end fw-bold text-success',
+                        render: function(data) {
+                            return Number(data || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        }
+                    },
+                    {
+                        data: 'wastage',
+                        className: 'text-end fw-bold',
+                        render: function(data) {
+                            let val = Number(data || 0);
+                            let cls = val > 0 ? 'text-danger' : 'text-muted';
+                            return '<span class="' + cls + '">' + val.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
+                        }
+                    },
+                    {
+                        data: 'utilisation',
+                        className: 'text-center',
+                        render: function(data) {
+                            let u = Number(data || 0);
+                            let badgeClass = 'bg-danger text-white';
+                            if (u >= 95) badgeClass = 'bg-success text-white';
+                            else if (u >= 90) badgeClass = 'bg-warning text-dark';
+                            return '<span class="badge ' + badgeClass + ' fw-bold px-3 py-2">' + u + '%</span>';
+                        }
+                    },
+                    {
+                        data: null,
+                        className: 'text-center',
+                        orderable: false,
+                        render: function() {
+                            return '<button class="btn btn-xs btn-outline-primary py-1 px-2">View <i class="ri ri-arrow-right-s-line"></i></button>';
+                        }
+                    }
+                ],
+                createdRow: function(row, data) {
+                    $(row).css('cursor', 'pointer').addClass('util-brand-row');
+                    $(row).on('click', function() {
+                        let title = (data.brand_name || '') + ' - ' + (data.style || '') + ' (' + (data.service_provider || '') + ')';
+                        drillDownToUtilBrand(title, data.job_cards || []);
+                    });
+                }
+            });
+        }
+    });
 </script>
 @endsection
+

@@ -144,7 +144,7 @@
             color: #000000;
         }
         .td-lbl { width: 15mm; white-space: nowrap; }
-        .td-col { width: 1.5mm; text-align: center; }
+        .td-col { width: 3px; text-align: center; }
         .td-val { white-space: nowrap; }
         
         .art-no-box {
@@ -156,7 +156,7 @@
         
         .sticker-qr {
             position: absolute;
-            right: 23mm;
+            right: 24mm;
             top: 6mm;
             text-align:center;
         }
@@ -298,10 +298,10 @@
                             <div class="lot-vertical">Lot, {{ $labelData['lot_no'] ?? '' }}</div>
                         </div>
                         
-                        <div style="margin-top: auto; width: 100%; text-align: right; padding-left: 0mm;">
+                        <div style="margin-top: auto; width: 100%; text-align: right; padding-left: 0mm; padding-right: 7px;">
                             <span class="fw-bold" style="font-size: 7.5pt; color: #000;">Sleeve: <span style="font-size: 11pt;">{{ $sText }}</span></span>
                         </div>
-                        <div class="mrp-section" style="margin-top: 0mm;">
+                        <div class="mrp-section" style="margin-top: 0mm;  padding-right: 7px;">
                             <div class="fw-bold" style="font-size: 5px; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 5px;">(inclusive of all taxes)</span></div>
                             <div class="fw-bold" style="font-size: 12pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
                             <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 5px;">MADE IN INDIA WITH PRIDE</div>

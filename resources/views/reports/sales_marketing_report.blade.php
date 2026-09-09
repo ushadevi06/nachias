@@ -24,29 +24,30 @@
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
             <form id="salesMarketingReportForm" class="row g-3 align-items-end" onsubmit="return false;">
-                <div class="col-md-3">
+                <div class="col-12 col-md-3 col-xl-2">
                     <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
                     <select class="form-select select2" id="report_type_select" name="report_type">
-                        <option value="order-report" selected>📦 Order Report</option>
-                        <option value="invoice-report">🧾 Invoice Report</option>
-                        <option value="pending-report">⏳ Pending Orders</option>
-                        <option value="incentive-report">🗺️ Zone Wise Incentive</option>
-                        <option value="comparison-report">📊 Sales Comparison</option>
-                        <option value="credit-note-report">📝 Credit Note Report</option>
-                        <option value="despatch-report">🚚 Despatch Tracking</option>
-                        <option value="outstanding-report">💰 Zone Wise Outstanding</option>
+                        <option value="order-report" {{ (!request('report_type') && !request('type')) || request('report_type') == 'order-report' || request('type') == 'order-report' ? 'selected' : '' }}>📦 Order Report</option>
+                        <option value="sales-gst-report" {{ request('report_type') == 'sales-gst-report' || request('type') == 'sales-gst-report' || request('report_type') == 'sales-report' || request('type') == 'sales-report' ? 'selected' : '' }}>📈 Sales GST Report</option>
+                        <option value="invoice-report" {{ request('report_type') == 'invoice-report' || request('type') == 'invoice-report' ? 'selected' : '' }}>🧾 Invoice Report</option>
+                        <option value="pending-report" {{ request('report_type') == 'pending-report' || request('type') == 'pending-report' ? 'selected' : '' }}>⏳ Pending Orders</option>
+                        <option value="incentive-report" {{ request('report_type') == 'incentive-report' || request('type') == 'incentive-report' ? 'selected' : '' }}>🗺️ Zone Wise Incentive</option>
+                        <option value="comparison-report" {{ request('report_type') == 'comparison-report' || request('type') == 'comparison-report' ? 'selected' : '' }}>📊 Sales Comparison</option>
+                        <option value="credit-note-report" {{ request('report_type') == 'credit-note-report' || request('type') == 'credit-note-report' ? 'selected' : '' }}>📝 Credit Note Report</option>
+                        <option value="despatch-report" {{ request('report_type') == 'despatch-report' || request('type') == 'despatch-report' ? 'selected' : '' }}>🚚 Despatch Tracking</option>
+                        <option value="outstanding-report" {{ request('report_type') == 'outstanding-report' || request('type') == 'outstanding-report' ? 'selected' : '' }}>💰 Zone Wise Outstanding</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-2 col-xl-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
                     <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-2 col-xl-2">
                     <label class="form-label small fw-bold text-muted">To Date</label>
                     <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-md-2 col-xl-2">
                     <label class="form-label small fw-bold text-muted">Customer</label>
                     <select class="form-select select2" name="customer_id" data-placeholder="Select Customer">
                         <option value=""></option>
@@ -57,7 +58,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-12 col-md-2 col-xl-2">
                     <label class="form-label small fw-bold text-muted">Sales Executive</label>
                     <select class="form-select select2" name="agent_id" id="agent_id_filter" data-placeholder="Select Executive">
                         <option value=""></option>
@@ -68,7 +69,15 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-1 d-flex gap-1">
+                <div class="col-12 col-md-2 col-xl-1" id="einvoice_status_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted">E-Invoice</label>
+                    <select class="form-select select2" name="einvoice_status" id="einvoice_status_filter" data-placeholder="All Status">
+                        <option value="">All</option>
+                        <option value="generated" {{ request('einvoice_status') == 'generated' ? 'selected' : '' }}>Generated</option>
+                        <option value="not_generated" {{ request('einvoice_status') == 'not_generated' ? 'selected' : '' }}>Not Generated</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-1 col-xl-1 d-flex gap-1">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill p-2" title="Search">
                         <i class="ri ri-search-line"></i>
                     </button>
@@ -84,7 +93,7 @@
     <div class="card shadow-sm border-0 premium-content-card">
         <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
             <h5 class="mb-0 fw-bold text-primary" id="active_report_title">
-                📦 Order Report
+                {{ (request('report_type') == 'sales-gst-report' || request('type') == 'sales-gst-report' || request('report_type') == 'sales-report' || request('type') == 'sales-report') ? '📈 Sales GST Report' : '📦 Order Report' }}
             </h5>
         </div>
         <div class="card-body py-4">
@@ -92,6 +101,11 @@
                 <!-- 1. Order Report -->
                 <div class="tab-pane fade show active" id="order-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._order_report')
+                </div>
+
+                <!-- Sales GST Report -->
+                <div class="tab-pane fade" id="sales-gst-report" role="tabpanel">
+                    @include('reports.sales_marketing_reports._sales_gst_report')
                 </div>
 
                 <!-- 2. Invoice Report -->
@@ -324,6 +338,21 @@ document.addEventListener('DOMContentLoaded', function() {
     .badge.bg-label-warning { background: #fef9c3; color: #854d0e; }
     .badge.bg-label-danger { background: #fee2e2; color: #991b1b; }
 
+    /* Processing Indicator Styling */
+    div.dataTables_processing {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1050;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 24px;
+        min-width: 220px;
+    }
+
 </style>
 @endsection
 
@@ -360,6 +389,43 @@ $.extend(true, $.fn.dataTable.defaults, {
                         return data;
                     }
                 }
+            },
+            customize: function (xlsx) {
+                var sheet   = xlsx.xl.worksheets['sheet1.xml'];
+                var styles  = xlsx.xl['styles.xml'];
+
+                // Change built-in 0% (numFmtId 9) to 0.00% (numFmtId 10) in styles
+                $('cellXfs xf[numFmtId="9"]', styles).attr('numFmtId', '10');
+
+                // Collect all numFmtIds that represent percentage formats
+                var pctFmtIds = [9, 10, 167];
+                $('numFmt', styles).each(function () {
+                    var code = $(this).attr('formatCode') || '';
+                    if (code.indexOf('%') !== -1) {
+                        pctFmtIds.push(parseInt($(this).attr('numFmtId'), 10));
+                    }
+                });
+
+                var xfs = [];
+                $('cellXfs xf', styles).each(function () {
+                    xfs.push(parseInt($(this).attr('numFmtId') || 0, 10));
+                });
+
+                $('row c', sheet).each(function () {
+                    var s     = parseInt($(this).attr('s') || 0, 10);
+                    var fmtId = xfs[s] || 0;
+
+                    if (pctFmtIds.indexOf(fmtId) !== -1) {
+                        var raw = parseFloat($('v', this).text());
+                        if (!isNaN(raw)) {
+                            var pctVal = (raw * 100);
+                            var pctStr = (Math.round(pctVal * 100) / 100).toFixed(2) + '%';
+                            $(this).attr('t', 'str').removeAttr('s');
+                            $(this).find('v').remove();
+                            $(this).append('<v>' + pctStr + '</v>');
+                        }
+                    }
+                });
             }
         },
         {
@@ -424,6 +490,86 @@ $(document).ready(function() {
                 { data: 'status', name: 'status', className: 'text-center' }
             ]
         },
+        'sales-gst-report': {
+            tableId: '#salesGstReportTable',
+            type: 'sales-gst-report',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center' },
+                { data: 'inv_no', name: 'inv_no', className: 'fw-bold text-primary' },
+                { data: 'inv_date', name: 'inv_date', className: 'text-nowrap' },
+                { data: 'customer_name', name: 'customer_name', className: 'fw-medium text-dark' },
+                { data: 'gst_no', name: 'gst_no', className: 'text-nowrap' },
+                { data: 'place', name: 'place' },
+                { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
+                { data: 'sub_total', name: 'sub_total', className: 'text-end fw-semibold text-dark' },
+                { data: 'discount', name: 'discount', className: 'text-end fw-semibold text-danger' },
+                { data: 'taxable_value', name: 'taxable_value', className: 'text-end fw-semibold text-dark' },
+                { data: 'cgst_percent', name: 'cgst_percent', className: 'text-center' },
+                { data: 'cgst_amount', name: 'cgst_amount', className: 'text-end fw-semibold text-dark' },
+                { data: 'sgst_percent', name: 'sgst_percent', className: 'text-center' },
+                { data: 'sgst_amount', name: 'sgst_amount', className: 'text-end fw-semibold text-dark' },
+                { data: 'igst_percent', name: 'igst_percent', className: 'text-center' },
+                { data: 'igst_amount', name: 'igst_amount', className: 'text-end fw-semibold text-dark' },
+                { data: 'round_off', name: 'round_off', className: 'text-end fw-semibold text-secondary' },
+                { data: 'total_amount', name: 'total_amount', className: 'text-end fw-bold text-success' },
+                { data: 'einvoice_status', name: 'einvoice_status', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#sales_gst_report_total_qty').html(json.totals.qty);
+                    $('#sales_gst_report_total_subtotal').html(json.totals.sub_total);
+                    $('#sales_gst_report_total_discount').html(json.totals.discount);
+                    $('#sales_gst_report_total_taxable').html(json.totals.taxable_value);
+                    $('#sales_gst_report_total_cgst').html(json.totals.cgst_amount);
+                    $('#sales_gst_report_total_sgst').html(json.totals.sgst_amount);
+                    $('#sales_gst_report_total_igst').html(json.totals.igst_amount);
+                    $('#sales_gst_report_total_round_off').html(json.totals.round_off);
+                    $('#sales_gst_report_total_amount').html(json.totals.total_amount);
+                }
+            }
+        },
+        'sales-report': {
+            tableId: '#salesGstReportTable',
+            type: 'sales-gst-report',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center' },
+                { data: 'inv_no', name: 'inv_no', className: 'fw-bold text-primary' },
+                { data: 'inv_date', name: 'inv_date', className: 'text-nowrap' },
+                { data: 'customer_name', name: 'customer_name', className: 'fw-medium text-dark' },
+                { data: 'gst_no', name: 'gst_no', className: 'text-nowrap' },
+                { data: 'place', name: 'place' },
+                { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
+                { data: 'sub_total', name: 'sub_total', className: 'text-end fw-semibold text-dark' },
+                { data: 'discount', name: 'discount', className: 'text-end fw-semibold text-danger' },
+                { data: 'taxable_value', name: 'taxable_value', className: 'text-end fw-semibold text-dark' },
+                { data: 'cgst_percent', name: 'cgst_percent', className: 'text-center' },
+                { data: 'cgst_amount', name: 'cgst_amount', className: 'text-end fw-semibold text-dark' },
+                { data: 'sgst_percent', name: 'sgst_percent', className: 'text-center' },
+                { data: 'sgst_amount', name: 'sgst_amount', className: 'text-end fw-semibold text-dark' },
+                { data: 'igst_percent', name: 'igst_percent', className: 'text-center' },
+                { data: 'igst_amount', name: 'igst_amount', className: 'text-end fw-semibold text-dark' },
+                { data: 'round_off', name: 'round_off', className: 'text-end fw-semibold text-secondary' },
+                { data: 'total_amount', name: 'total_amount', className: 'text-end fw-bold text-success' },
+                { data: 'einvoice_status', name: 'einvoice_status', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#sales_gst_report_total_qty').html(json.totals.qty);
+                    $('#sales_gst_report_total_subtotal').html(json.totals.sub_total);
+                    $('#sales_gst_report_total_discount').html(json.totals.discount);
+                    $('#sales_gst_report_total_taxable').html(json.totals.taxable_value);
+                    $('#sales_gst_report_total_cgst').html(json.totals.cgst_amount);
+                    $('#sales_gst_report_total_sgst').html(json.totals.sgst_amount);
+                    $('#sales_gst_report_total_igst').html(json.totals.igst_amount);
+                    $('#sales_gst_report_total_round_off').html(json.totals.round_off);
+                    $('#sales_gst_report_total_amount').html(json.totals.total_amount);
+                }
+            }
+        },
         'invoice-report': {
             tableId: '#invoiceReportTable',
             type: 'invoice-report',
@@ -479,7 +625,7 @@ $(document).ready(function() {
             tableId: '#despatchReportTable',
             type: 'despatch-report',
             columns: [
-                { data: 'sno', name: 'sno', className: 'text-center font-monospace' },
+                { data: 'sno', name: 'sno', className: 'text-center' },
                 { data: 'so_no', name: 'so_no', className: 'fw-bold text-primary' },
                 { data: 'order_no', name: 'order_no' },
                 { data: 'order_type', name: 'order_type' },
@@ -543,7 +689,7 @@ $(document).ready(function() {
         }
     }
 
-    function loadActiveTabTable(tabPaneId) {
+    function loadActiveTabTable(tabPaneId, resetPaging = true) {
         const config = tableConfigs[tabPaneId];
         if (!config) return;
 
@@ -556,7 +702,7 @@ $(document).ready(function() {
             const dt = tableElem.DataTable();
             if (dt && dt.ajax && typeof dt.ajax.url === 'function' && dt.ajax.url()) {
                 try {
-                    dt.ajax.reload(function() { showReportLoading(false); }, false);
+                    dt.ajax.reload(function() { showReportLoading(false); }, resetPaging);
                     return;
                 } catch (err) {
                     dt.destroy();
@@ -583,16 +729,27 @@ $(document).ready(function() {
                     d.to_date = $('.end_date').val();
                     d.customer_id = $('select[name="customer_id"]').val();
                     d.agent_id = $('select[name="agent_id"]').val();
+                    d.einvoice_status = $('select[name="einvoice_status"]').val();
                 }
             },
             drawCallback: function() {
                 showReportLoading(false);
             },
             columns: config.columns,
+            footerCallback: config.footerCallback || function() {},
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
             pageLength: 10
         });
+    }
+
+    function updateFilterVisibility(reportType) {
+        if (reportType === 'sales-gst-report' || reportType === 'sales-report' || reportType === 'invoice-report') {
+            $('#einvoice_status_filter_col').show();
+        } else {
+            $('#einvoice_status_filter_col').hide();
+            $('select[name="einvoice_status"]').val('').trigger('change.select2');
+        }
     }
 
     // Select Report Type Change Listener
@@ -604,7 +761,8 @@ $(document).ready(function() {
         $('.tab-pane').removeClass('show active');
         $('#' + selectedType).addClass('show active');
 
-        loadActiveTabTable(selectedType);
+        updateFilterVisibility(selectedType);
+        loadActiveTabTable(selectedType, true);
     });
 
     // Initialize Active Report on Page Load
@@ -615,7 +773,8 @@ $(document).ready(function() {
     }
     $('.tab-pane').removeClass('show active');
     $('#' + initialReportType).addClass('show active');
-    loadActiveTabTable(initialReportType);
+    updateFilterVisibility(initialReportType);
+    loadActiveTabTable(initialReportType, true);
 
     // Form Filter Submit listener
     $('#salesMarketingReportForm').on('submit', function(e) {
@@ -627,14 +786,14 @@ $(document).ready(function() {
             if (dt && dt.ajax && typeof dt.ajax.url === 'function' && dt.ajax.url()) {
                 try {
                     showReportLoading(true);
-                    dt.ajax.reload(function() { showReportLoading(false); });
+                    dt.ajax.reload(function() { showReportLoading(false); }, true);
                     return;
                 } catch (err) {
                     dt.destroy();
                 }
             }
         }
-        loadActiveTabTable(activeTabId);
+        loadActiveTabTable(activeTabId, true);
     });
 
     var isOrderRootLevel = true;
@@ -704,6 +863,7 @@ $(document).ready(function() {
         $('#orderReportTbody').html(rowsHtml);
 
         $('#orderReportTable').DataTable({
+            processing: true,
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -801,6 +961,7 @@ $(document).ready(function() {
         $('#pendingReportTbody').html(rowsHtml);
 
         $('#pendingReportTable').DataTable({
+            processing: true,
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -839,6 +1000,7 @@ $(document).ready(function() {
         $('.end_date').val('');
         $('select[name="customer_id"]').val('').trigger('change');
         $('select[name="agent_id"]').val('').trigger('change');
+        $('select[name="einvoice_status"]').val('').trigger('change');
         $('#salesMarketingReportForm').trigger('submit');
     });
 

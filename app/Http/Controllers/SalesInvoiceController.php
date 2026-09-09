@@ -230,7 +230,7 @@ class SalesInvoiceController extends Controller
                     }
                 } else {
                     $eInvoiceBtn = '<button type="button" class="btn btn-info einvoice-generate-btn" data-id="' . $inv->id . '" title="Generate E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
-                    $eInvoiceBtn .= '<button type="button" class="btn btn-primary einvoice-get-irn-btn" data-id="' . $inv->id . '" title="Get / Sync IRN from TaxPro" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-refresh-line"></i></button>';
+                    /* $eInvoiceBtn .= '<button type="button" class="btn btn-primary einvoice-get-irn-btn" data-id="' . $inv->id . '" title="Get / Sync IRN from TaxPro" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-refresh-line"></i></button>'; */
                 }
 
                 $editBtn = '';

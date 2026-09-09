@@ -2058,29 +2058,29 @@
 
                     // Completed Qty
                     var completedInput = row.find('.row-completed-qty');
-                    if (bulkCompleted !== '' && completedInput.attr('data-user-modified') !== 'true') {
-                        completedInput.val(bulkCompleted);
+                    if (bulkCompleted !== '') {
+                        completedInput.val(bulkCompleted).removeAttr('data-user-modified');
                         changed = true;
                     }
 
                     // Wastage Qty
                     var wastageInput = row.find('.row-wastage-qty');
-                    if (bulkWastage !== '' && wastageInput.attr('data-user-modified') !== 'true') {
-                        wastageInput.val(bulkWastage);
+                    if (bulkWastage !== '') {
+                        wastageInput.val(bulkWastage).removeAttr('data-user-modified');
                         changed = true;
                     }
 
                     // QC Checked
                     var qcCheckedInput = row.find('.row-qc-checked');
-                    if (qcCheckedInput.length > 0 && bulkQcChecked !== '' && qcCheckedInput.attr('data-user-modified') !== 'true') {
-                        qcCheckedInput.val(bulkQcChecked);
+                    if (qcCheckedInput.length > 0 && bulkQcChecked !== '') {
+                        qcCheckedInput.val(bulkQcChecked).removeAttr('data-user-modified');
                         changed = true;
                     }
 
                     // QC Passed
                     var qcPassedInput = row.find('.row-qc-passed');
-                    if (qcPassedInput.length > 0 && bulkQcPassed !== '' && qcPassedInput.attr('data-user-modified') !== 'true') {
-                        qcPassedInput.val(bulkQcPassed);
+                    if (qcPassedInput.length > 0 && bulkQcPassed !== '') {
+                        qcPassedInput.val(bulkQcPassed).removeAttr('data-user-modified');
                         changed = true;
                     }
 

@@ -568,6 +568,7 @@ class HomeController extends Controller
             $total_fabric_stock_val += $stockValue;
 
             $fabric_stock_summary[] = [
+                'brand_id'   => $brandId,
                 'brand_name' => $row->brand_name,
                 'stock' => $stock,
                 'stock_value' => $stockValue,
@@ -615,6 +616,332 @@ class HomeController extends Controller
             'supplier_perf_count', 'supplier_perf_spend', 'supplier_perf_ontime', 'supplier_perf_returns',
             'kpiCardData'
         ));
+    }
+
+    /**
+     * AJAX endpoint for Fabric Inventory Dashboard 3-level drill-down.
+     * Level 'style'  → filter by brand_id, group by style_id / style_name
+     * Level 'artno'  → filter by brand_id + style_id, group by art_no + fabric_width_id
+     */
+    public function fabricInventoryDrilldown(Request $request)
+    {
+        $level   = $request->input('level', 'brand'); // 'brand' | 'style' | 'artno'
+        $brandId = $request->input('brand_id');
+        $styleId = $request->input('style_id');
+        
+        $search = $request->input('search');
+        if (is_array($search) && isset($search['value'])) {
+            $search = trim(strtolower($search['value']));
+        } else {
+            $search = trim(strtolower(is_string($search) ? $search : ''));
+        }
+
+        if (!in_array($level, ['brand', 'style', 'artno'])) {
+            return response()->json(['error' => 'Invalid request'], 422);
+        }
+        if ($level === 'style' && !$brandId) {
+            return response()->json(['error' => 'brand_id required'], 422);
+        }
+        if ($level === 'artno' && !$styleId) {
+            return response()->json(['error' => 'style_id required'], 422);
+        }
+
+        $base = DB::table('stock_entry_items as sei')
+            ->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
+            ->where('sei.store_category_id', 1)
+            ->whereNull('sei.deleted_at');
+
+        if ($level === 'brand') {
+            $base->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
+                 ->selectRaw("
+                    sei.brand_id as id,
+                    COALESCE(b.brand_name, 'Unknown Brand') as label,
+                    SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
+                    SUM((sei.qty_in - COALESCE(sei.qty_out, 0)) * COALESCE(sei.price, 0)) as stock_value,
+                    ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
+                    0 as min_stock_sum
+                 ")
+                 ->groupBy('sei.brand_id', 'b.brand_name');
+                 
+            $minStocksByBrand = DB::table('stock_entry_items as sei2')
+                ->join('raw_materials as rm2', 'sei2.raw_material_id', '=', 'rm2.id')
+                ->where('sei2.store_category_id', 1)
+                ->whereNull('sei2.deleted_at')
+                ->select('sei2.brand_id', 'rm2.id as rm_id', DB::raw('COALESCE(rm2.min_stock, 0) as min_stock'))
+                ->distinct()
+                ->get()
+                ->groupBy('brand_id')
+                ->map(function($items) { return $items->sum('min_stock'); });
+                
+        } elseif ($level === 'style') {
+            $base->where('sei.brand_id', $brandId)
+                 ->leftJoin('styles as s', 'sei.style_id', '=', 's.id')
+                 ->selectRaw("
+                    sei.style_id as id,
+                    COALESCE(s.style_name, 'Unknown Style') as label,
+                    SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
+                    SUM((sei.qty_in - COALESCE(sei.qty_out, 0)) * COALESCE(sei.price, 0)) as stock_value,
+                    ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
+                    COALESCE(SUM(DISTINCT COALESCE(rm.min_stock, 0)), 0) as min_stock_sum
+                 ")
+                 ->groupBy('sei.style_id', 's.style_name');
+        } else {
+            $base->where('sei.brand_id', $brandId)
+                 ->where('sei.style_id', $styleId)
+                 ->leftJoin('fabric_sizes as fs', 'sei.fabric_width_id', '=', 'fs.id')
+                 ->selectRaw("
+                    sei.art_no as label,
+                    sei.fabric_width_id,
+                    COALESCE(fs.width, '—') as fabric_width,
+                    SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
+                    SUM((sei.qty_in - COALESCE(sei.qty_out, 0)) * COALESCE(sei.price, 0)) as stock_value,
+                    ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
+                    COALESCE(SUM(DISTINCT COALESCE(rm.min_stock, 0)), 0) as min_stock_sum
+                 ")
+                 ->groupBy('sei.art_no', 'sei.fabric_width_id', 'fs.width');
+        }
+
+        $base->having('stock', '>', 0)->orderByDesc('stock');
+        $rows = $base->get();
+        
+        $data = [];
+        $totalStock = 0;
+        $totalVal = 0;
+        $totalMin = 0;
+        $totalShort = 0;
+        $totalExc = 0;
+
+        foreach ($rows as $row) {
+            $stock    = floatval($row->stock);
+            
+            if ($level === 'brand') {
+                $minStock = floatval($minStocksByBrand[$row->id] ?? 0);
+            } else {
+                $minStock = floatval($row->min_stock_sum);
+            }
+            
+            $shortage = max(0, $minStock - $stock);
+            $excess   = max(0, $stock - $minStock);
+            
+            $item = [
+                'id'               => $row->id ?? null,
+                'label'            => $level === 'artno' && empty($row->label) ? '(No Art No.)' : $row->label,
+                'stock'            => $stock,
+                'stock_value'      => floatval($row->stock_value),
+                'days_in_warehouse' => intval($row->avg_days),
+                'min_stock'        => $minStock,
+                'shortage'         => $shortage,
+                'excess'           => $excess,
+            ];
+            
+            if ($level === 'artno') {
+                $item['fabric_width'] = $row->fabric_width;
+            }
+
+            // Apply search filtering
+            if ($search !== '') {
+                $match = false;
+                if (str_contains(strtolower($item['label']), $search)) $match = true;
+                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search)) $match = true;
+                if (!$match) continue;
+            }
+
+            $totalStock += $item['stock'];
+            $totalVal   += $item['stock_value'];
+            $totalMin   += $item['min_stock'];
+            $totalShort += $item['shortage'];
+            $totalExc   += $item['excess'];
+            
+            $data[] = $item;
+        }
+
+        // DataTables / Manual Pagination
+        $total = count($data);
+        if ($request->has('start')) {
+            $start = max(0, intval($request->input('start', 0)));
+            $length = intval($request->input('length', 10));
+            if ($length < 0) $length = $total;
+        } else {
+            $perPage = intval($request->input('per_page', 10));
+            $page = intval($request->input('page', 1));
+            $lastPage = ceil($total / $perPage) ?: 1;
+            $page = max(1, min($page, $lastPage));
+            $start = ($page - 1) * $perPage;
+            $length = $perPage;
+        }
+        
+        $paginatedData = array_slice($data, $start, $length);
+
+        return response()->json([
+            'draw'            => intval($request->get('draw', 1)),
+            'recordsTotal'    => $total,
+            'recordsFiltered' => $total,
+            'data'            => array_values($paginatedData),
+            'current_page'    => isset($page) ? $page : 1,
+            'last_page'       => isset($lastPage) ? $lastPage : 1,
+            'total'           => $total,
+            'totals'          => [
+                'stock'       => $totalStock,
+                'stock_value' => $totalVal,
+                'min_stock'   => $totalMin,
+                'shortage'    => $totalShort,
+                'excess'      => $totalExc,
+            ]
+        ]);
+    }
+
+    /**
+     * AJAX endpoint for Accessories Inventory Dashboard 2-level drill-down.
+     * Filtered by store_category_id = 2 (Accessories)
+     */
+    public function accessoriesInventoryDrilldown(Request $request)
+    {
+        $level   = $request->input('level', 'brand'); // 'brand' | 'artno'
+        $brandId = $request->input('brand_id');
+        
+        $search = $request->input('search');
+        if (is_array($search) && isset($search['value'])) {
+            $search = trim(strtolower($search['value']));
+        } else {
+            $search = trim(strtolower(is_string($search) ? $search : ''));
+        }
+
+        if (!in_array($level, ['brand', 'artno'])) {
+            return response()->json(['error' => 'Invalid request'], 422);
+        }
+        if ($level === 'artno' && !$brandId) {
+            return response()->json(['error' => 'brand_id required'], 422);
+        }
+
+        $base = DB::table('stock_entry_items as sei')
+            ->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
+            ->where('sei.store_category_id', 2)
+            ->whereNull('sei.deleted_at');
+
+        if ($level === 'brand') {
+            $base->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
+                 ->selectRaw("
+                    sei.brand_id as id,
+                    COALESCE(b.brand_name, 'Unknown Brand') as label,
+                    SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
+                    SUM((sei.qty_in - COALESCE(sei.qty_out, 0)) * COALESCE(sei.price, 0)) as stock_value,
+                    ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
+                    0 as min_stock_sum
+                 ")
+                 ->groupBy('sei.brand_id', 'b.brand_name');
+                 
+            $minStocksByBrand = DB::table('stock_entry_items as sei2')
+                ->join('raw_materials as rm2', 'sei2.raw_material_id', '=', 'rm2.id')
+                ->where('sei2.store_category_id', 2)
+                ->whereNull('sei2.deleted_at')
+                ->select('sei2.brand_id', 'rm2.id as rm_id', DB::raw('COALESCE(rm2.min_stock, 0) as min_stock'))
+                ->distinct()
+                ->get()
+                ->groupBy('brand_id')
+                ->map(function($items) { return $items->sum('min_stock'); });
+                
+        } else {
+            $base->where('sei.brand_id', $brandId)
+                 ->leftJoin('fabric_sizes as fs', 'sei.fabric_width_id', '=', 'fs.id')
+                 ->selectRaw("
+                    sei.art_no as label,
+                    sei.fabric_width_id,
+                    COALESCE(fs.width, '—') as fabric_width,
+                    SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
+                    SUM((sei.qty_in - COALESCE(sei.qty_out, 0)) * COALESCE(sei.price, 0)) as stock_value,
+                    ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
+                    COALESCE(SUM(DISTINCT COALESCE(rm.min_stock, 0)), 0) as min_stock_sum
+                 ")
+                 ->groupBy('sei.art_no', 'sei.fabric_width_id', 'fs.width');
+        }
+
+        $base->having('stock', '>', 0)->orderByDesc('stock');
+        $rows = $base->get();
+        
+        $data = [];
+        $totalStock = 0;
+        $totalVal = 0;
+        $totalMin = 0;
+        $totalShort = 0;
+        $totalExc = 0;
+
+        foreach ($rows as $row) {
+            $stock    = floatval($row->stock);
+            
+            if ($level === 'brand') {
+                $minStock = floatval($minStocksByBrand[$row->id] ?? 0);
+            } else {
+                $minStock = floatval($row->min_stock_sum);
+            }
+            
+            $shortage = max(0, $minStock - $stock);
+            $excess   = max(0, $stock - $minStock);
+            
+            $item = [
+                'id'               => $row->id ?? null,
+                'label'            => $level === 'artno' && empty($row->label) ? '(No Art No.)' : $row->label,
+                'stock'            => $stock,
+                'stock_value'      => floatval($row->stock_value),
+                'days_in_warehouse' => intval($row->avg_days),
+                'min_stock'        => $minStock,
+                'shortage'         => $shortage,
+                'excess'           => $excess,
+            ];
+            
+            if ($level === 'artno') {
+                $item['fabric_width'] = $row->fabric_width;
+            }
+
+            // Apply search filtering
+            if ($search !== '') {
+                $match = false;
+                if (str_contains(strtolower($item['label']), $search)) $match = true;
+                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search)) $match = true;
+                if (!$match) continue;
+            }
+
+            $totalStock += $item['stock'];
+            $totalVal   += $item['stock_value'];
+            $totalMin   += $item['min_stock'];
+            $totalShort += $item['shortage'];
+            $totalExc   += $item['excess'];
+            
+            $data[] = $item;
+        }
+
+        // DataTables / Manual Pagination
+        $total = count($data);
+        if ($request->has('start')) {
+            $start = max(0, intval($request->input('start', 0)));
+            $length = intval($request->input('length', 10));
+            if ($length < 0) $length = $total;
+        } else {
+            $perPage = intval($request->input('per_page', 10));
+            $page = intval($request->input('page', 1));
+            $lastPage = ceil($total / $perPage) ?: 1;
+            $page = max(1, min($page, $lastPage));
+            $start = ($page - 1) * $perPage;
+            $length = $perPage;
+        }
+        
+        $paginatedData = array_slice($data, $start, $length);
+
+        return response()->json([
+            'draw'            => intval($request->get('draw', 1)),
+            'recordsTotal'    => $total,
+            'recordsFiltered' => $total,
+            'data'            => array_values($paginatedData),
+            'current_page'    => isset($page) ? $page : 1,
+            'last_page'       => isset($lastPage) ? $lastPage : 1,
+            'total'           => $total,
+            'totals'          => [
+                'stock'       => $totalStock,
+                'stock_value' => $totalVal,
+                'min_stock'   => $totalMin,
+                'shortage'    => $totalShort,
+                'excess'      => $totalExc,
+            ]
+        ]);
     }
 
     private function computeOperationsKpiCard()
@@ -788,10 +1115,12 @@ class HomeController extends Controller
         $total_util_issued = 0;
         $total_util_consumed = 0;
         $total_util_wastage = 0;
+        $total_util_cutting = 0;
 
         foreach ($utilJobCards as $jc) {
             $brandName = $jc->brand ? $jc->brand->brand_name : 'Unassigned Brand';
             $brandId = $jc->brand_id ?: 0;
+            $cuttingQty = floatval($jc->grand_total_qty ?: 0);
 
             $issuedFromItems = $jc->issueItems->sum('qty_issue');
             $issuedFromDetails = $jc->fabricDetails->sum('total_qty');
@@ -823,13 +1152,33 @@ class HomeController extends Controller
             $total_util_issued += $fabricIssued;
             $total_util_consumed += $fabricConsumed;
             $total_util_wastage += $wastage;
+            $total_util_cutting += $cuttingQty;
+
+            $issueDate = $jc->job_card_date ? date('Y-m-d', strtotime($jc->job_card_date)) : null;
+            $deliveryDate = $jc->delivery_date ? date('Y-m-d', strtotime($jc->delivery_date)) : null;
+
+            $noOfDaysStr = '-';
+            if (!empty($jc->no_of_days)) {
+                $noOfDaysStr = $jc->no_of_days . ' Days';
+            } elseif ($issueDate && $deliveryDate) {
+                $days = (new \DateTime($deliveryDate))->diff(new \DateTime($issueDate))->days;
+                $noOfDaysStr = $days . ' Days';
+            } elseif ($issueDate) {
+                $today = date('Y-m-d');
+                $days = (new \DateTime($today))->diff(new \DateTime($issueDate))->days;
+                $noOfDaysStr = $days . ' Days';
+            }
 
             $jobCardDetail = [
                 'id' => $jc->id,
                 'job_card_no' => $jc->job_card_no,
                 'date' => $jc->job_card_date ? date('d-M-Y', strtotime($jc->job_card_date)) : '-',
+                'issue_date' => $jc->job_card_date ? date('d-M-Y', strtotime($jc->job_card_date)) : '-',
+                'delivery_date' => $jc->delivery_date ? date('d-M-Y', strtotime($jc->delivery_date)) : '-',
+                'no_of_days' => $noOfDaysStr,
                 'service_provider' => $serviceProviderName,
                 'style' => $style,
+                'cutting_qty' => $cuttingQty,
                 'fabric_issued' => floatval($fabricIssued),
                 'fabric_consumed' => floatval($fabricConsumed),
                 'wastage' => floatval($wastage),
@@ -847,6 +1196,7 @@ class HomeController extends Controller
                     'style' => $style,
                     'service_provider' => $serviceProviderName,
                     'job_cards_count' => 0,
+                    'cutting_qty' => 0,
                     'fabric_issued' => 0,
                     'fabric_consumed' => 0,
                     'wastage' => 0,
@@ -856,6 +1206,7 @@ class HomeController extends Controller
             }
 
             $fabric_utilisation_summary[$groupKey]['job_cards_count']++;
+            $fabric_utilisation_summary[$groupKey]['cutting_qty'] += $cuttingQty;
             $fabric_utilisation_summary[$groupKey]['fabric_issued'] += $fabricIssued;
             $fabric_utilisation_summary[$groupKey]['fabric_consumed'] += $fabricConsumed;
             $fabric_utilisation_summary[$groupKey]['wastage'] += $wastage;
@@ -881,6 +1232,7 @@ class HomeController extends Controller
             'total_issued' => $total_util_issued,
             'total_consumed' => $total_util_consumed,
             'total_wastage' => $total_util_wastage,
+            'total_cutting' => $total_util_cutting,
             'total_util_pct' => $total_util_pct,
         ];
     }
@@ -888,9 +1240,15 @@ class HomeController extends Controller
     public function getFabricUtilisationAjax(Request $request)
     {
         $allData = $this->computeFabricUtilisationSummary();
-        $search = trim($request->get('search', ''));
-        $page = max(1, intval($request->get('page', 1)));
-        $perPage = max(1, intval($request->get('per_page', 10)));
+        $search = '';
+        if ($request->has('search')) {
+            $s = $request->get('search');
+            if (is_array($s) && isset($s['value'])) {
+                $search = trim($s['value']);
+            } else if (is_string($s)) {
+                $search = trim($s);
+            }
+        }
 
         $summary = $allData['summary'];
 
@@ -902,33 +1260,37 @@ class HomeController extends Controller
             }));
         }
 
-        $totalRecords = count($summary);
-        $lastPage = max(1, ceil($totalRecords / $perPage));
-        if ($page > $lastPage) $page = $lastPage;
+        $recordsTotal = count($allData['summary']);
+        $recordsFiltered = count($summary);
+
+        $start = max(0, intval($request->get('start', 0)));
+        $length = intval($request->get('length', 10));
+
+        if ($length < 0) {
+            $pageRows = $summary;
+        } else {
+            $pageRows = array_slice($summary, $start, $length);
+        }
 
         $totIssued = collect($summary)->sum('fabric_issued');
         $totConsumed = collect($summary)->sum('fabric_consumed');
         $totWastage = collect($summary)->sum('wastage');
+        $totCutting = collect($summary)->sum('cutting_qty');
         $totJcs = collect($summary)->sum('job_cards_count');
         $totUtil = $totIssued > 0 ? round(($totConsumed / $totIssued) * 100, 1) : 0;
 
-        $offset = ($page - 1) * $perPage;
-        $pageData = array_slice($summary, $offset, $perPage);
-
         return response()->json([
-            'data' => $pageData,
-            'current_page' => $page,
-            'per_page' => $perPage,
-            'total_records' => $totalRecords,
-            'last_page' => $lastPage,
-            'from' => $totalRecords > 0 ? $offset + 1 : 0,
-            'to' => min($offset + $perPage, $totalRecords),
-            'totals' => [
-                'total_jcs' => number_format($totJcs) . ' JCs',
-                'total_issued' => number_format($totIssued, 2),
-                'total_consumed' => number_format($totConsumed, 2),
-                'total_wastage' => number_format($totWastage, 2),
-                'total_utilisation' => $totUtil . '%'
+            'draw'            => intval($request->get('draw', 1)),
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $pageRows,
+            'totals'          => [
+                'total_jcs'         => number_format($totJcs) . ' JCs',
+                'total_cutting'     => number_format($totCutting) . ' Pcs',
+                'total_issued'      => number_format($totIssued, 2),
+                'total_consumed'    => number_format($totConsumed, 2),
+                'total_wastage'     => number_format($totWastage, 2),
+                'total_utilisation' => $totUtil . '%',
             ]
         ]);
     }
@@ -1043,6 +1405,16 @@ class HomeController extends Controller
                 ->groupBy('jcfd.art_no')
                 ->get()
                 ->keyBy('art_no');
+
+            // Master Settings Lookup for current page items
+            $settingsQuery = DB::table('core_material_planner_settings')
+                ->whereIn('art_no', $pageArtList)
+                ->whereNull('deleted_at')
+                ->where(function($q) {
+                    $q->whereNull('status')->orWhere('status', 'Active');
+                })
+                ->get()
+                ->keyBy('art_no');
         }
 
         $pageData = [];
@@ -1054,6 +1426,34 @@ class HomeController extends Controller
             $fg = max($fg1, $fg2);
             $pipeline = $stock + $wip;
 
+            // Master Settings lookup
+            $setting = $settingsQuery[$item->art_no] ?? null;
+            $dailyConsumption = floatval($setting->daily_consumption ?? 0);
+            $supplierLeadTime = intval($setting->supplier_lead_time ?? 0);
+            $safetyStock = floatval($setting->safety_stock ?? 0);
+
+            // Calculations
+            $daysLeftStr = '—';
+            $daysLeftVal = 0;
+            if ($dailyConsumption > 0) {
+                $daysLeftVal = round($pipeline / $dailyConsumption, 1);
+                $daysLeftStr = $daysLeftVal . ' Days';
+            }
+
+            $reorderPointMeters = ($dailyConsumption * $supplierLeadTime) + $safetyStock;
+            
+            $nextPoStr = '—';
+            if ($dailyConsumption > 0) {
+                $netAvailableMeters = $pipeline - $reorderPointMeters;
+                if ($netAvailableMeters <= 0) {
+                    $nextPoStr = '<span class="badge bg-danger text-white px-2 py-1 fw-bold"><i class="ri ri-alarm-warning-line me-1"></i>ORDER NOW</span>';
+                } else {
+                    $daysUntilPo = floor($netAvailableMeters / $dailyConsumption);
+                    $nextPoDate = \Carbon\Carbon::now()->addDays($daysUntilPo);
+                    $nextPoStr = '<span class="fw-bold text-dark">' . $nextPoDate->format('d M') . '</span>';
+                }
+            }
+
             $pageData[] = [
                 'DT_RowIndex' => $start + $idx + 1,
                 'art_no' => '<span class="fw-bold text-primary">' . e($item->art_no) . '</span>',
@@ -1063,7 +1463,11 @@ class HomeController extends Controller
                 'wip' => '<span class="fw-bold text-warning">' . number_format($wip, 2) . '</span>',
                 'fg' => '<span class="fw-bold text-success">' . number_format($fg) . ' pcs</span>',
                 'pipeline' => '<span class="fw-bold text-info">' . number_format($pipeline, 2) . '</span>',
-                'total_pipeline' => '<span class="fw-bold text-info">' . number_format($pipeline, 2) . '</span>'
+                'daily_consumption' => $dailyConsumption > 0 ? '<span class="fw-bold text-dark">' . number_format($dailyConsumption, 2) . ' m</span>' : '<span class="text-muted">—</span>',
+                'days_left' => $daysLeftVal > 0 ? '<span class="badge bg-light text-dark border px-2 py-1 fw-bold">' . $daysLeftStr . '</span>' : '<span class="text-muted">—</span>',
+                'supplier_lead_time' => $supplierLeadTime > 0 ? '<span class="fw-bold text-secondary">' . $supplierLeadTime . ' Days</span>' : '<span class="text-muted">—</span>',
+                'safety_stock' => $safetyStock > 0 ? '<span class="fw-bold text-dark">' . number_format($safetyStock, 2) . ' m</span>' : '<span class="text-muted">—</span>',
+                'next_po' => $nextPoStr
             ];
         }
 
@@ -1261,14 +1665,20 @@ class HomeController extends Controller
 
             // Returns Badge
             $returnsHtml = $s['returns_count'] > 0
-                ? '<span class="badge bg-label-danger fw-bold">' . $s['returns_count'] . ' (' . '₹' . number_format($s['returns_total']) . ')</span>'
+                ? '<a href="javascript:;" class="badge bg-label-danger fw-bold btn-supplier-debit-notes-drilldown text-decoration-none" data-supplier-id="' . $s['supplier_id'] . '" data-supplier-name="' . e($s['supplier_name']) . '">' . $s['returns_count'] . ' (' . '₹' . number_format($s['returns_total']) . ')</a>'
+                : '<span class="text-muted">0</span>';
+
+            $ordersHtml = $s['orders_count'] > 0
+                ? '<a href="javascript:;" class="badge bg-label-info fw-bold btn-supplier-orders-drilldown text-decoration-none" data-supplier-id="' . $s['supplier_id'] . '" data-supplier-name="' . e($s['supplier_name']) . '">' . $s['orders_count'] . '</a>'
                 : '<span class="text-muted">0</span>';
 
             $pageData[] = [
                 'DT_RowIndex' => $start + $idx + 1,
+                'supplier_id' => $s['supplier_id'],
+                'supplier_name' => $s['supplier_name'],
                 'supplier' => '<span class="fw-bold text-dark">' . e($s['supplier_name']) . '</span>',
                 'purchase_value' => '<span class="fw-bold text-primary">₹' . number_format($s['purchase_value'], 2) . '</span>',
-                'orders' => '<span class="badge bg-label-info fw-bold">' . $s['orders_count'] . '</span>',
+                'orders' => $ordersHtml,
                 'on_time_pct' => $onTimeBadge,
                 'avg_delay' => $delayHtml,
                 'returns' => $returnsHtml,
@@ -1285,12 +1695,135 @@ class HomeController extends Controller
         ]);
     }
 
+    public function getSupplierOrdersDrilldown(Request $request)
+    {
+        $supplierId = $request->supplier_id;
+        $supplier = DB::table('suppliers')->where('id', $supplierId)->first();
+        if (!$supplier) {
+            return response()->json(['supplier_name' => 'Supplier', 'orders' => []]);
+        }
+
+        $orders = DB::table('purchase_orders as po')
+            ->leftJoin('purchase_invoices as pi', 'po.id', '=', 'pi.purchase_order_id')
+            ->leftJoin('grn_entries as grn', 'pi.id', '=', 'grn.purchase_invoice_id')
+            ->where('po.supplier_id', $supplierId)
+            ->whereNull('po.deleted_at')
+            ->select(
+                'po.id',
+                'po.po_number',
+                'po.po_date',
+                'po.due_date',
+                'po.total_qty',
+                'po.total_amount',
+                'po.status',
+                DB::raw('COALESCE(grn.grn_date, pi.invoice_date) as delivery_date')
+            )
+            ->groupBy(
+                'po.id',
+                'po.po_number',
+                'po.po_date',
+                'po.due_date',
+                'po.total_qty',
+                'po.total_amount',
+                'po.status',
+                'grn.grn_date',
+                'pi.invoice_date'
+            )
+            ->orderBy('po.po_date', 'desc')
+            ->get();
+
+        $formattedOrders = [];
+        foreach ($orders as $o) {
+            $dueDate = $o->due_date;
+            $deliveryDate = $o->delivery_date;
+            $onTimeStatus = 'On-Time';
+            $badgeClass = 'bg-success';
+
+            if ($dueDate) {
+                if ($deliveryDate) {
+                    if ($deliveryDate > $dueDate) {
+                        $delay = (new \DateTime($deliveryDate))->diff(new \DateTime($dueDate))->days;
+                        $onTimeStatus = 'Delayed (' . $delay . ' Days)';
+                        $badgeClass = 'bg-danger';
+                    }
+                } else {
+                    $today = date('Y-m-d');
+                    if ($today > $dueDate) {
+                        $delay = (new \DateTime($today))->diff(new \DateTime($dueDate))->days;
+                        $onTimeStatus = 'Overdue (' . $delay . ' Days)';
+                        $badgeClass = 'bg-danger';
+                    } else {
+                        $onTimeStatus = 'Pending Delivery';
+                        $badgeClass = 'bg-warning text-dark';
+                    }
+                }
+            }
+
+            $formattedOrders[] = [
+                'po_number' => $o->po_number ?: ('PO #' . $o->id),
+                'po_date' => $o->po_date ? date('d-m-Y', strtotime($o->po_date)) : '-',
+                'due_date' => $o->due_date ? date('d-m-Y', strtotime($o->due_date)) : '-',
+                'total_qty' => number_format($o->total_qty, 2),
+                'total_amount' => '₹' . number_format($o->total_amount, 2),
+                'status' => $o->status ?: 'Active',
+                'delivery_status' => '<span class="badge ' . $badgeClass . '">' . $onTimeStatus . '</span>'
+            ];
+        }
+
+        return response()->json([
+            'supplier_name' => $supplier->name,
+            'orders' => $formattedOrders
+        ]);
+    }
+
+    public function getSupplierDebitNotesDrilldown(Request $request)
+    {
+        $supplierId = $request->supplier_id;
+        $supplier = DB::table('suppliers')->where('id', $supplierId)->first();
+        if (!$supplier) {
+            return response()->json(['supplier_name' => 'Supplier', 'debit_notes' => []]);
+        }
+
+        $debitNotes = DB::table('debit_notes as dn')
+            ->leftJoin('purchase_invoices as pi', 'dn.purchase_invoice_id', '=', 'pi.id')
+            ->where('dn.supplier_id', $supplierId)
+            ->whereNull('dn.deleted_at')
+            ->select(
+                'dn.id',
+                'dn.debit_note_no',
+                'dn.debit_note_date',
+                'dn.grand_total',
+                'dn.status',
+                'dn.remarks',
+                'pi.invoice_no'
+            )
+            ->orderBy('dn.debit_note_date', 'desc')
+            ->get();
+
+        $formattedNotes = [];
+        foreach ($debitNotes as $dn) {
+            $formattedNotes[] = [
+                'debit_note_no' => $dn->debit_note_no ?: ('DN #' . $dn->id),
+                'debit_note_date' => $dn->debit_note_date ? date('d-m-Y', strtotime($dn->debit_note_date)) : '-',
+                'invoice_no' => $dn->invoice_no ?: '-',
+                'grand_total' => '₹' . number_format($dn->grand_total, 2),
+                'status' => '<span class="badge bg-label-info">' . e($dn->status ?: 'Submitted') . '</span>',
+                'remarks' => e($dn->remarks ?: '-')
+            ];
+        }
+
+        return response()->json([
+            'supplier_name' => $supplier->name,
+            'debit_notes' => $formattedNotes
+        ]);
+    }
+
     public function getServiceWipDetails(Request $request)
     {
         $jobCardNo = $request->job_card_no;
         $operationStageName = $request->operation_stage_name;
 
-        $jc = JobCardEntry::with('tasks.assignments')->where('job_card_no', $jobCardNo)->first();
+        $jc = JobCardEntry::with('tasks.remove')->where('job_card_no', $jobCardNo)->first();
         if (!$jc)
             return response()->json([]);
 

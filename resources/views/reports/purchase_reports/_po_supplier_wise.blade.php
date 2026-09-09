@@ -73,6 +73,17 @@
     #poSupplierTable tbody tr:hover {
         background-color: rgba(105, 108, 255, 0.08) !important;
     }
+
+    /* Fix font-family mismatch on drilldown table */
+    #poItemsContainer,
+    #poItemsContainer table,
+    #poItemsContainer table th,
+    #poItemsContainer table td,
+    #poItemsContainer .dataTables_wrapper,
+    #poItemsContainer .dataTables_wrapper * {
+        font-family: inherit !important;
+        font-size: inherit;
+    }
 </style>
 
 <script>
@@ -186,7 +197,6 @@
             }
         });
 
-        // Click row to drilldown to items table (like brandwise stock)
         $table.find('tbody').off('click', 'tr').on('click', 'tr', function(e) {
             if ($(e.target).is('a, button, input')) return;
 

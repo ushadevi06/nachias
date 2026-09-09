@@ -302,12 +302,184 @@ class SalesMarketingReportController extends Controller
                         'data' => $comparisonData
                     ]);
 
+                case 'sales-gst-report':
+                case 'sales-report':
+                    $countQuery = SalesInvoice::whereNull('deleted_at');
+                    if ($fromDate) $countQuery->where('inv_date', '>=', $fromDate);
+                    if ($toDate) $countQuery->where('inv_date', '<=', $toDate);
+                    if ($customerId) $countQuery->where('customer_id', $customerId);
+                    if ($agentId) $countQuery->where('agent_id', $agentId);
+                    $einvoiceStatus = strtolower(trim((string)$request->einvoice_status));
+                    if ($einvoiceStatus === 'generated') {
+                        $countQuery->whereRaw('LOWER(einvoice_status) = ?', ['generated']);
+                    } elseif ($einvoiceStatus === 'not_generated') {
+                        $countQuery->where(function($q) {
+                            $q->whereNull('einvoice_status')
+                              ->orWhereRaw('LOWER(einvoice_status) != ?', ['generated']);
+                        });
+                    }
+                    if ($search) {
+                        $countQuery->where(function($q) use ($search) {
+                            $q->where('inv_no', 'like', "%{$search}%")
+                              ->orWhereHas('customer', function($c) use ($search) {
+                                  $c->where('name', 'like', "%{$search}%")
+                                    ->orWhere('gst_no', 'like', "%{$search}%")
+                                    ->orWhereHas('place', function($p) use ($search) {
+                                        $p->where('place_name', 'like', "%{$search}%");
+                                    })
+                                    ->orWhereHas('city', function($ct) use ($search) {
+                                        $ct->where('city_name', 'like', "%{$search}%");
+                                    });
+                              });
+                        });
+                    }
+
+                    $unfilteredRecords = SalesInvoice::whereNull('deleted_at')->count();
+                    $filteredRecords = $countQuery->count();
+                    $totalCgst = (float)(clone $countQuery)->sum('cgst');
+                    $totalSgst = (float)(clone $countQuery)->sum('sgst');
+                    $totalIgst = (float)(clone $countQuery)->sum('igst');
+                    $totalSubTotal = (float)(clone $countQuery)->sum('sub_total');
+                    $totalDiscount = (float)(clone $countQuery)->sum('discount');
+                    $totalGrandTotal = (float)(clone $countQuery)->sum('grand_total');
+                    $totalTaxableValue = $totalSubTotal - $totalDiscount;
+                    $totalQty = (float)\App\Models\SalesInvoiceItem::whereIn('sales_invoice_id', (clone $countQuery)->select('id'))->whereNull('deleted_at')->sum('quantity');
+                    $totalRoundOff = (float)(clone $countQuery)->selectRaw("SUM(CASE WHEN LOWER(COALESCE(round_off_type, '')) IN ('less', 'subtract', '-') THEN -ABS(COALESCE(round_off, 0)) ELSE ABS(COALESCE(round_off, 0)) END) as total_round_off")->value('total_round_off');
+
+                    $orderColIdx = $request->order[0]['column'] ?? null;
+                    $orderDir = $request->order[0]['dir'] ?? 'desc';
+                    $columnMap = [
+                        1 => 'inv_no',
+                        2 => 'inv_date',
+                        7 => 'sub_total',
+                        8 => 'discount',
+                        10 => 'cgst_percent',
+                        11 => 'cgst',
+                        12 => 'sgst_percent',
+                        13 => 'sgst',
+                        14 => 'igst_percent',
+                        15 => 'igst',
+                        16 => 'round_off',
+                        17 => 'grand_total',
+                        18 => 'einvoice_status',
+                    ];
+
+                    $invoicesQuery = $countQuery->with(['customer.place', 'customer.city', 'items']);
+                    if ($orderColIdx !== null && isset($columnMap[$orderColIdx])) {
+                        $invoicesQuery->orderBy($columnMap[$orderColIdx], $orderDir);
+                    } else {
+                        $invoicesQuery->orderBy('inv_date', 'desc')->orderBy('id', 'desc');
+                    }
+
+                    if ($length !== -1) {
+                        $invoicesQuery->offset($start)->limit($length);
+                    }
+                    $invoices = $invoicesQuery->get();
+
+                    $data = [];
+                    $sno = $start + 1;
+                    foreach ($invoices as $invoice) {
+                        $isGenerated = (!empty($invoice->einvoice_status) && strtolower((string)$invoice->einvoice_status) === 'generated');
+                        $einvoiceStatusBadge = $isGenerated 
+                            ? '<span class="badge bg-label-success rounded-pill px-3 py-1"><i class="ri-checkbox-circle-line me-1"></i>Generated</span>' 
+                            : '<span class="badge bg-label-danger rounded-pill px-3 py-1"><i class="ri-close-circle-line me-1"></i>Not Generated</span>';
+                        $einvoiceStatusRaw = $isGenerated ? 'Generated' : 'Not Generated';
+
+                        $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
+                        $invViewUrl = url('sales_invoices/view/' . $invoice->id);
+                        $invNoHtml = '<a href="' . $invViewUrl . '" target="_blank" class="fw-bold text-primary">' . $invNoStr . '</a>';
+
+                        $custName = htmlspecialchars((string)(optional($invoice->customer)->name ?? '-'));
+                        $gstNo = htmlspecialchars((string)(optional($invoice->customer)->gst_no ?: '-'));
+                        $place = htmlspecialchars((string)(optional(optional($invoice->customer)->place)->place_name ?? (optional(optional($invoice->customer)->city)->city_name ?? '-')));
+
+                        $invDateStr = $invoice->inv_date ? date('d-m-Y', strtotime((string)$invoice->inv_date)) : '-';
+
+                        $cgstPercent = (float)($invoice->cgst_percent ?? 0);
+                        $cgstAmount = (float)($invoice->cgst ?? 0);
+                        $sgstPercent = (float)($invoice->sgst_percent ?? 0);
+                        $sgstAmount = (float)($invoice->sgst ?? 0);
+                        $igstPercent = (float)($invoice->igst_percent ?? 0);
+                        $igstAmount = (float)($invoice->igst ?? 0);
+
+                        $igstPercentDisplay = ($igstPercent > 0) ? number_format($igstPercent, 2) . '%' : '-';
+                        $igstAmountDisplay = ($igstAmount > 0) ? '₹' . number_format($igstAmount, 2) : '-';
+
+                        $subTotal = (float)($invoice->sub_total ?? 0);
+                        $discountAmt = (float)($invoice->discount ?? 0);
+                        $taxableValue = $subTotal - $discountAmt;
+                        $grandTotal = (float)($invoice->grand_total ?? 0);
+                        $itemQty = (float)($invoice->items ? $invoice->items->sum('quantity') : 0);
+
+                        $roundOffVal = (float)($invoice->round_off ?? 0);
+                        if (in_array(strtolower((string)$invoice->round_off_type), ['less', 'subtract', '-'])) {
+                            $roundOffVal = -$roundOffVal;
+                        }
+                        $roundOffDisplay = ($roundOffVal != 0) ? (($roundOffVal < 0 ? '-' : '') . '₹' . number_format(abs($roundOffVal), 2)) : '-';
+
+                        $data[] = [
+                            'sno' => $sno++,
+                            'inv_no' => $invNoHtml,
+                            'inv_no_raw' => $invNoStr,
+                            'inv_date' => $invDateStr,
+                            'customer_name' => $custName,
+                            'gst_no' => $gstNo,
+                            'place' => $place,
+                            'qty' => number_format($itemQty),
+                            'sub_total' => '₹' . number_format($subTotal, 2),
+                            'discount' => ($discountAmt > 0) ? '₹' . number_format($discountAmt, 2) : '-',
+                            'taxable_value' => '₹' . number_format($taxableValue, 2),
+                            'cgst_percent' => number_format($cgstPercent, 2) . '%',
+                            'cgst_amount' => '₹' . number_format($cgstAmount, 2),
+                            'sgst_percent' => number_format($sgstPercent, 2) . '%',
+                            'sgst_amount' => '₹' . number_format($sgstAmount, 2),
+                            'igst_percent' => $igstPercentDisplay,
+                            'igst_amount' => $igstAmountDisplay,
+                            'round_off' => $roundOffDisplay,
+                            'total_amount' => '₹' . number_format($grandTotal, 2),
+                            'einvoice_status' => $einvoiceStatusBadge,
+                            'einvoice_status_raw' => $einvoiceStatusRaw,
+                        ];
+                    }
+
+                    $totalRoundOffDisplay = ($totalRoundOff != 0) ? (($totalRoundOff < 0 ? '-' : '') . '₹' . number_format(abs($totalRoundOff), 2)) : '₹0.00';
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $unfilteredRecords,
+                        'recordsFiltered' => $filteredRecords,
+                        'data' => $data,
+                        'totals' => [
+                            'qty' => number_format($totalQty),
+                            'sub_total' => '₹' . number_format($totalSubTotal, 2),
+                            'discount' => ($totalDiscount > 0) ? '₹' . number_format($totalDiscount, 2) : '-',
+                            'taxable_value' => '₹' . number_format($totalTaxableValue, 2),
+                            'cgst_amount' => '₹' . number_format($totalCgst, 2),
+                            'sgst_amount' => '₹' . number_format($totalSgst, 2),
+                            'igst_amount' => ($totalIgst > 0) ? '₹' . number_format($totalIgst, 2) : '-',
+                            'round_off' => $totalRoundOffDisplay,
+                            'total_amount' => '₹' . number_format($totalGrandTotal, 2),
+                            'cgst_raw' => $totalCgst,
+                            'sgst_raw' => $totalSgst,
+                            'igst_raw' => $totalIgst,
+                        ]
+                    ]);
+
                 case 'invoice-report':
                     $countQuery = SalesInvoice::whereNull('deleted_at');
                     if ($fromDate) $countQuery->where('inv_date', '>=', $fromDate);
                     if ($toDate) $countQuery->where('inv_date', '<=', $toDate);
                     if ($customerId) $countQuery->where('customer_id', $customerId);
                     if ($agentId) $countQuery->where('agent_id', $agentId);
+                    $einvoiceStatus = strtolower(trim((string)$request->einvoice_status));
+                    if ($einvoiceStatus === 'generated') {
+                        $countQuery->whereRaw('LOWER(einvoice_status) = ?', ['generated']);
+                    } elseif ($einvoiceStatus === 'not_generated') {
+                        $countQuery->where(function($q) {
+                            $q->whereNull('einvoice_status')
+                              ->orWhereRaw('LOWER(einvoice_status) != ?', ['generated']);
+                        });
+                    }
                     if ($search) {
                         $countQuery->where(function($q) use ($search) {
                             $q->where('inv_no', 'like', "%{$search}%")

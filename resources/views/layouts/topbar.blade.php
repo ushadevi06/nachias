@@ -190,6 +190,12 @@ $isSuper = $user->id == 1;
                                                 </li>
                                             @endif
 
+                                            <li class="menu-item {{ request()->is('core-material-settings*') ? 'active' : '' }}">
+                                                <a href="{{ url('core-material-settings') }}" class="menu-link">
+                                                    <div>Core Material Planning Master</div>
+                                                </a>
+                                            </li>
+
                                             @if($isSuper || $user->can('view charges'))
                                                 <li class="menu-item {{ request()->is('charges*') ? 'active' : '' }}">
                                                     <a href="{{ url('charges') }}" class="menu-link">

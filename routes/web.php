@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\CoreMaterialPlannerSettingController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\CountryController;
@@ -102,6 +103,15 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/dashboard/core-material-planner', [HomeController::class, 'getCoreMaterialPlannerAjax']);
     Route::get('/dashboard/core-planner', [HomeController::class, 'getCoreMaterialPlannerAjax']);
     Route::get('/dashboard/supplier-performance', [HomeController::class, 'getSupplierPerformanceAjax']);
+    Route::get('/dashboard/supplier-orders-drilldown', [HomeController::class, 'getSupplierOrdersDrilldown']);
+    Route::get('/dashboard/supplier-debit-notes-drilldown', [HomeController::class, 'getSupplierDebitNotesDrilldown']);
+    Route::get('/dashboard/fabric-drilldown', [HomeController::class, 'fabricInventoryDrilldown']);
+    Route::get('/dashboard/accessories-drilldown', [HomeController::class, 'accessoriesInventoryDrilldown']);
+    Route::get('/core-material-settings', [CoreMaterialPlannerSettingController::class, 'index']);
+    Route::match(['get', 'post'], '/core-material-settings/add/{id?}', [CoreMaterialPlannerSettingController::class, 'add']);
+    Route::get('/core-material-settings/delete/{id}', [CoreMaterialPlannerSettingController::class, 'delete']);
+    Route::post('/core-material-settings/status/{id}', [CoreMaterialPlannerSettingController::class, 'updateStatus']);
+    Route::get('/core-material-settings/get-art-brand/{art_no}', [CoreMaterialPlannerSettingController::class, 'getArtNoDetails']);
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
     Route::match(['get', 'post'], 'logout', [AuthController::class, 'logout']);
 
@@ -720,6 +730,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Sales & Marketing Report */
     Route::get('sales_marketing_reports', [SalesMarketingReportController::class, 'index']);
     Route::get('sales_marketing_reports/ajax/{type}', [SalesMarketingReportController::class, 'ajaxReportData']);
+    Route::get('sales_gst_report', function() { return redirect('sales_marketing_reports?report_type=sales-gst-report'); });
+    Route::get('sales_report', function() { return redirect('sales_marketing_reports?report_type=sales-gst-report'); });
 
     /* Warehouse Report */
     Route::get('reports', [ReportController::class, 'index']);
