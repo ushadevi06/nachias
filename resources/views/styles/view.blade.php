@@ -24,6 +24,7 @@
                                     <th>#</th>
                                     <th>Style Name</th>
                                     <th>Code</th>
+                                    <th>Average Consumption</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -55,6 +56,7 @@
                 { data: 'DT_RowIndex' },
                 { data: 'style_name' },
                 { data: 'code' },
+                { data: 'average_consumption' },
                 {
                     data: 'status',
                     orderable: false,

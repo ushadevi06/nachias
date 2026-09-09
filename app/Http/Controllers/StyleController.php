@@ -54,6 +54,7 @@ class StyleController extends Controller
                     'DT_RowIndex' => $i++,
                     'style_name' => $row->style_name,
                     'code'       => $row->code,
+                    'average_consumption' => $row->average_consumption ?? '-',
                     'status'     => $status,
                     'action'     => $action,
                 ];
@@ -96,6 +97,7 @@ class StyleController extends Controller
                     'regex:/^(?!0+$).*$/',
                     'unique:styles,code,' . $id . ',id,deleted_at,NULL'
                 ],
+                'average_consumption' => 'required|integer|min:0',
                 'status'     => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -105,10 +107,12 @@ class StyleController extends Controller
                 '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                'average_consumption.integer' => 'This field must be an integer.',
+                'average_consumption.min'     => 'This field must be at least :min.',
             ];
             $request->validate($rules, $messages);
 
-            $data = $request->only(['style_name', 'code', 'status']);
+            $data = $request->only(['style_name', 'code', 'average_consumption', 'status']);
 
             if ($id) {
                 $data['updated_by'] = auth()->id();

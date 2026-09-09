@@ -32,6 +32,7 @@
                             Report Type</label>
                         <select class="form-select select2" id="report_type_select" name="report_type">
                             <option value="production-wip" selected>🏭 Production WIP Unit Wise</option>
+                            <option value="casino-cutting-wip">✂️ Casino Cutting WIP Report</option>
                             <option value="department-efficiency">📊 Department Wise Efficiency Report</option>
                             <option value="performance-report">👤 Performance Individual</option>
                             <option value="process-wise">⚙️ Production Report Section Wise</option>
@@ -96,6 +97,38 @@
                                         <th class="text-center">Inward</th>
                                         <th class="text-center">Outward</th>
                                         <th class="text-center">Current WIP</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Casino Cutting WIP Report -->
+                    <div class="tab-pane fade" id="casino-cutting-wip" role="tabpanel">
+                        <div class="card-datatable table-responsive">
+                            <table class="datatables-products table table-hover text-nowrap align-middle" id="casinoCuttingWipTable" style="width: 100%;">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Job Card</th>
+                                        <th>Issue Date</th>
+                                        <th>Delivery Date</th>
+                                        <th class="text-center">Age (Days)</th>
+                                        <th>Brand</th>
+                                        <th>Season</th>
+                                        <th>Pattern</th>
+                                        <th class="text-center">Fabric</th>
+                                        <th class="text-center">Issue Mtrs</th>
+                                        <th class="text-center">Est. Qty</th>
+                                        <th class="text-center">Cut Qty</th>
+                                        <th class="text-center">Bundled</th>
+                                        <th class="text-center">Balance to Bundle</th>
+                                        <th class="text-center">Full</th>
+                                        <th class="text-center">Half</th>
+                                        <th>Unit Assigned</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Priority</th>
+                                        <th>Remarks</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -483,6 +516,31 @@
                         { data: 'inward', name: 'inward', className: 'text-center' },
                         { data: 'outward', name: 'outward', className: 'text-center' },
                         { data: 'current_wip', name: 'current_wip', className: 'text-center fw-bold' }
+                    ]
+                },
+                'casino-cutting-wip': {
+                    tableId: '#casinoCuttingWipTable',
+                    type: 'casino-cutting-wip',
+                    columns: [
+                        { data: 'job_card_no', name: 'job_card_no' },
+                        { data: 'issue_date', name: 'issue_date' },
+                        { data: 'delivery_date', name: 'delivery_date' },
+                        { data: 'age_days', name: 'age_days', className: 'text-center' },
+                        { data: 'brand', name: 'brand' },
+                        { data: 'season', name: 'season' },
+                        { data: 'pattern', name: 'pattern' },
+                        { data: 'fabric', name: 'fabric', className: 'text-center' },
+                        { data: 'issue_mts', name: 'issue_mts', className: 'text-center' },
+                        { data: 'estimate_qty', name: 'estimate_qty', className: 'text-center' },
+                        { data: 'cut_qty', name: 'cut_qty', className: 'text-center' },
+                        { data: 'bundle', name: 'bundle', className: 'text-center' },
+                        { data: 'balance_bundle', name: 'balance_bundle', className: 'text-center' },
+                        { data: 'full_sleeve', name: 'full_sleeve', className: 'text-center' },
+                        { data: 'half_sleeve', name: 'half_sleeve', className: 'text-center' },
+                        { data: 'unit_assigned', name: 'unit_assigned' },
+                        { data: 'status', name: 'status', className: 'text-center' },
+                        { data: 'priority', name: 'priority', className: 'text-center' },
+                        { data: 'remarks', name: 'remarks' }
                     ]
                 },
                 'performance-report': {

@@ -882,6 +882,239 @@ class ProductionReportController extends Controller
                         'tasks' => $filteredRows
                     ]);
 
+                case 'casino-cutting-wip':
+                    $cuttingQuery = JobCardEntry::with([
+                        'brand',
+                        'season',
+                        'serviceProvider',
+                        'issueItems',
+                        'purchaseOrder.items.style',
+                        'item.style',
+                        'fabricDetails',
+                        'tasks.assignments.service'
+                    ]);
+
+                    if ($unitId) {
+                        $cuttingQuery->where('service_provider_id', $unitId);
+                    }
+                    if ($fromDate) {
+                        $cuttingQuery->where('job_card_date', '>=', $fromDate);
+                    }
+                    if ($toDate) {
+                        $cuttingQuery->where('job_card_date', '<=', $toDate);
+                    }
+
+                    $jobCards = $cuttingQuery->orderBy('id', 'desc')->get();
+                    $rows = [];
+
+                    // Preload styles for stockEntryItems if needed
+                    $fabricArtNos = [];
+                    foreach ($jobCards as $jc) {
+                        if ((!$jc->purchaseOrder || $jc->purchaseOrder->items->isEmpty()) && (!$jc->item || !$jc->item->style)) {
+                            foreach ($jc->fabricDetails as $fd) {
+                                if ($fd->art_no) {
+                                    $fabricArtNos[] = trim($fd->art_no);
+                                }
+                            }
+                        }
+                    }
+                    $artStyleMap = [];
+                    if (!empty($fabricArtNos)) {
+                        $stockItems = StockEntryItem::with('style')
+                            ->whereIn('art_no', array_unique($fabricArtNos))
+                            ->whereNotNull('style_id')
+                            ->get();
+                        foreach ($stockItems as $si) {
+                            if ($si->style) {
+                                $artStyleMap[trim($si->art_no)] = $si->style;
+                            }
+                        }
+                    }
+
+                    foreach ($jobCards as $jc) {
+                        // 1. Job Card No
+                        $jcNo = $jc->job_card_no ?? 'N/A';
+
+                        // 2. Issue Date
+                        $issueDateStr = $jc->job_card_date ? date('d-M-Y', strtotime($jc->job_card_date)) : '-';
+
+                        // 3. Delivery Date
+                        $deliveryDateStr = $jc->delivery_date ? date('d-M-Y', strtotime($jc->delivery_date)) : '-';
+
+                        // 4. Age (Day)
+                        $ageDays = ($jc->no_of_days !== null && $jc->no_of_days !== '') ? intval($jc->no_of_days) : ($jc->job_card_date ? Carbon::parse($jc->job_card_date)->diffInDays(Carbon::now()) : 0);
+
+                        // 5. Brand
+                        $brandName = $jc->brand->brand_name ?? 'N/A';
+
+                        // 6. Season
+                        $seasonName = $jc->season->season_name ?? '-';
+
+                        // 7. Pattern (from styles table during PO or fallback)
+                        $patternNames = [];
+                        $resolvedStyles = [];
+
+                        if ($jc->purchaseOrder && $jc->purchaseOrder->items->isNotEmpty()) {
+                            foreach ($jc->purchaseOrder->items as $poItem) {
+                                if ($poItem->style) {
+                                    $patternNames[] = $poItem->style->style_name;
+                                    $resolvedStyles[] = $poItem->style;
+                                }
+                            }
+                        }
+
+                        if (empty($patternNames) && $jc->item && $jc->item->style) {
+                            $patternNames[] = $jc->item->style->style_name;
+                            $resolvedStyles[] = $jc->item->style;
+                        }
+
+                        if (empty($patternNames) && $jc->fabricDetails->isNotEmpty()) {
+                            foreach ($jc->fabricDetails as $fd) {
+                                $art = trim($fd->art_no ?? '');
+                                if (isset($artStyleMap[$art])) {
+                                    $patternNames[] = $artStyleMap[$art]->style_name;
+                                    $resolvedStyles[] = $artStyleMap[$art];
+                                }
+                            }
+                        }
+
+                        $patternNames = array_unique(array_filter($patternNames));
+                        $patternDisplay = !empty($patternNames) ? implode(', ', $patternNames) : '-';
+
+                        // 8. Fabric
+                        $fabricDisplay = '-';
+
+                        // 9. Issue Mts (total sum of Qty To Issue)
+                        $issueMts = floatval($jc->issueItems->sum('qty_issue'));
+
+                        // 10. Estimate Qty (from style master average consumption / 1.5)
+                        $styleAvgCons = 0;
+                        if (!empty($resolvedStyles)) {
+                            foreach ($resolvedStyles as $st) {
+                                if (floatval($st->average_consumption ?? 0) > 0) {
+                                    $styleAvgCons = floatval($st->average_consumption);
+                                    break;
+                                }
+                            }
+                        }
+                        $estQty = ($styleAvgCons > 0) ? round($styleAvgCons / 1.5) : 0;
+
+                        // 11. Cut Qty (sum of Produced Qty)
+                        $cutQty = floatval($jc->issueItems->sum('produced_qty'));
+
+                        // 12. Bundle (Task Management bundle service allocation qty)
+                        $bundledQty = 0;
+                        if ($jc->tasks->isNotEmpty()) {
+                            foreach ($jc->tasks as $t) {
+                                if ($t->assignments->isNotEmpty()) {
+                                    foreach ($t->assignments as $asgn) {
+                                        if ($asgn->service && stripos($asgn->service->service_name, 'bundle') !== false) {
+                                            $bundledQty += floatval($asgn->issue_qty ?? 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 13. Balance Bundle (pending bundle)
+                        $baseCutOrEst = ($cutQty > 0) ? $cutQty : $estQty;
+                        $balanceBundle = max(0, $baseCutOrEst - $bundledQty);
+
+                        // 14. Full Sleeve
+                        $fullQty = floatval($jc->total_qty_fs ?? $jc->fs_qty ?? 0);
+
+                        // 15. Half Sleeve
+                        $halfQty = floatval($jc->total_qty_hs ?? $jc->hs_qty ?? 0);
+
+                        // 16. Unit Assigned
+                        $unitAssigned = $jc->serviceProvider->name ?? 'Not Assigned';
+
+                        // 17. Status
+                        $rawStatus = trim($jc->status ?: 'Waiting');
+                        $statusClass = 'secondary';
+                        if (stripos($rawStatus, 'complete') !== false) {
+                            $statusClass = 'success';
+                        } elseif (stripos($rawStatus, 'progress') !== false || stripos($rawStatus, 'running') !== false) {
+                            $statusClass = 'primary';
+                        } elseif (stripos($rawStatus, 'pending') !== false || stripos($rawStatus, 'hold') !== false) {
+                            $statusClass = 'warning';
+                        } elseif (stripos($rawStatus, 'overdue') !== false) {
+                            $statusClass = 'danger';
+                        }
+                        $statusBadge = '<span class="badge bg-label-' . $statusClass . ' rounded-pill px-2 py-1">' . htmlspecialchars($rawStatus) . '</span>';
+
+                        // 18. Priority (compare issue and delivery date: overdue -> critical, near by delivery date -> high, otherwise -> normal)
+                        $priorityText = 'Normal';
+                        $priorityBadge = '<span class="badge bg-label-secondary rounded-pill px-2 py-1">Normal</span>';
+
+                        $isJcCompleted = stripos($rawStatus, 'complete') !== false;
+                        if ($isJcCompleted) {
+                            $priorityText = 'Completed';
+                            $priorityBadge = '<span class="text-success fw-bold"><i class="ri-check-line me-1"></i>Completed</span>';
+                        } elseif ($jc->delivery_date) {
+                            $today = Carbon::now()->startOfDay();
+                            $delDate = Carbon::parse($jc->delivery_date)->startOfDay();
+                            if ($today->gt($delDate)) {
+                                $priorityText = 'Critical';
+                                $priorityBadge = '<span class="badge bg-label-danger rounded-pill px-2 py-1"><i class="ri-record-circle-fill text-danger me-1"></i>Critical</span>';
+                            } elseif ($today->diffInDays($delDate, false) <= 2) {
+                                $priorityText = 'High';
+                                $priorityBadge = '<span class="badge bg-label-warning rounded-pill px-2 py-1">High</span>';
+                            }
+                        }
+
+                        // 19. Remarks
+                        $remarksText = $jc->remarks ?: '-';
+
+                        $rows[] = [
+                            'job_card_no' => '<strong>' . htmlspecialchars($jcNo) . '</strong>',
+                            'issue_date' => $issueDateStr,
+                            'delivery_date' => $deliveryDateStr,
+                            'age_days' => $ageDays,
+                            'brand' => htmlspecialchars($brandName),
+                            'season' => htmlspecialchars($seasonName),
+                            'pattern' => htmlspecialchars($patternDisplay),
+                            'fabric' => $fabricDisplay,
+                            'issue_mts' => number_format($issueMts),
+                            'estimate_qty' => number_format($estQty),
+                            'cut_qty' => number_format($cutQty),
+                            'bundle' => number_format($bundledQty),
+                            'balance_bundle' => number_format($balanceBundle),
+                            'full_sleeve' => number_format($fullQty),
+                            'half_sleeve' => number_format($halfQty),
+                            'unit_assigned' => htmlspecialchars($unitAssigned),
+                            'status' => $statusBadge,
+                            'priority' => $priorityBadge,
+                            'remarks' => htmlspecialchars($remarksText),
+                            '_search_text' => strtolower($jcNo . ' ' . $brandName . ' ' . $seasonName . ' ' . $patternDisplay . ' ' . $unitAssigned . ' ' . $rawStatus . ' ' . $priorityText . ' ' . $remarksText)
+                        ];
+                    }
+
+                    $totalRecords = count($rows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $rows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+
+                    $isExport = ($request->get('export') == 1) || ($request->get('all') == 1) || ($length < 0);
+                    if ($isExport) {
+                        $pageData = $filteredRows;
+                    } else {
+                        $pageData = array_slice($filteredRows, $start, $length);
+                    }
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData
+                    ]);
+
                 default:
                     return response()->json([
                         'draw' => $draw,

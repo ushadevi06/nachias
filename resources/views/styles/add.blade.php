@@ -40,6 +40,17 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
+                                    <input type="number" step="1" min="0" class="form-control @error('average_consumption') is-invalid @enderror" id="average_consumption"
+                                        placeholder="Enter Average Consumption" name="average_consumption"
+                                        value="{{ old('average_consumption', $style->average_consumption ?? '') }}">
+                                    <label for="average_consumption">Average Consumption <span class="text-danger">*</span></label>
+                                </div>
+                                @error('average_consumption')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-12">
+                                <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
                                         data-placeholder="Select Status">
                                         <option value="">Select Status</option>

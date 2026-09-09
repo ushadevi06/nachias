@@ -9,7 +9,7 @@ class Style extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['style_name', 'code', 'status', 'created_by', 'updated_by'];
+    protected $fillable = ['style_name', 'code', 'average_consumption', 'status', 'created_by', 'updated_by'];
 
     public function scopeActive($query)
     {
