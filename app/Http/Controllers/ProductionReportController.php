@@ -33,6 +33,7 @@ class ProductionReportController extends Controller
         $start = intval($request->start ?? 0);
         $rawLength = $request->get('length');
         $length = ($rawLength !== null && intval($rawLength) == -1) ? -1 : intval($rawLength > 0 ? $rawLength : 10);
+        $isExport = ($request->get('export') == 1) || ($request->get('all') == 1) || ($length < 0);
         $searchVal = $request->search;
         $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
         $search = trim($search);
@@ -185,7 +186,7 @@ class ProductionReportController extends Controller
                         $filteredRows = $rows;
                     }
                     $recordsFiltered = count($filteredRows);
-                    $pageData = array_slice($filteredRows, $start, $length);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
                     return response()->json([
                         'draw' => $draw,
@@ -227,7 +228,11 @@ class ProductionReportController extends Controller
                     }
 
                     $totalRecords = $perfQuery->count();
-                    $items = $perfQuery->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    if ($isExport) {
+                        $items = $perfQuery->orderBy('id', 'desc')->get();
+                    } else {
+                        $items = $perfQuery->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    }
 
                     $data = [];
                     foreach ($items as $assign) {
@@ -325,7 +330,7 @@ class ProductionReportController extends Controller
                         $filteredRows = $rows;
                     }
                     $recordsFiltered = count($filteredRows);
-                    $pageData = array_slice($filteredRows, $start, $length);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
                     return response()->json([
                         'draw' => $draw,
@@ -355,7 +360,11 @@ class ProductionReportController extends Controller
                     }
 
                     $totalRecords = $compQuery->count();
-                    $jobCards = $compQuery->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    if ($isExport) {
+                        $jobCards = $compQuery->orderBy('id', 'desc')->get();
+                    } else {
+                        $jobCards = $compQuery->orderBy('id', 'desc')->offset($start)->limit($length)->get();
+                    }
 
                     $data = [];
                     foreach ($jobCards as $jc) {
@@ -506,7 +515,7 @@ class ProductionReportController extends Controller
                         $filteredRows = $rows;
                     }
                     $recordsFiltered = count($filteredRows);
-                    $pageData = array_slice($filteredRows, $start, $length);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
                     return response()->json([
                         'draw' => $draw,
@@ -694,7 +703,7 @@ class ProductionReportController extends Controller
                         $filteredRows = $rows;
                     }
                     $recordsFiltered = count($filteredRows);
-                    $pageData = array_slice($filteredRows, $start, $length);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
                     $overallEfficiency = ($totalPlan > 0) ? round(($totalActual / $totalPlan) * 100, 1) : 0;
 

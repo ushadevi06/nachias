@@ -369,14 +369,8 @@
                                     <h6 class="mb-0 fw-bold text-dark"><i class="ri-file-list-3-line me-1 text-primary"></i>
                                         Linked Job Cards & Tasks</h6>
                                     <div class="d-flex align-items-center gap-2">
-                                        <button type="button" id="btn-detail-excel" class="btn btn-outline-primary btn-sm rounded-pill"><i
-                                                class="ri ri-file-excel-line me-1"></i> Excel</button>
-                                        <button type="button" id="btn-detail-pdf" class="btn btn-outline-danger btn-sm rounded-pill"><i
-                                                class="ri ri-file-pdf-line me-1"></i> PDF</button>
-                                        <button type="button" id="btn-detail-print" class="btn btn-primary btn-sm rounded-pill px-3"><i
-                                                class="ri ri-printer-line me-1"></i> Print</button>
                                         <button type="button"
-                                            class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-dept-report ms-1">
+                                            class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-dept-report">
                                             <i class="ri-arrow-left-line me-1"></i> Back to Report
                                         </button>
                                     </div>
@@ -626,6 +620,59 @@
                 }
             }
 
+            // Universal Server-side Export Action to export all records
+            function serverSideExportAction(e, dt, button, config) {
+                var self = this;
+                var oldStart = dt.settings()[0]._iDisplayStart;
+                
+                showReportLoading(true);
+
+                dt.one('preXhr', function (e, s, data) {
+                    // Load ALL data for export
+                    data.start = 0;
+                    data.length = -1;
+                    data.export = 1;
+
+                    dt.one('preDraw', function (e, settings) {
+                        var btnType = config.extend || '';
+                        if (btnType === 'excel' || button.hasClass('buttons-excel') || button.hasClass('detail-buttons-excel')) {
+                            if ($.fn.dataTable.ext.buttons.excelHtml5 && $.fn.dataTable.ext.buttons.excelHtml5.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.excelHtml5.action.call(self, e, dt, button, config);
+                            } else if ($.fn.dataTable.ext.buttons.excelFlash && $.fn.dataTable.ext.buttons.excelFlash.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.excelFlash.action.call(self, e, dt, button, config);
+                            }
+                        } else if (btnType === 'pdf' || button.hasClass('buttons-pdf') || button.hasClass('detail-buttons-pdf')) {
+                            if ($.fn.dataTable.ext.buttons.pdfHtml5 && $.fn.dataTable.ext.buttons.pdfHtml5.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.pdfHtml5.action.call(self, e, dt, button, config);
+                            } else if ($.fn.dataTable.ext.buttons.pdfFlash && $.fn.dataTable.ext.buttons.pdfFlash.available(dt, config)) {
+                                $.fn.dataTable.ext.buttons.pdfFlash.action.call(self, e, dt, button, config);
+                            }
+                        } else if (btnType === 'print' || button.hasClass('buttons-print') || button.hasClass('detail-buttons-print')) {
+                            $.fn.dataTable.ext.buttons.print.action.call(self, e, dt, button, config);
+                        }
+
+                        // Restore original start and clear export flag
+                        dt.one('preXhr', function (e, s, data) {
+                            settings._iDisplayStart = oldStart;
+                            data.start = oldStart;
+                            data.length = dt.page.len();
+                            delete data.export;
+                        });
+
+                        // Reload the current page in background
+                        setTimeout(function () {
+                            dt.ajax.reload(function () {
+                                showReportLoading(false);
+                            }, false);
+                        }, 0);
+
+                        return false; // Prevent rendering all rows into the HTML DOM
+                    });
+                });
+
+                dt.ajax.reload();
+            }
+
             function loadActiveTabTable(tabPaneId) {
                 const config = tableConfigs[tabPaneId];
                 if (!config) return;
@@ -700,7 +747,8 @@
                             },
                             exportOptions: {
                                 columns: ':not(.no-export)'
-                            }
+                            },
+                            action: serverSideExportAction
                         },
                         {
                             extend: 'pdf',
@@ -708,9 +756,36 @@
                             title: function () {
                                 return $('#active_report_title').text().trim() || 'Production Report';
                             },
+                            orientation: 'landscape',
+                            pageSize: (config.columns && config.columns.length > 10) ? 'A3' : 'A4',
                             exportOptions: {
                                 columns: ':not(.no-export)'
-                            }
+                            },
+                            customize: function (doc) {
+                                var isWide = (config.columns && config.columns.length > 10);
+                                if (isWide) {
+                                    doc.pageSize = 'A3';
+                                    doc.pageOrientation = 'landscape';
+                                    doc.defaultStyle.fontSize = 6.5;
+                                    doc.styles.tableHeader.fontSize = 7;
+                                    doc.pageMargins = [10, 15, 10, 15];
+                                } else {
+                                    doc.defaultStyle.fontSize = 8;
+                                    doc.styles.tableHeader.fontSize = 8.5;
+                                    doc.pageMargins = [15, 15, 15, 15];
+                                }
+
+                                if (doc.content) {
+                                    for (var i = 0; i < doc.content.length; i++) {
+                                        if (doc.content[i].table) {
+                                            var colCount = doc.content[i].table.body[0].length;
+                                            doc.content[i].table.widths = Array(colCount).fill('*');
+                                            break;
+                                        }
+                                    }
+                                }
+                            },
+                            action: serverSideExportAction
                         },
                         {
                             extend: 'print',
@@ -720,64 +795,37 @@
                             },
                             exportOptions: {
                                 columns: ':not(.no-export)'
-                            }
+                            },
+                            autoPrint: false,
+                            customize: function (win) {
+                                var isWide = (config.columns && config.columns.length > 10);
+                                $(win.document.body).css('padding', '20px');
+                                $(win.document.body).find('h1').css({
+                                    'font-size': '20px',
+                                    'margin-bottom': '15px'
+                                });
+                                $(win.document.body).find('table')
+                                    .addClass('table table-bordered')
+                                    .css({
+                                        'font-size': (isWide ? '9px' : '11px'),
+                                        'width': '100%',
+                                        'border-collapse': 'collapse'
+                                    });
+                                var pageOrientation = isWide ? 'landscape' : 'portrait';
+                                var printStyle = '<style>@page { size: ' + pageOrientation + '; margin: 10mm; } body { -webkit-print-color-adjust: exact; } table th, table td { padding: 4px 6px !important; }</style>';
+                                $(win.document.head).append(printStyle);
+
+                                setTimeout(function () {
+                                    win.focus();
+                                    win.print();
+                                }, 600);
+                            },
+                            action: serverSideExportAction
                         }
                     ],
                     lengthMenu: [10, 25, 50, 100],
                     pageLength: 10
                 });
-            }
-
-            // Universal Server-side Export Action to export all records
-            function serverSideExportAction(e, dt, button, config) {
-                var self = this;
-                var oldStart = dt.settings()[0]._iDisplayStart;
-                
-                showReportLoading(true);
-
-                dt.one('preXhr', function (e, s, data) {
-                    // Load ALL data for export
-                    data.start = 0;
-                    data.length = -1;
-                    data.export = 1;
-
-                    dt.one('preDraw', function (e, settings) {
-                        var btnType = config.extend || '';
-                        if (btnType === 'excel' || button.hasClass('buttons-excel') || button.hasClass('detail-buttons-excel')) {
-                            if ($.fn.dataTable.ext.buttons.excelHtml5.available(dt, config)) {
-                                $.fn.dataTable.ext.buttons.excelHtml5.action.call(self, e, dt, button, config);
-                            } else if ($.fn.dataTable.ext.buttons.excelFlash && $.fn.dataTable.ext.buttons.excelFlash.available(dt, config)) {
-                                $.fn.dataTable.ext.buttons.excelFlash.action.call(self, e, dt, button, config);
-                            }
-                        } else if (btnType === 'pdf' || button.hasClass('buttons-pdf') || button.hasClass('detail-buttons-pdf')) {
-                            if ($.fn.dataTable.ext.buttons.pdfHtml5.available(dt, config)) {
-                                $.fn.dataTable.ext.buttons.pdfHtml5.action.call(self, e, dt, button, config);
-                            } else if ($.fn.dataTable.ext.buttons.pdfFlash && $.fn.dataTable.ext.buttons.pdfFlash.available(dt, config)) {
-                                $.fn.dataTable.ext.buttons.pdfFlash.action.call(self, e, dt, button, config);
-                            }
-                        } else if (btnType === 'print' || button.hasClass('buttons-print') || button.hasClass('detail-buttons-print')) {
-                            $.fn.dataTable.ext.buttons.print.action.call(self, e, dt, button, config);
-                        }
-
-                        // Restore original start and clear export flag
-                        dt.one('preXhr', function (e, s, data) {
-                            settings._iDisplayStart = oldStart;
-                            data.start = oldStart;
-                            delete data.export;
-                        });
-
-                        // Reload the current page in background
-                        setTimeout(function () {
-                            dt.ajax.reload(function () {
-                                showReportLoading(false);
-                            }, false);
-                        }, 0);
-
-                        return false; // Prevent rendering all rows into the HTML DOM
-                    });
-                });
-
-                dt.ajax.reload();
             }
 
             let detailTasksDataTable = null;
@@ -953,6 +1001,20 @@
                             exportOptions: {
                                 columns: ':visible'
                             },
+                            customize: function (doc) {
+                                doc.defaultStyle.fontSize = 8;
+                                doc.styles.tableHeader.fontSize = 8.5;
+                                doc.pageMargins = [15, 15, 15, 15];
+                                if (doc.content) {
+                                    for (var i = 0; i < doc.content.length; i++) {
+                                        if (doc.content[i].table) {
+                                            var colCount = doc.content[i].table.body[0].length;
+                                            doc.content[i].table.widths = Array(colCount).fill('*');
+                                            break;
+                                        }
+                                    }
+                                }
+                            },
                             action: serverSideExportAction
                         },
                         {
@@ -963,6 +1025,28 @@
                             },
                             exportOptions: {
                                 columns: ':visible'
+                            },
+                            autoPrint: false,
+                            customize: function (win) {
+                                $(win.document.body).css('padding', '20px');
+                                $(win.document.body).find('h1').css({
+                                    'font-size': '20px',
+                                    'margin-bottom': '15px'
+                                });
+                                $(win.document.body).find('table')
+                                    .addClass('table table-bordered')
+                                    .css({
+                                        'font-size': '11px',
+                                        'width': '100%',
+                                        'border-collapse': 'collapse'
+                                    });
+                                var printStyle = '<style>@page { size: landscape; margin: 10mm; } body { -webkit-print-color-adjust: exact; } table th, table td { padding: 4px 6px !important; }</style>';
+                                $(win.document.head).append(printStyle);
+
+                                setTimeout(function () {
+                                    win.focus();
+                                    win.print();
+                                }, 600);
                             },
                             action: serverSideExportAction
                         }
@@ -1125,26 +1209,6 @@
                 $('#productionReportForm').trigger('submit');
             });
 
-            // Detail Card Export Buttons Handlers
-            $(document).on('click', '#btn-detail-excel', function (e) {
-                e.preventDefault();
-                if (detailTasksDataTable) {
-                    detailTasksDataTable.button('.detail-buttons-excel').trigger();
-                }
-            });
-            $(document).on('click', '#btn-detail-pdf', function (e) {
-                e.preventDefault();
-                if (detailTasksDataTable) {
-                    detailTasksDataTable.button('.detail-buttons-pdf').trigger();
-                }
-            });
-            $(document).on('click', '#btn-detail-print', function (e) {
-                e.preventDefault();
-                if (detailTasksDataTable) {
-                    detailTasksDataTable.button('.detail-buttons-print').trigger();
-                }
-            });
-
             // Top Header Export Handlers
             $('#btn-excel').on('click', function () {
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
@@ -1153,7 +1217,10 @@
                         return;
                     }
                 }
-                $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();
+                var activeTable = $('.tab-pane.active .datatables-products');
+                if (activeTable.length && $.fn.DataTable.isDataTable(activeTable)) {
+                    activeTable.DataTable().button('.buttons-excel').trigger();
+                }
             });
             $('#btn-pdf').on('click', function () {
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
@@ -1162,7 +1229,10 @@
                         return;
                     }
                 }
-                $('.tab-pane.active .datatables-products').DataTable().button('.buttons-pdf').trigger();
+                var activeTable = $('.tab-pane.active .datatables-products');
+                if (activeTable.length && $.fn.DataTable.isDataTable(activeTable)) {
+                    activeTable.DataTable().button('.buttons-pdf').trigger();
+                }
             });
             $('#btn-print').on('click', function () {
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
@@ -1171,7 +1241,10 @@
                         return;
                     }
                 }
-                $('.tab-pane.active .datatables-products').DataTable().button('.buttons-print').trigger();
+                var activeTable = $('.tab-pane.active .datatables-products');
+                if (activeTable.length && $.fn.DataTable.isDataTable(activeTable)) {
+                    activeTable.DataTable().button('.buttons-print').trigger();
+                }
             });
         });
     </script>
