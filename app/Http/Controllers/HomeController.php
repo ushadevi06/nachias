@@ -161,9 +161,12 @@ class HomeController extends Controller
         $soInvoiceQtyTotals = $soInvoiceTotals->pluck('invoiced_qty', 'so_id');
         $soInvoiceValTotals = $soInvoiceTotals->pluck('invoiced_value', 'so_id');
 
-        $today_missed_qty = 0; $today_missed_value = 0;
-        $month_missed_qty = 0; $month_missed_value = 0;
-        $year_missed_qty = 0; $year_missed_value = 0;
+        $today_missed_qty = 0;
+        $today_missed_value = 0;
+        $month_missed_qty = 0;
+        $month_missed_value = 0;
+        $year_missed_qty = 0;
+        $year_missed_value = 0;
 
         foreach ($soTotals as $so) {
             $invQty = floatval($soInvoiceQtyTotals[$so->so_id] ?? 0);
@@ -253,7 +256,7 @@ class HomeController extends Controller
             ->whereNull('deleted_at')
             ->sum('amount');
         $total_creditors = max(0, $total_purchase - $total_supplier_payments);
-        
+
         /* Debtors Outstanding & Aging Report */
         $debtors_aging = DB::table('sales_invoices')
             ->join('customers', 'sales_invoices.customer_id', '=', 'customers.id')
@@ -265,10 +268,12 @@ class HomeController extends Controller
                     ->select('reference_id', DB::raw('SUM(amount) as paid_amount'))
                     ->groupBy('reference_id'),
                 'p',
-                'p.reference_id', '=', 'sales_invoices.id'
+                'p.reference_id',
+                '=',
+                'sales_invoices.id'
             )
             ->leftJoin('sales_orders as so_direct', 'so_direct.id', '=', 'sales_invoices.so_id')
-            ->leftJoin('sales_orders as so_json', function($join) {
+            ->leftJoin('sales_orders as so_json', function ($join) {
                 $join->whereRaw('JSON_LENGTH(sales_invoices.so_ids) > 0')
                     ->whereRaw('so_json.id = JSON_UNQUOTE(JSON_EXTRACT(sales_invoices.so_ids, "$[0]"))');
             })
@@ -276,7 +281,7 @@ class HomeController extends Controller
             ->whereNull('customers.deleted_at')
             ->whereIn('sales_invoices.invoice_status', ['Unpaid/Credit', 'Partially Paid'])
             ->whereRaw('(sales_invoices.grand_total - COALESCE(p.paid_amount, 0)) > 0')
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereNotNull('sales_invoices.so_id')
                     ->orWhereRaw('JSON_LENGTH(sales_invoices.so_ids) > 0');
             })
@@ -309,7 +314,9 @@ class HomeController extends Controller
                     ->select('reference_id', DB::raw('SUM(amount) as paid_amount'))
                     ->groupBy('reference_id'),
                 'p',
-                'p.reference_id', '=', 'purchase_invoices.id'
+                'p.reference_id',
+                '=',
+                'purchase_invoices.id'
             )
             ->whereNull('purchase_invoices.deleted_at')
             ->whereNull('suppliers.deleted_at')
@@ -378,10 +385,10 @@ class HomeController extends Controller
 
         $jobCards = $wipQuery->get();
         $groupedRows = [];
-        
+
         $userSpId = auth()->user()->service_provider_id;
         $isAdmin = auth()->id() == 1 || auth()->user()->hasRole('Super Admin');
-        
+
         $userUnitStageId = null;
         if (!$isAdmin && $userSpId && auth()->user()->serviceProvider) {
             $userUnitStageId = auth()->user()->serviceProvider->operation_stage_id;
@@ -412,15 +419,16 @@ class HomeController extends Controller
                 if ($currentWip > 0) {
                     $hasSpTask = false;
                     $unitName = 'Unassigned';
-                    
+
                     if (!$isAdmin && $userSpId) {
-                        $hasSpTask = $jc->tasks->filter(function($t) use ($userSpId) {
+                        $hasSpTask = $jc->tasks->filter(function ($t) use ($userSpId) {
                             return $t->assignee && $t->assignee->service_provider_id == $userSpId;
                         })->isNotEmpty();
-                        
-                        $isProcessResponsible = ($userUnitStageId && $jc->process_group_id == $userUnitStageId); 
-                        
-                        if (!$hasSpTask && !$isProcessResponsible) continue;
+
+                        $isProcessResponsible = ($userUnitStageId && $jc->process_group_id == $userUnitStageId);
+
+                        if (!$hasSpTask && !$isProcessResponsible)
+                            continue;
                         $unitName = auth()->user()->serviceProvider->name ?? 'Unknown Unit';
                     } else {
                         $firstTask = $jc->tasks->first();
@@ -459,15 +467,16 @@ class HomeController extends Controller
                 $wip = max(0, $inward - $outward);
 
                 $hasSpTask = false;
-                
+
                 if (!$isAdmin && $userSpId) {
-                    $hasSpTask = $jc->tasks->where('stage_id', $schedule->id)->filter(function($t) use ($userSpId) {
+                    $hasSpTask = $jc->tasks->where('stage_id', $schedule->id)->filter(function ($t) use ($userSpId) {
                         return $t->assignee && $t->assignee->service_provider_id == $userSpId;
                     })->isNotEmpty();
 
                     $isStageResponsible = ($userUnitStageId && $schedule->operation_stage_id == $userUnitStageId);
 
-                    if (!$hasSpTask && !$isStageResponsible) continue;
+                    if (!$hasSpTask && !$isStageResponsible)
+                        continue;
                 }
 
                 $stageName = $schedule->operationStage->operation_stage_name ?? 'N/A';
@@ -489,7 +498,7 @@ class HomeController extends Controller
         }
 
         /* Production WIP (Unit Wise) */
-        $production_wip = collect(array_values($groupedRows))->filter(function($row) {
+        $production_wip = collect(array_values($groupedRows))->filter(function ($row) {
             return $row->inward > 0 || $row->outward > 0 || $row->wip > 0;
         })->values();
 
@@ -525,7 +534,7 @@ class HomeController extends Controller
             ->distinct()
             ->get()
             ->groupBy('brand_id')
-            ->map(function($items) {
+            ->map(function ($items) {
                 return $items->sum('min_stock');
             });
 
@@ -561,14 +570,16 @@ class HomeController extends Controller
             $shortage = max(0, $minStock - $stock);
             $excess = max(0, $stock - $minStock);
 
-            if ($shortage > 0) $fabric_shortage_count++;
-            if ($excess > 0) $fabric_excess_count++;
+            if ($shortage > 0)
+                $fabric_shortage_count++;
+            if ($excess > 0)
+                $fabric_excess_count++;
 
             $total_fabric_stock_qty += $stock;
             $total_fabric_stock_val += $stockValue;
 
             $fabric_stock_summary[] = [
-                'brand_id'   => $brandId,
+                'brand_id' => $brandId,
                 'brand_name' => $row->brand_name,
                 'stock' => $stock,
                 'stock_value' => $stockValue,
@@ -604,18 +615,235 @@ class HomeController extends Controller
         /* Executive Fulfillment & Warehouse Operations KPI Card */
         $kpiCardData = $this->computeOperationsKpiCard();
 
+        /* Cutting Department Dashboard (Today's Operations) */
+        $cuttingData = $this->computeCuttingDashboardData($today);
+        $cutting_emp_present = $cuttingData['emp_present'];
+        $cutting_emp_total = $cuttingData['emp_total'];
+        $cutting_pieces_cut = $cuttingData['pieces_cut_today'];
+        $cutting_active_job_cards = $cuttingData['active_job_cards_count'];
+        $cutting_completed_job_cards = $cuttingData['completed_job_cards_count'];
+        $cutting_total_job_cards = $cuttingData['total_job_cards_count'];
+        $cutting_target = $cuttingData['target'];
+        $cutting_completed = $cuttingData['completed'];
+        $cutting_pending = $cuttingData['pending'];
+        $cutting_efficiency = $cuttingData['efficiency'];
+        $cutting_job_cards_list = $cuttingData['job_cards_list'];
+
         return view('dashboard', compact(
-            'sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'total_emp', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today', 'dbDevices', 'attendance_chart_data',
-            'today_sales_qty', 'today_sales_wot', 'today_return_qty', 'today_return_wot', 'today_net_qty', 'today_net_wot',
-            'month_sales_qty', 'month_sales_wot', 'month_return_qty', 'month_return_wot', 'month_net_qty', 'month_net_wot',
-            'year_sales_qty', 'year_sales_wot', 'year_return_qty', 'year_return_wot', 'year_net_qty', 'year_net_wot',
-            'today_missed_qty', 'today_missed_value', 'month_missed_qty', 'month_missed_value', 'year_missed_qty', 'year_missed_value',
-            'fabric_stock_summary', 'total_fabric_stock_qty', 'total_fabric_stock_val', 'fabric_shortage_count', 'fabric_excess_count',
-            'fabric_utilisation_summary', 'total_util_issued', 'total_util_consumed', 'total_util_wastage', 'total_util_pct',
-            'core_total_stock', 'core_total_wip', 'core_total_fg', 'core_total_pipeline',
-            'supplier_perf_count', 'supplier_perf_spend', 'supplier_perf_ontime', 'supplier_perf_returns',
-            'kpiCardData'
+            'sales_today',
+            'sales_month',
+            'sales_year',
+            'sales_count_today',
+            'sales_count_month',
+            'sales_count_year',
+            'orders_today',
+            'orders_month',
+            'total_stock',
+            'urgent_orders',
+            'total_sales_value',
+            'sales_return',
+            'bill_discount',
+            'bill_discount_percent',
+            'cash_discount',
+            'cash_discount_percent',
+            'total_debtors',
+            'total_purchase',
+            'purchase_return',
+            'total_creditors',
+            'debtors_aging',
+            'creditors_aging',
+            'collection_performance',
+            'fabric_value',
+            'accessories_value',
+            'wip_value',
+            'finished_goods_value',
+            'months_labels',
+            'sales_chart_data',
+            'collection_chart_data',
+            'purchase_chart_data',
+            'payment_chart_data',
+            'production_wip',
+            'production_plan_qty',
+            'production_achieved_qty',
+            'production_efficiency',
+            'delivery_overdue',
+            'process_wise_status',
+            'wip_cost_breakdown',
+            'maintenance_raised',
+            'maintenance_attended',
+            'maintenance_pending',
+            'expiring_documents',
+            'total_emp',
+            'present_emp_today',
+            'absent_emp_today',
+            'late_emp_today',
+            'overtime_today',
+            'dbDevices',
+            'attendance_chart_data',
+            'today_sales_qty',
+            'today_sales_wot',
+            'today_return_qty',
+            'today_return_wot',
+            'today_net_qty',
+            'today_net_wot',
+            'month_sales_qty',
+            'month_sales_wot',
+            'month_return_qty',
+            'month_return_wot',
+            'month_net_qty',
+            'month_net_wot',
+            'year_sales_qty',
+            'year_sales_wot',
+            'year_return_qty',
+            'year_return_wot',
+            'year_net_qty',
+            'year_net_wot',
+            'today_missed_qty',
+            'today_missed_value',
+            'month_missed_qty',
+            'month_missed_value',
+            'year_missed_qty',
+            'year_missed_value',
+            'fabric_stock_summary',
+            'total_fabric_stock_qty',
+            'total_fabric_stock_val',
+            'fabric_shortage_count',
+            'fabric_excess_count',
+            'fabric_utilisation_summary',
+            'total_util_issued',
+            'total_util_consumed',
+            'total_util_wastage',
+            'total_util_pct',
+            'core_total_stock',
+            'core_total_wip',
+            'core_total_fg',
+            'core_total_pipeline',
+            'supplier_perf_count',
+            'supplier_perf_spend',
+            'supplier_perf_ontime',
+            'supplier_perf_returns',
+            'kpiCardData',
+            'cutting_emp_present',
+            'cutting_emp_total',
+            'cutting_pieces_cut',
+            'cutting_active_job_cards',
+            'cutting_completed_job_cards',
+            'cutting_total_job_cards',
+            'cutting_target',
+            'cutting_completed',
+            'cutting_pending',
+            'cutting_efficiency',
+            'cutting_job_cards_list'
         ));
+    }
+
+    /**
+     * Compute real-time Cutting Department KPI data for current date (today).
+     */
+    protected function computeCuttingDashboardData($today)
+    {
+        // 1. Employee Present -> total active employees present in Cutting Department
+        $cuttingDept = \App\Models\Department::where('department', 'like', '%CUTTING%')->first();
+        $cuttingDeptId = $cuttingDept ? $cuttingDept->id : 3;
+
+        $cuttingEmpUsers = \App\Models\User::where('status', 'Active')
+            ->where('department_id', $cuttingDeptId)
+            ->where('id', '!=', 1)
+            ->get();
+
+        $empTotal = $cuttingEmpUsers->count();
+        $empCodes = $cuttingEmpUsers->pluck('emp_id')->filter()->toArray();
+
+        $empPresent = Attendance::whereDate('date', $today)
+            ->whereIn('emp_code', $empCodes)
+            ->whereIn('status', ['Present', 'Late', 'Overtime'])
+            ->count();
+
+        // 2. Pieces Cut -> total pcs cutting today
+        $cuttingStage = \App\Models\OperationStage::where('operation_stage_name', 'like', '%CUTTING%')->first();
+        $cuttingStageId = $cuttingStage ? $cuttingStage->id : 1;
+
+        $cuttingTaskIds = \App\Models\Task::whereHas('stage', function ($q) use ($cuttingStageId) {
+            $q->where('operation_stage_id', $cuttingStageId);
+        })->pluck('id');
+
+        $issueProducedToday = JobCardIssueItem::whereDate('updated_at', $today)
+            ->whereNull('deleted_at')
+            ->sum('produced_qty');
+
+        $movementOutwardToday = \App\Models\ProductionMovement::where('operation_stage_id', $cuttingStageId)
+            ->whereDate('created_at', $today)
+            ->whereNull('deleted_at')
+            ->sum('outward_qty');
+
+        $taskCompletedToday = \App\Models\TaskAssignEmployee::whereIn('task_id', $cuttingTaskIds)
+            ->whereDate('updated_at', $today)
+            ->whereNull('deleted_at')
+            ->sum('completed_qty');
+
+        $piecesCutToday = max(floatval($issueProducedToday), floatval($movementOutwardToday), floatval($taskCompletedToday));
+
+        // 4. Active Job Card -> show all job cards with completed
+        $cuttingScheduleJcIds = ProcessSchedule::where('operation_stage_id', $cuttingStageId)
+            ->pluck('job_card_entry_id')
+            ->unique();
+
+        $cuttingJobCardsQuery = JobCardEntry::whereIn('id', $cuttingScheduleJcIds)->whereNull('deleted_at');
+
+        $activeJobCardsCount = (clone $cuttingJobCardsQuery)->whereNotIn('status', ['Production Completed', 'Closed'])->count();
+        $completedJobCardsCount = (clone $cuttingJobCardsQuery)->where('status', 'Production Completed')->count();
+        $totalJobCardsCount = (clone $cuttingJobCardsQuery)->count();
+
+        // Detailed list for modal view
+        $jobCardsList = JobCardEntry::with(['brand', 'item.style', 'serviceProvider', 'issueItems'])
+            ->whereIn('id', $cuttingScheduleJcIds)
+            ->whereNull('deleted_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(function ($jc) {
+                return [
+                    'id' => $jc->id,
+                    'job_card_no' => $jc->job_card_no,
+                    'brand' => $jc->brand->brand_name ?? 'N/A',
+                    'style' => $jc->item->style->style_name ?? '-',
+                    'unit' => $jc->serviceProvider->name ?? 'In-House',
+                    'order_qty' => floatval($jc->grand_total_qty),
+                    'pieces_cut' => floatval($jc->issueItems->sum('produced_qty')),
+                    'delivery_date' => $jc->delivery_date ? date('d-M-Y', strtotime($jc->delivery_date)) : '-',
+                    'status' => $jc->status ?: 'In Progress',
+                    'url' => url('job_card_entry/view/' . $jc->id),
+                ];
+            });
+
+        // 5. Target -> show today cutting target
+        $tasksTargetToday = \App\Models\Task::whereHas('stage', function ($q) use ($cuttingStageId) {
+            $q->where('operation_stage_id', $cuttingStageId);
+        })->whereDate('issue_date', $today)->sum('issue_qty');
+
+        $target = $tasksTargetToday > 0 ? floatval($tasksTargetToday) : floatval($cuttingStage->target ?? 3100);
+
+        // 6. Completed -> show today cutting completed count
+        $completed = $piecesCutToday;
+
+        // 7. Pending -> target - completed
+        $pending = max(0, $target - $completed);
+
+        // Efficiency
+        $efficiency = $target > 0 ? round(($completed / $target) * 100, 1) : 0;
+
+        return [
+            'emp_present' => $empPresent,
+            'emp_total' => $empTotal,
+            'pieces_cut_today' => $piecesCutToday,
+            'active_job_cards_count' => $activeJobCardsCount,
+            'completed_job_cards_count' => $completedJobCardsCount,
+            'total_job_cards_count' => $totalJobCardsCount,
+            'target' => $target,
+            'completed' => $completed,
+            'pending' => $pending,
+            'efficiency' => $efficiency,
+            'job_cards_list' => $jobCardsList,
+        ];
     }
 
     /**
@@ -625,10 +853,10 @@ class HomeController extends Controller
      */
     public function fabricInventoryDrilldown(Request $request)
     {
-        $level   = $request->input('level', 'brand'); // 'brand' | 'style' | 'artno'
+        $level = $request->input('level', 'brand'); // 'brand' | 'style' | 'artno'
         $brandId = $request->input('brand_id');
         $styleId = $request->input('style_id');
-        
+
         $search = $request->input('search');
         if (is_array($search) && isset($search['value'])) {
             $search = trim(strtolower($search['value']));
@@ -653,7 +881,7 @@ class HomeController extends Controller
 
         if ($level === 'brand') {
             $base->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
-                 ->selectRaw("
+                ->selectRaw("
                     sei.brand_id as id,
                     COALESCE(b.brand_name, 'Unknown Brand') as label,
                     SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
@@ -661,8 +889,8 @@ class HomeController extends Controller
                     ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
                     0 as min_stock_sum
                  ")
-                 ->groupBy('sei.brand_id', 'b.brand_name');
-                 
+                ->groupBy('sei.brand_id', 'b.brand_name');
+
             $minStocksByBrand = DB::table('stock_entry_items as sei2')
                 ->join('raw_materials as rm2', 'sei2.raw_material_id', '=', 'rm2.id')
                 ->where('sei2.store_category_id', 1)
@@ -671,12 +899,13 @@ class HomeController extends Controller
                 ->distinct()
                 ->get()
                 ->groupBy('brand_id')
-                ->map(function($items) { return $items->sum('min_stock'); });
-                
+                ->map(function ($items) {
+                    return $items->sum('min_stock'); });
+
         } elseif ($level === 'style') {
             $base->where('sei.brand_id', $brandId)
-                 ->leftJoin('styles as s', 'sei.style_id', '=', 's.id')
-                 ->selectRaw("
+                ->leftJoin('styles as s', 'sei.style_id', '=', 's.id')
+                ->selectRaw("
                     sei.style_id as id,
                     COALESCE(s.style_name, 'Unknown Style') as label,
                     SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
@@ -684,12 +913,12 @@ class HomeController extends Controller
                     ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
                     COALESCE(SUM(DISTINCT COALESCE(rm.min_stock, 0)), 0) as min_stock_sum
                  ")
-                 ->groupBy('sei.style_id', 's.style_name');
+                ->groupBy('sei.style_id', 's.style_name');
         } else {
             $base->where('sei.brand_id', $brandId)
-                 ->where('sei.style_id', $styleId)
-                 ->leftJoin('fabric_sizes as fs', 'sei.fabric_width_id', '=', 'fs.id')
-                 ->selectRaw("
+                ->where('sei.style_id', $styleId)
+                ->leftJoin('fabric_sizes as fs', 'sei.fabric_width_id', '=', 'fs.id')
+                ->selectRaw("
                     sei.art_no as label,
                     sei.fabric_width_id,
                     COALESCE(fs.width, '—') as fabric_width,
@@ -698,12 +927,12 @@ class HomeController extends Controller
                     ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
                     COALESCE(SUM(DISTINCT COALESCE(rm.min_stock, 0)), 0) as min_stock_sum
                  ")
-                 ->groupBy('sei.art_no', 'sei.fabric_width_id', 'fs.width');
+                ->groupBy('sei.art_no', 'sei.fabric_width_id', 'fs.width');
         }
 
         $base->having('stock', '>', 0)->orderByDesc('stock');
         $rows = $base->get();
-        
+
         $data = [];
         $totalStock = 0;
         $totalVal = 0;
@@ -712,28 +941,28 @@ class HomeController extends Controller
         $totalExc = 0;
 
         foreach ($rows as $row) {
-            $stock    = floatval($row->stock);
-            
+            $stock = floatval($row->stock);
+
             if ($level === 'brand') {
                 $minStock = floatval($minStocksByBrand[$row->id] ?? 0);
             } else {
                 $minStock = floatval($row->min_stock_sum);
             }
-            
+
             $shortage = max(0, $minStock - $stock);
-            $excess   = max(0, $stock - $minStock);
-            
+            $excess = max(0, $stock - $minStock);
+
             $item = [
-                'id'               => $row->id ?? null,
-                'label'            => $level === 'artno' && empty($row->label) ? '(No Art No.)' : $row->label,
-                'stock'            => $stock,
-                'stock_value'      => floatval($row->stock_value),
+                'id' => $row->id ?? null,
+                'label' => $level === 'artno' && empty($row->label) ? '(No Art No.)' : $row->label,
+                'stock' => $stock,
+                'stock_value' => floatval($row->stock_value),
                 'days_in_warehouse' => intval($row->avg_days),
-                'min_stock'        => $minStock,
-                'shortage'         => $shortage,
-                'excess'           => $excess,
+                'min_stock' => $minStock,
+                'shortage' => $shortage,
+                'excess' => $excess,
             ];
-            
+
             if ($level === 'artno') {
                 $item['fabric_width'] = $row->fabric_width;
             }
@@ -741,17 +970,20 @@ class HomeController extends Controller
             // Apply search filtering
             if ($search !== '') {
                 $match = false;
-                if (str_contains(strtolower($item['label']), $search)) $match = true;
-                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search)) $match = true;
-                if (!$match) continue;
+                if (str_contains(strtolower($item['label']), $search))
+                    $match = true;
+                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search))
+                    $match = true;
+                if (!$match)
+                    continue;
             }
 
             $totalStock += $item['stock'];
-            $totalVal   += $item['stock_value'];
-            $totalMin   += $item['min_stock'];
+            $totalVal += $item['stock_value'];
+            $totalMin += $item['min_stock'];
             $totalShort += $item['shortage'];
-            $totalExc   += $item['excess'];
-            
+            $totalExc += $item['excess'];
+
             $data[] = $item;
         }
 
@@ -760,7 +992,8 @@ class HomeController extends Controller
         if ($request->has('start')) {
             $start = max(0, intval($request->input('start', 0)));
             $length = intval($request->input('length', 10));
-            if ($length < 0) $length = $total;
+            if ($length < 0)
+                $length = $total;
         } else {
             $perPage = intval($request->input('per_page', 10));
             $page = intval($request->input('page', 1));
@@ -769,23 +1002,23 @@ class HomeController extends Controller
             $start = ($page - 1) * $perPage;
             $length = $perPage;
         }
-        
+
         $paginatedData = array_slice($data, $start, $length);
 
         return response()->json([
-            'draw'            => intval($request->get('draw', 1)),
-            'recordsTotal'    => $total,
+            'draw' => intval($request->get('draw', 1)),
+            'recordsTotal' => $total,
             'recordsFiltered' => $total,
-            'data'            => array_values($paginatedData),
-            'current_page'    => isset($page) ? $page : 1,
-            'last_page'       => isset($lastPage) ? $lastPage : 1,
-            'total'           => $total,
-            'totals'          => [
-                'stock'       => $totalStock,
+            'data' => array_values($paginatedData),
+            'current_page' => isset($page) ? $page : 1,
+            'last_page' => isset($lastPage) ? $lastPage : 1,
+            'total' => $total,
+            'totals' => [
+                'stock' => $totalStock,
                 'stock_value' => $totalVal,
-                'min_stock'   => $totalMin,
-                'shortage'    => $totalShort,
-                'excess'      => $totalExc,
+                'min_stock' => $totalMin,
+                'shortage' => $totalShort,
+                'excess' => $totalExc,
             ]
         ]);
     }
@@ -796,9 +1029,9 @@ class HomeController extends Controller
      */
     public function accessoriesInventoryDrilldown(Request $request)
     {
-        $level   = $request->input('level', 'brand'); // 'brand' | 'artno'
+        $level = $request->input('level', 'brand'); // 'brand' | 'artno'
         $brandId = $request->input('brand_id');
-        
+
         $search = $request->input('search');
         if (is_array($search) && isset($search['value'])) {
             $search = trim(strtolower($search['value']));
@@ -820,7 +1053,7 @@ class HomeController extends Controller
 
         if ($level === 'brand') {
             $base->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
-                 ->selectRaw("
+                ->selectRaw("
                     sei.brand_id as id,
                     COALESCE(b.brand_name, 'Unknown Brand') as label,
                     SUM(sei.qty_in - COALESCE(sei.qty_out, 0)) as stock,
@@ -828,8 +1061,8 @@ class HomeController extends Controller
                     ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
                     0 as min_stock_sum
                  ")
-                 ->groupBy('sei.brand_id', 'b.brand_name');
-                 
+                ->groupBy('sei.brand_id', 'b.brand_name');
+
             $minStocksByBrand = DB::table('stock_entry_items as sei2')
                 ->join('raw_materials as rm2', 'sei2.raw_material_id', '=', 'rm2.id')
                 ->where('sei2.store_category_id', 2)
@@ -838,12 +1071,13 @@ class HomeController extends Controller
                 ->distinct()
                 ->get()
                 ->groupBy('brand_id')
-                ->map(function($items) { return $items->sum('min_stock'); });
-                
+                ->map(function ($items) {
+                    return $items->sum('min_stock'); });
+
         } else {
             $base->where('sei.brand_id', $brandId)
-                 ->leftJoin('fabric_sizes as fs', 'sei.fabric_width_id', '=', 'fs.id')
-                 ->selectRaw("
+                ->leftJoin('fabric_sizes as fs', 'sei.fabric_width_id', '=', 'fs.id')
+                ->selectRaw("
                     sei.art_no as label,
                     sei.fabric_width_id,
                     COALESCE(fs.width, '—') as fabric_width,
@@ -852,12 +1086,12 @@ class HomeController extends Controller
                     ROUND(AVG(DATEDIFF(CURDATE(), sei.created_at))) as avg_days,
                     COALESCE(SUM(DISTINCT COALESCE(rm.min_stock, 0)), 0) as min_stock_sum
                  ")
-                 ->groupBy('sei.art_no', 'sei.fabric_width_id', 'fs.width');
+                ->groupBy('sei.art_no', 'sei.fabric_width_id', 'fs.width');
         }
 
         $base->having('stock', '>', 0)->orderByDesc('stock');
         $rows = $base->get();
-        
+
         $data = [];
         $totalStock = 0;
         $totalVal = 0;
@@ -866,28 +1100,28 @@ class HomeController extends Controller
         $totalExc = 0;
 
         foreach ($rows as $row) {
-            $stock    = floatval($row->stock);
-            
+            $stock = floatval($row->stock);
+
             if ($level === 'brand') {
                 $minStock = floatval($minStocksByBrand[$row->id] ?? 0);
             } else {
                 $minStock = floatval($row->min_stock_sum);
             }
-            
+
             $shortage = max(0, $minStock - $stock);
-            $excess   = max(0, $stock - $minStock);
-            
+            $excess = max(0, $stock - $minStock);
+
             $item = [
-                'id'               => $row->id ?? null,
-                'label'            => $level === 'artno' && empty($row->label) ? '(No Art No.)' : $row->label,
-                'stock'            => $stock,
-                'stock_value'      => floatval($row->stock_value),
+                'id' => $row->id ?? null,
+                'label' => $level === 'artno' && empty($row->label) ? '(No Art No.)' : $row->label,
+                'stock' => $stock,
+                'stock_value' => floatval($row->stock_value),
                 'days_in_warehouse' => intval($row->avg_days),
-                'min_stock'        => $minStock,
-                'shortage'         => $shortage,
-                'excess'           => $excess,
+                'min_stock' => $minStock,
+                'shortage' => $shortage,
+                'excess' => $excess,
             ];
-            
+
             if ($level === 'artno') {
                 $item['fabric_width'] = $row->fabric_width;
             }
@@ -895,17 +1129,20 @@ class HomeController extends Controller
             // Apply search filtering
             if ($search !== '') {
                 $match = false;
-                if (str_contains(strtolower($item['label']), $search)) $match = true;
-                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search)) $match = true;
-                if (!$match) continue;
+                if (str_contains(strtolower($item['label']), $search))
+                    $match = true;
+                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search))
+                    $match = true;
+                if (!$match)
+                    continue;
             }
 
             $totalStock += $item['stock'];
-            $totalVal   += $item['stock_value'];
-            $totalMin   += $item['min_stock'];
+            $totalVal += $item['stock_value'];
+            $totalMin += $item['min_stock'];
             $totalShort += $item['shortage'];
-            $totalExc   += $item['excess'];
-            
+            $totalExc += $item['excess'];
+
             $data[] = $item;
         }
 
@@ -914,7 +1151,8 @@ class HomeController extends Controller
         if ($request->has('start')) {
             $start = max(0, intval($request->input('start', 0)));
             $length = intval($request->input('length', 10));
-            if ($length < 0) $length = $total;
+            if ($length < 0)
+                $length = $total;
         } else {
             $perPage = intval($request->input('per_page', 10));
             $page = intval($request->input('page', 1));
@@ -923,23 +1161,23 @@ class HomeController extends Controller
             $start = ($page - 1) * $perPage;
             $length = $perPage;
         }
-        
+
         $paginatedData = array_slice($data, $start, $length);
 
         return response()->json([
-            'draw'            => intval($request->get('draw', 1)),
-            'recordsTotal'    => $total,
+            'draw' => intval($request->get('draw', 1)),
+            'recordsTotal' => $total,
             'recordsFiltered' => $total,
-            'data'            => array_values($paginatedData),
-            'current_page'    => isset($page) ? $page : 1,
-            'last_page'       => isset($lastPage) ? $lastPage : 1,
-            'total'           => $total,
-            'totals'          => [
-                'stock'       => $totalStock,
+            'data' => array_values($paginatedData),
+            'current_page' => isset($page) ? $page : 1,
+            'last_page' => isset($lastPage) ? $lastPage : 1,
+            'total' => $total,
+            'totals' => [
+                'stock' => $totalStock,
                 'stock_value' => $totalVal,
-                'min_stock'   => $totalMin,
-                'shortage'    => $totalShort,
-                'excess'      => $totalExc,
+                'min_stock' => $totalMin,
+                'shortage' => $totalShort,
+                'excess' => $totalExc,
             ]
         ]);
     }
@@ -1002,15 +1240,15 @@ class HomeController extends Controller
             ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereNull('stock_entry_items.store_category_id')
-                  ->orWhere('stock_entry_items.store_category_id', '!=', 6);
+                    ->orWhere('stock_entry_items.store_category_id', '!=', 6);
             });
 
         if (!empty($activeWhIds)) {
-            $stockQuery->where(function($q) use ($activeWhIds) {
+            $stockQuery->where(function ($q) use ($activeWhIds) {
                 $q->whereIn('stock_entry_items.warehouse_id', $activeWhIds)
-                  ->orWhereIn('stock_entries.warehouse_id', $activeWhIds);
+                    ->orWhereIn('stock_entries.warehouse_id', $activeWhIds);
             });
         }
 
@@ -1028,9 +1266,9 @@ class HomeController extends Controller
         // 4. Dispatch Accuracy
         $totalDispatches = DB::table('sales_invoices')->whereNull('deleted_at')->count();
         $dispatchErrors = DB::table('credit_notes')->whereNull('deleted_at')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('fault', 'Warehouse Fault')
-                  ->orWhereIn('reason', ['Invoice Mistake', 'Delay Despatch']);
+                    ->orWhereIn('reason', ['Invoice Mistake', 'Delay Despatch']);
             })
             ->count();
 
@@ -1083,18 +1321,18 @@ class HomeController extends Controller
             'fabricDetails',
             'item.style'
         ])
-        ->where('status', '!=', 'cancelled')
-        ->whereNotNull('job_card_date')
-        ->orderBy('job_card_date', 'desc')
-        ->get();
+            ->where('status', '!=', 'cancelled')
+            ->whereNotNull('job_card_date')
+            ->orderBy('job_card_date', 'desc')
+            ->get();
 
         $utilJobCardIds = $utilJobCards->pluck('id')->toArray();
         $utilStyleMap = [];
         if (!empty($utilJobCardIds)) {
             $utilStyleRows = DB::table('job_card_fabric_details as jcfd')
-                ->join('stock_entry_items as sei', function($join) {
+                ->join('stock_entry_items as sei', function ($join) {
                     $join->on('sei.stock_entry_id', '=', 'jcfd.stock_entry_id')
-                         ->on('sei.art_no', '=', 'jcfd.art_no');
+                        ->on('sei.art_no', '=', 'jcfd.art_no');
                 })
                 ->join('styles as s', 'sei.style_id', '=', 's.id')
                 ->whereIn('jcfd.job_card_entry_id', $utilJobCardIds)
@@ -1138,7 +1376,8 @@ class HomeController extends Controller
             }
 
             $utilisation = $fabricIssued > 0 ? round(($fabricConsumed / $fabricIssued) * 100, 1) : 0;
-            if ($utilisation > 100) $utilisation = 100.0;
+            if ($utilisation > 100)
+                $utilisation = 100.0;
 
             $style = 'N/A';
             if (!empty($utilStyleMap[$jc->id])) {
@@ -1214,14 +1453,15 @@ class HomeController extends Controller
         }
 
         foreach ($fabric_utilisation_summary as &$b) {
-            $b['utilisation'] = $b['fabric_issued'] > 0 
-                ? round(($b['fabric_consumed'] / $b['fabric_issued']) * 100, 1) 
+            $b['utilisation'] = $b['fabric_issued'] > 0
+                ? round(($b['fabric_consumed'] / $b['fabric_issued']) * 100, 1)
                 : 0;
-            if ($b['utilisation'] > 100) $b['utilisation'] = 100.0;
+            if ($b['utilisation'] > 100)
+                $b['utilisation'] = 100.0;
         }
         unset($b);
 
-        usort($fabric_utilisation_summary, function($a, $b) {
+        usort($fabric_utilisation_summary, function ($a, $b) {
             return $b['fabric_issued'] <=> $a['fabric_issued'];
         });
 
@@ -1253,7 +1493,7 @@ class HomeController extends Controller
         $summary = $allData['summary'];
 
         if (!empty($search)) {
-            $summary = array_values(array_filter($summary, function($item) use ($search) {
+            $summary = array_values(array_filter($summary, function ($item) use ($search) {
                 return (stripos($item['brand_name'] ?? '', $search) !== false)
                     || (stripos($item['style'] ?? '', $search) !== false)
                     || (stripos($item['service_provider'] ?? '', $search) !== false);
@@ -1280,16 +1520,16 @@ class HomeController extends Controller
         $totUtil = $totIssued > 0 ? round(($totConsumed / $totIssued) * 100, 1) : 0;
 
         return response()->json([
-            'draw'            => intval($request->get('draw', 1)),
-            'recordsTotal'    => $recordsTotal,
+            'draw' => intval($request->get('draw', 1)),
+            'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
-            'data'            => $pageRows,
-            'totals'          => [
-                'total_jcs'         => number_format($totJcs) . ' JCs',
-                'total_cutting'     => number_format($totCutting) . ' Pcs',
-                'total_issued'      => number_format($totIssued, 2),
-                'total_consumed'    => number_format($totConsumed, 2),
-                'total_wastage'     => number_format($totWastage, 2),
+            'data' => $pageRows,
+            'totals' => [
+                'total_jcs' => number_format($totJcs) . ' JCs',
+                'total_cutting' => number_format($totCutting) . ' Pcs',
+                'total_issued' => number_format($totIssued, 2),
+                'total_consumed' => number_format($totConsumed, 2),
+                'total_wastage' => number_format($totWastage, 2),
                 'total_utilisation' => $totUtil . '%',
             ]
         ]);
@@ -1327,7 +1567,8 @@ class HomeController extends Controller
         $search = trim($request->input('search.value', $request->get('search', '')));
         $start = max(0, intval($request->get('start', 0)));
         $length = intval($request->get('length', 10));
-        if ($length <= 0) $length = 10;
+        if ($length <= 0)
+            $length = 10;
 
         $artQuery = DB::table('stock_entry_items as sei')
             ->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
@@ -1346,10 +1587,10 @@ class HomeController extends Controller
             ->havingRaw('stock > 0');
 
         if (!empty($search)) {
-            $artQuery->where(function($q) use ($search) {
+            $artQuery->where(function ($q) use ($search) {
                 $q->where('sei.art_no', 'like', "%{$search}%")
-                  ->orWhere('rm.name', 'like', "%{$search}%")
-                  ->orWhere('b.brand_name', 'like', "%{$search}%");
+                    ->orWhere('rm.name', 'like', "%{$search}%")
+                    ->orWhere('b.brand_name', 'like', "%{$search}%");
             });
         }
 
@@ -1394,9 +1635,9 @@ class HomeController extends Controller
             // Fast FG via JC lookup for only current page items
             $fgViaJc = DB::table('job_card_fabric_details as jcfd')
                 ->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')
-                ->join('stock_entry_items as fg_sei', function($join) {
+                ->join('stock_entry_items as fg_sei', function ($join) {
                     $join->on('fg_sei.art_no', '=', 'jce.job_card_no')
-                         ->orOn('fg_sei.art_no', '=', 'jce.reference_no');
+                        ->orOn('fg_sei.art_no', '=', 'jce.reference_no');
                 })
                 ->whereIn('jcfd.art_no', $pageArtList)
                 ->whereNull('fg_sei.store_category_id')
@@ -1410,7 +1651,7 @@ class HomeController extends Controller
             $settingsQuery = DB::table('core_material_planner_settings')
                 ->whereIn('art_no', $pageArtList)
                 ->whereNull('deleted_at')
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->whereNull('status')->orWhere('status', 'Active');
                 })
                 ->get()
@@ -1441,7 +1682,7 @@ class HomeController extends Controller
             }
 
             $reorderPointMeters = ($dailyConsumption * $supplierLeadTime) + $safetyStock;
-            
+
             $nextPoStr = '—';
             if ($dailyConsumption > 0) {
                 $netAvailableMeters = $pipeline - $reorderPointMeters;
@@ -1625,10 +1866,11 @@ class HomeController extends Controller
         $search = trim($request->input('search.value', $request->get('search', '')));
         $start = max(0, intval($request->get('start', 0)));
         $length = intval($request->get('length', 10));
-        if ($length <= 0) $length = 10;
+        if ($length <= 0)
+            $length = 10;
 
         if (!empty($search)) {
-            $items = array_values(array_filter($items, function($item) use ($search) {
+            $items = array_values(array_filter($items, function ($item) use ($search) {
                 return stripos($item['supplier_name'] ?? '', $search) !== false;
             }));
         }
@@ -1659,7 +1901,7 @@ class HomeController extends Controller
             }
 
             // Avg Delay Badge
-            $delayHtml = $s['avg_delay'] > 0 
+            $delayHtml = $s['avg_delay'] > 0
                 ? '<span class="text-danger fw-bold">' . $s['avg_delay'] . ' Days</span>'
                 : '<span class="text-success fw-bold">0 Days</span>';
 

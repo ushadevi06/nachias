@@ -1124,6 +1124,445 @@ class ProductionReportController extends Controller
                         'data' => $pageData
                     ]);
 
+                case 'employee-efficiency':
+                    $query = TaskAssignEmployee::with([
+                        'employee',
+                        'service',
+                        'task.jobCard.serviceProvider',
+                        'task.stage.operationStage',
+                        'task.operationStage'
+                    ])->whereNotNull('issued_to');
+
+                    if ($fromDate) {
+                        $query->where(function($q) use ($fromDate) {
+                            $q->where('issue_date', '>=', $fromDate)
+                              ->orWhere(function($sub) use ($fromDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                              });
+                        });
+                    }
+                    if ($toDate) {
+                        $query->where(function($q) use ($toDate) {
+                            $q->where('issue_date', '<=', $toDate)
+                              ->orWhere(function($sub) use ($toDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                              });
+                        });
+                    }
+                    if ($unitId) {
+                        $query->where(function($q) use ($unitId) {
+                            $q->whereHas('task.jobCard', function($jcQ) use ($unitId) {
+                                $jcQ->where('service_provider_id', $unitId);
+                            })->orWhereHas('employee', function($empQ) use ($unitId) {
+                                $empQ->where('service_provider_id', $unitId);
+                            });
+                        });
+                    }
+
+                    $allAssignments = $query->get();
+                    $grouped = $allAssignments->groupBy('issued_to');
+
+                    $rows = [];
+                    $summaryTotalHours = 0;
+                    $summaryTotalTarget = 0;
+                    $summaryTotalCompleted = 0;
+
+                    foreach ($grouped as $empId => $assignments) {
+                        $emp = $assignments->first()->employee;
+                        if (!$emp) continue;
+
+                        $tasksDone = $assignments->map(function($a) {
+                            return $a->service ? $a->service->service_name : ($a->task && $a->task->task_no ? $a->task->task_no : null);
+                        })->filter()->unique()->values();
+
+                        $tasksStr = $tasksDone->implode(' + ');
+
+                        $totalHours = (float) $assignments->sum(function($a) {
+                            return (float)($a->total_hrs ?? 0);
+                        });
+
+                        $targetQty = (float) $assignments->sum(function($a) {
+                            return (float)($a->issue_qty ?? 0);
+                        });
+
+                        $completedQty = (float) $assignments->sum(function($a) {
+                            return (float)($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
+                        });
+
+                        $pendingQty = max(0, $targetQty - $completedQty);
+                        $efficiency = ($targetQty > 0) ? round(($completedQty / $targetQty) * 100, 1) : 0;
+
+                        $summaryTotalHours += $totalHours;
+                        $summaryTotalTarget += $targetQty;
+                        $summaryTotalCompleted += $completedQty;
+
+                        $remarksList = $assignments->pluck('remarks')->filter(function($r) {
+                            return !empty(trim($r));
+                        })->unique()->values();
+                        $remarksStr = $remarksList->isNotEmpty() ? $remarksList->implode(', ') : '-';
+
+                        $designation = $emp->operation_stages_names ?: '-';
+                        if ($designation === '-') {
+                            $stageNames = $assignments->map(function($a) {
+                                if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
+                                    return $a->task->stage->operationStage->operation_stage_name;
+                                } elseif ($a->task && $a->task->operationStage) {
+                                    return $a->task->operationStage->operation_stage_name;
+                                }
+                                return null;
+                            })->filter()->unique()->values();
+                            if ($stageNames->isNotEmpty()) {
+                                $designation = $stageNames->implode(', ');
+                            }
+                        }
+
+                        $effBadge = 'bg-label-danger';
+                        if ($efficiency >= 95) $effBadge = 'bg-label-success';
+                        elseif ($efficiency >= 75) $effBadge = 'bg-label-warning';
+
+                        $empCode = $emp->emp_id ?: 'EMP' . $emp->id;
+
+                        // Clickable Employee Name for Point 1 (Task Wise Report)
+                        $empNameHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-emp-tasks text-decoration-none" data-emp-id="' . $emp->id . '" data-emp-name="' . htmlspecialchars($emp->name) . '" data-emp-code="' . htmlspecialchars($empCode) . '" data-designation="' . htmlspecialchars($designation) . '" title="Click to view task-wise breakdown">' . htmlspecialchars($emp->name) . ' <i class="ri-external-link-line small opacity-75 ms-1"></i></a>';
+
+                        // Clickable Target Qty for Point 2 (Job Wise Summary)
+                        $targetQtyHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-emp-jobs text-decoration-none" data-emp-id="' . $emp->id . '" data-emp-name="' . htmlspecialchars($emp->name) . '" data-emp-code="' . htmlspecialchars($empCode) . '" data-designation="' . htmlspecialchars($designation) . '" title="Click to view job card summary">' . number_format($targetQty) . ' Pcs <i class="ri-file-list-line small opacity-75 ms-1"></i></a>';
+
+                        $rows[] = [
+                            'emp_id_raw' => $empCode,
+                            'emp_id' => '<span class="badge bg-label-secondary font-monospace">' . htmlspecialchars($empCode) . '</span>',
+                            'employee_name' => $empNameHtml,
+                            'designation' => htmlspecialchars($designation),
+                            'task' => '<span class="fw-semibold text-dark">' . htmlspecialchars($tasksStr ?: '-') . '</span>',
+                            'hours_working' => '<span class="fw-bold">' . (fmod($totalHours, 1) !== 0.0 ? number_format($totalHours, 1) : number_format($totalHours, 0)) . '</span>',
+                            'target_qty' => $targetQtyHtml,
+                            'completed' => '<span class="text-success fw-bold">' . number_format($completedQty) . ' Pcs</span>',
+                            'pending' => '<span class="text-danger fw-semibold">' . number_format($pendingQty) . ' Pcs</span>',
+                            'efficiency' => '<span class="badge ' . $effBadge . ' rounded-pill px-3 py-1 fs-6">' . $efficiency . '%</span>',
+                            'remark' => htmlspecialchars($remarksStr),
+                            '_search_text' => strtolower($empCode . ' ' . $emp->name . ' ' . $designation . ' ' . $tasksStr . ' ' . $remarksStr . ' ' . $efficiency . '%')
+                        ];
+                    }
+
+                    $totalRecords = count($rows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $rows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
+
+                    $overallEfficiency = ($summaryTotalTarget > 0) ? round(($summaryTotalCompleted / $summaryTotalTarget) * 100, 1) : 0;
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'meta' => [
+                            'total_employees' => $totalRecords,
+                            'total_hours' => (fmod($summaryTotalHours, 1) !== 0.0 ? number_format($summaryTotalHours, 1) : number_format($summaryTotalHours, 0)) . ' Hrs',
+                            'total_target' => number_format($summaryTotalTarget) . ' Pcs',
+                            'total_completed' => number_format($summaryTotalCompleted) . ' Pcs',
+                            'overall_efficiency' => $overallEfficiency . '%',
+                            'efficiency_val' => $overallEfficiency
+                        ]
+                    ]);
+
+                case 'employee-tasks':
+                    $empId = intval($request->emp_id ?? 0);
+                    $empUser = \App\Models\User::find($empId);
+                    if (!$empUser) {
+                        return response()->json(['success' => false, 'message' => 'Employee not found'], 404);
+                    }
+
+                    $taskQuery = TaskAssignEmployee::with([
+                        'employee',
+                        'service',
+                        'task.jobCard.serviceProvider',
+                        'task.stage.operationStage',
+                        'task.operationStage'
+                    ])->where('issued_to', $empId);
+
+                    if ($fromDate) {
+                        $taskQuery->where(function($q) use ($fromDate) {
+                            $q->where('issue_date', '>=', $fromDate)
+                              ->orWhere(function($sub) use ($fromDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                              });
+                        });
+                    }
+                    if ($toDate) {
+                        $taskQuery->where(function($q) use ($toDate) {
+                            $q->where('issue_date', '<=', $toDate)
+                              ->orWhere(function($sub) use ($toDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                              });
+                        });
+                    }
+                    if ($unitId) {
+                        $taskQuery->whereHas('task.jobCard', function($jcQ) use ($unitId) {
+                            $jcQ->where('service_provider_id', $unitId);
+                        });
+                    }
+
+                    $assignments = $taskQuery->orderBy('id', 'desc')->get();
+
+                    $taskRows = [];
+                    $totalEmpHours = 0;
+                    $totalEmpTarget = 0;
+                    $totalEmpCompleted = 0;
+
+                    foreach ($assignments as $a) {
+                        $tHours = (float)($a->total_hrs ?? 0);
+                        $tTarget = (float)($a->issue_qty ?? 0);
+                        $tCompleted = (float)($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
+                        $tPending = max(0, $tTarget - $tCompleted);
+                        $tEfficiency = ($tTarget > 0) ? round(($tCompleted / $tTarget) * 100, 1) : 0;
+
+                        $totalEmpHours += $tHours;
+                        $totalEmpTarget += $tTarget;
+                        $totalEmpCompleted += $tCompleted;
+
+                        $taskNo = $a->task ? $a->task->task_no : 'N/A';
+                        $jcNo = $a->task ? ($a->task->job_card_no ?? ($a->task->jobCard ? $a->task->jobCard->job_card_no : 'N/A')) : 'N/A';
+                        $serviceName = $a->service ? $a->service->service_name : '-';
+                        
+                        $stageName = '-';
+                        if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
+                            $stageName = $a->task->stage->operationStage->operation_stage_name;
+                        } elseif ($a->task && $a->task->operationStage) {
+                            $stageName = $a->task->operationStage->operation_stage_name;
+                        }
+
+                        $statusVal = $a->status ?: ($a->task ? $a->task->status : 'Planned');
+                        $statusBadge = 'secondary';
+                        if ($statusVal === 'Completed') $statusBadge = 'success';
+                        elseif ($statusVal === 'In Progress') $statusBadge = 'primary';
+                        elseif ($statusVal === 'Hold') $statusBadge = 'warning';
+                        elseif ($statusVal === 'Open') $statusBadge = 'info';
+
+                        $effBadge = 'bg-label-danger';
+                        if ($tEfficiency >= 95) $effBadge = 'bg-label-success';
+                        elseif ($tEfficiency >= 75) $effBadge = 'bg-label-warning';
+
+                        $remark = $a->remarks ?: ($a->task && $a->task->remarks ? $a->task->remarks : '-');
+
+                        $taskRows[] = [
+                            'task_no' => '<strong>' . htmlspecialchars($taskNo) . '</strong>',
+                            'job_card_no' => htmlspecialchars($jcNo),
+                            'service' => '<span class="badge bg-label-primary">' . htmlspecialchars($serviceName) . '</span>',
+                            'stage' => htmlspecialchars($stageName),
+                            'hours_worked' => (fmod($tHours, 1) !== 0.0 ? number_format($tHours, 1) : number_format($tHours, 0)),
+                            'target_qty' => number_format($tTarget) . ' Pcs',
+                            'completed_qty' => '<span class="text-success fw-bold">' . number_format($tCompleted) . ' Pcs</span>',
+                            'pending_qty' => '<span class="text-danger">' . number_format($tPending) . ' Pcs</span>',
+                            'efficiency' => '<span class="badge ' . $effBadge . ' rounded-pill">' . $tEfficiency . '%</span>',
+                            'status' => '<span class="badge bg-label-' . $statusBadge . ' rounded-pill">' . htmlspecialchars($statusVal) . '</span>',
+                            'remarks' => htmlspecialchars($remark),
+                            '_search_text' => strtolower($taskNo . ' ' . $jcNo . ' ' . $serviceName . ' ' . $stageName . ' ' . $statusVal . ' ' . $remark)
+                        ];
+                    }
+
+                    $totalRecords = count($taskRows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($taskRows, function($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $taskRows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
+
+                    $overallEmpEff = ($totalEmpTarget > 0) ? round(($totalEmpCompleted / $totalEmpTarget) * 100, 1) : 0;
+                    $designation = $empUser->operation_stages_names ?: '-';
+                    if ($designation === '-') {
+                        $stageNames = $assignments->map(function($a) {
+                            if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
+                                return $a->task->stage->operationStage->operation_stage_name;
+                            } elseif ($a->task && $a->task->operationStage) {
+                                return $a->task->operationStage->operation_stage_name;
+                            }
+                            return null;
+                        })->filter()->unique()->values();
+                        if ($stageNames->isNotEmpty()) {
+                            $designation = $stageNames->implode(', ');
+                        }
+                    }
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'success' => true,
+                        'employee' => [
+                            'id' => $empUser->id,
+                            'name' => $empUser->name,
+                            'emp_id' => $empUser->emp_id ?: 'EMP' . $empUser->id,
+                            'designation' => $designation,
+                        ],
+                        'summary' => [
+                            'total_tasks' => $totalRecords,
+                            'total_hours' => (fmod($totalEmpHours, 1) !== 0.0 ? number_format($totalEmpHours, 1) : number_format($totalEmpHours, 0)) . ' Hrs',
+                            'total_target' => number_format($totalEmpTarget) . ' Pcs',
+                            'total_completed' => number_format($totalEmpCompleted) . ' Pcs',
+                            'total_pending' => number_format(max(0, $totalEmpTarget - $totalEmpCompleted)) . ' Pcs',
+                            'efficiency' => $overallEmpEff . '%'
+                        ]
+                    ]);
+
+                case 'employee-jobs':
+                    $empId = intval($request->emp_id ?? 0);
+                    $empUser = \App\Models\User::find($empId);
+                    if (!$empUser) {
+                        return response()->json(['success' => false, 'message' => 'Employee not found'], 404);
+                    }
+
+                    $jobQuery = TaskAssignEmployee::with([
+                        'employee',
+                        'service',
+                        'task.jobCard.serviceProvider',
+                        'task.stage.operationStage',
+                        'task.operationStage'
+                    ])->where('issued_to', $empId);
+
+                    if ($fromDate) {
+                        $jobQuery->where(function($q) use ($fromDate) {
+                            $q->where('issue_date', '>=', $fromDate)
+                              ->orWhere(function($sub) use ($fromDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                              });
+                        });
+                    }
+                    if ($toDate) {
+                        $jobQuery->where(function($q) use ($toDate) {
+                            $q->where('issue_date', '<=', $toDate)
+                              ->orWhere(function($sub) use ($toDate) {
+                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                              });
+                        });
+                    }
+                    if ($unitId) {
+                        $jobQuery->whereHas('task.jobCard', function($jcQ) use ($unitId) {
+                            $jcQ->where('service_provider_id', $unitId);
+                        });
+                    }
+
+                    $assignments = $jobQuery->orderBy('id', 'desc')->get();
+                    $groupedJobs = $assignments->groupBy(function($a) {
+                        return $a->task ? ($a->task->job_card_entry_id ?: $a->task->job_card_no) : 'no_jc_' . $a->id;
+                    });
+
+                    $jobRows = [];
+                    $totalEmpTarget = 0;
+                    $totalEmpCompleted = 0;
+
+                    foreach ($groupedJobs as $jcKey => $group) {
+                        $first = $group->first();
+                        $jcNo = $first->task ? ($first->task->job_card_no ?? ($first->task->jobCard ? $first->task->jobCard->job_card_no : 'N/A')) : 'N/A';
+                        $unit = ($first->task && $first->task->jobCard && $first->task->jobCard->serviceProvider) ? $first->task->jobCard->serviceProvider->name : '-';
+                        
+                        $tasksList = $group->map(function($a) {
+                            return $a->service ? $a->service->service_name : ($a->task ? $a->task->task_no : null);
+                        })->filter()->unique()->values()->implode(', ');
+
+                        $target = (float) $group->sum('issue_qty');
+                        $completed = (float) $group->sum(function($a) {
+                            return (float)($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
+                        });
+                        $pending = max(0, $target - $completed);
+                        $eff = ($target > 0) ? round(($completed / $target) * 100, 1) : 0;
+
+                        $totalEmpTarget += $target;
+                        $totalEmpCompleted += $completed;
+
+                        $effBadge = 'bg-label-danger';
+                        if ($eff >= 95) $effBadge = 'bg-label-success';
+                        elseif ($eff >= 75) $effBadge = 'bg-label-warning';
+
+                        $statusVal = $first->status ?: ($first->task ? $first->task->status : 'Planned');
+                        $statusBadge = 'secondary';
+                        if ($statusVal === 'Completed') $statusBadge = 'success';
+                        elseif ($statusVal === 'In Progress') $statusBadge = 'primary';
+                        elseif ($statusVal === 'Hold') $statusBadge = 'warning';
+
+                        $remarks = $group->pluck('remarks')->filter(function($r) {
+                            return !empty(trim($r));
+                        })->unique()->implode(', ');
+                        if (empty($remarks)) {
+                            $remarks = $first->task && $first->task->remarks ? $first->task->remarks : '-';
+                        }
+
+                        $jobRows[] = [
+                            'job_card_no' => '<strong>' . htmlspecialchars($jcNo) . '</strong>',
+                            'unit' => htmlspecialchars($unit),
+                            'tasks' => '<span class="fw-semibold">' . htmlspecialchars($tasksList ?: '-') . '</span>',
+                            'target_qty' => number_format($target) . ' Pcs',
+                            'completed_qty' => '<span class="text-success fw-bold">' . number_format($completed) . ' Pcs</span>',
+                            'pending_qty' => '<span class="text-danger">' . number_format($pending) . ' Pcs</span>',
+                            'efficiency' => '<span class="badge ' . $effBadge . ' rounded-pill">' . $eff . '%</span>',
+                            'status' => '<span class="badge bg-label-' . $statusBadge . ' rounded-pill">' . htmlspecialchars($statusVal) . '</span>',
+                            'remarks' => htmlspecialchars($remarks ?: '-'),
+                            '_search_text' => strtolower($jcNo . ' ' . $unit . ' ' . $tasksList . ' ' . $statusVal . ' ' . $remarks)
+                        ];
+                    }
+
+                    $totalRecords = count($jobRows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($jobRows, function($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $jobRows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
+
+                    $overallEmpEff = ($totalEmpTarget > 0) ? round(($totalEmpCompleted / $totalEmpTarget) * 100, 1) : 0;
+                    $designation = $empUser->operation_stages_names ?: '-';
+                    if ($designation === '-') {
+                        $stageNames = $assignments->map(function($a) {
+                            if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
+                                return $a->task->stage->operationStage->operation_stage_name;
+                            } elseif ($a->task && $a->task->operationStage) {
+                                return $a->task->operationStage->operation_stage_name;
+                            }
+                            return null;
+                        })->filter()->unique()->values();
+                        if ($stageNames->isNotEmpty()) {
+                            $designation = $stageNames->implode(', ');
+                        }
+                    }
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'success' => true,
+                        'employee' => [
+                            'id' => $empUser->id,
+                            'name' => $empUser->name,
+                            'emp_id' => $empUser->emp_id ?: 'EMP' . $empUser->id,
+                            'designation' => $designation,
+                        ],
+                        'summary' => [
+                            'total_jobs' => $totalRecords,
+                            'total_target' => number_format($totalEmpTarget) . ' Pcs',
+                            'total_completed' => number_format($totalEmpCompleted) . ' Pcs',
+                            'total_pending' => number_format(max(0, $totalEmpTarget - $totalEmpCompleted)) . ' Pcs',
+                            'efficiency' => $overallEmpEff . '%'
+                        ]
+                    ]);
+
                 default:
                     return response()->json([
                         'draw' => $draw,

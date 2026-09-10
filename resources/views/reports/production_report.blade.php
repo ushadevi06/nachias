@@ -34,6 +34,7 @@
                             <option value="production-wip" selected>🏭 Production WIP Unit Wise</option>
                             <option value="casino-cutting-wip">✂️ Casino Cutting WIP Report</option>
                             <option value="department-efficiency">📊 Department Wise Efficiency Report</option>
+                            <option value="employee-efficiency">👥 Employee Wise Efficiency Report</option>
                             <option value="performance-report">👤 Performance Individual</option>
                             <option value="process-wise">⚙️ Production Report Section Wise</option>
                             <option value="completion-report">📅 Job Card Completed Date</option>
@@ -409,6 +410,253 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 7. Employee Wise Efficiency Report -->
+                    <div class="tab-pane fade" id="employee-efficiency" role="tabpanel">
+                        <!-- MAIN VIEW: Summary Widget & Employee Table -->
+                        <div id="employeeEfficiencyMainView">
+                            <!-- Employee Efficiency Summary Widget -->
+                            <div class="dept-efficiency-summary-card mb-4 p-4 rounded-3 border bg-white shadow-sm">
+                                <div class="row align-items-center">
+                                    <div class="col-md-5 mb-3 mb-md-0">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <h5 class="mb-0 fw-bold text-dark">Employee Efficiency</h5>
+                                            <div class="text-warning fs-5">
+                                                <i class="ri-user-star-fill"></i>
+                                                <i class="ri-user-star-fill"></i>
+                                                <i class="ri-user-star-fill"></i>
+                                                <i class="ri-user-star-fill"></i>
+                                                <i class="ri-user-star-fill"></i>
+                                            </div>
+                                        </div>
+                                        <p class="text-muted small mb-0">Daily individual employee productivity & performance overview calculated from assigned tasks vs completed quantity.
+                                        </p>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="dept-eff-badge-display px-3 py-2 rounded-3 fw-bold fs-3 text-primary bg-white shadow-sm border"
+                                                    id="empOverallEffVal">
+                                                    0%
+                                                </div>
+                                                <div class="flex-grow-1" style="min-width: 140px;">
+                                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                                        <span class="fw-semibold">Overall Efficiency</span>
+                                                        <span id="empEffProgressLabel">0%</span>
+                                                    </div>
+                                                    <div class="progress" style="height: 10px; border-radius: 6px;">
+                                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                                            id="empEffProgressBar" role="progressbar" style="width: 0%">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-2 text-center text-nowrap">
+                                                <div class="px-2 py-1 bg-white rounded border">
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
+                                                        style="font-size: 0.68rem;">Employees</span>
+                                                    <span class="fw-bold text-dark small" id="empSummaryCount">0</span>
+                                                </div>
+                                                <div class="px-2 py-1 bg-white rounded border">
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
+                                                        style="font-size: 0.68rem;">Hours</span>
+                                                    <span class="fw-bold text-dark small" id="empSummaryHours">0 Hrs</span>
+                                                </div>
+                                                <div class="px-2 py-1 bg-white rounded border">
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
+                                                        style="font-size: 0.68rem;">Target</span>
+                                                    <span class="fw-bold text-primary small" id="empSummaryTarget">0 Pcs</span>
+                                                </div>
+                                                <div class="px-2 py-1 bg-white rounded border">
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
+                                                        style="font-size: 0.68rem;">Completed</span>
+                                                    <span class="fw-bold text-success small" id="empSummaryActual">0 Pcs</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Employee Efficiency DataTable -->
+                            <div class="card-datatable table-responsive">
+                                <table class="datatables-products table table-hover align-middle text-nowrap" id="employeeEfficiencyTable" style="width: 100%;">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Emp ID</th>
+                                            <th>Employee Name</th>
+                                            <th>Designation</th>
+                                            <th>Task</th>
+                                            <th class="text-center">Hours Working</th>
+                                            <th class="text-center">Target Qty</th>
+                                            <th class="text-center">Completed</th>
+                                            <th class="text-center">Pending</th>
+                                            <th class="text-center">Efficiency</th>
+                                            <th>Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- DETAIL VIEW: In-Page Employee Task & Job Breakdown (Points 1 & 2) -->
+                        <div id="employeeDetailView" class="d-none">
+                            <!-- Top Action Bar with Back Button & View Switcher -->
+                            <div class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-light rounded-3 border gap-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <button type="button"
+                                        class="btn btn-primary btn-sm rounded-pill px-3 btn-back-to-emp-report">
+                                        <i class="ri-arrow-left-line me-1"></i> Back to Report
+                                    </button>
+                                    <div>
+                                        <h5 class="mb-0 fw-bold text-primary d-flex align-items-center"
+                                            id="empDetailTitle">
+                                            Employee Breakdown
+                                        </h5>
+                                        <small class="text-muted" id="empDetailSubtitle">Tasks, Job Cards & Performance</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <!-- View Mode Switcher Toggle: Task-Wise vs Job-Wise -->
+                                    <div class="btn-group rounded-pill p-1 bg-white border shadow-sm" role="group">
+                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 active" id="btnShowEmpTasks">
+                                            <i class="ri-task-line me-1"></i> Task-Wise Breakdown
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="btnShowEmpJobs">
+                                            <i class="ri-file-list-3-line me-1"></i> Job-Wise Summary
+                                        </button>
+                                    </div>
+                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2"
+                                        id="empDetailFilterDateRange">All Dates</span>
+                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2" id="empDetailFilterUnit">All
+                                        Units</span>
+                                </div>
+                            </div>
+
+                            <!-- Summary KPI Chips for Selected Employee -->
+                            <div class="row g-3 mb-4" id="empDetailSummaryCards">
+                                <div class="col-6 col-md-2">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1" id="empDetailCountLabel">Total Tasks</span>
+                                        <h4 class="mb-0 fw-bold text-dark" id="empDetailTotalCount">0</h4>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Hours Worked</span>
+                                        <h4 class="mb-0 fw-bold text-dark" id="empDetailTotalHours">0 Hrs</h4>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Target Qty</span>
+                                        <h4 class="mb-0 fw-bold text-primary" id="empDetailTotalTarget">0 Pcs</h4>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Completed</span>
+                                        <h4 class="mb-0 fw-bold text-success" id="empDetailTotalCompleted">0 Pcs</h4>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Pending</span>
+                                        <h4 class="mb-0 fw-bold text-danger" id="empDetailTotalPending">0 Pcs</h4>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Efficiency</span>
+                                        <h4 class="mb-0 fw-bold text-info" id="empDetailEfficiency">0%</h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-VIEW 1: Task Wise Breakdown (Point 1) -->
+                            <div id="empTaskSubView">
+                                <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
+                                    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <h6 class="mb-0 fw-bold text-dark"><i class="ri-task-line me-1 text-primary"></i>
+                                            Task-Wise Performance Breakdown</h6>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button type="button"
+                                                class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-emp-report">
+                                                <i class="ri-arrow-left-line me-1"></i> Back to Report
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body py-4">
+                                        <div class="card-datatable table-responsive">
+                                            <table class="table table-hover align-middle mb-0 text-nowrap" id="employeeTasksTable" style="width: 100%;">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th>Task No</th>
+                                                        <th>Job Card No</th>
+                                                        <th>Service / Process</th>
+                                                        <th>Stage</th>
+                                                        <th class="text-center">Hours Worked</th>
+                                                        <th class="text-center">Target Qty</th>
+                                                        <th class="text-center">Completed</th>
+                                                        <th class="text-center">Pending</th>
+                                                        <th class="text-center">Efficiency</th>
+                                                        <th class="text-center">Status</th>
+                                                        <th>Remarks</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-VIEW 2: Job Card Wise Summary (Point 2) -->
+                            <div id="empJobSubView" class="d-none">
+                                <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
+                                    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <h6 class="mb-0 fw-bold text-dark"><i class="ri-file-list-3-line me-1 text-primary"></i>
+                                            Job Card Wise Summary</h6>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button type="button"
+                                                class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-emp-report">
+                                                <i class="ri-arrow-left-line me-1"></i> Back to Report
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body py-4">
+                                        <div class="card-datatable table-responsive">
+                                            <table class="table table-hover align-middle mb-0 text-nowrap" id="employeeJobsTable" style="width: 100%;">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th>Job Card No</th>
+                                                        <th>Unit / Plant</th>
+                                                        <th>Tasks / Services</th>
+                                                        <th class="text-center">Target Qty</th>
+                                                        <th class="text-center">Completed</th>
+                                                        <th class="text-center">Pending</th>
+                                                        <th class="text-center">Efficiency</th>
+                                                        <th class="text-center">Status</th>
+                                                        <th>Remarks</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Back to Report Button -->
+                            <div class="d-flex justify-content-start mb-3">
+                                <button type="button"
+                                    class="btn btn-outline-primary rounded-pill px-4 btn-back-to-emp-report">
+                                    <i class="ri-arrow-left-line me-1"></i> Back to Employee Efficiency Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -599,6 +847,22 @@
                         { data: 'working_hours', name: 'working_hours', className: 'text-center' },
                         { data: 'delay_details', name: 'delay_details', className: 'text-center no-export', orderable: false, searchable: false }
                     ]
+                },
+                'employee-efficiency': {
+                    tableId: '#employeeEfficiencyTable',
+                    type: 'employee-efficiency',
+                    columns: [
+                        { data: 'emp_id', name: 'emp_id_raw' },
+                        { data: 'employee_name', name: 'employee_name' },
+                        { data: 'designation', name: 'designation' },
+                        { data: 'task', name: 'task' },
+                        { data: 'hours_working', name: 'hours_working', className: 'text-center' },
+                        { data: 'target_qty', name: 'target_qty', className: 'text-center' },
+                        { data: 'completed', name: 'completed', className: 'text-center' },
+                        { data: 'pending', name: 'pending', className: 'text-center' },
+                        { data: 'efficiency', name: 'efficiency', className: 'text-center' },
+                        { data: 'remark', name: 'remark' }
+                    ]
                 }
             };
 
@@ -635,19 +899,19 @@
 
                     dt.one('preDraw', function (e, settings) {
                         var btnType = config.extend || '';
-                        if (btnType === 'excel' || button.hasClass('buttons-excel') || button.hasClass('detail-buttons-excel')) {
+                        if (btnType === 'excel' || button.hasClass('buttons-excel') || button.hasClass('detail-buttons-excel') || button.hasClass('emp-detail-buttons-excel')) {
                             if ($.fn.dataTable.ext.buttons.excelHtml5 && $.fn.dataTable.ext.buttons.excelHtml5.available(dt, config)) {
                                 $.fn.dataTable.ext.buttons.excelHtml5.action.call(self, e, dt, button, config);
                             } else if ($.fn.dataTable.ext.buttons.excelFlash && $.fn.dataTable.ext.buttons.excelFlash.available(dt, config)) {
                                 $.fn.dataTable.ext.buttons.excelFlash.action.call(self, e, dt, button, config);
                             }
-                        } else if (btnType === 'pdf' || button.hasClass('buttons-pdf') || button.hasClass('detail-buttons-pdf')) {
+                        } else if (btnType === 'pdf' || button.hasClass('buttons-pdf') || button.hasClass('detail-buttons-pdf') || button.hasClass('emp-detail-buttons-pdf')) {
                             if ($.fn.dataTable.ext.buttons.pdfHtml5 && $.fn.dataTable.ext.buttons.pdfHtml5.available(dt, config)) {
                                 $.fn.dataTable.ext.buttons.pdfHtml5.action.call(self, e, dt, button, config);
                             } else if ($.fn.dataTable.ext.buttons.pdfFlash && $.fn.dataTable.ext.buttons.pdfFlash.available(dt, config)) {
                                 $.fn.dataTable.ext.buttons.pdfFlash.action.call(self, e, dt, button, config);
                             }
-                        } else if (btnType === 'print' || button.hasClass('buttons-print') || button.hasClass('detail-buttons-print')) {
+                        } else if (btnType === 'print' || button.hasClass('buttons-print') || button.hasClass('detail-buttons-print') || button.hasClass('emp-detail-buttons-print')) {
                             $.fn.dataTable.ext.buttons.print.action.call(self, e, dt, button, config);
                         }
 
@@ -735,6 +999,26 @@
                                 $('#deptSummaryActual').text(json.meta.total_actual || '0 Pcs');
                             }
                         }
+                        if (config.type === 'employee-efficiency') {
+                            const json = settings.json;
+                            if (json && json.meta) {
+                                $('#empOverallEffVal').text(json.meta.overall_efficiency || '0%');
+                                $('#empEffProgressLabel').text(json.meta.overall_efficiency || '0%');
+                                const effNum = Math.min(100, Math.max(0, parseFloat(json.meta.efficiency_val || 0)));
+                                $('#empEffProgressBar').css('width', effNum + '%');
+                                if (effNum >= 95) {
+                                    $('#empEffProgressBar').removeClass('bg-warning bg-danger').addClass('bg-success');
+                                } else if (effNum >= 75) {
+                                    $('#empEffProgressBar').removeClass('bg-success bg-danger').addClass('bg-warning');
+                                } else {
+                                    $('#empEffProgressBar').removeClass('bg-success bg-warning').addClass('bg-danger');
+                                }
+                                $('#empSummaryCount').text(json.meta.total_employees || '0');
+                                $('#empSummaryHours').text(json.meta.total_hours || '0 Hrs');
+                                $('#empSummaryTarget').text(json.meta.total_target || '0 Pcs');
+                                $('#empSummaryActual').text(json.meta.total_completed || '0 Pcs');
+                            }
+                        }
                     },
                     columns: config.columns,
                     dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
@@ -746,7 +1030,15 @@
                                 return $('#active_report_title').text().trim() || 'Production Report';
                             },
                             exportOptions: {
-                                columns: ':not(.no-export)'
+                                columns: ':not(.no-export)',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
                             },
                             action: serverSideExportAction
                         },
@@ -757,19 +1049,35 @@
                                 return $('#active_report_title').text().trim() || 'Production Report';
                             },
                             orientation: 'landscape',
-                            pageSize: (config.columns && config.columns.length > 10) ? 'A3' : 'A4',
+                            pageSize: (config.columns && config.columns.length > 12) ? 'A3' : 'A4',
                             exportOptions: {
-                                columns: ':not(.no-export)'
+                                columns: ':not(.no-export)',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
                             },
                             customize: function (doc) {
-                                var isWide = (config.columns && config.columns.length > 10);
-                                if (isWide) {
+                                var colCount = (config.columns ? config.columns.length : 0);
+                                var isVeryWide = colCount > 12;
+
+                                doc.pageOrientation = 'landscape';
+                                if (isVeryWide) {
                                     doc.pageSize = 'A3';
-                                    doc.pageOrientation = 'landscape';
                                     doc.defaultStyle.fontSize = 6.5;
                                     doc.styles.tableHeader.fontSize = 7;
                                     doc.pageMargins = [10, 15, 10, 15];
+                                } else if (colCount >= 10) {
+                                    doc.pageSize = 'A4';
+                                    doc.defaultStyle.fontSize = 7;
+                                    doc.styles.tableHeader.fontSize = 7.5;
+                                    doc.pageMargins = [12, 15, 12, 15];
                                 } else {
+                                    doc.pageSize = 'A4';
                                     doc.defaultStyle.fontSize = 8;
                                     doc.styles.tableHeader.fontSize = 8.5;
                                     doc.pageMargins = [15, 15, 15, 15];
@@ -778,8 +1086,12 @@
                                 if (doc.content) {
                                     for (var i = 0; i < doc.content.length; i++) {
                                         if (doc.content[i].table) {
-                                            var colCount = doc.content[i].table.body[0].length;
-                                            doc.content[i].table.widths = Array(colCount).fill('*');
+                                            var actualCols = doc.content[i].table.body[0].length;
+                                            if (config.type === 'employee-efficiency' && actualCols === 10) {
+                                                doc.content[i].table.widths = ['6%', '13%', '12%', '14%', '7%', '8%', '8%', '7%', '8%', '17%'];
+                                            } else {
+                                                doc.content[i].table.widths = Array(actualCols).fill('*');
+                                            }
                                             break;
                                         }
                                     }
@@ -794,25 +1106,58 @@
                                 return $('#active_report_title').text().trim() || 'Production Report';
                             },
                             exportOptions: {
-                                columns: ':not(.no-export)'
+                                columns: ':not(.no-export)',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
                             },
                             autoPrint: false,
                             customize: function (win) {
-                                var isWide = (config.columns && config.columns.length > 10);
-                                $(win.document.body).css('padding', '20px');
-                                $(win.document.body).find('h1').css({
-                                    'font-size': '20px',
-                                    'margin-bottom': '15px'
+                                var colCount = (config.columns ? config.columns.length : 0);
+                                var isVeryWide = colCount > 12;
+                                var isWide = colCount >= 7;
+
+                                var $winBody = $(win.document.body);
+                                $winBody.css('padding', '15px');
+                                $winBody.find('h1').css({
+                                    'font-size': '18px',
+                                    'margin-bottom': '12px'
                                 });
-                                $(win.document.body).find('table')
+
+                                var $tbl = $winBody.find('table');
+                                $tbl.removeClass('text-nowrap')
                                     .addClass('table table-bordered')
                                     .css({
-                                        'font-size': (isWide ? '9px' : '11px'),
+                                        'font-size': (isVeryWide ? '7.5px' : (colCount >= 10 ? '8.5px' : (isWide ? '9.5px' : '11px'))),
                                         'width': '100%',
+                                        'table-layout': (colCount >= 8 ? 'fixed' : 'auto'),
                                         'border-collapse': 'collapse'
                                     });
+
+                                if (config.type === 'employee-efficiency') {
+                                    var empColWidths = ['6%', '13%', '12%', '14%', '7%', '8%', '8%', '7%', '8%', '17%'];
+                                    $tbl.find('thead th').each(function (idx) {
+                                        if (empColWidths[idx]) {
+                                            $(this).css('width', empColWidths[idx]);
+                                        }
+                                    });
+                                }
+
                                 var pageOrientation = isWide ? 'landscape' : 'portrait';
-                                var printStyle = '<style>@page { size: ' + pageOrientation + '; margin: 10mm; } body { -webkit-print-color-adjust: exact; } table th, table td { padding: 4px 6px !important; }</style>';
+                                var printStyle = '<style>' +
+                                    '@page { size: ' + pageOrientation + '; margin: 8mm; } ' +
+                                    'body { -webkit-print-color-adjust: exact; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; } ' +
+                                    'table { width: 100% !important; border-collapse: collapse !important; } ' +
+                                    'table th, table td { padding: 4px 5px !important; white-space: normal !important; word-wrap: break-word !important; word-break: break-word !important; vertical-align: middle !important; } ' +
+                                    'table th { background-color: #f8f9fa !important; font-weight: 700 !important; color: #212529 !important; } ' +
+                                    '.badge, .btn, span, a { font-size: inherit !important; padding: 0 !important; background: transparent !important; color: inherit !important; text-decoration: none !important; } ' +
+                                    'i { display: none !important; } ' +
+                                    '</style>';
                                 $(win.document.head).append(printStyle);
 
                                 setTimeout(function () {
@@ -1132,13 +1477,516 @@
                 }
             });
 
+            // ==========================================
+            // EMPLOYEE WISE EFFICIENCY REPORT DETAIL LOGIC
+            // ==========================================
+            let activeEmpId = null;
+            let activeEmpName = '';
+            let activeEmpCode = '';
+            let activeEmpDesignation = '';
+            let activeEmpSubView = 'tasks';
+            let employeeTasksDataTable = null;
+            let employeeJobsDataTable = null;
+
+            function initEmployeeTasksDataTable(empId) {
+                if ($.fn.DataTable.isDataTable('#employeeTasksTable')) {
+                    var dt = $('#employeeTasksTable').DataTable();
+                    dt.ajax.reload(null, true);
+                    return;
+                }
+
+                employeeTasksDataTable = $('#employeeTasksTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    autoWidth: false,
+                    destroy: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    language: {
+                        processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading task details...</div>',
+                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No tasks found for this employee with the selected filters.</div>',
+                        zeroRecords: '<div class="text-center py-3 text-muted">No matching records found</div>'
+                    },
+                    ajax: {
+                        url: "{{ url('production_reports/ajax/employee-tasks') }}",
+                        type: "GET",
+                        data: function (d) {
+                            d.emp_id = activeEmpId;
+                            d.from_date = $('.start_date').val();
+                            d.to_date = $('.end_date').val();
+                            d.unit_id = $('select[name="unit_id"]').val();
+                        },
+                        dataSrc: function (json) {
+                            if (json && json.summary) {
+                                $('#empDetailTotalCount').text(json.summary.total_tasks != null ? json.summary.total_tasks : 0);
+                                $('#empDetailTotalHours').text(json.summary.total_hours || '0 Hrs');
+                                $('#empDetailTotalTarget').text(json.summary.total_target || '0 Pcs');
+                                $('#empDetailTotalCompleted').text(json.summary.total_completed || '0 Pcs');
+                                $('#empDetailTotalPending').text(json.summary.total_pending || '0 Pcs');
+                                $('#empDetailEfficiency').text(json.summary.efficiency || '0%');
+                            }
+                            if (json && json.employee) {
+                                if (json.employee.designation && json.employee.designation !== '-') {
+                                    activeEmpDesignation = json.employee.designation;
+                                    $('#empDetailSubtitle').text('Emp ID: ' + (json.employee.emp_id || '-') + ' | Designation: ' + activeEmpDesignation);
+                                }
+                            }
+                            return json.data || [];
+                        }
+                    },
+                    columns: [
+                        { data: 'task_no', name: 'task_no' },
+                        { data: 'job_card_no', name: 'job_card_no' },
+                        { data: 'service', name: 'service' },
+                        { data: 'stage', name: 'stage' },
+                        { data: 'hours_worked', name: 'hours_worked', className: 'text-center' },
+                        { data: 'target_qty', name: 'target_qty', className: 'text-center' },
+                        { data: 'completed_qty', name: 'completed_qty', className: 'text-center' },
+                        { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+                        { data: 'efficiency', name: 'efficiency', className: 'text-center' },
+                        { data: 'status', name: 'status', className: 'text-center' },
+                        { data: 'remarks', name: 'remarks' }
+                    ],
+                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                    buttons: [
+                        {
+                            extend: 'excel',
+                            className: 'emp-detail-buttons-excel d-none',
+                            title: function () {
+                                return (activeEmpName ? activeEmpName + ' - Task-Wise Efficiency Report' : 'Employee Tasks Report');
+                            },
+                            exportOptions: {
+                                columns: ':visible',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
+                            },
+                            action: serverSideExportAction
+                        },
+                        {
+                            extend: 'pdf',
+                            className: 'emp-detail-buttons-pdf d-none',
+                            title: function () {
+                                return (activeEmpName ? activeEmpName + ' - Task-Wise Efficiency Report' : 'Employee Tasks Report');
+                            },
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
+                            },
+                            customize: function (doc) {
+                                doc.pageOrientation = 'landscape';
+                                doc.pageSize = 'A4';
+                                doc.defaultStyle.fontSize = 7;
+                                doc.styles.tableHeader.fontSize = 7.5;
+                                doc.pageMargins = [10, 12, 10, 12];
+                                if (doc.content) {
+                                    for (var i = 0; i < doc.content.length; i++) {
+                                        if (doc.content[i].table) {
+                                            var colCount = doc.content[i].table.body[0].length;
+                                            if (colCount === 11) {
+                                                doc.content[i].table.widths = ['9%', '9%', '11%', '10%', '7%', '8%', '8%', '7%', '8%', '8%', '15%'];
+                                            } else {
+                                                doc.content[i].table.widths = Array(colCount).fill('*');
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            },
+                            action: serverSideExportAction
+                        },
+                        {
+                            extend: 'print',
+                            className: 'emp-detail-buttons-print d-none',
+                            title: function () {
+                                return (activeEmpName ? activeEmpName + ' - Task-Wise Efficiency Report' : 'Employee Tasks Report');
+                            },
+                            exportOptions: {
+                                columns: ':visible',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
+                            },
+                            autoPrint: false,
+                            customize: function (win) {
+                                var $winBody = $(win.document.body);
+                                $winBody.css('padding', '15px');
+                                $winBody.find('h1').css({
+                                    'font-size': '18px',
+                                    'margin-bottom': '12px'
+                                });
+
+                                var $tbl = $winBody.find('table');
+                                $tbl.removeClass('text-nowrap')
+                                    .addClass('table table-bordered')
+                                    .css({
+                                        'font-size': '8px',
+                                        'width': '100%',
+                                        'table-layout': 'fixed',
+                                        'border-collapse': 'collapse'
+                                    });
+
+                                var taskColWidths = ['9%', '9%', '11%', '10%', '7%', '8%', '8%', '7%', '8%', '8%', '15%'];
+                                $tbl.find('thead th').each(function (idx) {
+                                    if (taskColWidths[idx]) {
+                                        $(this).css('width', taskColWidths[idx]);
+                                    }
+                                });
+
+                                var printStyle = '<style>' +
+                                    '@page { size: landscape; margin: 8mm; } ' +
+                                    'body { -webkit-print-color-adjust: exact; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; } ' +
+                                    'table { width: 100% !important; border-collapse: collapse !important; } ' +
+                                    'table th, table td { padding: 4px 5px !important; white-space: normal !important; word-wrap: break-word !important; word-break: break-word !important; vertical-align: middle !important; } ' +
+                                    'table th { background-color: #f8f9fa !important; font-weight: 700 !important; color: #212529 !important; } ' +
+                                    '.badge, .btn, span, a { font-size: inherit !important; padding: 0 !important; background: transparent !important; color: inherit !important; text-decoration: none !important; } ' +
+                                    'i { display: none !important; } ' +
+                                    '</style>';
+                                $(win.document.head).append(printStyle);
+
+                                setTimeout(function () {
+                                    win.focus();
+                                    win.print();
+                                }, 600);
+                            },
+                            action: serverSideExportAction
+                        }
+                    ]
+                });
+            }
+
+            function initEmployeeJobsDataTable(empId) {
+                if ($.fn.DataTable.isDataTable('#employeeJobsTable')) {
+                    var dt = $('#employeeJobsTable').DataTable();
+                    dt.ajax.reload(null, true);
+                    return;
+                }
+
+                employeeJobsDataTable = $('#employeeJobsTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    autoWidth: false,
+                    destroy: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    language: {
+                        processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading job card summary...</div>',
+                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No job cards found for this employee with the selected filters.</div>',
+                        zeroRecords: '<div class="text-center py-3 text-muted">No matching records found</div>'
+                    },
+                    ajax: {
+                        url: "{{ url('production_reports/ajax/employee-jobs') }}",
+                        type: "GET",
+                        data: function (d) {
+                            d.emp_id = activeEmpId;
+                            d.from_date = $('.start_date').val();
+                            d.to_date = $('.end_date').val();
+                            d.unit_id = $('select[name="unit_id"]').val();
+                        },
+                        dataSrc: function (json) {
+                            if (json && json.summary) {
+                                $('#empDetailTotalCount').text(json.summary.total_jobs != null ? json.summary.total_jobs : 0);
+                                $('#empDetailTotalTarget').text(json.summary.total_target || '0 Pcs');
+                                $('#empDetailTotalCompleted').text(json.summary.total_completed || '0 Pcs');
+                                $('#empDetailTotalPending').text(json.summary.total_pending || '0 Pcs');
+                                $('#empDetailEfficiency').text(json.summary.efficiency || '0%');
+                            }
+                            if (json && json.employee) {
+                                if (json.employee.designation && json.employee.designation !== '-') {
+                                    activeEmpDesignation = json.employee.designation;
+                                    $('#empDetailSubtitle').text('Emp ID: ' + (json.employee.emp_id || '-') + ' | Designation: ' + activeEmpDesignation);
+                                }
+                            }
+                            return json.data || [];
+                        }
+                    },
+                    columns: [
+                        { data: 'job_card_no', name: 'job_card_no' },
+                        { data: 'unit', name: 'unit' },
+                        { data: 'tasks', name: 'tasks' },
+                        { data: 'target_qty', name: 'target_qty', className: 'text-center' },
+                        { data: 'completed_qty', name: 'completed_qty', className: 'text-center' },
+                        { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+                        { data: 'efficiency', name: 'efficiency', className: 'text-center' },
+                        { data: 'status', name: 'status', className: 'text-center' },
+                        { data: 'remarks', name: 'remarks' }
+                    ],
+                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                    buttons: [
+                        {
+                            extend: 'excel',
+                            className: 'emp-detail-buttons-excel d-none',
+                            title: function () {
+                                return (activeEmpName ? activeEmpName + ' - Job Card Summary' : 'Employee Job Summary');
+                            },
+                            exportOptions: {
+                                columns: ':visible',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
+                            },
+                            action: serverSideExportAction
+                        },
+                        {
+                            extend: 'pdf',
+                            className: 'emp-detail-buttons-pdf d-none',
+                            title: function () {
+                                return (activeEmpName ? activeEmpName + ' - Job Card Summary' : 'Employee Job Summary');
+                            },
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
+                            },
+                            customize: function (doc) {
+                                doc.pageOrientation = 'landscape';
+                                doc.pageSize = 'A4';
+                                doc.defaultStyle.fontSize = 7.5;
+                                doc.styles.tableHeader.fontSize = 8;
+                                doc.pageMargins = [10, 12, 10, 12];
+                                if (doc.content) {
+                                    for (var i = 0; i < doc.content.length; i++) {
+                                        if (doc.content[i].table) {
+                                            var colCount = doc.content[i].table.body[0].length;
+                                            if (colCount === 9) {
+                                                doc.content[i].table.widths = ['12%', '12%', '16%', '9%', '9%', '8%', '9%', '9%', '16%'];
+                                            } else {
+                                                doc.content[i].table.widths = Array(colCount).fill('*');
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            },
+                            action: serverSideExportAction
+                        },
+                        {
+                            extend: 'print',
+                            className: 'emp-detail-buttons-print d-none',
+                            title: function () {
+                                return (activeEmpName ? activeEmpName + ' - Job Card Summary' : 'Employee Job Summary');
+                            },
+                            exportOptions: {
+                                columns: ':visible',
+                                format: {
+                                    body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    }
+                                }
+                            },
+                            autoPrint: false,
+                            customize: function (win) {
+                                var $winBody = $(win.document.body);
+                                $winBody.css('padding', '15px');
+                                $winBody.find('h1').css({
+                                    'font-size': '18px',
+                                    'margin-bottom': '12px'
+                                });
+
+                                var $tbl = $winBody.find('table');
+                                $tbl.removeClass('text-nowrap')
+                                    .addClass('table table-bordered')
+                                    .css({
+                                        'font-size': '8.5px',
+                                        'width': '100%',
+                                        'table-layout': 'fixed',
+                                        'border-collapse': 'collapse'
+                                    });
+
+                                var jobColWidths = ['12%', '12%', '16%', '9%', '9%', '8%', '9%', '9%', '16%'];
+                                $tbl.find('thead th').each(function (idx) {
+                                    if (jobColWidths[idx]) {
+                                        $(this).css('width', jobColWidths[idx]);
+                                    }
+                                });
+
+                                var printStyle = '<style>' +
+                                    '@page { size: landscape; margin: 8mm; } ' +
+                                    'body { -webkit-print-color-adjust: exact; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; } ' +
+                                    'table { width: 100% !important; border-collapse: collapse !important; } ' +
+                                    'table th, table td { padding: 4px 5px !important; white-space: normal !important; word-wrap: break-word !important; word-break: break-word !important; vertical-align: middle !important; } ' +
+                                    'table th { background-color: #f8f9fa !important; font-weight: 700 !important; color: #212529 !important; } ' +
+                                    '.badge, .btn, span, a { font-size: inherit !important; padding: 0 !important; background: transparent !important; color: inherit !important; text-decoration: none !important; } ' +
+                                    'i { display: none !important; } ' +
+                                    '</style>';
+                                $(win.document.head).append(printStyle);
+
+                                setTimeout(function () {
+                                    win.focus();
+                                    win.print();
+                                }, 600);
+                            },
+                            action: serverSideExportAction
+                        }
+                    ]
+                });
+            }
+
+            function switchEmpSubView(viewType) {
+                activeEmpSubView = viewType;
+                if (viewType === 'tasks') {
+                    $('#btnShowEmpTasks').addClass('btn-primary active').removeClass('btn-outline-primary');
+                    $('#btnShowEmpJobs').removeClass('btn-primary active').addClass('btn-outline-primary');
+                    $('#empTaskSubView').removeClass('d-none');
+                    $('#empJobSubView').addClass('d-none');
+                    $('#empDetailCountLabel').text('Total Tasks');
+                    initEmployeeTasksDataTable(activeEmpId);
+                } else {
+                    $('#btnShowEmpJobs').addClass('btn-primary active').removeClass('btn-outline-primary');
+                    $('#btnShowEmpTasks').removeClass('btn-primary active').addClass('btn-outline-primary');
+                    $('#empJobSubView').removeClass('d-none');
+                    $('#empTaskSubView').addClass('d-none');
+                    $('#empDetailCountLabel').text('Total Job Cards');
+                    initEmployeeJobsDataTable(activeEmpId);
+                }
+            }
+
+            function openEmpDetailView(empId, empName, empCode, designation, initialView, pushHistory) {
+                activeEmpId = empId;
+                activeEmpName = empName || 'Employee';
+                activeEmpCode = empCode || '';
+                activeEmpDesignation = designation || '-';
+                activeEmpSubView = initialView || 'tasks';
+
+                $('#empDetailTitle').html('<i class="ri-user-line me-2"></i> ' + activeEmpName);
+                $('#empDetailSubtitle').text('Emp ID: ' + (activeEmpCode || '-') + ' | Designation: ' + (activeEmpDesignation || '-'));
+                $('#active_report_title').html('<span class="text-muted">Employee Wise Efficiency &gt;</span> ' + activeEmpName);
+
+                const fromDateVal = $('.start_date').val() || '';
+                const toDateVal = $('.end_date').val() || '';
+                const unitText = $('select[name="unit_id"] option:selected').text();
+                $('#empDetailFilterDateRange').text(fromDateVal || toDateVal ? 'Dates: ' + (fromDateVal || 'Start') + ' to ' + (toDateVal || 'Now') : 'All Dates');
+                $('#empDetailFilterUnit').text(unitText && unitText.trim() ? 'Unit: ' + unitText.trim() : 'All Units');
+
+                $('#empDetailTotalCount').text('-');
+                $('#empDetailTotalHours').text('-');
+                $('#empDetailTotalTarget').text('-');
+                $('#empDetailTotalCompleted').text('-');
+                $('#empDetailTotalPending').text('-');
+                $('#empDetailEfficiency').text('-');
+
+                $('#employeeEfficiencyMainView').addClass('d-none');
+                $('#employeeDetailView').removeClass('d-none');
+
+                if (pushHistory !== false) {
+                    history.pushState({ view: 'emp-detail', empId: empId, empName: activeEmpName, empCode: activeEmpCode, designation: activeEmpDesignation, subView: activeEmpSubView }, '', '#emp-' + empId + '-' + activeEmpSubView);
+                }
+
+                $('html, body').animate({ scrollTop: $('#employeeDetailView').offset().top - 80 }, 200);
+
+                switchEmpSubView(activeEmpSubView);
+            }
+
+            function returnToEmpMainView() {
+                activeEmpId = null;
+                activeEmpName = '';
+                activeEmpCode = '';
+                activeEmpDesignation = '';
+
+                $('#employeeDetailView').addClass('d-none');
+                $('#employeeEfficiencyMainView').removeClass('d-none');
+
+                const origTitle = $('#report_type_select option:selected').text() || 'Employee Wise Efficiency Report';
+                $('#active_report_title').html(origTitle);
+
+                if (window.location.hash && window.location.hash.indexOf('#emp-') !== -1) {
+                    history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+
+                if ($.fn.DataTable.isDataTable('#employeeEfficiencyTable')) {
+                    $('#employeeEfficiencyTable').DataTable().columns.adjust();
+                }
+            }
+
+            // Employee Task-Wise Breakdown Click Handler (Point 1: clicking Employee Name)
+            $(document).on('click', '.view-emp-tasks', function (e) {
+                e.preventDefault();
+                const empId = $(this).data('emp-id');
+                const empName = $(this).data('emp-name') || 'Employee';
+                const empCode = $(this).data('emp-code') || '';
+                const designation = $(this).data('designation') || '-';
+                openEmpDetailView(empId, empName, empCode, designation, 'tasks', true);
+            });
+
+            // Employee Job-Wise Summary Click Handler (Point 2: clicking Target Qty)
+            $(document).on('click', '.view-emp-jobs', function (e) {
+                e.preventDefault();
+                const empId = $(this).data('emp-id');
+                const empName = $(this).data('emp-name') || 'Employee';
+                const empCode = $(this).data('emp-code') || '';
+                const designation = $(this).data('designation') || '-';
+                openEmpDetailView(empId, empName, empCode, designation, 'jobs', true);
+            });
+
+            // Switch to Task Wise Sub-view
+            $(document).on('click', '#btnShowEmpTasks', function (e) {
+                e.preventDefault();
+                switchEmpSubView('tasks');
+            });
+
+            // Switch to Job Wise Sub-view
+            $(document).on('click', '#btnShowEmpJobs', function (e) {
+                e.preventDefault();
+                switchEmpSubView('jobs');
+            });
+
+            // Back to Employee Report Buttons Handler
+            $(document).on('click', '.btn-back-to-emp-report', function (e) {
+                e.preventDefault();
+                if (window.location.hash && window.location.hash.indexOf('#emp-') !== -1) {
+                    history.back();
+                } else {
+                    returnToEmpMainView();
+                }
+            });
+
             // Browser Client Back / Forward Button Popstate Handler
             window.addEventListener('popstate', function (e) {
                 if (e.state && e.state.view === 'dept-detail' && e.state.stageId) {
                     openDeptDetailView(e.state.stageId, e.state.stageName, false);
+                } else if (e.state && e.state.view === 'emp-detail' && e.state.empId) {
+                    openEmpDetailView(e.state.empId, e.state.empName, e.state.empCode, e.state.designation, e.state.subView || 'tasks', false);
                 } else {
                     if (!$('#deptEfficiencyDetailView').hasClass('d-none')) {
                         returnToDeptMainView();
+                    }
+                    if (!$('#employeeDetailView').hasClass('d-none')) {
+                        returnToEmpMainView();
                     }
                 }
             });
@@ -1149,8 +1997,9 @@
                 const selectedText = $(this).find('option:selected').text();
                 $('#active_report_title').html(selectedText);
 
-                // Reset detail view if switching tabs
+                // Reset detail views if switching tabs
                 returnToDeptMainView();
+                returnToEmpMainView();
 
                 $('.tab-pane').removeClass('show active');
                 $('#' + selectedType).addClass('show active');
@@ -1183,6 +2032,18 @@
                     return;
                 }
 
+                // If currently viewing employee detail, refresh active detail subview
+                if (activeTabId === 'employee-efficiency' && activeEmpId && !$('#employeeDetailView').hasClass('d-none')) {
+                    if (activeEmpSubView === 'jobs' && employeeJobsDataTable) {
+                        employeeJobsDataTable.ajax.reload(null, false);
+                    } else if (employeeTasksDataTable) {
+                        employeeTasksDataTable.ajax.reload(null, false);
+                    } else {
+                        switchEmpSubView(activeEmpSubView);
+                    }
+                    return;
+                }
+
                 const config = tableConfigs[activeTabId];
                 if (config && $.fn.DataTable.isDataTable(config.tableId)) {
                     const dt = $(config.tableId).DataTable();
@@ -1206,6 +2067,7 @@
                 $('.end_date').val('');
                 $('select[name="unit_id"]').val('').trigger('change');
                 returnToDeptMainView();
+                returnToEmpMainView();
                 $('#productionReportForm').trigger('submit');
             });
 
@@ -1214,6 +2076,15 @@
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-excel').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'employee-efficiency' && !$('#employeeDetailView').hasClass('d-none')) {
+                    if (activeEmpSubView === 'jobs' && employeeJobsDataTable) {
+                        employeeJobsDataTable.button('.emp-detail-buttons-excel').trigger();
+                        return;
+                    } else if (employeeTasksDataTable) {
+                        employeeTasksDataTable.button('.emp-detail-buttons-excel').trigger();
                         return;
                     }
                 }
@@ -1229,6 +2100,15 @@
                         return;
                     }
                 }
+                if ($('#report_type_select').val() === 'employee-efficiency' && !$('#employeeDetailView').hasClass('d-none')) {
+                    if (activeEmpSubView === 'jobs' && employeeJobsDataTable) {
+                        employeeJobsDataTable.button('.emp-detail-buttons-pdf').trigger();
+                        return;
+                    } else if (employeeTasksDataTable) {
+                        employeeTasksDataTable.button('.emp-detail-buttons-pdf').trigger();
+                        return;
+                    }
+                }
                 var activeTable = $('.tab-pane.active .datatables-products');
                 if (activeTable.length && $.fn.DataTable.isDataTable(activeTable)) {
                     activeTable.DataTable().button('.buttons-pdf').trigger();
@@ -1238,6 +2118,15 @@
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-print').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'employee-efficiency' && !$('#employeeDetailView').hasClass('d-none')) {
+                    if (activeEmpSubView === 'jobs' && employeeJobsDataTable) {
+                        employeeJobsDataTable.button('.emp-detail-buttons-print').trigger();
+                        return;
+                    } else if (employeeTasksDataTable) {
+                        employeeTasksDataTable.button('.emp-detail-buttons-print').trigger();
                         return;
                     }
                 }
