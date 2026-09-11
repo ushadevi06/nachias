@@ -12,14 +12,18 @@ class LogController extends Controller
             $query = \App\Models\Log::with('user')->latest();
 
             if (!empty($request->date_range)) {
-                $dates = explode(' to ', $request->date_range);
-                if (count($dates) == 2) {
-                    $startDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
-                    $endDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
-                    $query->whereBetween('created_at', [$startDate, $endDate]);
-                } elseif (count($dates) == 1) {
-                    $startDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
-                    $query->whereDate('created_at', $startDate);
+                try {
+                    $dates = explode(' to ', $request->date_range);
+                    if (count($dates) == 2) {
+                        $startDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                        $endDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
+                        $query->whereBetween('created_at', [$startDate, $endDate]);
+                    } elseif (count($dates) == 1 && !empty(trim($dates[0]))) {
+                        $startDate = \Carbon\Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                        $query->whereDate('created_at', $startDate);
+                    }
+                } catch (\Exception $e) {
+                    // Ignore date parse errors gracefully
                 }
             }
 
@@ -30,6 +34,11 @@ class LogController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('module', 'like', "%{$search}%")
                         ->orWhere('action_type', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('created_at', 'like', "%{$search}%")
+                        ->orWhereRaw("DATE_FORMAT(created_at, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                        ->orWhereRaw("DATE_FORMAT(created_at, '%d-%m-%Y %h:%i %p') LIKE ?", ["%{$search}%"])
+                        ->orWhereRaw("DATE_FORMAT(created_at, '%d-%m-%Y %H:%i') LIKE ?", ["%{$search}%"])
                         ->orWhereHas('user', function ($q2) use ($search) {
                             $q2->where('name', 'like', "%{$search}%");
                         });

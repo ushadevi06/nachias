@@ -220,10 +220,10 @@ $(document).ready(function() {
         $('.tab-pane').removeClass('show active');
         $('#' + targetTabId).addClass('show active');
 
-        let activeTable = $('#' + targetTabId).find('table');
+        let activeTable = $('#' + targetTabId).find('table').first();
         if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
             let dt = activeTable.DataTable();
-            if (dt.ajax && typeof dt.ajax.reload === 'function' && dt.ajax.url()) {
+            if (dt && dt.ajax && typeof dt.ajax.reload === 'function' && dt.ajax.url()) {
                 dt.ajax.reload();
             }
         }
@@ -232,10 +232,10 @@ $(document).ready(function() {
     $('#accessoriesReportForm').on('submit', function(e) {
         e.preventDefault();
         let currentTabId = $('#report_type_select').val();
-        let activeTable = $('#' + currentTabId).find('table');
+        let activeTable = $('#' + currentTabId).find('table').first();
         if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
             let dt = activeTable.DataTable();
-            if (dt.ajax && typeof dt.ajax.reload === 'function' && dt.ajax.url()) {
+            if (dt && dt.ajax && typeof dt.ajax.reload === 'function' && dt.ajax.url()) {
                 dt.ajax.reload();
                 return;
             }

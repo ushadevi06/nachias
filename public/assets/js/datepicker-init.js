@@ -33,7 +33,6 @@ $(document).ready(function () {
 
     $('.delivery_date').flatpickr({
         dateFormat: 'd-m-Y',
-        minDate: 'today',
         allowInput: true
     });
 

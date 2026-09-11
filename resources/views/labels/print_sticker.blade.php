@@ -136,7 +136,7 @@
             height: 100%;
         }
         .details-table td {
-            padding: 0.6mm 0;
+            padding: 3px 0;
             vertical-align: middle;
             font-size: 8px;
             line-height: 1.20;
@@ -161,14 +161,14 @@
             text-align:center;
         }
         .qrcode-text {
-            font-size: 5px;
+            font-size: 7px;
             margin: 0;
             line-height: 10px;
             font-weight: 600;
         }
         .sticker-qr img, .sticker-qr svg {
-            width: 11mm;
-            height: 11mm;
+            width: 38px;
+            height: 38px;
         }
         
         .size-wrapper {
@@ -279,7 +279,7 @@
                                 <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
                             </table>
                             <div class="sticker-qr">
-                                {!! QrCode::size(60)->generate($qrString) !!}
+                                {!! QrCode::size(50)->generate($qrString) !!}
                                 <p class="qrcode-text">{{ $qrString }}</p>
                             </div>
                         </div>
@@ -303,7 +303,7 @@
                         </div>
                         <div class="mrp-section" style="margin-top: 0mm;  padding-right: 7px;">
                             <div class="fw-bold" style="font-size: 5px; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 5px;">(inclusive of all taxes)</span></div>
-                            <div class="fw-bold" style="font-size: 12pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
+                            <div class="fw-bold" style="font-size: 11pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
                             <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 5px;">MADE IN INDIA WITH PRIDE</div>
                         </div>
                     </div>

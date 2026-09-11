@@ -1354,7 +1354,7 @@
                                                             name="igst_percent" id="igst_percent"
                                                             class="form-control text-end"
                                                             value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '0.00') }}"
-                                                            {{ isset($invoice) && $invoice->einvoice_status === 'generated' ? 'readonly' : '' }}>
+                                                            readonly>
                                                         <span class="input-group-text bg-white">%</span>
                                                     </div>
                                                     <span class="fw-bold ms-3" style="text-align: right;"
@@ -1376,7 +1376,7 @@
                                                             name="cgst_percent" id="cgst_percent"
                                                             class="form-control text-end"
                                                             value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '0.00') }}"
-                                                            {{ isset($invoice) && $invoice->einvoice_status === 'generated' ? 'readonly' : '' }}>
+                                                            readonly>
                                                         <span class="input-group-text bg-white">%</span>
                                                     </div>
                                                     <span class="fw-bold ms-3" style="text-align: right;"
@@ -1396,7 +1396,7 @@
                                                             name="sgst_percent" id="sgst_percent"
                                                             class="form-control text-end"
                                                             value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '0.00') }}"
-                                                            {{ isset($invoice) && $invoice->einvoice_status === 'generated' ? 'readonly' : '' }}>
+                                                            readonly>
                                                         <span class="input-group-text bg-white">%</span>
                                                     </div>
                                                     <span class="fw-bold ms-3" style="text-align: right;"
@@ -1825,12 +1825,9 @@
                                     $('#box_discount_amount').val(parseFloat(data
                                         .box_discount_amount).toFixed(2));
                                 }
-                                if (!$('#igst_percent').val() || $('#igst_percent').val() ==
-                                    '18.00') $('#igst_percent').val(data.igst_percent || 18);
-                                if (!$('#cgst_percent').val() || $('#cgst_percent').val() ==
-                                    '9.00') $('#cgst_percent').val(data.cgst_percent || 9);
-                                if (!$('#sgst_percent').val() || $('#sgst_percent').val() ==
-                                    '9.00') $('#sgst_percent').val(data.sgst_percent || 9);
+                                if (data.igst_percent !== undefined && data.igst_percent !== null) $('#igst_percent').val(data.igst_percent);
+                                if (data.cgst_percent !== undefined && data.cgst_percent !== null) $('#cgst_percent').val(data.cgst_percent);
+                                if (data.sgst_percent !== undefined && data.sgst_percent !== null) $('#sgst_percent').val(data.sgst_percent);
 
                                 window.availableSOItems = data.items;
                                 if (window.isEditMode !== true) {}
@@ -2317,12 +2314,12 @@
                     if (customerStateId && companyStateId) {
                         if (customerStateId == companyStateId) {
                             $('#other_state_no').prop('checked', true).trigger('change');
-                            $('#cgst_percent').val("{{ $web_settings->cgst ?? 9 }}");
-                            $('#sgst_percent').val("{{ $web_settings->sgst ?? 9 }}");
+                            $('#cgst_percent').val("{{ isset($web_settings->cgst) ? $web_settings->cgst : 0 }}");
+                            $('#sgst_percent').val("{{ isset($web_settings->sgst) ? $web_settings->sgst : 0 }}");
                             $('#igst_percent').val(0);
                         } else {
                             $('#other_state_yes').prop('checked', true).trigger('change');
-                            $('#igst_percent').val("{{ $web_settings->igst ?? 18 }}");
+                            $('#igst_percent').val("{{ isset($web_settings->igst) ? $web_settings->igst : 0 }}");
                             $('#cgst_percent').val(0);
                             $('#sgst_percent').val(0);
                         }

@@ -923,42 +923,42 @@
                                         </div>
                                     </div>
                                     <div id="igst_section" style="display:none;">
-                                        <div class="row g-2 align-items-center mb-3">
-                                            <div class="col-4"><span class="text-secondary fw-medium">IGST</span></div>
-                                            <div class="col-8 d-flex align-items-center">
-                                                <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '18.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
-                                                    <span class="input-group-text bg-white">%</span>
-                                                </div>
-                                                <span class="fw-bold ms-3" style="text-align: right;" id="igst_val">{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}</span>
-                                                <input type="hidden" name="igst" id="igst" value="{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div id="cgst_sgst_section">
-                                        <div class="row g-2 align-items-center mb-2">
-                                            <div class="col-4"><span class="text-secondary fw-medium">CGST</span></div>
-                                            <div class="col-8 d-flex align-items-center">
-                                                <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '9.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
-                                                    <span class="input-group-text bg-white">%</span>
-                                                </div>
-                                                <span class="fw-bold ms-3" style="text-align: right;" id="cgst_val">{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}</span>
-                                                <input type="hidden" name="cgst" id="cgst" value="{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}">
-                                            </div>
-                                        </div>
-                                        <div class="row g-2 align-items-center mb-3">
-                                            <div class="col-4"><span class="text-secondary fw-medium">SGST</span></div>
-                                            <div class="col-8 d-flex align-items-center">
-                                                <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '9.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
-                                                    <span class="input-group-text bg-white">%</span>
-                                                </div>
-                                                <span class="fw-bold ms-3" style="text-align: right;" id="sgst_val">{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}</span>
-                                                <input type="hidden" name="sgst" id="sgst" value="{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}">
-                                            </div>
-                                        </div>
-                                    </div>
+                                         <div class="row g-2 align-items-center mb-3">
+                                             <div class="col-4"><span class="text-secondary fw-medium">IGST</span></div>
+                                             <div class="col-8 d-flex align-items-center">
+                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
+                                                     <input type="number" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : (!empty($web_settings->igst) ? number_format($web_settings->igst, 2, '.', '') : '0.00')) }}" readonly>
+                                                     <span class="input-group-text bg-white">%</span>
+                                                 </div>
+                                                 <span class="fw-bold ms-3" style="text-align: right;" id="igst_val">{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}</span>
+                                                 <input type="hidden" name="igst" id="igst" value="{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}">
+                                             </div>
+                                         </div>
+                                     </div>
+                                     <div id="cgst_sgst_section">
+                                         <div class="row g-2 align-items-center mb-2">
+                                             <div class="col-4"><span class="text-secondary fw-medium">CGST</span></div>
+                                             <div class="col-8 d-flex align-items-center">
+                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
+                                                     <input type="number" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : (!empty($web_settings->cgst) ? number_format($web_settings->cgst, 2, '.', '') : '0.00')) }}" readonly>
+                                                     <span class="input-group-text bg-white">%</span>
+                                                 </div>
+                                                 <span class="fw-bold ms-3" style="text-align: right;" id="cgst_val">{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}</span>
+                                                 <input type="hidden" name="cgst" id="cgst" value="{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}">
+                                             </div>
+                                         </div>
+                                         <div class="row g-2 align-items-center mb-3">
+                                             <div class="col-4"><span class="text-secondary fw-medium">SGST</span></div>
+                                             <div class="col-8 d-flex align-items-center">
+                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
+                                                     <input type="number" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : (!empty($web_settings->sgst) ? number_format($web_settings->sgst, 2, '.', '') : '0.00')) }}" readonly>
+                                                     <span class="input-group-text bg-white">%</span>
+                                                 </div>
+                                                 <span class="fw-bold ms-3" style="text-align: right;" id="sgst_val">{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}</span>
+                                                 <input type="hidden" name="sgst" id="sgst" value="{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}">
+                                             </div>
+                                         </div>
+                                     </div>
                                     <div class="d-flex justify-content-between align-items-center py-2 border-top border-bottom mb-3">
                                         <span class="text-secondary fw-medium">Tax Amount:</span>
                                         <span class="fw-bold" id="tax_amount_val">{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}</span>

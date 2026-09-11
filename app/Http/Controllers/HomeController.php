@@ -1862,6 +1862,7 @@ class HomeController extends Controller
     {
         $perfData = $this->computeSupplierPerformanceData();
         $items = $perfData['suppliers'];
+        $unfilteredRecords = count($items);
 
         $search = trim($request->input('search.value', $request->get('search', '')));
         $start = max(0, intval($request->get('start', 0)));
@@ -1875,7 +1876,40 @@ class HomeController extends Controller
             }));
         }
 
-        $totalRecords = count($items);
+        // $totalRecords = count($items);
+        $filteredRecords = count($items);
+
+        // Handle DataTables Column Sorting
+        $orderColumnIdx = $request->input('order.0.column');
+        $orderDir = strtolower($request->input('order.0.dir', 'desc'));
+        if ($orderColumnIdx !== null) {
+            $columnMap = [
+                1 => 'supplier_name',
+                2 => 'purchase_value',
+                3 => 'orders_count',
+                4 => 'on_time_pct',
+                5 => 'avg_delay',
+                6 => 'returns_count',
+                7 => 'stars',
+            ];
+            if (isset($columnMap[$orderColumnIdx])) {
+                $sortKey = $columnMap[$orderColumnIdx];
+                usort($items, function($a, $b) use ($sortKey, $orderDir) {
+                    $valA = $a[$sortKey] ?? 0;
+                    $valB = $b[$sortKey] ?? 0;
+                    if ($valA == $valB) return 0;
+                    if (is_string($valA)) {
+                        return ($orderDir === 'asc') 
+                            ? strcasecmp($valA, $valB) 
+                            : strcasecmp($valB, $valA);
+                    }
+                    return ($orderDir === 'asc') 
+                        ? ($valA <=> $valB) 
+                        : ($valB <=> $valA);
+                });
+            }
+        }
+
         $pageRows = array_slice($items, $start, $length);
 
         $pageData = [];
@@ -1930,8 +1964,8 @@ class HomeController extends Controller
 
         return response()->json([
             'draw' => intval($request->get('draw', 1)),
-            'recordsTotal' => $totalRecords,
-            'recordsFiltered' => $totalRecords,
+            'recordsTotal' => $unfilteredRecords,
+            'recordsFiltered' => $filteredRecords,
             'data' => $pageData,
             'kpis' => $perfData['kpis']
         ]);

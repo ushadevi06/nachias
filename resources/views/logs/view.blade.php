@@ -9,6 +9,18 @@
             </div>
             <div class="card">
                 <div class="card-body">
+                    <div class="filter-box mb-4">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4 col-lg-3">
+                                <label class="form-label font-weight-semibold">Date Range</label>
+                                <input type="text" id="date_range" class="form-control" placeholder="Select Date Range">
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <button type="button" id="filterBtn" class="btn btn-primary me-2"><i class="icon-base ri ri-filter-3-line me-1"></i>Filter</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary"><i class="icon-base ri ri-refresh-line me-1"></i>Reset</button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="card-datatable">
                         <table class="logs-table table">
                             <thead>
@@ -98,6 +110,12 @@
 @section('scripts')
 <script>
     $(function() {
+        $('#date_range').flatpickr({
+            mode: 'range',
+            dateFormat: 'd-m-Y',
+            allowInput: true
+        });
+
         let table = $('.logs-table').DataTable({
             processing: true,
             responsive: true,
@@ -105,6 +123,7 @@
             ajax: {
                 url: "{{ url('logs') }}",
                 data: function(d) {
+                    d.date_range = $('#date_range').val();
                 }
             },
             columns: [{
@@ -133,6 +152,15 @@
                     searchable: false
                 }
             ]
+        });
+
+        $('#filterBtn').click(function() {
+            table.ajax.reload();
+        });
+
+        $('#resetBtn').click(function() {
+            $('#date_range').val('');
+            table.ajax.reload();
         });
     });
 
