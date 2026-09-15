@@ -752,6 +752,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);
     Route::get('production_reports/ajax/{type}', [ProductionReportController::class, 'ajaxReportData']);
+    Route::get('production_reports/export/cutting-section-average/excel', [ProductionReportController::class, 'exportCuttingSectionAverageExcel']);
+    Route::get('production_reports/export/cutting-section-average/pdf', [ProductionReportController::class, 'exportCuttingSectionAveragePdf']);
+    Route::get('production_reports/export/cutting-section-average/print', [ProductionReportController::class, 'exportCuttingSectionAveragePrint']);
 
     /* Purchase Report */
     Route::get('purchase_reports/fabric', [PurchaseReportController::class, 'fabricStore']);

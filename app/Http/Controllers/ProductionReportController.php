@@ -11,8 +11,12 @@ use App\Models\Task;
 use App\Models\TaskAssignEmployee;
 use App\Models\StockEntryItem;
 use App\Models\OperationStage;
+use App\Models\Attendance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\CuttingSectionAverageExport;
 
 class ProductionReportController extends Controller
 {
@@ -24,7 +28,34 @@ class ProductionReportController extends Controller
         }
 
         $units = ServiceProvider::where('status', 'Active')->orderBy('name', 'asc')->get();
-        return view('reports/production_report', compact('units'));
+        $cuttingEmployees = $this->getCuttingEmployees();
+        $cuttingPlants = $this->getCuttingPlants();
+
+        return view('reports/production_report', compact('units', 'cuttingEmployees', 'cuttingPlants'));
+    }
+
+    public function getCuttingEmployees()
+    {
+        $cuttingRoleIds = DB::table('roles')->where('name', 'like', 'CUTTING%')->pluck('id')->toArray();
+        $service16UserIds = TaskAssignEmployee::where('service_id', 16)->pluck('issued_to')->filter()->unique()->toArray();
+
+        return \App\Models\User::where('status', 'Active')
+            ->where(function ($q) use ($cuttingRoleIds, $service16UserIds) {
+                $q->whereIn('role_id', $cuttingRoleIds)
+                    ->orWhereIn('id', $service16UserIds)
+                    ->orWhereJsonContains('operation_stage_id', 1)
+                    ->orWhereJsonContains('operation_stage_id', '1');
+            })
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name', 'emp_id']);
+    }
+
+    public function getCuttingPlants()
+    {
+        return ServiceProvider::where('status', 'Active')
+            ->where('is_plant', 1)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name', 'code']);
     }
 
     public function ajaxReportData(Request $request, $type)
@@ -39,20 +70,8 @@ class ProductionReportController extends Controller
         $search = trim($search);
 
         try {
-            $parseDate = function($dateStr) {
-                if (empty($dateStr) || $dateStr === 'DD-MM-YYYY' || trim($dateStr) === '') {
-                    return null;
-                }
-                try {
-                    return \Carbon\Carbon::createFromFormat('d-m-Y', trim($dateStr))->format('Y-m-d');
-                } catch (\Exception $e) {
-                    try {
-                        $ts = strtotime(trim($dateStr));
-                        return ($ts !== false && $ts > 0) ? date('Y-m-d', $ts) : null;
-                    } catch (\Exception $e2) {
-                        return null;
-                    }
-                }
+            $parseDate = function ($dateStr) {
+                return $this->parseReportDate($dateStr);
             };
 
             $fromDate = $parseDate($request->from_date);
@@ -62,9 +81,9 @@ class ProductionReportController extends Controller
             switch ($type) {
                 case 'production-wip':
                     $wipQuery = JobCardEntry::with([
-                        'processGroup', 
-                        'serviceProvider', 
-                        'operations.operationStage', 
+                        'processGroup',
+                        'serviceProvider',
+                        'operations.operationStage',
                         'tasks.assignments'
                     ])->where('grand_total_qty', '>', 0);
 
@@ -87,7 +106,7 @@ class ProductionReportController extends Controller
 
                         if ($stages->isEmpty()) {
                             $processName = $jc->processGroup ? $jc->processGroup->name : 'N/A';
-                            
+
                             $totalProduced = DB::table('production_receipt_items')
                                 ->join('production_receipts', 'production_receipt_items.production_receipt_id', '=', 'production_receipts.id')
                                 ->where('production_receipts.job_card_id', $jc->id)
@@ -126,7 +145,7 @@ class ProductionReportController extends Controller
 
                         $prevStageOpeningOutward = ($fromDate && $jc->job_card_date < $openingDate) ? $jc->grand_total_qty : 0;
                         $prevStagePeriodOutward = ($jc->job_card_date >= $openingDate && $jc->job_card_date <= $closingDate) ? $jc->grand_total_qty : 0;
-                        
+
                         if (!$fromDate && $jc->job_card_date <= $closingDate) {
                             $prevStagePeriodOutward = $jc->grand_total_qty;
                             $prevStageOpeningOutward = 0;
@@ -134,11 +153,11 @@ class ProductionReportController extends Controller
 
                         foreach ($stages as $stage) {
                             $stageId = $stage->id;
-                            
+
                             $stageTasks = $jc->tasks->where('stage_id', $stageId);
                             $assignments = $stageTasks->flatMap->assignments;
 
-                            $serviceCompletions = $assignments->groupBy('service_id')->map(function($group) use ($openingDate, $closingDate) {
+                            $serviceCompletions = $assignments->groupBy('service_id')->map(function ($group) use ($openingDate, $closingDate) {
                                 return [
                                     'opening' => $group->where('updated_at', '<', $openingDate)->sum('completed_qty'),
                                     'period' => $group->where('updated_at', '>=', $openingDate . ' 00:00:00')->where('updated_at', '<=', $closingDate . ' 23:59:59')->sum('completed_qty'),
@@ -179,7 +198,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($rows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -197,13 +216,13 @@ class ProductionReportController extends Controller
 
                 case 'performance-report':
                     $perfQuery = TaskAssignEmployee::with([
-                        'task.jobCard', 
-                        'task.stage.operationStage', 
+                        'task.jobCard',
+                        'task.stage.operationStage',
                         'task.operationStage',
-                        'employee', 
+                        'employee',
                         'service'
                     ]);
-                    
+
                     if ($fromDate) {
                         $perfQuery->where('issue_date', '>=', $fromDate);
                     }
@@ -211,17 +230,17 @@ class ProductionReportController extends Controller
                         $perfQuery->where('issue_date', '<=', $toDate);
                     }
                     if ($unitId) {
-                        $perfQuery->whereHas('task.jobCard', function($q) use ($unitId) {
+                        $perfQuery->whereHas('task.jobCard', function ($q) use ($unitId) {
                             $q->where('service_provider_id', $unitId);
                         });
                     }
                     if ($search !== '') {
-                        $perfQuery->where(function($q) use ($search) {
-                            $q->whereHas('employee', function($eq) use ($search) {
+                        $perfQuery->where(function ($q) use ($search) {
+                            $q->whereHas('employee', function ($eq) use ($search) {
                                 $eq->where('name', 'like', "%{$search}%");
-                            })->orWhereHas('service', function($sq) use ($search) {
+                            })->orWhereHas('service', function ($sq) use ($search) {
                                 $sq->where('service_name', 'like', "%{$search}%");
-                            })->orWhereHas('task', function($tq) use ($search) {
+                            })->orWhereHas('task', function ($tq) use ($search) {
                                 $tq->where('job_card_no', 'like', "%{$search}%");
                             });
                         });
@@ -236,11 +255,11 @@ class ProductionReportController extends Controller
 
                     $data = [];
                     foreach ($items as $assign) {
-                        $assigned = (float)$assign->issue_qty;
-                        $completed = (float)$assign->completed_qty;
-                        $pending = max(0, $assigned - ($completed + (float)$assign->wastage_qty));
+                        $assigned = (float) $assign->issue_qty;
+                        $completed = (float) $assign->completed_qty;
+                        $pending = max(0, $assigned - ($completed + (float) $assign->wastage_qty));
                         $efficiency = ($assigned > 0) ? round(($completed / $assigned) * 100, 2) : 0;
-                        
+
                         $stageName = 'N/A';
                         if ($assign->task) {
                             if ($assign->task->stage && $assign->task->stage->operationStage) {
@@ -249,10 +268,12 @@ class ProductionReportController extends Controller
                                 $stageName = $assign->task->operationStage->operation_stage_name;
                             }
                         }
-                        
+
                         $badgeClass = 'bg-label-danger';
-                        if ($efficiency >= 90) $badgeClass = 'bg-label-success';
-                        elseif ($efficiency >= 70) $badgeClass = 'bg-label-warning';
+                        if ($efficiency >= 90)
+                            $badgeClass = 'bg-label-success';
+                        elseif ($efficiency >= 70)
+                            $badgeClass = 'bg-label-warning';
 
                         $data[] = [
                             'job_card_no' => '<strong>' . htmlspecialchars($assign->task->job_card_no ?? ($assign->task->jobCard->job_card_no ?? 'N/A')) . '</strong>',
@@ -275,9 +296,9 @@ class ProductionReportController extends Controller
 
                 case 'process-wise':
                     $sectionQuery = TaskAssignEmployee::with(['task.jobCard', 'task.operationStage', 'task.stage.operationStage', 'service']);
-                    
+
                     if ($unitId) {
-                        $sectionQuery->whereHas('task.jobCard', function($q) use ($unitId) {
+                        $sectionQuery->whereHas('task.jobCard', function ($q) use ($unitId) {
                             $q->where('service_provider_id', $unitId);
                         });
                     }
@@ -287,15 +308,15 @@ class ProductionReportController extends Controller
                     if ($toDate) {
                         $sectionQuery->where('issue_date', '<=', $toDate);
                     }
-                    
-                    $groups = $sectionQuery->get()->groupBy(function($item) {
+
+                    $groups = $sectionQuery->get()->groupBy(function ($item) {
                         return ($item->task->job_card_entry_id ?? 0) . '-' . ($item->task->stage_id ?? 0) . '-' . ($item->service_id ?? 0);
                     });
 
                     $rows = [];
                     foreach ($groups as $group) {
                         $first = $group->first();
-                        
+
                         $stageName = 'N/A';
                         if ($first->task) {
                             if ($first->task->stage && $first->task->stage->operationStage) {
@@ -323,7 +344,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($rows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -351,11 +372,11 @@ class ProductionReportController extends Controller
                         $compQuery->where('job_card_date', '<=', $toDate);
                     }
                     if ($search !== '') {
-                        $compQuery->where(function($q) use ($search) {
+                        $compQuery->where(function ($q) use ($search) {
                             $q->where('job_card_no', 'like', "%{$search}%")
-                              ->orWhereHas('serviceProvider', function($sq) use ($search) {
-                                  $sq->where('name', 'like', "%{$search}%");
-                              });
+                                ->orWhereHas('serviceProvider', function ($sq) use ($search) {
+                                    $sq->where('name', 'like', "%{$search}%");
+                                });
                         });
                     }
 
@@ -380,16 +401,16 @@ class ProductionReportController extends Controller
                             ->max('receipt_date');
 
                         $isCompleted = ($jc->grand_total_qty > 0) && ($totalReceived >= $jc->grand_total_qty);
-                        
+
                         $statusLabel = 'Pending';
                         $statusClass = 'warning';
-                        
+
                         if ($isCompleted && $lastReceiptDate) {
                             if ($jc->delivery_date) {
                                 $delivery = strtotime($jc->delivery_date);
                                 $actual = strtotime($lastReceiptDate);
                                 $diff = floor(($delivery - $actual) / (60 * 60 * 24));
-                                
+
                                 if ($diff > 0) {
                                     $statusLabel = $diff . " Days Early";
                                     $statusClass = "success";
@@ -429,27 +450,27 @@ class ProductionReportController extends Controller
 
                 case 'brand-production':
                     $receiptItemsQuery = ProductionReceiptItem::with([
-                        'productionReceipt.jobCard.brand', 
-                        'productionReceipt.jobCard.item.style', 
-                        'productionReceipt.jobCard.serviceProvider', 
+                        'productionReceipt.jobCard.brand',
+                        'productionReceipt.jobCard.item.style',
+                        'productionReceipt.jobCard.serviceProvider',
                         'productionReceipt.jobCard.fabricDetails'
                     ])
-                    ->whereHas('productionReceipt', function($q) use ($unitId, $fromDate, $toDate) {
-                        if ($unitId) {
-                            $q->whereHas('jobCard', function($jcQuery) use ($unitId) {
-                                $jcQuery->where('service_provider_id', $unitId);
-                            });
-                        }
-                        if ($fromDate) {
-                            $q->where('receipt_date', '>=', $fromDate);
-                        }
-                        if ($toDate) {
-                            $q->where('receipt_date', '<=', $toDate);
-                        }
-                        $q->where('status', 'Posted');
-                    });
+                        ->whereHas('productionReceipt', function ($q) use ($unitId, $fromDate, $toDate) {
+                            if ($unitId) {
+                                $q->whereHas('jobCard', function ($jcQuery) use ($unitId) {
+                                    $jcQuery->where('service_provider_id', $unitId);
+                                });
+                            }
+                            if ($fromDate) {
+                                $q->where('receipt_date', '>=', $fromDate);
+                            }
+                            if ($toDate) {
+                                $q->where('receipt_date', '<=', $toDate);
+                            }
+                            $q->where('status', 'Posted');
+                        });
 
-                    $groups = $receiptItemsQuery->get()->groupBy(function($item) {
+                    $groups = $receiptItemsQuery->get()->groupBy(function ($item) {
                         $jc = $item->productionReceipt->jobCard;
                         return ($jc->brand_id ?? 0) . '-' . ($jc->item_id ?? 0) . '-' . ($jc->service_provider_id ?? 0);
                     });
@@ -458,7 +479,7 @@ class ProductionReportController extends Controller
                     foreach ($groups as $group) {
                         $first = $group->first();
                         $jc = $first->productionReceipt->jobCard;
-                        
+
                         $styleName = 'N/A';
                         if ($jc && $jc->item && $jc->item->style) {
                             $styleName = $jc->item->style->style_name ?? $jc->item->name;
@@ -508,7 +529,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($rows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -581,28 +602,28 @@ class ProductionReportController extends Controller
 
                     foreach ($stages as $stage) {
                         $tasksQuery = Task::with(['jobCard.serviceProvider', 'assignments', 'stage'])
-                            ->whereHas('stage', function($q) use ($stage) {
+                            ->whereHas('stage', function ($q) use ($stage) {
                                 $q->where('operation_stage_id', $stage->id);
                             });
 
                         if ($fromDate) {
-                            $tasksQuery->where(function($q) use ($fromDate) {
+                            $tasksQuery->where(function ($q) use ($fromDate) {
                                 $q->where('issue_date', '>=', $fromDate)
-                                  ->orWhere(function($sub) use ($fromDate) {
-                                      $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
-                                  });
+                                    ->orWhere(function ($sub) use ($fromDate) {
+                                        $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                                    });
                             });
                         }
                         if ($toDate) {
-                            $tasksQuery->where(function($q) use ($toDate) {
+                            $tasksQuery->where(function ($q) use ($toDate) {
                                 $q->where('issue_date', '<=', $toDate)
-                                  ->orWhere(function($sub) use ($toDate) {
-                                      $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
-                                  });
+                                    ->orWhere(function ($sub) use ($toDate) {
+                                        $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                                    });
                             });
                         }
                         if ($unitId) {
-                            $tasksQuery->whereHas('jobCard', function($q) use ($unitId) {
+                            $tasksQuery->whereHas('jobCard', function ($q) use ($unitId) {
                                 $q->where('service_provider_id', $unitId);
                             });
                         }
@@ -615,14 +636,14 @@ class ProductionReportController extends Controller
 
                         foreach ($tasks as $task) {
                             $taskPlan = (float) ($task->issue_qty ?? 0);
-                            
+
                             $taskActual = 0;
                             if ($task->status === 'Completed') {
                                 $taskActual = $taskPlan;
                             } elseif ($task->assignments->isNotEmpty()) {
                                 $services = $task->assignments->groupBy('service_id');
                                 if ($services->isNotEmpty()) {
-                                    $taskActual = (float) $services->map(function($grp) {
+                                    $taskActual = (float) $services->map(function ($grp) {
                                         return $grp->sum('completed_qty');
                                     })->min();
                                 } else {
@@ -654,7 +675,7 @@ class ProductionReportController extends Controller
                             }
                         }
 
-                        $targetVal = $stage->target !== null ? (float)$stage->target : null;
+                        $targetVal = $stage->target !== null ? (float) $stage->target : null;
                         if ($targetVal !== null) {
                             $totalTarget += $targetVal;
                         }
@@ -662,10 +683,12 @@ class ProductionReportController extends Controller
                         $totalActual += $stageActual;
 
                         $stageEfficiency = ($stagePlan > 0) ? round(($stageActual / $stagePlan) * 100, 1) : 0;
-                        
+
                         $effBadgeClass = 'bg-label-danger';
-                        if ($stageEfficiency >= 95) $effBadgeClass = 'bg-label-success';
-                        elseif ($stageEfficiency >= 75) $effBadgeClass = 'bg-label-warning';
+                        if ($stageEfficiency >= 95)
+                            $effBadgeClass = 'bg-label-success';
+                        elseif ($stageEfficiency >= 75)
+                            $effBadgeClass = 'bg-label-warning';
 
                         $tasksCount = $tasks->count();
                         if ($tasksCount === 0) {
@@ -696,7 +719,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($rows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -729,28 +752,28 @@ class ProductionReportController extends Controller
                     }
 
                     $tasksQuery = Task::with(['jobCard.serviceProvider', 'assignments', 'stage'])
-                        ->whereHas('stage', function($q) use ($stageId) {
+                        ->whereHas('stage', function ($q) use ($stageId) {
                             $q->where('operation_stage_id', $stageId);
                         });
 
                     if ($fromDate) {
-                        $tasksQuery->where(function($q) use ($fromDate) {
+                        $tasksQuery->where(function ($q) use ($fromDate) {
                             $q->where('issue_date', '>=', $fromDate)
-                              ->orWhere(function($sub) use ($fromDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
-                              });
+                                ->orWhere(function ($sub) use ($fromDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                                });
                         });
                     }
                     if ($toDate) {
-                        $tasksQuery->where(function($q) use ($toDate) {
+                        $tasksQuery->where(function ($q) use ($toDate) {
                             $q->where('issue_date', '<=', $toDate)
-                              ->orWhere(function($sub) use ($toDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
-                              });
+                                ->orWhere(function ($sub) use ($toDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                                });
                         });
                     }
                     if ($unitId) {
-                        $tasksQuery->whereHas('jobCard', function($q) use ($unitId) {
+                        $tasksQuery->whereHas('jobCard', function ($q) use ($unitId) {
                             $q->where('service_provider_id', $unitId);
                         });
                     }
@@ -763,14 +786,14 @@ class ProductionReportController extends Controller
 
                     foreach ($tasks as $task) {
                         $taskPlan = (float) ($task->issue_qty ?? 0);
-                        
+
                         $taskActual = 0;
                         if ($task->status === 'Completed') {
                             $taskActual = $taskPlan;
                         } elseif ($task->assignments->isNotEmpty()) {
                             $services = $task->assignments->groupBy('service_id');
                             if ($services->isNotEmpty()) {
-                                $taskActual = (float) $services->map(function($grp) {
+                                $taskActual = (float) $services->map(function ($grp) {
                                     return $grp->sum('completed_qty');
                                 })->min();
                             } else {
@@ -785,7 +808,7 @@ class ProductionReportController extends Controller
                         // Reason / Delay Calculation
                         $delayReason = '-';
                         $delayBadge = 'secondary';
-                        
+
                         if (!empty($task->remarks)) {
                             $delayReason = $task->remarks;
                             $delayBadge = 'info';
@@ -824,10 +847,14 @@ class ProductionReportController extends Controller
                         }
 
                         $statusBadge = 'secondary';
-                        if ($task->status === 'Completed') $statusBadge = 'success';
-                        elseif ($task->status === 'In Progress') $statusBadge = 'primary';
-                        elseif ($task->status === 'Hold') $statusBadge = 'warning';
-                        elseif ($task->status === 'Planned') $statusBadge = 'info';
+                        if ($task->status === 'Completed')
+                            $statusBadge = 'success';
+                        elseif ($task->status === 'In Progress')
+                            $statusBadge = 'primary';
+                        elseif ($task->status === 'Hold')
+                            $statusBadge = 'warning';
+                        elseif ($task->status === 'Planned')
+                            $statusBadge = 'info';
 
                         $jcNo = $task->job_card_no ?? ($task->jobCard->job_card_no ?? 'N/A');
                         $unitName = $task->jobCard && $task->jobCard->serviceProvider ? $task->jobCard->serviceProvider->name : 'N/A';
@@ -857,7 +884,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($tasksData);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($tasksData, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($tasksData, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -1102,7 +1129,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($rows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -1134,26 +1161,26 @@ class ProductionReportController extends Controller
                     ])->whereNotNull('issued_to');
 
                     if ($fromDate) {
-                        $query->where(function($q) use ($fromDate) {
+                        $query->where(function ($q) use ($fromDate) {
                             $q->where('issue_date', '>=', $fromDate)
-                              ->orWhere(function($sub) use ($fromDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
-                              });
+                                ->orWhere(function ($sub) use ($fromDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                                });
                         });
                     }
                     if ($toDate) {
-                        $query->where(function($q) use ($toDate) {
+                        $query->where(function ($q) use ($toDate) {
                             $q->where('issue_date', '<=', $toDate)
-                              ->orWhere(function($sub) use ($toDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
-                              });
+                                ->orWhere(function ($sub) use ($toDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                                });
                         });
                     }
                     if ($unitId) {
-                        $query->where(function($q) use ($unitId) {
-                            $q->whereHas('task.jobCard', function($jcQ) use ($unitId) {
+                        $query->where(function ($q) use ($unitId) {
+                            $q->whereHas('task.jobCard', function ($jcQ) use ($unitId) {
                                 $jcQ->where('service_provider_id', $unitId);
-                            })->orWhereHas('employee', function($empQ) use ($unitId) {
+                            })->orWhereHas('employee', function ($empQ) use ($unitId) {
                                 $empQ->where('service_provider_id', $unitId);
                             });
                         });
@@ -1169,24 +1196,25 @@ class ProductionReportController extends Controller
 
                     foreach ($grouped as $empId => $assignments) {
                         $emp = $assignments->first()->employee;
-                        if (!$emp) continue;
+                        if (!$emp)
+                            continue;
 
-                        $tasksDone = $assignments->map(function($a) {
+                        $tasksDone = $assignments->map(function ($a) {
                             return $a->service ? $a->service->service_name : ($a->task && $a->task->task_no ? $a->task->task_no : null);
                         })->filter()->unique()->values();
 
                         $tasksStr = $tasksDone->implode(' + ');
 
-                        $totalHours = (float) $assignments->sum(function($a) {
-                            return (float)($a->total_hrs ?? 0);
+                        $totalHours = (float) $assignments->sum(function ($a) {
+                            return (float) ($a->total_hrs ?? 0);
                         });
 
-                        $targetQty = (float) $assignments->sum(function($a) {
-                            return (float)($a->issue_qty ?? 0);
+                        $targetQty = (float) $assignments->sum(function ($a) {
+                            return (float) ($a->issue_qty ?? 0);
                         });
 
-                        $completedQty = (float) $assignments->sum(function($a) {
-                            return (float)($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
+                        $completedQty = (float) $assignments->sum(function ($a) {
+                            return (float) ($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
                         });
 
                         $pendingQty = max(0, $targetQty - $completedQty);
@@ -1196,14 +1224,14 @@ class ProductionReportController extends Controller
                         $summaryTotalTarget += $targetQty;
                         $summaryTotalCompleted += $completedQty;
 
-                        $remarksList = $assignments->pluck('remarks')->filter(function($r) {
+                        $remarksList = $assignments->pluck('remarks')->filter(function ($r) {
                             return !empty(trim($r));
                         })->unique()->values();
                         $remarksStr = $remarksList->isNotEmpty() ? $remarksList->implode(', ') : '-';
 
                         $designation = $emp->operation_stages_names ?: '-';
                         if ($designation === '-') {
-                            $stageNames = $assignments->map(function($a) {
+                            $stageNames = $assignments->map(function ($a) {
                                 if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
                                     return $a->task->stage->operationStage->operation_stage_name;
                                 } elseif ($a->task && $a->task->operationStage) {
@@ -1217,8 +1245,10 @@ class ProductionReportController extends Controller
                         }
 
                         $effBadge = 'bg-label-danger';
-                        if ($efficiency >= 95) $effBadge = 'bg-label-success';
-                        elseif ($efficiency >= 75) $effBadge = 'bg-label-warning';
+                        if ($efficiency >= 95)
+                            $effBadge = 'bg-label-success';
+                        elseif ($efficiency >= 75)
+                            $effBadge = 'bg-label-warning';
 
                         $empCode = $emp->emp_id ?: 'EMP' . $emp->id;
 
@@ -1247,7 +1277,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($rows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -1289,23 +1319,23 @@ class ProductionReportController extends Controller
                     ])->where('issued_to', $empId);
 
                     if ($fromDate) {
-                        $taskQuery->where(function($q) use ($fromDate) {
+                        $taskQuery->where(function ($q) use ($fromDate) {
                             $q->where('issue_date', '>=', $fromDate)
-                              ->orWhere(function($sub) use ($fromDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
-                              });
+                                ->orWhere(function ($sub) use ($fromDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                                });
                         });
                     }
                     if ($toDate) {
-                        $taskQuery->where(function($q) use ($toDate) {
+                        $taskQuery->where(function ($q) use ($toDate) {
                             $q->where('issue_date', '<=', $toDate)
-                              ->orWhere(function($sub) use ($toDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
-                              });
+                                ->orWhere(function ($sub) use ($toDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                                });
                         });
                     }
                     if ($unitId) {
-                        $taskQuery->whereHas('task.jobCard', function($jcQ) use ($unitId) {
+                        $taskQuery->whereHas('task.jobCard', function ($jcQ) use ($unitId) {
                             $jcQ->where('service_provider_id', $unitId);
                         });
                     }
@@ -1318,9 +1348,9 @@ class ProductionReportController extends Controller
                     $totalEmpCompleted = 0;
 
                     foreach ($assignments as $a) {
-                        $tHours = (float)($a->total_hrs ?? 0);
-                        $tTarget = (float)($a->issue_qty ?? 0);
-                        $tCompleted = (float)($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
+                        $tHours = (float) ($a->total_hrs ?? 0);
+                        $tTarget = (float) ($a->issue_qty ?? 0);
+                        $tCompleted = (float) ($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
                         $tPending = max(0, $tTarget - $tCompleted);
                         $tEfficiency = ($tTarget > 0) ? round(($tCompleted / $tTarget) * 100, 1) : 0;
 
@@ -1331,7 +1361,7 @@ class ProductionReportController extends Controller
                         $taskNo = $a->task ? $a->task->task_no : 'N/A';
                         $jcNo = $a->task ? ($a->task->job_card_no ?? ($a->task->jobCard ? $a->task->jobCard->job_card_no : 'N/A')) : 'N/A';
                         $serviceName = $a->service ? $a->service->service_name : '-';
-                        
+
                         $stageName = '-';
                         if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
                             $stageName = $a->task->stage->operationStage->operation_stage_name;
@@ -1341,14 +1371,20 @@ class ProductionReportController extends Controller
 
                         $statusVal = $a->status ?: ($a->task ? $a->task->status : 'Planned');
                         $statusBadge = 'secondary';
-                        if ($statusVal === 'Completed') $statusBadge = 'success';
-                        elseif ($statusVal === 'In Progress') $statusBadge = 'primary';
-                        elseif ($statusVal === 'Hold') $statusBadge = 'warning';
-                        elseif ($statusVal === 'Open') $statusBadge = 'info';
+                        if ($statusVal === 'Completed')
+                            $statusBadge = 'success';
+                        elseif ($statusVal === 'In Progress')
+                            $statusBadge = 'primary';
+                        elseif ($statusVal === 'Hold')
+                            $statusBadge = 'warning';
+                        elseif ($statusVal === 'Open')
+                            $statusBadge = 'info';
 
                         $effBadge = 'bg-label-danger';
-                        if ($tEfficiency >= 95) $effBadge = 'bg-label-success';
-                        elseif ($tEfficiency >= 75) $effBadge = 'bg-label-warning';
+                        if ($tEfficiency >= 95)
+                            $effBadge = 'bg-label-success';
+                        elseif ($tEfficiency >= 75)
+                            $effBadge = 'bg-label-warning';
 
                         $remark = $a->remarks ?: ($a->task && $a->task->remarks ? $a->task->remarks : '-');
 
@@ -1371,7 +1407,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($taskRows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($taskRows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($taskRows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -1383,7 +1419,7 @@ class ProductionReportController extends Controller
                     $overallEmpEff = ($totalEmpTarget > 0) ? round(($totalEmpCompleted / $totalEmpTarget) * 100, 1) : 0;
                     $designation = $empUser->operation_stages_names ?: '-';
                     if ($designation === '-') {
-                        $stageNames = $assignments->map(function($a) {
+                        $stageNames = $assignments->map(function ($a) {
                             if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
                                 return $a->task->stage->operationStage->operation_stage_name;
                             } elseif ($a->task && $a->task->operationStage) {
@@ -1434,29 +1470,29 @@ class ProductionReportController extends Controller
                     ])->where('issued_to', $empId);
 
                     if ($fromDate) {
-                        $jobQuery->where(function($q) use ($fromDate) {
+                        $jobQuery->where(function ($q) use ($fromDate) {
                             $q->where('issue_date', '>=', $fromDate)
-                              ->orWhere(function($sub) use ($fromDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
-                              });
+                                ->orWhere(function ($sub) use ($fromDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate);
+                                });
                         });
                     }
                     if ($toDate) {
-                        $jobQuery->where(function($q) use ($toDate) {
+                        $jobQuery->where(function ($q) use ($toDate) {
                             $q->where('issue_date', '<=', $toDate)
-                              ->orWhere(function($sub) use ($toDate) {
-                                  $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
-                              });
+                                ->orWhere(function ($sub) use ($toDate) {
+                                    $sub->whereNull('issue_date')->whereDate('created_at', '<=', $toDate);
+                                });
                         });
                     }
                     if ($unitId) {
-                        $jobQuery->whereHas('task.jobCard', function($jcQ) use ($unitId) {
+                        $jobQuery->whereHas('task.jobCard', function ($jcQ) use ($unitId) {
                             $jcQ->where('service_provider_id', $unitId);
                         });
                     }
 
                     $assignments = $jobQuery->orderBy('id', 'desc')->get();
-                    $groupedJobs = $assignments->groupBy(function($a) {
+                    $groupedJobs = $assignments->groupBy(function ($a) {
                         return $a->task ? ($a->task->job_card_entry_id ?: $a->task->job_card_no) : 'no_jc_' . $a->id;
                     });
 
@@ -1468,14 +1504,14 @@ class ProductionReportController extends Controller
                         $first = $group->first();
                         $jcNo = $first->task ? ($first->task->job_card_no ?? ($first->task->jobCard ? $first->task->jobCard->job_card_no : 'N/A')) : 'N/A';
                         $unit = ($first->task && $first->task->jobCard && $first->task->jobCard->serviceProvider) ? $first->task->jobCard->serviceProvider->name : '-';
-                        
-                        $tasksList = $group->map(function($a) {
+
+                        $tasksList = $group->map(function ($a) {
                             return $a->service ? $a->service->service_name : ($a->task ? $a->task->task_no : null);
                         })->filter()->unique()->values()->implode(', ');
 
                         $target = (float) $group->sum('issue_qty');
-                        $completed = (float) $group->sum(function($a) {
-                            return (float)($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
+                        $completed = (float) $group->sum(function ($a) {
+                            return (float) ($a->completed_qty > 0 ? $a->completed_qty : ($a->status === 'Completed' ? $a->issue_qty : 0));
                         });
                         $pending = max(0, $target - $completed);
                         $eff = ($target > 0) ? round(($completed / $target) * 100, 1) : 0;
@@ -1484,16 +1520,21 @@ class ProductionReportController extends Controller
                         $totalEmpCompleted += $completed;
 
                         $effBadge = 'bg-label-danger';
-                        if ($eff >= 95) $effBadge = 'bg-label-success';
-                        elseif ($eff >= 75) $effBadge = 'bg-label-warning';
+                        if ($eff >= 95)
+                            $effBadge = 'bg-label-success';
+                        elseif ($eff >= 75)
+                            $effBadge = 'bg-label-warning';
 
                         $statusVal = $first->status ?: ($first->task ? $first->task->status : 'Planned');
                         $statusBadge = 'secondary';
-                        if ($statusVal === 'Completed') $statusBadge = 'success';
-                        elseif ($statusVal === 'In Progress') $statusBadge = 'primary';
-                        elseif ($statusVal === 'Hold') $statusBadge = 'warning';
+                        if ($statusVal === 'Completed')
+                            $statusBadge = 'success';
+                        elseif ($statusVal === 'In Progress')
+                            $statusBadge = 'primary';
+                        elseif ($statusVal === 'Hold')
+                            $statusBadge = 'warning';
 
-                        $remarks = $group->pluck('remarks')->filter(function($r) {
+                        $remarks = $group->pluck('remarks')->filter(function ($r) {
                             return !empty(trim($r));
                         })->unique()->implode(', ');
                         if (empty($remarks)) {
@@ -1517,7 +1558,7 @@ class ProductionReportController extends Controller
                     $totalRecords = count($jobRows);
                     if ($search !== '') {
                         $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($jobRows, function($r) use ($lowerSearch) {
+                        $filteredRows = array_values(array_filter($jobRows, function ($r) use ($lowerSearch) {
                             return strpos($r['_search_text'], $lowerSearch) !== false;
                         }));
                     } else {
@@ -1529,7 +1570,7 @@ class ProductionReportController extends Controller
                     $overallEmpEff = ($totalEmpTarget > 0) ? round(($totalEmpCompleted / $totalEmpTarget) * 100, 1) : 0;
                     $designation = $empUser->operation_stages_names ?: '-';
                     if ($designation === '-') {
-                        $stageNames = $assignments->map(function($a) {
+                        $stageNames = $assignments->map(function ($a) {
                             if ($a->task && $a->task->stage && $a->task->stage->operationStage) {
                                 return $a->task->stage->operationStage->operation_stage_name;
                             } elseif ($a->task && $a->task->operationStage) {
@@ -1563,6 +1604,29 @@ class ProductionReportController extends Controller
                         ]
                     ]);
 
+                case 'cutting-section-average':
+                    $reportData = $this->getCuttingSectionAverageData($request);
+                    $rows = $reportData['rows'];
+                    $totalRecords = count($rows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $rows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'meta' => $reportData['meta']
+                    ]);
+
                 default:
                     return response()->json([
                         'draw' => $draw,
@@ -1579,6 +1643,467 @@ class ProductionReportController extends Controller
                 'data' => [],
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function getCuttingSectionAverageData(Request $request)
+    {
+        $fromDate = $this->parseReportDate($request->from_date);
+        $toDate = $this->parseReportDate($request->to_date);
+        $unitId = $request->unit_id;
+        $unitName = null;
+        if ($unitId) {
+            $unitObj = ServiceProvider::find($unitId);
+            if ($unitObj) {
+                $unitName = $unitObj->name;
+            }
+        }
+
+        $defaultDailyTarget = 2000;
+        $otDailyTarget = 2250;
+
+        if (!$fromDate || !$toDate) {
+            $latestDate = Task::where(function ($q) {
+                $q->where('stage_id', 1)
+                    ->orWhereHas('stage', function ($sq) {
+                        $sq->where('operation_stage_id', 1);
+                    });
+            })->whereNotNull('issue_date')->max('issue_date');
+
+            if (!$latestDate) {
+                $latestDate = JobCardEntry::max('job_card_date') ?: date('Y-m-d');
+            }
+
+            $latestCarbon = Carbon::parse($latestDate);
+            $calcFromDate = $fromDate ?: $latestCarbon->copy()->startOfMonth()->format('Y-m-d');
+            $calcToDate = $toDate ?: $latestCarbon->copy()->endOfMonth()->format('Y-m-d');
+        } else {
+            $calcFromDate = $fromDate;
+            $calcToDate = $toDate;
+        }
+
+        // 1. Query cutting tasks in date range
+        $cuttingTasksQuery = Task::where(function ($q) {
+            $q->where('stage_id', 1)
+                ->orWhereHas('stage', function ($sq) {
+                    $sq->where('operation_stage_id', 1);
+                });
+        })
+            ->whereBetween('issue_date', [$calcFromDate, $calcToDate])
+            ->with(['jobCard.serviceProvider', 'assignments.service', 'assignments.employee']);
+
+        if ($unitId) {
+            $cuttingTasksQuery->whereHas('jobCard', function ($jq) use ($unitId) {
+                $jq->where('service_provider_id', $unitId);
+            });
+        }
+        $cuttingTasks = $cuttingTasksQuery->get();
+
+        // 2. Query task assignments in date range
+        $assignQuery = TaskAssignEmployee::whereBetween('issue_date', [$calcFromDate, $calcToDate])
+            ->with(['service', 'employee', 'task.jobCard.serviceProvider']);
+
+        if ($unitId) {
+            $assignQuery->whereHas('task.jobCard', function ($jq) use ($unitId) {
+                $jq->where('service_provider_id', $unitId);
+            });
+        }
+        $allAssignments = $assignQuery->get();
+
+        // 3. Query Job Cards in date range
+        $jcQuery = JobCardEntry::whereBetween('job_card_date', [$calcFromDate, $calcToDate])
+            ->with('serviceProvider');
+        if ($unitId) {
+            $jcQuery->where('service_provider_id', $unitId);
+        }
+        $jobCards = $jcQuery->get();
+
+        // 4. Query Attendance in date range to check OT
+        $attendanceRecords = Attendance::whereBetween('date', [$calcFromDate, $calcToDate])
+            ->where(function ($q) {
+                $q->where('status', 'Overtime')
+                    ->orWhere('work_hours', '>', 9);
+            })
+            ->get();
+
+        $otDatesMap = [];
+        foreach ($attendanceRecords as $att) {
+            $dStr = Carbon::parse($att->date)->format('Y-m-d');
+            $otDatesMap[$dStr] = true;
+        }
+
+        // Gather distinct active dates from tasks, assignments, and job cards
+        $activeDates = collect();
+        foreach ($cuttingTasks as $ct) {
+            if ($ct->issue_date)
+                $activeDates->push(Carbon::parse($ct->issue_date)->format('Y-m-d'));
+        }
+        foreach ($allAssignments as $as) {
+            if ($as->issue_date)
+                $activeDates->push(Carbon::parse($as->issue_date)->format('Y-m-d'));
+        }
+        foreach ($jobCards as $jc) {
+            if ($jc->job_card_date)
+                $activeDates->push(Carbon::parse($jc->job_card_date)->format('Y-m-d'));
+        }
+        foreach ($attendanceRecords as $att) {
+            if ($att->date)
+                $activeDates->push(Carbon::parse($att->date)->format('Y-m-d'));
+        }
+        $activeDates = $activeDates->unique()->sort()->values();
+
+        if ($activeDates->isEmpty()) {
+            $curr = Carbon::parse($calcFromDate);
+            $end = Carbon::parse($calcToDate);
+            while ($curr->lte($end)) {
+                if (!$curr->isSunday()) {
+                    $activeDates->push($curr->format('Y-m-d'));
+                }
+                $curr->addDay();
+            }
+        }
+
+        $cuttingEmployees = $this->getCuttingEmployees();
+        $cuttingPlants = $this->getCuttingPlants();
+
+        $rows = [];
+        $summaryColTotals = [
+            'master_total' => 0,
+            'cutting_bundleing_qty' => 0,
+            'fusing_qty' => 0,
+            'logo_qty' => 0,
+            'issue_total' => 0,
+            'target_per_day' => 0
+        ];
+        foreach ($cuttingEmployees as $emp) {
+            $summaryColTotals['emp_' . $emp->id] = 0;
+        }
+        foreach ($cuttingPlants as $plant) {
+            $summaryColTotals['plant_' . $plant->id] = 0;
+        }
+
+        $otDaysWorkedCount = 0;
+        $regularDaysWorkedCount = 0;
+
+        $tasksByDate = $cuttingTasks->groupBy(fn($t) => Carbon::parse($t->issue_date)->format('Y-m-d'));
+        $assignsByDate = $allAssignments->groupBy(fn($a) => Carbon::parse($a->issue_date)->format('Y-m-d'));
+        $jcsByDate = $jobCards->groupBy(fn($j) => Carbon::parse($j->job_card_date)->format('Y-m-d'));
+
+        foreach ($activeDates as $dateStr) {
+            $cDate = Carbon::parse($dateStr);
+            $dFormatted = $cDate->format('d-m-Y');
+
+            $dayAssigns = $assignsByDate->get($dateStr, collect());
+            $dayTasks = $tasksByDate->get($dateStr, collect());
+            $dayJcs = $jcsByDate->get($dateStr, collect());
+
+            // Dynamic Cutting Master Quantities
+            $empQuantities = [];
+            $masterTotal = 0;
+
+            foreach ($cuttingEmployees as $emp) {
+                $eQty = 0;
+                foreach ($dayAssigns as $as) {
+                    if ($as->issued_to == $emp->id) {
+                        $sName = strtoupper($as->service ? $as->service->service_name : '');
+                        $isCutting = ($as->service_id == 16) || (strpos($sName, 'CUTTING') !== false);
+                        if ($isCutting) {
+                            $eQty += (float) $as->issue_qty;
+                        }
+                    }
+                }
+                $empQuantities[$emp->id] = $eQty;
+                $masterTotal += $eQty;
+                $summaryColTotals['emp_' . $emp->id] += $eQty;
+            }
+            $summaryColTotals['master_total'] += $masterTotal;
+
+            // Services Related Quantities
+            $bundleingQty = 0;
+            $fusingQty = 0;
+            $logoQty = 0;
+
+            foreach ($dayAssigns as $as) {
+                $sName = strtoupper($as->service ? $as->service->service_name : '');
+                if (strpos($sName, 'BUNDLE') !== false) {
+                    $bundleingQty += (float) $as->issue_qty;
+                }
+                if (strpos($sName, 'FUSING') !== false) {
+                    $fusingQty += (float) $as->issue_qty;
+                }
+                if (strpos($sName, 'LOGO') !== false) {
+                    $logoQty += (float) $as->issue_qty;
+                }
+            }
+            $summaryColTotals['cutting_bundleing_qty'] += $bundleingQty;
+            $summaryColTotals['fusing_qty'] += $fusingQty;
+            $summaryColTotals['logo_qty'] += $logoQty;
+
+            // Dynamic Cutting Issues (Plants)
+            $plantQuantities = [];
+            $issueTotal = 0;
+
+            foreach ($cuttingPlants as $plant) {
+                $pQty = 0;
+                foreach ($dayTasks as $t) {
+                    if ($t->jobCard && $t->jobCard->service_provider_id == $plant->id) {
+                        $tQty = (float) ($t->issue_qty > 0 ? $t->issue_qty : ($t->jobCard ? $t->jobCard->grand_total_qty : 0));
+                        $pQty += $tQty;
+                    }
+                }
+                $plantQuantities[$plant->id] = $pQty;
+                $issueTotal += $pQty;
+            }
+
+            if ($issueTotal == 0 && $dayJcs->isNotEmpty()) {
+                foreach ($cuttingPlants as $plant) {
+                    $jcQty = 0;
+                    foreach ($dayJcs as $jc) {
+                        if ($jc->service_provider_id == $plant->id) {
+                            $jcQty += (float) $jc->grand_total_qty;
+                        }
+                    }
+                    $plantQuantities[$plant->id] = $jcQty;
+                    $issueTotal += $jcQty;
+                }
+            }
+
+            foreach ($cuttingPlants as $plant) {
+                $summaryColTotals['plant_' . $plant->id] += $plantQuantities[$plant->id];
+            }
+            $summaryColTotals['issue_total'] += $issueTotal;
+
+            // OT check
+            $isOt = isset($otDatesMap[$dateStr]);
+            if ($isOt) {
+                $otDaysWorkedCount++;
+            } else {
+                $regularDaysWorkedCount++;
+            }
+
+            $targetPerDay = $defaultDailyTarget; // 2000
+            $efficiencyVal = ($targetPerDay > 0 && $issueTotal > 0) ? round(($issueTotal / $targetPerDay) * 100) : 0;
+            $summaryColTotals['target_per_day'] += $targetPerDay;
+
+            $effClass = 'text-danger';
+            if ($efficiencyVal >= 100)
+                $effClass = 'text-success fw-bold';
+            elseif ($efficiencyVal >= 75)
+                $effClass = 'text-primary fw-bold';
+            elseif ($efficiencyVal >= 50)
+                $effClass = 'text-warning fw-bold';
+
+            $otBadge = $isOt
+                ? '<span class="badge bg-label-success fw-bold px-2 py-1">Yes</span>'
+                : '<span class="text-muted">No</span>';
+
+            $formatNum = function ($v) {
+                return $v > 0 ? number_format($v) : '-';
+            };
+
+            $row = [
+                'date' => '<strong>' . htmlspecialchars($dFormatted) . '</strong>',
+                'date_clean' => $dFormatted,
+                'date_raw' => $dateStr,
+            ];
+            $searchTextParts = [$dFormatted];
+
+            foreach ($cuttingEmployees as $emp) {
+                $ev = $empQuantities[$emp->id];
+                $row['emp_' . $emp->id] = $formatNum($ev);
+                if ($ev > 0)
+                    $searchTextParts[] = (string) $ev . ' ' . $emp->name;
+            }
+            $row['master_total'] = '<strong class="text-dark">' . $formatNum($masterTotal) . '</strong>';
+            $row['master_total_clean'] = $formatNum($masterTotal);
+            $searchTextParts[] = (string) $masterTotal;
+
+            $row['cutting_bundleing_qty'] = $formatNum($bundleingQty);
+            $row['fusing_qty'] = $formatNum($fusingQty);
+            $row['logo_qty'] = $formatNum($logoQty);
+
+            foreach ($cuttingPlants as $plant) {
+                $pv = $plantQuantities[$plant->id];
+                $row['plant_' . $plant->id] = $formatNum($pv);
+                if ($pv > 0)
+                    $searchTextParts[] = (string) $pv . ' ' . ($plant->code ?: $plant->name);
+            }
+            $row['issue_total'] = '<strong class="text-dark">' . $formatNum($issueTotal) . '</strong>';
+            $row['issue_total_clean'] = $formatNum($issueTotal);
+            $searchTextParts[] = (string) $issueTotal;
+
+            $row['efficiency'] = '<span class="' . $effClass . '">' . ($efficiencyVal > 0 ? $efficiencyVal . '%' : '-') . '</span>';
+            $row['efficiency_clean'] = $efficiencyVal > 0 ? $efficiencyVal . '%' : '-';
+            $row['efficiency_val'] = $efficiencyVal;
+            $row['ot'] = $otBadge;
+            $row['ot_clean'] = $isOt ? 'Yes' : 'No';
+            $row['ot_val'] = $isOt ? 'Yes' : 'No';
+            $row['target_per_day'] = number_format($targetPerDay);
+            $row['_search_text'] = strtolower(implode(' ', $searchTextParts) . ' ' . ($isOt ? 'Yes' : 'No'));
+
+            $rows[] = $row;
+        }
+
+        $totalDaysWorked = count($rows);
+        $targetForDaysWorked = ($regularDaysWorkedCount * $defaultDailyTarget) + ($otDaysWorkedCount * $otDailyTarget);
+        $actualIssueTotal = $summaryColTotals['issue_total'];
+        $loss = $actualIssueTotal - $targetForDaysWorked;
+        $avgDailyActual = ($totalDaysWorked > 0) ? round($actualIssueTotal / $totalDaysWorked) : 0;
+        $overallEfficiency = ($targetForDaysWorked > 0) ? round(($actualIssueTotal / $targetForDaysWorked) * 100) : 0;
+
+        $dailyTargetAvg = ($totalDaysWorked > 0) ? ($targetForDaysWorked / $totalDaysWorked) : $defaultDailyTarget;
+        $daysBackward = ($dailyTargetAvg > 0) ? round(abs($loss) / $dailyTargetAvg, 2) : 0;
+
+        $monthCarbon = Carbon::parse($calcFromDate);
+        $totalMonthDays = $monthCarbon->daysInMonth;
+        $remainingDays = max(1, $totalMonthDays - $totalDaysWorked);
+        $targetPerDayToAchieve = ($remainingDays > 0) ? round(abs($loss) / $remainingDays) : 0;
+
+        $totalRow = [
+            'date' => 'TOTAL',
+        ];
+        foreach ($cuttingEmployees as $emp) {
+            $totalRow['emp_' . $emp->id] = number_format($summaryColTotals['emp_' . $emp->id]);
+        }
+        $totalRow['master_total'] = number_format($summaryColTotals['master_total']);
+        $totalRow['cutting_bundleing_qty'] = number_format($summaryColTotals['cutting_bundleing_qty']);
+        $totalRow['fusing_qty'] = number_format($summaryColTotals['fusing_qty']);
+        $totalRow['logo_qty'] = number_format($summaryColTotals['logo_qty']);
+        foreach ($cuttingPlants as $plant) {
+            $totalRow['plant_' . $plant->id] = number_format($summaryColTotals['plant_' . $plant->id]);
+        }
+        $totalRow['issue_total'] = number_format($summaryColTotals['issue_total']);
+        $totalRow['efficiency'] = $overallEfficiency . '%';
+        $totalRow['ot'] = $otDaysWorkedCount > 0 ? $otDaysWorkedCount . ' Days' : 'No';
+        $totalRow['target_per_day'] = number_format($summaryColTotals['target_per_day']);
+
+        $daysCountForAvg = max(1, $totalDaysWorked);
+        $avgRow = [
+            'date' => 'AVERAGE',
+        ];
+        foreach ($cuttingEmployees as $emp) {
+            $avgRow['emp_' . $emp->id] = number_format(round($summaryColTotals['emp_' . $emp->id] / $daysCountForAvg));
+        }
+        $avgRow['master_total'] = number_format(round($summaryColTotals['master_total'] / $daysCountForAvg));
+        $avgRow['cutting_bundleing_qty'] = number_format(round($summaryColTotals['cutting_bundleing_qty'] / $daysCountForAvg));
+        $avgRow['fusing_qty'] = number_format(round($summaryColTotals['fusing_qty'] / $daysCountForAvg));
+        $avgRow['logo_qty'] = number_format(round($summaryColTotals['logo_qty'] / $daysCountForAvg));
+        foreach ($cuttingPlants as $plant) {
+            $avgRow['plant_' . $plant->id] = number_format(round($summaryColTotals['plant_' . $plant->id] / $daysCountForAvg));
+        }
+        $avgRow['issue_total'] = number_format($avgDailyActual);
+        $avgRow['efficiency'] = $overallEfficiency . '%';
+        $avgRow['ot'] = '-';
+        $avgRow['target_per_day'] = number_format($defaultDailyTarget);
+
+        $meta = [
+            'total_row' => $totalRow,
+            'average_row' => $avgRow,
+            'cutting_employees' => $cuttingEmployees->map(fn($e) => ['id' => $e->id, 'name' => $e->name, 'emp_id' => $e->emp_id]),
+            'cutting_plants' => $cuttingPlants->map(fn($p) => ['id' => $p->id, 'name' => $p->name, 'code' => $p->code ?: $p->name]),
+            'report_title' => 'HO CUTTING SECTION AVERAGE REPORT ' . strtoupper(Carbon::parse($calcFromDate)->format('F Y')) . ' - (' . number_format($defaultDailyTarget) . ' PCS PER DAY)',
+            'report_period' => Carbon::parse($calcFromDate)->format('M Y'),
+            'monthly_target' => number_format($targetForDaysWorked),
+            'timing_reg_days' => $regularDaysWorkedCount,
+            'timing_ot_days' => $otDaysWorkedCount,
+            'timing_total_days' => $totalDaysWorked,
+            'target_reg_days' => number_format($regularDaysWorkedCount * $defaultDailyTarget),
+            'target_ot_days' => number_format($otDaysWorkedCount * $otDailyTarget),
+            'target_total_days' => number_format($targetForDaysWorked),
+            'actual_issue' => number_format($actualIssueTotal),
+            'loss' => ($loss < 0 ? '-' : '+') . number_format(abs($loss)),
+            'loss_is_negative' => $loss < 0,
+            'average' => number_format($avgDailyActual),
+            'efficiency' => $overallEfficiency . '%',
+            'days_backward' => $daysBackward,
+            'target_per_day_to_achieve' => number_format($targetPerDayToAchieve)
+        ];
+
+        return [
+            'calcFromDate' => $calcFromDate,
+            'calcToDate' => $calcToDate,
+            'unitId' => $unitId,
+            'unitName' => $unitName,
+            'cuttingEmployees' => $cuttingEmployees,
+            'cuttingPlants' => $cuttingPlants,
+            'rows' => $rows,
+            'totalRow' => $totalRow,
+            'avgRow' => $avgRow,
+            'summaryColTotals' => $summaryColTotals,
+            'meta' => $meta
+        ];
+    }
+
+    public function exportCuttingSectionAverageExcel(Request $request)
+    {
+        $reportData = $this->getCuttingSectionAverageData($request);
+        $period = str_replace([' ', '/', '\\', ':', '*'], '_', $reportData['meta']['report_period'] ?? date('M_Y'));
+        $fileName = 'HO_CUTTING_SECTION_AVERAGE_REPORT_' . $period . '_' . date('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new CuttingSectionAverageExport(
+                $reportData['cuttingEmployees'],
+                $reportData['cuttingPlants'],
+                $reportData['rows'],
+                $reportData['totalRow'],
+                $reportData['avgRow'],
+                $reportData['meta']
+            ),
+            $fileName
+        );
+    }
+
+    public function exportCuttingSectionAveragePdf(Request $request)
+    {
+        $reportData = $this->getCuttingSectionAverageData($request);
+        $period = str_replace([' ', '/', '\\', ':', '*'], '_', $reportData['meta']['report_period'] ?? date('M_Y'));
+        $fileName = 'HO_CUTTING_SECTION_AVERAGE_REPORT_' . $period . '_' . date('Ymd_His') . '.pdf';
+
+        $pdf = Pdf::loadView('reports.production_report._cutting_section_average_print', [
+            'cuttingEmployees' => $reportData['cuttingEmployees'],
+            'cuttingPlants' => $reportData['cuttingPlants'],
+            'rows' => $reportData['rows'],
+            'totalRow' => $reportData['totalRow'],
+            'avgRow' => $reportData['avgRow'],
+            'meta' => $reportData['meta'],
+            'unitName' => $reportData['unitName'] ?? null,
+            'isPrint' => false
+        ]);
+        $pdf->setPaper('A3', 'landscape');
+
+        return $pdf->stream($fileName);
+    }
+
+    public function exportCuttingSectionAveragePrint(Request $request)
+    {
+        $reportData = $this->getCuttingSectionAverageData($request);
+
+        return view('reports.production_report._cutting_section_average_print', [
+            'cuttingEmployees' => $reportData['cuttingEmployees'],
+            'cuttingPlants' => $reportData['cuttingPlants'],
+            'rows' => $reportData['rows'],
+            'totalRow' => $reportData['totalRow'],
+            'avgRow' => $reportData['avgRow'],
+            'meta' => $reportData['meta'],
+            'unitName' => $reportData['unitName'] ?? null,
+            'isPrint' => true
+        ]);
+    }
+
+    private function parseReportDate($dateStr)
+    {
+        if (empty($dateStr) || $dateStr === 'DD-MM-YYYY' || trim($dateStr) === '') {
+            return null;
+        }
+        try {
+            return Carbon::createFromFormat('d-m-Y', trim($dateStr))->format('Y-m-d');
+        } catch (\Exception $e) {
+            try {
+                $ts = strtotime(trim($dateStr));
+                return ($ts !== false && $ts > 0) ? date('Y-m-d', $ts) : null;
+            } catch (\Exception $e2) {
+                return null;
+            }
         }
     }
 }

@@ -1,6 +1,10 @@
 @extends('layouts.common')
 @section('title', 'Production Report - ' . env('WEBSITE_NAME'))
 @section('content')
+    @php
+        $cuttingEmployees = $cuttingEmployees ?? collect();
+        $cuttingPlants = $cuttingPlants ?? collect();
+    @endphp
     <div class="container-xxl section-padding">
         <!-- Header Section -->
         <div class="d-flex align-items-center justify-content-between mb-4">
@@ -32,6 +36,7 @@
                             Report Type</label>
                         <select class="form-select select2" id="report_type_select" name="report_type">
                             <option value="production-wip" selected>🏭 Production WIP Unit Wise</option>
+                            <option value="cutting-section-average">✂️ Cutting Section Average Report</option>
                             <option value="casino-cutting-wip">✂️ Casino Cutting WIP Report</option>
                             <option value="department-efficiency">📊 Department Wise Efficiency Report</option>
                             <option value="employee-efficiency">👥 Employee Wise Efficiency Report</option>
@@ -108,7 +113,8 @@
                     <!-- Casino Cutting WIP Report -->
                     <div class="tab-pane fade" id="casino-cutting-wip" role="tabpanel">
                         <div class="card-datatable table-responsive">
-                            <table class="datatables-products table table-hover text-nowrap align-middle" id="casinoCuttingWipTable" style="width: 100%;">
+                            <table class="datatables-products table table-hover text-nowrap align-middle"
+                                id="casinoCuttingWipTable" style="width: 100%;">
                                 <thead class="bg-light">
                                     <tr>
                                         <th>Job Card</th>
@@ -134,6 +140,183 @@
                                 </thead>
                                 <tbody></tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Cutting Section Average Report -->
+                    <div class="tab-pane fade" id="cutting-section-average" role="tabpanel">
+                        <!-- Top Title Banner matching Image 1 -->
+                        <div class="cutting-report-banner mb-3 p-3 rounded-3 text-center border shadow-sm"
+                            style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);">
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase" id="cuttingReportHeaderTitle"
+                                style="letter-spacing: 0.8px;">
+                                HO CUTTING SECTION AVERAGE REPORT - (2000 PCS PER DAY)
+                            </h5>
+                        </div>
+
+                        <!-- Main Cutting Table -->
+                        <div class="card-datatable table-responsive">
+                            <table class="datatables-products table table-bordered table-hover align-middle text-nowrap"
+                                id="cuttingSectionAverageTable" style="width: 100%;">
+                                <thead class="text-center align-middle" style="background-color: #f8f9fa;">
+                                    <tr>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border"
+                                            style="background-color: #fce4d6; min-width: 95px;">DATE</th>
+                                        <th colspan="{{ count($cuttingEmployees) + 1 }}" class="fw-bold text-dark border"
+                                            style="background-color: #ffc000;">CUTTING MASTER</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
+                                            style="background-color: #fff2cc; min-width: 90px;">CUTTING BUNDLEING QTY</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
+                                            style="background-color: #fff2cc; min-width: 75px;">FUSING QTY</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
+                                            style="background-color: #fff2cc; min-width: 70px;">LOGO QTY</th>
+                                        <th colspan="{{ count($cuttingPlants) + 1 }}" class="fw-bold text-dark border"
+                                            style="background-color: #ffc000;">CUTTING ISSUE</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border"
+                                            style="background-color: #fce4d6; min-width: 85px;">EFFICIENCY</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border"
+                                            style="background-color: #fce4d6; min-width: 65px;">1hr OT</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
+                                            style="background-color: #fce4d6; min-width: 80px;">TARGET PER DAY</th>
+                                    </tr>
+                                    <tr style="background-color: #fff2cc;">
+                                        <!-- Dynamic Cutting Master Sub-headers -->
+                                        @foreach($cuttingEmployees as $emp)
+                                            <th class="fw-bold text-dark border text-nowrap"
+                                                style="background-color: #ffc000; font-size: 0.8rem;"
+                                                title="{{ $emp->name }} (Emp ID: {{ $emp->emp_id }})">
+                                                {{ strtoupper($emp->name) }}</th>
+                                        @endforeach
+                                        <th class="fw-bold text-dark border"
+                                            style="background-color: #e6ac00; font-size: 0.8rem;">TOTAL QTY</th>
+
+                                        <!-- Dynamic Cutting Issue Sub-headers -->
+                                        @foreach($cuttingPlants as $plant)
+                                            <th class="fw-bold text-dark border text-nowrap"
+                                                style="background-color: #ffc000; font-size: 0.8rem;"
+                                                title="{{ $plant->name }}">{{ strtoupper($plant->code ?: $plant->name) }}</th>
+                                        @endforeach
+                                        <th class="fw-bold text-dark border"
+                                            style="background-color: #e6ac00; font-size: 0.8rem;">TOTAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                                <tfoot class="fw-bold align-middle">
+                                    <!-- Dynamic TOTAL Row -->
+                                    <tr class="table-warning border-top border-dark" id="cuttingFooterTotalRow"
+                                        style="background-color: #fef08a !important; font-weight: bold;">
+                                        <th class="text-center fw-bold text-dark">TOTAL</th>
+                                        @foreach($cuttingEmployees as $emp)
+                                            <th class="text-center" id="foot_emp_{{ $emp->id }}">-</th>
+                                        @endforeach
+                                        <th class="text-center fw-bold text-primary" id="foot_master_total">-</th>
+                                        <th class="text-center" id="foot_bundleing">-</th>
+                                        <th class="text-center" id="foot_fusing">-</th>
+                                        <th class="text-center" id="foot_logo">-</th>
+                                        @foreach($cuttingPlants as $plant)
+                                            <th class="text-center" id="foot_plant_{{ $plant->id }}">-</th>
+                                        @endforeach
+                                        <th class="text-center fw-bold text-primary" id="foot_issue_total">-</th>
+                                        <th class="text-center fw-bold text-success" id="foot_efficiency">-</th>
+                                        <th class="text-center" id="foot_ot">-</th>
+                                        <th class="text-center" id="foot_target">-</th>
+                                    </tr>
+                                    <!-- Dynamic AVERAGE Row -->
+                                    <tr class="table-secondary border-bottom border-dark" id="cuttingFooterAvgRow"
+                                        style="background-color: #e2e8f0 !important; font-weight: bold;">
+                                        <th class="text-center fw-bold text-dark">AVERAGE</th>
+                                        @foreach($cuttingEmployees as $emp)
+                                            <th class="text-center" id="avg_emp_{{ $emp->id }}">-</th>
+                                        @endforeach
+                                        <th class="text-center fw-bold text-dark" id="avg_master_total">-</th>
+                                        <th class="text-center" id="avg_bundleing">-</th>
+                                        <th class="text-center" id="avg_fusing">-</th>
+                                        <th class="text-center" id="avg_logo">-</th>
+                                        @foreach($cuttingPlants as $plant)
+                                            <th class="text-center" id="avg_plant_{{ $plant->id }}">-</th>
+                                        @endforeach
+                                        <th class="text-center fw-bold text-dark" id="avg_issue_total">-</th>
+                                        <th class="text-center fw-bold text-success" id="avg_efficiency">-</th>
+                                        <th class="text-center" id="avg_ot">-</th>
+                                        <th class="text-center" id="avg_target">-</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Executive KPI Summary Table at Bottom (Matching Image 2 Rows 41-51) -->
+                        <div class="row mt-4 pt-2">
+                            <div class="col-lg-6 col-md-8 col-sm-12">
+                                <div class="card shadow-sm border border-light-subtle rounded-3 overflow-hidden">
+                                    <div
+                                        class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
+                                        <h6 class="mb-0 fw-bold text-white"><i class="ri-dashboard-line me-1"></i>
+                                            Performance & Target Summary</h6>
+                                        <span class="badge bg-white text-primary rounded-pill px-2"
+                                            id="cuttingSummaryMonthBadge">Current Period</span>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-bordered mb-0 align-middle">
+                                            <tbody>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold" style="width: 45%;">Monthly
+                                                        Target</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 fs-6"
+                                                        id="summaryMonthlyTarget">0</td>
+                                                </tr>
+                                                <tr class="bg-light text-center fw-bold small text-muted">
+                                                    <td>Timing</td>
+                                                    <td>9 to 6</td>
+                                                    <td>9 to 7</td>
+                                                    <td class="text-dark">Total</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Days Worked</th>
+                                                    <td class="text-center" id="summaryRegDays">0</td>
+                                                    <td class="text-center" id="summaryOtDays">0</td>
+                                                    <td class="text-center fw-bold text-dark" id="summaryTotalDays">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Target for Days worked</th>
+                                                    <td class="text-center" id="summaryRegTarget">0</td>
+                                                    <td class="text-center" id="summaryOtTarget">0</td>
+                                                    <td class="text-center fw-bold text-primary"
+                                                        id="summaryTotalWorkedTarget">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Actual</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-success fs-6"
+                                                        id="summaryActualIssue">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Loss</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3" id="summaryLoss">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Average</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3" id="summaryAverage">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Efficiency</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-info"
+                                                        id="summaryEfficiency">0%</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Days Backward</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-warning"
+                                                        id="summaryDaysBackward">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="bg-light text-dark fw-bold">Target Per day to achieve Monthly
+                                                        Target</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-primary fw-bold"
+                                                        id="summaryTargetPerDayToAchieve">0</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -378,7 +561,8 @@
                                 </div>
                                 <div class="card-body py-4">
                                     <div class="card-datatable table-responsive">
-                                        <table class="table table-hover align-middle mb-0" id="detailTasksTable" style="width: 100%;">
+                                        <table class="table table-hover align-middle mb-0" id="detailTasksTable"
+                                            style="width: 100%;">
                                             <thead class="bg-light">
                                                 <tr>
                                                     <th>Job Card No</th>
@@ -429,11 +613,13 @@
                                                 <i class="ri-user-star-fill"></i>
                                             </div>
                                         </div>
-                                        <p class="text-muted small mb-0">Daily individual employee productivity & performance overview calculated from assigned tasks vs completed quantity.
+                                        <p class="text-muted small mb-0">Daily individual employee productivity &
+                                            performance overview calculated from assigned tasks vs completed quantity.
                                         </p>
                                     </div>
                                     <div class="col-md-7">
-                                        <div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+                                        <div
+                                            class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
                                             <div class="d-flex align-items-center gap-3">
                                                 <div class="dept-eff-badge-display px-3 py-2 rounded-3 fw-bold fs-3 text-primary bg-white shadow-sm border"
                                                     id="empOverallEffVal">
@@ -465,12 +651,14 @@
                                                 <div class="px-2 py-1 bg-white rounded border">
                                                     <span class="d-block extra-small text-muted text-uppercase fw-bold"
                                                         style="font-size: 0.68rem;">Target</span>
-                                                    <span class="fw-bold text-primary small" id="empSummaryTarget">0 Pcs</span>
+                                                    <span class="fw-bold text-primary small" id="empSummaryTarget">0
+                                                        Pcs</span>
                                                 </div>
                                                 <div class="px-2 py-1 bg-white rounded border">
                                                     <span class="d-block extra-small text-muted text-uppercase fw-bold"
                                                         style="font-size: 0.68rem;">Completed</span>
-                                                    <span class="fw-bold text-success small" id="empSummaryActual">0 Pcs</span>
+                                                    <span class="fw-bold text-success small" id="empSummaryActual">0
+                                                        Pcs</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -480,7 +668,8 @@
 
                             <!-- Employee Efficiency DataTable -->
                             <div class="card-datatable table-responsive">
-                                <table class="datatables-products table table-hover align-middle text-nowrap" id="employeeEfficiencyTable" style="width: 100%;">
+                                <table class="datatables-products table table-hover align-middle text-nowrap"
+                                    id="employeeEfficiencyTable" style="width: 100%;">
                                     <thead class="bg-light">
                                         <tr>
                                             <th>Emp ID</th>
@@ -503,33 +692,37 @@
                         <!-- DETAIL VIEW: In-Page Employee Task & Job Breakdown (Points 1 & 2) -->
                         <div id="employeeDetailView" class="d-none">
                             <!-- Top Action Bar with Back Button & View Switcher -->
-                            <div class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-light rounded-3 border gap-3">
+                            <div
+                                class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-light rounded-3 border gap-3">
                                 <div class="d-flex align-items-center gap-3">
                                     <button type="button"
                                         class="btn btn-primary btn-sm rounded-pill px-3 btn-back-to-emp-report">
                                         <i class="ri-arrow-left-line me-1"></i> Back to Report
                                     </button>
                                     <div>
-                                        <h5 class="mb-0 fw-bold text-primary d-flex align-items-center"
-                                            id="empDetailTitle">
+                                        <h5 class="mb-0 fw-bold text-primary d-flex align-items-center" id="empDetailTitle">
                                             Employee Breakdown
                                         </h5>
-                                        <small class="text-muted" id="empDetailSubtitle">Tasks, Job Cards & Performance</small>
+                                        <small class="text-muted" id="empDetailSubtitle">Tasks, Job Cards &
+                                            Performance</small>
                                     </div>
                                 </div>
                                 <div class="d-flex flex-wrap align-items-center gap-2">
                                     <!-- View Mode Switcher Toggle: Task-Wise vs Job-Wise -->
                                     <div class="btn-group rounded-pill p-1 bg-white border shadow-sm" role="group">
-                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 active" id="btnShowEmpTasks">
+                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 active"
+                                            id="btnShowEmpTasks">
                                             <i class="ri-task-line me-1"></i> Task-Wise Breakdown
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="btnShowEmpJobs">
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                            id="btnShowEmpJobs">
                                             <i class="ri-file-list-3-line me-1"></i> Job-Wise Summary
                                         </button>
                                     </div>
                                     <span class="badge bg-label-secondary rounded-pill px-3 py-2"
                                         id="empDetailFilterDateRange">All Dates</span>
-                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2" id="empDetailFilterUnit">All
+                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2"
+                                        id="empDetailFilterUnit">All
                                         Units</span>
                                 </div>
                             </div>
@@ -537,38 +730,50 @@
                             <!-- Summary KPI Chips for Selected Employee -->
                             <div class="row g-3 mb-4" id="empDetailSummaryCards">
                                 <div class="col-6 col-md-2">
-                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1" id="empDetailCountLabel">Total Tasks</span>
+                                    <div
+                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1"
+                                            id="empDetailCountLabel">Total Tasks</span>
                                         <h4 class="mb-0 fw-bold text-dark" id="empDetailTotalCount">0</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Hours Worked</span>
+                                    <div
+                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Hours
+                                            Worked</span>
                                         <h4 class="mb-0 fw-bold text-dark" id="empDetailTotalHours">0 Hrs</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Target Qty</span>
+                                    <div
+                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Target
+                                            Qty</span>
                                         <h4 class="mb-0 fw-bold text-primary" id="empDetailTotalTarget">0 Pcs</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Completed</span>
+                                    <div
+                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span
+                                            class="text-muted small fw-semibold text-uppercase d-block mb-1">Completed</span>
                                         <h4 class="mb-0 fw-bold text-success" id="empDetailTotalCompleted">0 Pcs</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Pending</span>
+                                    <div
+                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span
+                                            class="text-muted small fw-semibold text-uppercase d-block mb-1">Pending</span>
                                         <h4 class="mb-0 fw-bold text-danger" id="empDetailTotalPending">0 Pcs</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Efficiency</span>
+                                    <div
+                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span
+                                            class="text-muted small fw-semibold text-uppercase d-block mb-1">Efficiency</span>
                                         <h4 class="mb-0 fw-bold text-info" id="empDetailEfficiency">0%</h4>
                                     </div>
                                 </div>
@@ -577,7 +782,8 @@
                             <!-- SUB-VIEW 1: Task Wise Breakdown (Point 1) -->
                             <div id="empTaskSubView">
                                 <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
-                                    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div
+                                        class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                                         <h6 class="mb-0 fw-bold text-dark"><i class="ri-task-line me-1 text-primary"></i>
                                             Task-Wise Performance Breakdown</h6>
                                         <div class="d-flex align-items-center gap-2">
@@ -589,7 +795,8 @@
                                     </div>
                                     <div class="card-body py-4">
                                         <div class="card-datatable table-responsive">
-                                            <table class="table table-hover align-middle mb-0 text-nowrap" id="employeeTasksTable" style="width: 100%;">
+                                            <table class="table table-hover align-middle mb-0 text-nowrap"
+                                                id="employeeTasksTable" style="width: 100%;">
                                                 <thead class="bg-light">
                                                     <tr>
                                                         <th>Task No</th>
@@ -615,8 +822,10 @@
                             <!-- SUB-VIEW 2: Job Card Wise Summary (Point 2) -->
                             <div id="empJobSubView" class="d-none">
                                 <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
-                                    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                        <h6 class="mb-0 fw-bold text-dark"><i class="ri-file-list-3-line me-1 text-primary"></i>
+                                    <div
+                                        class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <h6 class="mb-0 fw-bold text-dark"><i
+                                                class="ri-file-list-3-line me-1 text-primary"></i>
                                             Job Card Wise Summary</h6>
                                         <div class="d-flex align-items-center gap-2">
                                             <button type="button"
@@ -627,7 +836,8 @@
                                     </div>
                                     <div class="card-body py-4">
                                         <div class="card-datatable table-responsive">
-                                            <table class="table table-hover align-middle mb-0 text-nowrap" id="employeeJobsTable" style="width: 100%;">
+                                            <table class="table table-hover align-middle mb-0 text-nowrap"
+                                                id="employeeJobsTable" style="width: 100%;">
                                                 <thead class="bg-light">
                                                     <tr>
                                                         <th>Job Card No</th>
@@ -741,6 +951,20 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
+
+        .cutting-report-banner {
+            border: 1px solid #c7d2fe !important;
+        }
+
+        #cuttingSectionAverageTable thead th {
+            font-size: 0.8rem;
+            letter-spacing: 0.2px;
+            vertical-align: middle !important;
+        }
+
+        #cuttingSectionAverageTable tfoot th {
+            font-size: 0.84rem;
+        }
     </style>
 @endsection
 
@@ -758,6 +982,27 @@
                         { data: 'inward', name: 'inward', className: 'text-center' },
                         { data: 'outward', name: 'outward', className: 'text-center' },
                         { data: 'current_wip', name: 'current_wip', className: 'text-center fw-bold' }
+                    ]
+                },
+                'cutting-section-average': {
+                    tableId: '#cuttingSectionAverageTable',
+                    type: 'cutting-section-average',
+                    columns: [
+                        { data: 'date', name: 'date_raw' },
+                        @foreach($cuttingEmployees as $emp)
+                            { data: 'emp_{{ $emp->id }}', name: 'emp_{{ $emp->id }}', className: 'text-center' },
+                        @endforeach
+                        { data: 'master_total', name: 'master_total', className: 'text-center fw-bold bg-light' },
+                        { data: 'cutting_bundleing_qty', name: 'cutting_bundleing_qty', className: 'text-center' },
+                        { data: 'fusing_qty', name: 'fusing_qty', className: 'text-center' },
+                        { data: 'logo_qty', name: 'logo_qty', className: 'text-center' },
+                        @foreach($cuttingPlants as $plant)
+                            { data: 'plant_{{ $plant->id }}', name: 'plant_{{ $plant->id }}', className: 'text-center' },
+                        @endforeach
+                        { data: 'issue_total', name: 'issue_total', className: 'text-center fw-bold bg-light' },
+                        { data: 'efficiency', name: 'efficiency_val', className: 'text-center fw-bold' },
+                        { data: 'ot', name: 'ot_val', className: 'text-center' },
+                        { data: 'target_per_day', name: 'target_per_day', className: 'text-center' }
                     ]
                 },
                 'casino-cutting-wip': {
@@ -888,7 +1133,7 @@
             function serverSideExportAction(e, dt, button, config) {
                 var self = this;
                 var oldStart = dt.settings()[0]._iDisplayStart;
-                
+
                 showReportLoading(true);
 
                 dt.one('preXhr', function (e, s, data) {
@@ -1019,6 +1264,70 @@
                                 $('#empSummaryActual').text(json.meta.total_completed || '0 Pcs');
                             }
                         }
+                        if (config.type === 'cutting-section-average') {
+                            const json = settings.json;
+                            if (json && json.meta) {
+                                const m = json.meta;
+                                if (m.report_title) {
+                                    $('#cuttingReportHeaderTitle').text(m.report_title);
+                                }
+                                if (m.report_period) {
+                                    $('#cuttingSummaryMonthBadge').text(m.report_period);
+                                }
+                                if (m.total_row) {
+                                    const t = m.total_row;
+                                    @foreach($cuttingEmployees as $emp)
+                                        $('#foot_emp_{{ $emp->id }}').text(t['emp_{{ $emp->id }}'] || '-');
+                                    @endforeach
+                                    $('#foot_master_total').text(t.master_total || '-');
+                                    $('#foot_bundleing').text(t.cutting_bundleing_qty || '-');
+                                    $('#foot_fusing').text(t.fusing_qty || '-');
+                                    $('#foot_logo').text(t.logo_qty || '-');
+                                    @foreach($cuttingPlants as $plant)
+                                        $('#foot_plant_{{ $plant->id }}').text(t['plant_{{ $plant->id }}'] || '-');
+                                    @endforeach
+                                    $('#foot_issue_total').text(t.issue_total || '-');
+                                    $('#foot_efficiency').text(t.efficiency || '-');
+                                    $('#foot_ot').text(t.ot || '-');
+                                    $('#foot_target').text(t.target_per_day || '-');
+                                }
+                                if (m.average_row) {
+                                    const a = m.average_row;
+                                    @foreach($cuttingEmployees as $emp)
+                                        $('#avg_emp_{{ $emp->id }}').text(a['emp_{{ $emp->id }}'] || '-');
+                                    @endforeach
+                                    $('#avg_master_total').text(a.master_total || '-');
+                                    $('#avg_bundleing').text(a.cutting_bundleing_qty || '-');
+                                    $('#avg_fusing').text(a.fusing_qty || '-');
+                                    $('#avg_logo').text(a.logo_qty || '-');
+                                    @foreach($cuttingPlants as $plant)
+                                        $('#avg_plant_{{ $plant->id }}').text(a['plant_{{ $plant->id }}'] || '-');
+                                    @endforeach
+                                    $('#avg_issue_total').text(a.issue_total || '-');
+                                    $('#avg_efficiency').text(a.efficiency || '-');
+                                    $('#avg_ot').text(a.ot || '-');
+                                    $('#avg_target').text(a.target_per_day || '-');
+                                }
+                                $('#summaryMonthlyTarget').text(m.monthly_target || '0');
+                                $('#summaryRegDays').text(m.timing_reg_days != null ? m.timing_reg_days : '0');
+                                $('#summaryOtDays').text(m.timing_ot_days != null ? m.timing_ot_days : '0');
+                                $('#summaryTotalDays').text(m.timing_total_days != null ? m.timing_total_days : '0');
+                                $('#summaryRegTarget').text(m.target_reg_days || '0');
+                                $('#summaryOtTarget').text(m.target_ot_days || '0');
+                                $('#summaryTotalWorkedTarget').text(m.target_total_days || '0');
+                                $('#summaryActualIssue').text(m.actual_issue || '0');
+                                $('#summaryLoss').text(m.loss || '0');
+                                if (m.loss_is_negative) {
+                                    $('#summaryLoss').removeClass('text-success').addClass('text-danger');
+                                } else {
+                                    $('#summaryLoss').removeClass('text-danger').addClass('text-success');
+                                }
+                                $('#summaryAverage').text(m.average || '0');
+                                $('#summaryEfficiency').text(m.efficiency || '0%');
+                                $('#summaryDaysBackward').text(m.days_backward != null ? m.days_backward : '0');
+                                $('#summaryTargetPerDayToAchieve').text(m.target_per_day_to_achieve || '0');
+                            }
+                        }
                     },
                     columns: config.columns,
                     dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
@@ -1027,12 +1336,33 @@
                             extend: 'excel',
                             className: 'buttons-excel d-none',
                             title: function () {
-                                return $('#active_report_title').text().trim() || 'Production Report';
+                                var t = $('#active_report_title').text().trim() || 'Production Report';
+                                return t.replace(/[^\w\s\-\–\—\(\)\/]/gi, '').trim() || 'Production Report';
+                            },
+                            filename: function () {
+                                var t = $('#active_report_title').text().trim() || 'Production Report';
+                                var clean = t.replace(/[^\w\s\-\–\—\(\)\/]/gi, '').trim() || 'Production Report';
+                                return clean.replace(/\s+/g, '_') + '_' + (new Date().toISOString().slice(0, 10));
                             },
                             exportOptions: {
                                 columns: ':not(.no-export)',
+                                footer: true,
                                 format: {
+                                    header: function (data, columnIdx) {
+                                        var clean = (typeof data === 'string') ? data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() : data;
+                                        if (config.type === 'cutting-section-average') {
+                                            if (clean === 'TOTAL QTY') return 'CUTTING MASTER TOTAL';
+                                            if (clean === 'TOTAL') return 'CUTTING ISSUE TOTAL';
+                                        }
+                                        return clean;
+                                    },
                                     body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    },
+                                    footer: function (data, row, column, node) {
                                         if (typeof data === 'string') {
                                             return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
                                         }
@@ -1046,14 +1376,35 @@
                             extend: 'pdf',
                             className: 'buttons-pdf d-none',
                             title: function () {
-                                return $('#active_report_title').text().trim() || 'Production Report';
+                                var t = $('#active_report_title').text().trim() || 'Production Report';
+                                return t.replace(/[^\w\s\-\–\—\(\)\/]/gi, '').trim() || 'Production Report';
+                            },
+                            filename: function () {
+                                var t = $('#active_report_title').text().trim() || 'Production Report';
+                                var clean = t.replace(/[^\w\s\-\–\—\(\)\/]/gi, '').trim() || 'Production Report';
+                                return clean.replace(/\s+/g, '_') + '_' + (new Date().toISOString().slice(0, 10));
                             },
                             orientation: 'landscape',
                             pageSize: (config.columns && config.columns.length > 12) ? 'A3' : 'A4',
                             exportOptions: {
                                 columns: ':not(.no-export)',
+                                footer: true,
                                 format: {
+                                    header: function (data, columnIdx) {
+                                        var clean = (typeof data === 'string') ? data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() : data;
+                                        if (config.type === 'cutting-section-average') {
+                                            if (clean === 'TOTAL QTY') return 'CUTTING MASTER TOTAL';
+                                            if (clean === 'TOTAL') return 'CUTTING ISSUE TOTAL';
+                                        }
+                                        return clean;
+                                    },
                                     body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    },
+                                    footer: function (data, row, column, node) {
                                         if (typeof data === 'string') {
                                             return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
                                         }
@@ -1064,9 +1415,15 @@
                             customize: function (doc) {
                                 var colCount = (config.columns ? config.columns.length : 0);
                                 var isVeryWide = colCount > 12;
+                                var isExtremeWide = colCount > 20;
 
                                 doc.pageOrientation = 'landscape';
-                                if (isVeryWide) {
+                                if (isExtremeWide) {
+                                    doc.pageSize = 'A3';
+                                    doc.defaultStyle.fontSize = 5.2;
+                                    doc.styles.tableHeader.fontSize = 5.5;
+                                    doc.pageMargins = [8, 12, 8, 12];
+                                } else if (isVeryWide) {
                                     doc.pageSize = 'A3';
                                     doc.defaultStyle.fontSize = 6.5;
                                     doc.styles.tableHeader.fontSize = 7;
@@ -1089,12 +1446,78 @@
                                             var actualCols = doc.content[i].table.body[0].length;
                                             if (config.type === 'employee-efficiency' && actualCols === 10) {
                                                 doc.content[i].table.widths = ['6%', '13%', '12%', '14%', '7%', '8%', '8%', '7%', '8%', '17%'];
+                                            } else if (config.type === 'cutting-section-average') {
+                                                var cWidths = ['auto'];
+                                                for (var k = 1; k < actualCols; k++) {
+                                                    cWidths.push('*');
+                                                }
+                                                doc.content[i].table.widths = cWidths;
+                                                doc.content[i].layout = {
+                                                    hLineWidth: function (i, node) { return 0.5; },
+                                                    vLineWidth: function (i, node) { return 0.5; },
+                                                    hLineColor: function (i, node) { return '#bbb'; },
+                                                    vLineColor: function (i, node) { return '#bbb'; },
+                                                    paddingLeft: function (i, node) { return 1.5; },
+                                                    paddingRight: function (i, node) { return 1.5; },
+                                                    paddingTop: function (i, node) { return 2; },
+                                                    paddingBottom: function (i, node) { return 2; }
+                                                };
                                             } else {
                                                 doc.content[i].table.widths = Array(actualCols).fill('*');
                                             }
                                             break;
                                         }
                                     }
+                                }
+
+                                if (config.type === 'cutting-section-average') {
+                                    var kpiMonthly = $('#summaryMonthlyTarget').text() || '-';
+                                    var kpiRegDays = $('#summaryRegDays').text() || '-';
+                                    var kpiOtDays = $('#summaryOtDays').text() || '-';
+                                    var kpiTotalDays = $('#summaryTotalDays').text() || '-';
+                                    var kpiRegTarget = $('#summaryRegTarget').text() || '-';
+                                    var kpiOtTarget = $('#summaryOtTarget').text() || '-';
+                                    var kpiTotalTarget = $('#summaryTotalWorkedTarget').text() || '-';
+                                    var kpiActual = $('#summaryActualIssue').text() || '-';
+                                    var kpiLoss = $('#summaryLoss').text() || '-';
+                                    var kpiAvg = $('#summaryAverage').text() || '-';
+                                    var kpiEff = $('#summaryEfficiency').text() || '-';
+                                    var kpiDaysBwd = $('#summaryDaysBackward').text() || '-';
+                                    var kpiPerDayAchieve = $('#summaryTargetPerDayToAchieve').text() || '-';
+
+                                    doc.content.push({
+                                        text: 'PERFORMANCE & TARGET SUMMARY',
+                                        fontSize: 7.5,
+                                        bold: true,
+                                        margin: [0, 12, 0, 4]
+                                    });
+
+                                    doc.content.push({
+                                        table: {
+                                            widths: ['25%', '25%', '25%', '25%'],
+                                            body: [
+                                                [
+                                                    { text: 'Monthly Target: ' + kpiMonthly, fontSize: 6 },
+                                                    { text: 'Regular Days: ' + kpiRegDays + ' (Target: ' + kpiRegTarget + ')', fontSize: 6 },
+                                                    { text: 'Actual Issue: ' + kpiActual, fontSize: 6, bold: true },
+                                                    { text: 'Daily Average: ' + kpiAvg, fontSize: 6 }
+                                                ],
+                                                [
+                                                    { text: 'Total Days Worked: ' + kpiTotalDays, fontSize: 6 },
+                                                    { text: '1hr OT Days: ' + kpiOtDays + ' (Target: ' + kpiOtTarget + ')', fontSize: 6 },
+                                                    { text: 'Loss / Gain: ' + kpiLoss, fontSize: 6, bold: true },
+                                                    { text: 'Overall Efficiency: ' + kpiEff, fontSize: 6, bold: true }
+                                                ],
+                                                [
+                                                    { text: 'Target for Worked Days: ' + kpiTotalTarget, fontSize: 6 },
+                                                    { text: 'Days Backward: ' + kpiDaysBwd, fontSize: 6 },
+                                                    { text: 'Target/Day to Achieve: ' + kpiPerDayAchieve, fontSize: 6, bold: true },
+                                                    { text: '', fontSize: 6 }
+                                                ]
+                                            ]
+                                        },
+                                        layout: 'lightHorizontalLines'
+                                    });
                                 }
                             },
                             action: serverSideExportAction
@@ -1103,12 +1526,28 @@
                             extend: 'print',
                             className: 'buttons-print d-none',
                             title: function () {
-                                return $('#active_report_title').text().trim() || 'Production Report';
+                                var t = $('#active_report_title').text().trim() || 'Production Report';
+                                return t.replace(/[^\w\s\-\–\—\(\)\/]/gi, '').trim() || 'Production Report';
                             },
                             exportOptions: {
                                 columns: ':not(.no-export)',
+                                footer: true,
                                 format: {
+                                    header: function (data, columnIdx) {
+                                        var clean = (typeof data === 'string') ? data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() : data;
+                                        if (config.type === 'cutting-section-average') {
+                                            if (clean === 'TOTAL QTY') return 'CUTTING MASTER TOTAL';
+                                            if (clean === 'TOTAL') return 'CUTTING ISSUE TOTAL';
+                                        }
+                                        return clean;
+                                    },
                                     body: function (data, row, column, node) {
+                                        if (typeof data === 'string') {
+                                            return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+                                        }
+                                        return data;
+                                    },
+                                    footer: function (data, row, column, node) {
                                         if (typeof data === 'string') {
                                             return data.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
                                         }
@@ -1119,21 +1558,22 @@
                             autoPrint: false,
                             customize: function (win) {
                                 var colCount = (config.columns ? config.columns.length : 0);
+                                var isExtremeWide = colCount > 20;
                                 var isVeryWide = colCount > 12;
                                 var isWide = colCount >= 7;
 
                                 var $winBody = $(win.document.body);
-                                $winBody.css('padding', '15px');
+                                $winBody.css('padding', isExtremeWide ? '6px' : '15px');
                                 $winBody.find('h1').css({
-                                    'font-size': '18px',
-                                    'margin-bottom': '12px'
+                                    'font-size': isExtremeWide ? '14px' : '18px',
+                                    'margin-bottom': isExtremeWide ? '8px' : '12px'
                                 });
 
                                 var $tbl = $winBody.find('table');
                                 $tbl.removeClass('text-nowrap')
                                     .addClass('table table-bordered')
                                     .css({
-                                        'font-size': (isVeryWide ? '7.5px' : (colCount >= 10 ? '8.5px' : (isWide ? '9.5px' : '11px'))),
+                                        'font-size': (isExtremeWide ? '6px' : (isVeryWide ? '7.5px' : (colCount >= 10 ? '8.5px' : (isWide ? '9.5px' : '11px')))),
                                         'width': '100%',
                                         'table-layout': (colCount >= 8 ? 'fixed' : 'auto'),
                                         'border-collapse': 'collapse'
@@ -1146,19 +1586,35 @@
                                             $(this).css('width', empColWidths[idx]);
                                         }
                                     });
+                                } else if (config.type === 'cutting-section-average') {
+                                    $tbl.find('th, td').css({
+                                        'padding': '2px 1.5px',
+                                        'font-size': '6px',
+                                        'text-align': 'center'
+                                    });
+                                    $tbl.find('th:first-child, td:first-child').css({
+                                        'min-width': '55px',
+                                        'text-align': 'left'
+                                    });
                                 }
 
                                 var pageOrientation = isWide ? 'landscape' : 'portrait';
                                 var printStyle = '<style>' +
-                                    '@page { size: ' + pageOrientation + '; margin: 8mm; } ' +
+                                    '@page { size: ' + pageOrientation + '; margin: ' + (isExtremeWide ? '4mm' : '8mm') + '; } ' +
                                     'body { -webkit-print-color-adjust: exact; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; } ' +
                                     'table { width: 100% !important; border-collapse: collapse !important; } ' +
-                                    'table th, table td { padding: 4px 5px !important; white-space: normal !important; word-wrap: break-word !important; word-break: break-word !important; vertical-align: middle !important; } ' +
+                                    'table th, table td { padding: ' + (isExtremeWide ? '2px 1.5px' : '4px 5px') + ' !important; white-space: normal !important; word-wrap: break-word !important; word-break: break-word !important; vertical-align: middle !important; } ' +
                                     'table th { background-color: #f8f9fa !important; font-weight: 700 !important; color: #212529 !important; } ' +
                                     '.badge, .btn, span, a { font-size: inherit !important; padding: 0 !important; background: transparent !important; color: inherit !important; text-decoration: none !important; } ' +
                                     'i { display: none !important; } ' +
                                     '</style>';
                                 $(win.document.head).append(printStyle);
+
+                                if (config.type === 'cutting-section-average') {
+                                    var $kpi = $('#cutting-section-average .row.mt-4').clone();
+                                    $kpi.css({ 'margin-top': '15px', 'page-break-inside': 'avoid' });
+                                    $winBody.append($kpi);
+                                }
 
                                 setTimeout(function () {
                                     win.focus();
@@ -2088,6 +2544,17 @@
                         return;
                     }
                 }
+                if ($('#report_type_select').val() === 'cutting-section-average') {
+                    let fromDate = $('.start_date').val() || '';
+                    let toDate = $('.end_date').val() || '';
+                    let unitId = $('select[name="unit_id"]').val() || '';
+                    let exportUrl = "{{ url('production_reports/export/cutting-section-average/excel') }}"
+                        + "?from_date=" + encodeURIComponent(fromDate)
+                        + "&to_date=" + encodeURIComponent(toDate)
+                        + "&unit_id=" + encodeURIComponent(unitId);
+                    window.location.href = exportUrl;
+                    return;
+                }
                 var activeTable = $('.tab-pane.active .datatables-products');
                 if (activeTable.length && $.fn.DataTable.isDataTable(activeTable)) {
                     activeTable.DataTable().button('.buttons-excel').trigger();
@@ -2109,6 +2576,17 @@
                         return;
                     }
                 }
+                if ($('#report_type_select').val() === 'cutting-section-average') {
+                    let fromDate = $('.start_date').val() || '';
+                    let toDate = $('.end_date').val() || '';
+                    let unitId = $('select[name="unit_id"]').val() || '';
+                    let exportUrl = "{{ url('production_reports/export/cutting-section-average/pdf') }}"
+                        + "?from_date=" + encodeURIComponent(fromDate)
+                        + "&to_date=" + encodeURIComponent(toDate)
+                        + "&unit_id=" + encodeURIComponent(unitId);
+                    window.open(exportUrl, '_blank');
+                    return;
+                }
                 var activeTable = $('.tab-pane.active .datatables-products');
                 if (activeTable.length && $.fn.DataTable.isDataTable(activeTable)) {
                     activeTable.DataTable().button('.buttons-pdf').trigger();
@@ -2129,6 +2607,17 @@
                         employeeTasksDataTable.button('.emp-detail-buttons-print').trigger();
                         return;
                     }
+                }
+                if ($('#report_type_select').val() === 'cutting-section-average') {
+                    let fromDate = $('.start_date').val() || '';
+                    let toDate = $('.end_date').val() || '';
+                    let unitId = $('select[name="unit_id"]').val() || '';
+                    let printUrl = "{{ url('production_reports/export/cutting-section-average/print') }}"
+                        + "?from_date=" + encodeURIComponent(fromDate)
+                        + "&to_date=" + encodeURIComponent(toDate)
+                        + "&unit_id=" + encodeURIComponent(unitId);
+                    window.open(printUrl, '_blank', 'width=1400,height=900');
+                    return;
                 }
                 var activeTable = $('.tab-pane.active .datatables-products');
                 if (activeTable.length && $.fn.DataTable.isDataTable(activeTable)) {
