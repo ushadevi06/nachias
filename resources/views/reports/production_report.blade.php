@@ -185,7 +185,8 @@
                                             <th class="fw-bold text-dark border text-nowrap"
                                                 style="background-color: #ffc000; font-size: 0.8rem;"
                                                 title="{{ $emp->name }} (Emp ID: {{ $emp->emp_id }})">
-                                                {{ strtoupper($emp->name) }}</th>
+                                                {{ strtoupper($emp->name) }}
+                                            </th>
                                         @endforeach
                                         <th class="fw-bold text-dark border"
                                             style="background-color: #e6ac00; font-size: 0.8rem;">TOTAL QTY</th>
@@ -473,6 +474,7 @@
                                             <th class="text-center">Target</th>
                                             <th class="text-center">Plan</th>
                                             <th class="text-center">Actual</th>
+                                            <th class="text-center">Pending</th>
                                             <th class="text-center">Efficiency</th>
                                             <th class="text-center">Working Hours</th>
                                             <th class="text-center no-export">Delay Breakdown & Tasks</th>
@@ -489,10 +491,6 @@
                             <div
                                 class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-light rounded-3 border gap-3">
                                 <div class="d-flex align-items-center gap-3">
-                                    <button type="button"
-                                        class="btn btn-primary btn-sm rounded-pill px-3 btn-back-to-dept-report">
-                                        <i class="ri-arrow-left-line me-1"></i> Back to Report
-                                    </button>
                                     <div>
                                         <h5 class="mb-0 fw-bold text-primary d-flex align-items-center"
                                             id="detailStageName">
@@ -501,12 +499,6 @@
                                         <small class="text-muted" id="detailStageSubheading">Job Cards, Tasks & Delay
                                             Reasons</small>
                                     </div>
-                                </div>
-                                <div class="d-flex flex-wrap align-items-center gap-2">
-                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2"
-                                        id="detailFilterDateRange">All Dates</span>
-                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2" id="detailFilterUnit">All
-                                        Units</span>
                                 </div>
                             </div>
 
@@ -583,14 +575,6 @@
                                         </table>
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- Bottom Back to Report Button -->
-                            <div class="d-flex justify-content-start mb-3">
-                                <button type="button"
-                                    class="btn btn-outline-primary rounded-pill px-4 btn-back-to-dept-report">
-                                    <i class="ri-arrow-left-line me-1"></i> Back to Department Efficiency Report
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -695,10 +679,6 @@
                             <div
                                 class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-light rounded-3 border gap-3">
                                 <div class="d-flex align-items-center gap-3">
-                                    <button type="button"
-                                        class="btn btn-primary btn-sm rounded-pill px-3 btn-back-to-emp-report">
-                                        <i class="ri-arrow-left-line me-1"></i> Back to Report
-                                    </button>
                                     <div>
                                         <h5 class="mb-0 fw-bold text-primary d-flex align-items-center" id="empDetailTitle">
                                             Employee Breakdown
@@ -719,11 +699,6 @@
                                             <i class="ri-file-list-3-line me-1"></i> Job-Wise Summary
                                         </button>
                                     </div>
-                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2"
-                                        id="empDetailFilterDateRange">All Dates</span>
-                                    <span class="badge bg-label-secondary rounded-pill px-3 py-2"
-                                        id="empDetailFilterUnit">All
-                                        Units</span>
                                 </div>
                             </div>
 
@@ -856,14 +831,6 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- Bottom Back to Report Button -->
-                            <div class="d-flex justify-content-start mb-3">
-                                <button type="button"
-                                    class="btn btn-outline-primary rounded-pill px-4 btn-back-to-emp-report">
-                                    <i class="ri-arrow-left-line me-1"></i> Back to Employee Efficiency Report
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1088,6 +1055,7 @@
                         { data: 'target', name: 'target', className: 'text-center' },
                         { data: 'plan', name: 'plan', className: 'text-center' },
                         { data: 'actual', name: 'actual', className: 'text-center' },
+                        { data: 'pending', name: 'pending', className: 'text-center' },
                         { data: 'efficiency', name: 'efficiency', className: 'text-center' },
                         { data: 'working_hours', name: 'working_hours', className: 'text-center' },
                         { data: 'delay_details', name: 'delay_details', className: 'text-center no-export', orderable: false, searchable: false }

@@ -703,12 +703,15 @@ class ProductionReportController extends Controller
 
                         $deptHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-dept-tasks text-decoration-none" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '">' . htmlspecialchars($stage->operation_stage_name) . ' <i class="ri-external-link-line small opacity-75 ms-1"></i></a>';
 
+                        $stagePending = max(0, $stagePlan - $stageActual);
+
                         $rows[] = [
                             'stage_id' => $stage->id,
                             'operation' => $deptHtml,
                             'target' => $targetVal !== null ? number_format($targetVal) . ' Pcs' : '<span class="text-muted">-</span>',
                             'plan' => '<span class="text-primary fw-bold">' . number_format($stagePlan) . ' Pcs</span>',
                             'actual' => '<span class="text-success fw-bold">' . number_format($stageActual) . ' Pcs</span>',
+                            'pending' => '<span class="text-danger fw-bold">' . number_format($stagePending) . ' Pcs</span>',
                             'efficiency' => '<span class="badge ' . $effBadgeClass . ' rounded-pill px-3 py-1 fs-6">' . $stageEfficiency . '%</span>',
                             'working_hours' => '<span class="fw-semibold">8</span>',
                             'delay_details' => $delayDetailsHtml,
@@ -729,6 +732,7 @@ class ProductionReportController extends Controller
                     $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
                     $overallEfficiency = ($totalPlan > 0) ? round(($totalActual / $totalPlan) * 100, 1) : 0;
+                    $totalPending = max(0, $totalPlan - $totalActual);
 
                     return response()->json([
                         'draw' => $draw,
@@ -739,6 +743,7 @@ class ProductionReportController extends Controller
                             'total_target' => number_format($totalTarget) . ' Pcs',
                             'total_plan' => number_format($totalPlan) . ' Pcs',
                             'total_actual' => number_format($totalActual) . ' Pcs',
+                            'total_pending' => number_format($totalPending) . ' Pcs',
                             'overall_efficiency' => $overallEfficiency . '%',
                             'efficiency_val' => $overallEfficiency
                         ]
