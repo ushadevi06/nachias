@@ -166,4 +166,71 @@ class SalesInvoice extends Model
     {
         return $this->belongsTo(StoreType::class, 'store_id');
     }
+
+    /**
+     * Convert DB invoice number (e.g. CDW/1/26-27) to display/E-invoice number (e.g. CD/311/26-27).
+     * Offset is 310 based on the last actual CD invoice CD/310/26-27.
+     */
+    public static function formatDisplayInvNo($invNo)
+    {
+        if (empty($invNo)) {
+            return $invNo;
+        }
+
+        if (preg_match('/^CDW\/(\d+)\/(.*)$/i', $invNo, $matches)) {
+            $num = (int)$matches[1];
+            $fy = $matches[2];
+            $newNum = 310 + $num;
+            return "CD/{$newNum}/{$fy}";
+        }
+
+        return $invNo;
+    }
+
+    /**
+     * Convert display/input invoice number (e.g. CD/311/26-27) back to DB format (e.g. CDW/1/26-27).
+     * Numbers <= 310 remain as CD.
+     */
+    public static function formatDbInvNo($invNo)
+    {
+        if (empty($invNo)) {
+            return $invNo;
+        }
+
+        if (preg_match('/^CD\/(\d+)\/(.*)$/i', $invNo, $matches)) {
+            $num = (int)$matches[1];
+            $fy = $matches[2];
+            if ($num > 310) {
+                $dbNum = $num - 310;
+                return "CDW/{$dbNum}/{$fy}";
+            }
+        }
+
+        return $invNo;
+    }
+
+    /**
+     * Accessor: Automatically formats inv_no for display, prints, and e-invoicing.
+     */
+    public function getInvNoAttribute($value)
+    {
+        return self::formatDisplayInvNo($value);
+    }
+
+    /**
+     * Mutator: Ensures DB always stores the underlying CDW representation without altering DB constraints.
+     */
+    public function setInvNoAttribute($value)
+    {
+        $this->attributes['inv_no'] = self::formatDbInvNo($value);
+    }
+
+    /**
+     * Raw accessor to access DB value if explicitly needed.
+     */
+    public function getRawInvNoAttribute()
+    {
+        return $this->attributes['inv_no'] ?? null;
+    }
 }
+

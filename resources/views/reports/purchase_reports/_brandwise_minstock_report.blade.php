@@ -103,7 +103,7 @@
                 <th rowspan="2" class="align-middle text-end" style="min-width: 100px;">ORDER FABRIC</th>
                 <th rowspan="2" class="align-middle text-end" style="min-width: 100px;">FABRIC STOCK</th>
                 <th rowspan="2" class="align-middle text-end dhoti-col" style="min-width: 100px;">DHOTI STOCK</th>
-                <th rowspan="2" class="align-middle text-end dhoti-col" style="min-width: 100px;">DHOTI REORDER</th>
+                <th rowspan="2" class="align-middle text-end dhoti-col" style="min-width: 100px;">DHOTI ORDERED</th>
                 <th rowspan="2" class="align-middle text-end dhoti-col" style="min-width: 100px;">DHOTI PENDING</th>
                 <th rowspan="2" class="align-middle" style="min-width: 65px;">STOCK</th>
                 <th colspan="9" class="text-center bg-fs-header py-2 fw-bold">F/S</th>
@@ -111,6 +111,7 @@
                 <th rowspan="2" class="align-middle bg-gross-header fw-bold" style="min-width: 90px;">GROSS TOT</th>
                 <th rowspan="2" class="align-middle" style="min-width: 110px;">UNIT</th>
                 <th rowspan="2" class="align-middle" style="min-width: 100px;">C.NO</th>
+                <th rowspan="2" class="align-middle" style="min-width: 130px;">STAGE STATUS</th>
                 <th rowspan="2" class="align-middle text-start" style="min-width: 140px;">REMARKS</th>
             </tr>
             <tr class="bg-light text-dark">
@@ -138,7 +139,7 @@
         </thead>
         <tbody id="brandwise-minstock-tbody">
             <tr>
-                <td colspan="28" class="text-center text-muted py-4">Select a Brand to view Brandwise Minimum Stock report</td>
+                <td colspan="29" class="text-center text-muted py-4">Select a Brand to view Brandwise Minimum Stock report</td>
             </tr>
         </tbody>
     </table>
@@ -192,7 +193,7 @@
             const supplierId = $('select[name="supplier_id"]').val();
             const searchQuery = $('#brandwise_search_input').val();
 
-            const colSpanVal = isDhotiBrand ? 28 : 25;
+            const colSpanVal = isDhotiBrand ? 29 : 26;
 
             $.ajax({
                 url: window.location.pathname,
@@ -288,6 +289,7 @@
                             <td></td>
                             <td></td>
                             <td></td>
+                            <td></td>
                         </tr>
                         `;
 
@@ -314,6 +316,7 @@
                             <td>${renderCell(fg.hs[50])}</td>
                             <td class="fw-bold bg-light text-dark">${renderCell(fg.hs_tl)}</td>
                             <td class="fw-bold bg-light text-dark">${renderCell(fg.gross_total)}</td>
+                            <td></td>
                             <td></td>
                             <td></td>
                             <td></td>
@@ -346,6 +349,7 @@
                                 <td class="fw-bold bg-light text-dark">${renderCell(wip.gross_total)}</td>
                                 <td class="text-nowrap fw-semibold bg-white">${wip.unit || '-'}</td>
                                 <td class="text-nowrap fw-semibold bg-white">${wip.c_no || '-'}</td>
+                                <td class="text-nowrap fw-semibold bg-white">${wip.stage_status ? `<span class="badge bg-label-primary px-2 py-1">${wip.stage_status}</span>` : '-'}</td>
                                 <td class="text-start small text-break bg-white">${wip.remarks || '-'}</td>
                             </tr>
                             `;
@@ -374,6 +378,7 @@
                             <td>${renderCell(total.hs[50], min.hs[50], true)}</td>
                             <td class="fw-bold bg-light text-dark">${renderCell(total.hs_tl, min.hs_tl, true)}</td>
                             <td class="fw-bold bg-light text-dark">${renderCell(total.gross_total, min.gross_total, true)}</td>
+                            <td></td>
                             <td></td>
                             <td></td>
                             <td></td>

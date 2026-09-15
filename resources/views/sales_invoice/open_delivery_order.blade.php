@@ -230,16 +230,20 @@
                         <td style="width: 15px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
                         <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">
                             {{ $invoice->customer->name ?? '-' }}<br>
-                            {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
-                            @php
-                                $locParts = [];
-                                if($invoice->customer->city->city_name ?? false) $locParts[] = strtoupper($invoice->customer->city->city_name);
-                                if($invoice->customer->state->state_name ?? false) $locParts[] = strtoupper($invoice->customer->state->state_name);
-                                $locStr = implode(', ', $locParts);
-                                if($invoice->customer->zip_code ?? false) $locStr .= ($locStr ? ' - ' : '') . $invoice->customer->zip_code;
-                            @endphp
-                            @if($locStr)
-                                {{ $locStr }}<br>
+                            @if(!empty($invoice->delivery_address))
+                                {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
+                            @else
+                                {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->customer->address ?? '')))) !!}<br>
+                                @php
+                                    $locParts = [];
+                                    if($invoice->customer->city->city_name ?? false) $locParts[] = strtoupper($invoice->customer->city->city_name);
+                                    if($invoice->customer->state->state_name ?? false) $locParts[] = strtoupper($invoice->customer->state->state_name);
+                                    $locStr = implode(', ', $locParts);
+                                    if($invoice->customer->zip_code ?? false) $locStr .= ($locStr ? ' - ' : '') . $invoice->customer->zip_code;
+                                @endphp
+                                @if($locStr)
+                                    {{ $locStr }}<br>
+                                @endif
                             @endif
                             @if($invoice->customer && $invoice->customer->mobile_no)
                                 {{ $invoice->customer->mobile_no }}

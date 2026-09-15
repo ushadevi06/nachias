@@ -1,7 +1,7 @@
 <table>
     <thead>
         <tr>
-            <th colspan="{{ !empty($isDhotiBrand) ? 28 : 25 }}" style="font-size: 14px; font-weight: bold; text-align: center; background-color: #f1f5f9; height: 35px; border: 1px solid #000000;">
+            <th colspan="{{ !empty($isDhotiBrand) ? 29 : 26 }}" style="font-size: 14px; font-weight: bold; text-align: center; background-color: #f1f5f9; height: 35px; border: 1px solid #000000;">
                 {{ $title }}
             </th>
         </tr>
@@ -21,6 +21,7 @@
             <th rowspan="2" style="font-weight: bold; text-align: center; vertical-align: middle; border: 1px solid #000000; background-color: #cbd5e1;">GROSS TOT</th>
             <th rowspan="2" style="font-weight: bold; text-align: center; vertical-align: middle; border: 1px solid #000000; background-color: #e2e8f0;">UNIT</th>
             <th rowspan="2" style="font-weight: bold; text-align: center; vertical-align: middle; border: 1px solid #000000; background-color: #e2e8f0;">C.NO</th>
+            <th rowspan="2" style="font-weight: bold; text-align: center; vertical-align: middle; border: 1px solid #000000; background-color: #e2e8f0;">STAGE STATUS</th>
             <th rowspan="2" style="font-weight: bold; text-align: center; vertical-align: middle; border: 1px solid #000000; background-color: #e2e8f0;">REMARKS</th>
         </tr>
         <tr>
@@ -48,7 +49,7 @@
     @foreach($data as $index => $item)
         @php
             $wips = !empty($item['matrix']['wips']) ? $item['matrix']['wips'] : [[
-                'label' => 'WIP', 'unit' => '-', 'c_no' => '-', 'remarks' => '-',
+                'label' => 'WIP', 'unit' => '-', 'c_no' => '-', 'remarks' => '-', 'stage_status' => '-',
                 'fs' => [], 'hs' => [], 'fs_tl' => 0, 'hs_tl' => 0, 'gross_total' => 0
             ]];
             $min = $item['matrix']['min'];
@@ -80,6 +81,7 @@
             <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>
+            <td style="border: 1px solid #000000;"></td>
         </tr>
         <tr>
             <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #f8fafc;">FG</td>
@@ -92,6 +94,7 @@
             @endforeach
             <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #f1f5f9;">{{ !empty($fg['hs_tl']) ? $fg['hs_tl'] : '' }}</td>
             <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #cbd5e1;">{{ !empty($fg['gross_total']) ? $fg['gross_total'] : '' }}</td>
+            <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>
@@ -110,6 +113,7 @@
             <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #cbd5e1;">{{ !empty($wip['gross_total']) ? $wip['gross_total'] : '' }}</td>
             <td style="border: 1px solid #000000; text-align: center;">{{ $wip['unit'] ?? '-' }}</td>
             <td style="border: 1px solid #000000; text-align: center;">{{ $wip['c_no'] ?? '-' }}</td>
+            <td style="border: 1px solid #000000; text-align: center; font-weight: 500;">{{ $wip['stage_status'] ?? '-' }}</td>
             <td style="border: 1px solid #000000; text-align: left;">{{ $wip['remarks'] ?? '-' }}</td>
         </tr>
         @endforeach
@@ -124,6 +128,7 @@
             @endforeach
             <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #cbd5e1;">{{ !empty($total['hs_tl']) ? $total['hs_tl'] : 0 }}</td>
             <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #cbd5e1;">{{ !empty($total['gross_total']) ? $total['gross_total'] : 0 }}</td>
+            <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>
             <td style="border: 1px solid #000000;"></td>

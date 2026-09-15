@@ -57,7 +57,8 @@ class EInvoiceService
         $slNo = 1;
 
         foreach ($invoice->items as $item) {
-            $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
+            $itemRateVal = (float) ($item->rate > 0 ? $item->rate : $item->mrp);
+            $totAmt = (float) number_format((float) $item->quantity * $itemRateVal, 2, '.', '');
             $salesDiscountPercent = (float) ($invoice->sales_discount ?? 0);
             $boxDiscountAmount = (float) ($invoice->box_discount_amount ?? 0);
 

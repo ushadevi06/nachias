@@ -126,8 +126,26 @@ class SalesInvoiceController extends Controller
                 $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);
 
                 $query->where(function ($q) use ($search, $numericSearch) {
-                    $q->where('inv_no', 'like', "%{$search}%")
-                      ->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                    $q->where('inv_no', 'like', "%{$search}%");
+
+                    // Map CD search to CDW for sequence numbers > 310
+                    if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
+                        $sNum = (int)$sm[1];
+                        if ($sNum > 310) {
+                            $cdwEq = 'CDW/' . ($sNum - 310);
+                            $q->orWhere('inv_no', 'like', "%{$cdwEq}%");
+                        }
+                    } elseif (is_numeric(trim($search))) {
+                        $numVal = (int)trim($search);
+                        if ($numVal > 310) {
+                            $cdwNum = $numVal - 310;
+                            $q->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
+                        }
+                    } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
+                        $q->orWhere('inv_no', 'like', "%CDW/%");
+                    }
+
+                    $q->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                       ->orWhere('sub_total', 'like', "%{$numericSearch}%")
                       ->orWhere('discount', 'like', "%{$numericSearch}%")
                       ->orWhere('grand_total', 'like', "%{$numericSearch}%")
@@ -308,7 +326,7 @@ class SalesInvoiceController extends Controller
 
         return response()->json([
             'success' => true,
-            'inv_no' => $generatedInvNo
+            'inv_no' => SalesInvoice::formatDisplayInvNo($generatedInvNo)
         ]);
     }
 
@@ -362,7 +380,7 @@ class SalesInvoiceController extends Controller
                         if ($invoice->brand_id != $selectedBrandId || $origFYStart != $selFYStart) {
                             $regenerate = true;
                         } else {
-                            $request->merge(['inv_no' => $invoice->inv_no]);
+                            $request->merge(['inv_no' => $invoice->raw_inv_no ?: $invoice->getRawOriginal('inv_no')]);
                         }
                     }
 
@@ -372,6 +390,10 @@ class SalesInvoiceController extends Controller
                     }
                 } catch (\Exception $e) {
                 }
+            }
+
+            if ($request->inv_no) {
+                $request->merge(['inv_no' => SalesInvoice::formatDbInvNo($request->inv_no)]);
             }
 
             $request->validate([
@@ -480,7 +502,6 @@ class SalesInvoiceController extends Controller
                 $invoiceData3['other_state'] = $request->other_state == 'yes';
                 $invoiceData3['so_ids'] = json_encode($request->so_ids);
                 $invoiceData3['so_id'] = $request->so_ids[0] ?? null;
-                Log::info('invoiceData3', [$invoiceData3]);
 
                 if ($request->hasFile('signature_file')) {
                     if (!empty($invoice->signature_file)) {
@@ -663,7 +684,7 @@ class SalesInvoiceController extends Controller
                     if ($itemMrp <= 0 && $itemRate > 0) {
                         $itemMrp = $itemRate;
                     }
-                    $itemAmount = !empty($item['amount']) && (float)$item['amount'] > 0 ? (float)$item['amount'] : ($itemQty * $itemRate);
+                    $itemAmount = round($itemQty * $itemRate, 2);
 
                     SalesInvoiceItem::updateOrCreate(
                         ['id' => !empty($item['id']) ? $item['id'] : null],
@@ -2611,7 +2632,10 @@ class SalesInvoiceController extends Controller
                 $query->where('brand_id', $request->brand_id);
             }
             if ($request->inv_no) {
-                $query->where('inv_no', $request->inv_no); 
+                $dbInvNo = SalesInvoice::formatDbInvNo($request->inv_no);
+                $query->where(function($q) use ($request, $dbInvNo) {
+                    $q->where('inv_no', $request->inv_no)->orWhere('inv_no', $dbInvNo);
+                });
             }
             if ($request->inv_date_range) {
                 $dates = explode(' to ', $request->inv_date_range);
@@ -2631,8 +2655,25 @@ class SalesInvoiceController extends Controller
                 $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);
 
                 $query->where(function ($q) use ($search, $numericSearch) {
-                    $q->where('inv_no', 'like', "%{$search}%")
-                      ->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                    $q->where('inv_no', 'like', "%{$search}%");
+
+                    // Map CD search to CDW for sequence numbers > 310
+                    if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
+                        $sNum = (int)$sm[1];
+                        if ($sNum > 310) {
+                            $cdwEq = 'CDW/' . ($sNum - 310);
+                            $q->orWhere('inv_no', 'like', "%{$cdwEq}%");
+                        }
+                    } elseif (is_numeric(trim($search))) {
+                        $numVal = (int)trim($search);
+                        if ($numVal > 310) {
+                            $cdwNum = $numVal - 310;
+                            $q->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
+                        }
+                    } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
+                        $q->orWhere('inv_no', 'like', "%CDW/%");
+                    }
+                    $q->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                       ->orWhere('sub_total', 'like', "%{$numericSearch}%")
                       ->orWhere('discount', 'like', "%{$numericSearch}%")
                       ->orWhere('grand_total', 'like', "%{$numericSearch}%")
@@ -2750,7 +2791,8 @@ class SalesInvoiceController extends Controller
             ->get(['inv_no']);
 
         foreach ($invoices as $inv) {
-            $parts = explode('/', $inv->inv_no);
+            $rawNo = $inv->raw_inv_no ?: $inv->getRawOriginal('inv_no');
+            $parts = explode('/', $rawNo);
             if (count($parts) === 3) {
                 $runningNo = (int)$parts[1];
                 if ($runningNo > $maxRunningNo) {

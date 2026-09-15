@@ -76,7 +76,7 @@
                                         <select id="brand_id" name="brand_id"
                                             class="select2 form-select @error('brand_id') is-invalid @enderror"
                                             data-placeholder="Select Brand"
-                                            {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'disabled' : '' }}>
+                                            {{ isset($invoice) ? 'disabled' : '' }}>
                                             <option value="">Select Brand</option>
                                             @foreach ($brands as $brand)
                                                 <option value="{{ $brand->id }}"
@@ -84,7 +84,7 @@
                                                     {{ $brand->brand_name }} ({{ $brand->code }})</option>
                                             @endforeach
                                         </select>
-                                        @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                        @if (isset($invoice))
                                             <input type="hidden" name="brand_id" value="{{ $invoice->brand_id }}">
                                         @endif
                                         <label for="brand_id">Brand <span class="text-danger">*</span></label>
@@ -543,11 +543,11 @@
                                                             value="{{ $row->id ?? '' }}">
                                                         <input type="hidden" name="items[{{ $index }}][brand_id]"
                                                             class="brand-id" value="{{ $row->brand_id ?? '' }}">
-                                                        <input type="hidden" class="brand-name"
+                                                        <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name"
                                                             value="{{ $row->brand_name ?? '' }}">
                                                         <input type="hidden" name="items[{{ $index }}][item_id]"
                                                             class="item-id" value="{{ $row->item_id ?? '' }}">
-                                                        <input type="hidden" class="item-name"
+                                                        <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name"
                                                             value="{{ $row->item_name ?? '' }}">
                                                         <input type="hidden"
                                                             name="items[{{ $index }}][sleeve_type]"
@@ -558,22 +558,22 @@
                                                             name="items[{{ $index }}][stock_entry_item_id]"
                                                             class="stock-entry-item-id"
                                                             value="{{ $row->stock_entry_item_id ?? '' }}">
-                                                        <input type="hidden" class="max-qty"
+                                                        <input type="hidden" name="items[{{ $index }}][max_qty]" class="max-qty"
                                                             value="{{ $row->max_qty ?? '' }}">
-                                                        <input type="hidden" class="stock-qty"
+                                                        <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty"
                                                             value="{{ $row->stock_qty ?? '' }}">
                                                         <input type="hidden" name="items[{{ $index }}][is_extra]"
                                                             class="is-extra" value="{{ $row->is_extra ?? '' }}">
                                                     </td>
                                                     <td>
                                                         <span
-                                                            class="color-text">{{ !empty($row->api_color) ? $row->api_color : $row->color_name ?? '-' }}</span>
+                                                            class="color-text">{{ !empty($row->api_color) ? $row->api_color : (!empty($row->color_name) ? $row->color_name : '-') }}</span>
                                                         <input type="hidden" name="items[{{ $index }}][color_id]"
                                                             class="color-id" value="{{ $row->color_id ?? '' }}">
                                                         <input type="hidden"
                                                             name="items[{{ $index }}][api_color]"
                                                             class="api-color" value="{{ $row->api_color ?? '' }}">
-                                                        <input type="hidden" class="color-name"
+                                                        <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name"
                                                             value="{{ $row->color_name ?? '' }}">
                                                     </td>
                                                     <td>
@@ -585,14 +585,14 @@
                                                         <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
                                                         <input type="hidden" name="items[{{ $index }}][uom_id]"
                                                             class="uom-id" value="{{ $row->uom_id ?? '' }}">
-                                                        <input type="hidden" class="uom-code"
+                                                        <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code"
                                                             value="{{ $row->uom_code ?? '' }}">
                                                     </td>
                                                     <td>
                                                         <span class="size-text">{{ $row->size_name ?? '' }}</span>
                                                         <input type="hidden" name="items[{{ $index }}][size]"
                                                             class="size-id" value="{{ $row->size ?? '' }}">
-                                                        <input type="hidden" class="size-name"
+                                                        <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name"
                                                             value="{{ $row->size_name ?? '' }}">
                                                     </td>
                                                     <td>
@@ -850,11 +850,14 @@
                                                         <div class="form-floating form-floating-outline">
                                                             <input type="number"
                                                                 name="items[{{ $index }}][quantity]"
-                                                                class="form-control qty-input open-qty"
-                                                                value="{{ $row->quantity ?? '' }}"
+                                                                class="form-control qty-input open-qty @error('items.'.$index.'.quantity') is-invalid @enderror"
+                                                                value="{{ old('items.'.$index.'.quantity', $row->quantity ?? '') }}"
                                                                 data-original-qty="{{ $row->quantity ?? 0 }}"
                                                                 min="0">
                                                         </div>
+                                                        @error('items.'.$index.'.quantity')
+                                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                                        @enderror
                                                         <div class="stock-info-wrapper mt-1">
                                                             <small class="stock-label text-muted">Stock: <span
                                                                     class="available-stock-display">{{ number_format(max(0, $row->stock_qty ?? 0), 2) }}</span></small>

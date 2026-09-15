@@ -1365,6 +1365,45 @@ class PurchaseReportController extends Controller
             ->get()
             ->groupBy('art_no');
 
+        // Bulk preload schedules and tasks for all WIP job cards to resolve Stage Status
+        $allWipJcIds = [];
+        foreach ($wipRecordsBulk as $artRecords) {
+            foreach ($artRecords as $r) {
+                if (!empty($r->job_card_id)) {
+                    $allWipJcIds[$r->job_card_id] = $r->job_card_id;
+                }
+            }
+        }
+        $allWipJcIds = array_values($allWipJcIds);
+
+        $schedulesByJc = collect();
+        $tasksByJc = collect();
+        $opsByJc = collect();
+        if (!empty($allWipJcIds)) {
+            $schedulesByJc = DB::table('process_schedules')
+                ->whereIn('job_card_entry_id', $allWipJcIds)
+                ->whereNull('deleted_at')
+                ->select('id', 'job_card_entry_id', 'stage', 'status')
+                ->orderBy('id', 'asc')
+                ->get()
+                ->groupBy('job_card_entry_id');
+
+            $tasksByJc = DB::table('tasks')
+                ->whereIn('job_card_entry_id', $allWipJcIds)
+                ->whereNull('deleted_at')
+                ->select('id', 'job_card_entry_id', 'stage_id', 'status')
+                ->get()
+                ->groupBy('job_card_entry_id');
+
+            $opsByJc = DB::table('job_card_operations as jco')
+                ->leftJoin('operation_stages as os', 'jco.operation_stage_id', '=', 'os.id')
+                ->whereIn('jco.job_card_entry_id', $allWipJcIds)
+                ->select('jco.id', 'jco.job_card_entry_id', 'jco.operation_stage_id', 'os.operation_stage_name')
+                ->orderBy('jco.id', 'asc')
+                ->get()
+                ->groupBy('job_card_entry_id');
+        }
+
         $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
         $result = [];
 
@@ -1431,10 +1470,12 @@ class PurchaseReportController extends Controller
             if ($wipByJc->count() > 0) {
                 foreach ($wipByJc as $jcNo => $jcSizes) {
                     $firstRec = $jcSizes->first();
+                    $stageStatus = $this->resolveJobCardCurrentStage($firstRec->job_card_id ?? 0, $schedulesByJc, $tasksByJc, $opsByJc);
                     $wipItem = [
                         'label' => 'WIP-' . $wipIdx++,
                         'unit' => ($firstRec && !empty($firstRec->unit_name)) ? $firstRec->unit_name : '-',
                         'c_no' => $jcNo,
+                        'stage_status' => $stageStatus,
                         'remarks' => ($firstRec && !empty($firstRec->remarks)) ? $firstRec->remarks : '-',
                         'fs' => [],
                         'hs' => [],
@@ -1463,6 +1504,7 @@ class PurchaseReportController extends Controller
                     'label' => 'WIP-1',
                     'unit' => '-',
                     'c_no' => '-',
+                    'stage_status' => '-',
                     'remarks' => '-',
                     'fs' => [],
                     'hs' => [],
@@ -1503,6 +1545,64 @@ class PurchaseReportController extends Controller
         return $result;
     }
 
+    private function resolveJobCardCurrentStage($jobCardId, $schedulesByJc, $tasksByJc, $opsByJc)
+    {
+        if (!$jobCardId) return '-';
+
+        $schedules = $schedulesByJc->get($jobCardId, collect());
+        if ($schedules->isNotEmpty()) {
+            $tasks = $tasksByJc->get($jobCardId, collect());
+
+            foreach ($schedules as $schedule) {
+                $scheduleTasks = $tasks->where('stage_id', $schedule->id);
+
+                $isCompleted = false;
+                if (strtolower(trim($schedule->status ?? '')) === 'completed') {
+                    $isCompleted = true;
+                } elseif ($scheduleTasks->isNotEmpty() && $scheduleTasks->every(function($t) {
+                    return strtolower(trim($t->status ?? '')) === 'completed';
+                })) {
+                    $isCompleted = true;
+                }
+
+                if (!$isCompleted) {
+                    return strtoupper(trim($schedule->stage ?? ''));
+                }
+            }
+
+            return 'COMPLETED';
+        }
+
+        $operations = $opsByJc->get($jobCardId, collect());
+        if ($operations->isNotEmpty()) {
+            $tasks = $tasksByJc->get($jobCardId, collect());
+
+            foreach ($operations as $op) {
+                $stageName = strtoupper(trim($op->operation_stage_name ?? ''));
+                $osId = $op->operation_stage_id;
+
+                $opTasks = $tasks->filter(function($t) use ($osId) {
+                    return $t->stage_id == $osId;
+                });
+
+                $isCompleted = false;
+                if ($opTasks->isNotEmpty() && $opTasks->every(function($t) {
+                    return strtolower(trim($t->status ?? '')) === 'completed';
+                })) {
+                    $isCompleted = true;
+                }
+
+                if (!$isCompleted) {
+                    return $stageName ?: 'CUTTING';
+                }
+            }
+
+            return 'COMPLETED';
+        }
+
+        return 'CUTTING';
+    }
+
     public function exportBrandwiseMinStockExcel(Request $request)
     {
         $brandwiseData = $this->getBrandwiseMinStockData($request);
@@ -1515,6 +1615,7 @@ class PurchaseReportController extends Controller
                 foreach ($item['matrix']['wips'] ?? [] as $wip) {
                     if (strpos(strtolower($wip['unit'] ?? ''), $searchLower) !== false) return true;
                     if (strpos(strtolower($wip['c_no'] ?? ''), $searchLower) !== false) return true;
+                    if (strpos(strtolower($wip['stage_status'] ?? ''), $searchLower) !== false) return true;
                     if (strpos(strtolower($wip['remarks'] ?? ''), $searchLower) !== false) return true;
                 }
                 return false;
@@ -1666,8 +1767,8 @@ class PurchaseReportController extends Controller
         $wIds = !empty($widthName) && $widthName !== 'N/A' && $widthName !== '-' ? DB::table('fabric_sizes')->where('width', $widthName)->pluck('id')->toArray() : [];
 
         $query = \App\Models\StockEntryItem::with([
-            'stockEntry.grnEntry',
-            'grnEntryItem',
+            'stockEntry.grnEntry.purchaseInvoice',
+            'grnEntryItem.grnEntry.purchaseInvoice',
             'storeLocation',
             'uom',
             'fabricWidth',
@@ -1722,6 +1823,24 @@ class PurchaseReportController extends Controller
         // Limit maximum records to prevent browser crash if filters are empty
         $stockItems = $query->take(2000)->get();
 
+        // Preload any purchase invoices for art_nos that do not have a direct GRN link (e.g. opening stock SE00003)
+        $artNos = $stockItems->pluck('art_no')->filter()->unique()->toArray();
+        $artInvoices = [];
+        if (!empty($artNos)) {
+            $artInvoices = DB::table('grn_entry_items as gei')
+                ->join('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')
+                ->join('purchase_invoices as pi', 'ge.purchase_invoice_id', '=', 'pi.id')
+                ->whereIn('gei.art_no', $artNos)
+                ->whereNull('gei.deleted_at')
+                ->whereNull('ge.deleted_at')
+                ->whereNull('pi.deleted_at')
+                ->whereNotNull('pi.invoice_no')
+                ->where('pi.invoice_no', '!=', '')
+                ->orderBy('pi.id', 'desc')
+                ->pluck('pi.invoice_no', 'gei.art_no')
+                ->toArray();
+        }
+
         $stockItemIds = $stockItems->pluck('id')->toArray();
 
         $jcIssuesByStockItem = [];
@@ -1761,9 +1880,13 @@ class PurchaseReportController extends Controller
             $docNumber = '-';
             $rate = (float)($item->price ?: 0);
             
+            $invoiceNo = null;
             if ($item->grnEntryItem) {
                 $rate = (float)($item->grnEntryItem->rate ?: $rate);
                 if ($item->grnEntryItem->grnEntry) {
+                    if ($item->grnEntryItem->grnEntry->purchaseInvoice && !empty($item->grnEntryItem->grnEntry->purchaseInvoice->invoice_no)) {
+                        $invoiceNo = $item->grnEntryItem->grnEntry->purchaseInvoice->invoice_no;
+                    }
                     $docNumber = $item->grnEntryItem->grnEntry->grn_number ?: ($item->grnEntryItem->grnEntry->grn_no ?: $docNumber);
                 }
             }
@@ -1773,6 +1896,9 @@ class PurchaseReportController extends Controller
                 $inwardDate = $stockDate;
                 
                 if ($item->stockEntry->grnEntry) {
+                    if (!$invoiceNo && $item->stockEntry->grnEntry->purchaseInvoice && !empty($item->stockEntry->grnEntry->purchaseInvoice->invoice_no)) {
+                        $invoiceNo = $item->stockEntry->grnEntry->purchaseInvoice->invoice_no;
+                    }
                     $docNumber = $item->stockEntry->grnEntry->grn_number ?: ($item->stockEntry->grnEntry->grn_no ?: $docNumber);
                     if ($item->stockEntry->grnEntry->grn_date) {
                         $inwardDate = date('d-m-Y', strtotime($item->stockEntry->grnEntry->grn_date));
@@ -1781,6 +1907,11 @@ class PurchaseReportController extends Controller
                     $docNumber = $item->stockEntry->stock_entry_no ?: '-';
                 }
             }
+
+            // Fallback: If no direct invoice found, check if this art_no has a Purchase Invoice in the database
+            if (!$invoiceNo && !empty($item->art_no) && isset($artInvoices[$item->art_no])) {
+                $invoiceNo = $artInvoices[$item->art_no];
+            }
             
             $qtyIn = (float)$item->qty_in;
             $date = $item->created_at ? $item->created_at->format('Y-m-d') : '';
@@ -1788,6 +1919,13 @@ class PurchaseReportController extends Controller
             $rawEntryType = strtolower($item->stockEntry ? ($item->stockEntry->entry_type ?? '') : '');
             
             $isOpening = ($fromDate && $date && $date < $fromDate) || str_contains($remarks, 'opening') || str_contains($rawEntryType, 'opening');
+
+            if ($invoiceNo) {
+                $docType = 'INVOICE';
+                $docNumber = $invoiceNo;
+            } else {
+                $docType = $isOpening ? 'OPENING' : 'RECEIPTS';
+            }
             
             $openingQty = $isOpening ? $qtyIn : 0;
             $openingVal = $isOpening ? ($openingQty * $rate) : 0;

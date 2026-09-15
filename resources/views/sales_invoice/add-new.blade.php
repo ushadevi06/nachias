@@ -37,13 +37,13 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="brand_id" name="brand_id" class="select2 form-select @error('brand_id') is-invalid @enderror" data-placeholder="Select Brand" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'disabled' : '' }}>
+                                    <select id="brand_id" name="brand_id" class="select2 form-select @error('brand_id') is-invalid @enderror" data-placeholder="Select Brand" {{ isset($invoice) ? 'disabled' : '' }}>
                                         <option value="">Select Brand</option>
                                         @foreach($brands as $brand)
                                             <option value="{{ $brand->id }}" {{ (old('brand_id', isset($invoice) ? $invoice->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
                                         @endforeach
                                     </select>
-                                    @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                    @if(isset($invoice))
                                         <input type="hidden" name="brand_id" value="{{ $invoice->brand_id }}">
                                     @endif
                                     <label for="brand_id">Brand <span class="text-danger">*</span></label>

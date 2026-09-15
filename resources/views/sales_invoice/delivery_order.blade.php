@@ -220,7 +220,8 @@
 
         $totalPcs = $invoice->items->sum('quantity');
 
-        $presentationRows = [];
+        $chunks = [];
+        $currentPageRows = [];
         foreach ($groupedItems as $groupName => $items) {
             $rows = [];
             foreach ($items as $item) {
@@ -346,80 +347,113 @@
                 if (!isset($rows[$desc])) {
                     $rows[$desc] = [
                         'uom' => $uom,
-                        'prices' => [],
+                        'items' => [],
                     ];
                 }
 
-                $priceKey = number_format($mrp, 2, '.', '') . '_' . number_format($rate, 2, '.', '');
-                if (!isset($rows[$desc]['prices'][$priceKey])) {
-                    $rows[$desc]['prices'][$priceKey] = [
+                $artDisplayVal = !empty($art) && $art !== '-' ? trim($art) : '-';
+                $itemKey = $artDisplayVal . '_' . number_format($mrp, 2, '.', '') . '_' . number_format($rate, 2, '.', '');
+                if (!isset($rows[$desc]['items'][$itemKey])) {
+                    $rows[$desc]['items'][$itemKey] = [
+                        'art' => $artDisplayVal,
                         'mrp' => $mrp,
                         'rate' => $rate,
-                        'arts' => [],
                         'quantities' => [],
                         'total' => 0,
                     ];
                 }
 
-                if ($art && $art !== '-') {
-                    $rows[$desc]['prices'][$priceKey]['arts'][] = $art;
+                if (!isset($rows[$desc]['items'][$itemKey]['quantities'][$size])) {
+                    $rows[$desc]['items'][$itemKey]['quantities'][$size] = 0;
                 }
-
-                if (!isset($rows[$desc]['prices'][$priceKey]['quantities'][$size])) {
-                    $rows[$desc]['prices'][$priceKey]['quantities'][$size] = 0;
-                }
-                $rows[$desc]['prices'][$priceKey]['quantities'][$size] += $qty;
-                $rows[$desc]['prices'][$priceKey]['total'] += $qty;
+                $rows[$desc]['items'][$itemKey]['quantities'][$size] += $qty;
+                $rows[$desc]['items'][$itemKey]['total'] += $qty;
             }
-
-            $presentationRows[] = [
-                'type' => 'group_header',
-                'name' => $groupName,
-            ];
 
             $groupGrandTotal = 0;
             $groupSizeTotals = array_fill_keys($allSizes, 0);
 
+            // Group Subtotals calculation
             foreach ($rows as $desc => $descData) {
-                $priceCount = count($descData['prices']);
-                $isFirstPrice = true;
-
-                foreach ($descData['prices'] as $priceKey => $priceData) {
-                    $uniqueArts = array_unique($priceData['arts']);
-                    $artDisplay = !empty($uniqueArts) ? implode(', ', $uniqueArts) : '-';
-
-                    $presentationRows[] = [
-                        'type' => 'item',
-                        'data' => [
-                            'description' => $desc,
-                            'uom' => $descData['uom'],
-                            'mrp' => $priceData['mrp'],
-                            'rate' => $priceData['rate'],
-                            'art' => $artDisplay,
-                            'quantities' => $priceData['quantities'],
-                            'total' => $priceData['total'],
-                        ],
-                        'price_count' => $priceCount,
-                        'is_first_price' => $isFirstPrice,
-                    ];
-                    $isFirstPrice = false;
-
+                foreach ($descData['items'] as $itemKey => $itemData) {
                     foreach ($allSizes as $size) {
-                        $qty = $priceData['quantities'][$size] ?? 0;
+                        $qty = $itemData['quantities'][$size] ?? 0;
                         $groupSizeTotals[$size] += $qty;
                     }
-                    $groupGrandTotal += $priceData['total'];
+                    $groupGrandTotal += $itemData['total'];
                 }
             }
 
-            $presentationRows[] = [
+            // Page-aware row construction to avoid breaking rowspans across page chunks
+            $maxRowsPerPage = 22;
+
+            // Group header check
+            if (!empty($currentPageRows) && (count($currentPageRows) + 3 > $maxRowsPerPage)) {
+                $chunks[] = $currentPageRows;
+                $currentPageRows = [];
+            }
+
+            $currentPageRows[] = [
+                'type' => 'group_header',
+                'name' => $groupName,
+            ];
+
+            foreach ($rows as $desc => $descData) {
+                $itemRows = array_values($descData['items']);
+                $totalItemsInDesc = count($itemRows);
+                $offset = 0;
+
+                while ($offset < $totalItemsInDesc) {
+                    $remainingSlots = $maxRowsPerPage - count($currentPageRows);
+                    if ($remainingSlots < 1 || (!empty($currentPageRows) && $remainingSlots < min(2, $totalItemsInDesc - $offset))) {
+                        $chunks[] = $currentPageRows;
+                        $currentPageRows = [];
+                        $remainingSlots = $maxRowsPerPage;
+                    }
+
+                    $itemsForThisPageCount = min($remainingSlots, $totalItemsInDesc - $offset);
+                    $slice = array_slice($itemRows, $offset, $itemsForThisPageCount);
+
+                    for ($i = 0; $i < count($slice); $i++) {
+                        $itemData = $slice[$i];
+                        $isFirstOnPage = ($i === 0);
+
+                        $currentPageRows[] = [
+                            'type' => 'item',
+                            'data' => [
+                                'description' => $desc,
+                                'uom' => $descData['uom'],
+                                'mrp' => $itemData['mrp'],
+                                'rate' => $itemData['rate'],
+                                'art' => $itemData['art'],
+                                'quantities' => $itemData['quantities'],
+                                'total' => $itemData['total'],
+                            ],
+                            'item_count' => count($slice),
+                            'is_first_item' => $isFirstOnPage,
+                        ];
+                    }
+
+                    $offset += $itemsForThisPageCount;
+                }
+            }
+
+            if (count($currentPageRows) >= $maxRowsPerPage) {
+                $chunks[] = $currentPageRows;
+                $currentPageRows = [];
+            }
+
+            $currentPageRows[] = [
                 'type' => 'group_subtotal',
                 'group' => $groupName,
                 'grand_total' => $groupGrandTotal,
                 'size_totals' => $groupSizeTotals,
             ];
         }
-        $chunks = array_chunk($presentationRows, 20);
+
+        if (!empty($currentPageRows)) {
+            $chunks[] = $currentPageRows;
+        }
     @endphp
 
     @foreach ($chunks as $pageIndex => $chunk)
@@ -472,22 +506,26 @@
                                 :</td>
                             <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">
                                 {{ $invoice->customer->name ?? '-' }}<br>
-                                {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
-                                @php
-                                    $locParts = [];
-                                    if ($invoice->customer->city->city_name ?? false) {
-                                        $locParts[] = strtoupper($invoice->customer->city->city_name);
-                                    }
-                                    if ($invoice->customer->state->state_name ?? false) {
-                                        $locParts[] = strtoupper($invoice->customer->state->state_name);
-                                    }
-                                    $locStr = implode(', ', $locParts);
-                                    if ($invoice->customer->zip_code ?? false) {
-                                        $locStr .= ($locStr ? ' - ' : '') . $invoice->customer->zip_code;
-                                    }
-                                @endphp
-                                @if ($locStr)
-                                    {{ $locStr }}<br>
+                                @if(!empty($invoice->delivery_address))
+                                    {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
+                                @else
+                                    {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->customer->address ?? '')))) !!}<br>
+                                    @php
+                                        $locParts = [];
+                                        if ($invoice->customer->city->city_name ?? false) {
+                                            $locParts[] = strtoupper($invoice->customer->city->city_name);
+                                        }
+                                        if ($invoice->customer->state->state_name ?? false) {
+                                            $locParts[] = strtoupper($invoice->customer->state->state_name);
+                                        }
+                                        $locStr = implode(', ', $locParts);
+                                        if ($invoice->customer->zip_code ?? false) {
+                                            $locStr .= ($locStr ? ' - ' : '') . $invoice->customer->zip_code;
+                                        }
+                                    @endphp
+                                    @if ($locStr)
+                                        {{ $locStr }}<br>
+                                    @endif
                                 @endif
                                 @if ($invoice->customer && $invoice->customer->mobile_no)
                                     {{ $invoice->customer->mobile_no }}
@@ -601,10 +639,10 @@
                     @elseif($rowItem['type'] == 'item')
                         @php $row = $rowItem['data']; @endphp
                         <tr>
-                            @if ($rowItem['is_first_price'])
-                                <td rowspan="{{ $rowItem['price_count'] }}"
+                            @if ($rowItem['is_first_item'])
+                                <td rowspan="{{ $rowItem['item_count'] }}"
                                     style="padding-left: 6px; vertical-align: middle;">{{ $row['description'] }}</td>
-                                <td rowspan="{{ $rowItem['price_count'] }}" class="text-center"
+                                <td rowspan="{{ $rowItem['item_count'] }}" class="text-center"
                                     style="vertical-align: middle;">{{ $row['uom'] }}</td>
                             @endif
                             @if (is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))

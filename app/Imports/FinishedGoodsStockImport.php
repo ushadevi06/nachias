@@ -66,6 +66,14 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         $warehouse = $this->resolveWarehouse($this->getRowValue($row, ['warehouse', 'warehouse_id', 'warehouse_name']));
         $qtyIn = $this->parseNumber($this->getRowValue($row, ['qty_in', 'qtyin']), 'Qty In is required.');
         $qtyOut = $this->parseOptionalNumber($this->getRowValue($row, ['qty_out', 'qtyout'])) ?? 0;
+        
+        if ($qtyOut < 0) {
+            throw new \Exception('Qty Out cannot be negative.');
+        }
+
+        if ($qtyOut >= $qtyIn) {
+            throw new \Exception("Qty Out ({$qtyOut}) cannot be greater than or equal to Qty In ({$qtyIn}). Qty Out must be strictly less than Qty In.");
+        }
         $price = $this->parseNumber($this->getRowValue($row, ['price']), 'Price is required.');
         $remarks = trim((string) ($this->getRowValue($row, ['remarks']) ?? ''));
         $color = $this->resolveColor($this->getRowValue($row, ['color_id', 'colorid', 'color']));
