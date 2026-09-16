@@ -46,7 +46,25 @@ class CreditNoteController extends Controller
                 $search = $request->search['value'];
                 $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);
 
-                $matchingInvoiceIds = \App\Models\SalesInvoice::where('inv_no', 'like', "%{$search}%")->pluck('id')->toArray();
+                $matchingInvoiceIds = \App\Models\SalesInvoice::where(function($siq) use ($search) {
+                    $siq->where('inv_no', 'like', "%{$search}%");
+
+                    if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
+                        $sNum = (int)$sm[1];
+                        if ($sNum > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                            $dbNum = ($sNum >= 316) ? ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                            $siq->orWhere('inv_no', 'like', "%CDW/{$dbNum}%");
+                        }
+                    } elseif (is_numeric(trim($search))) {
+                        $numVal = (int)trim($search);
+                        if ($numVal > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                            $cdwNum = ($numVal >= 316) ? ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                            $siq->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
+                        }
+                    } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
+                        $siq->orWhere('inv_no', 'like', "%CDW/%");
+                    }
+                })->pluck('id')->toArray();
 
                 $query->where(function ($q) use ($search, $numericSearch, $matchingInvoiceIds) {
                     $q->where('note_no', 'like', "%{$search}%")
@@ -56,13 +74,11 @@ class CreditNoteController extends Controller
                       ->orWhereHas('customer', function($q2) use ($search) {
                           $q2->where('name', 'like', "%{$search}%")
                              ->orWhere('code', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('salesInvoice', function($q3) use ($search) {
-                          $q3->where('inv_no', 'like', "%{$search}%");
                       });
 
                     if (!empty($matchingInvoiceIds)) {
-                        $q->orWhere(function ($q4) use ($matchingInvoiceIds) {
+                        $q->orWhereIn('sales_invoice_id', $matchingInvoiceIds)
+                          ->orWhere(function ($q4) use ($matchingInvoiceIds) {
                             foreach ($matchingInvoiceIds as $invId) {
                                 $q4->orWhereJsonContains('sales_invoice_ids', (string)$invId)
                                    ->orWhereJsonContains('sales_invoice_ids', (int)$invId);
@@ -177,7 +193,7 @@ class CreditNoteController extends Controller
             $creditNote = CreditNote::with('items.item', 'items.uom', 'items.brandCategory', 'charges')->findOrFail($id);
         }
         if ($request->isMethod('POST')) {
-            if ($creditNote && $creditNote->einvoice_status === 'generated') {
+            if ($creditNote && ($creditNote->status === 'Approved' || $creditNote->einvoice_status === 'generated')) {
                 $request->validate([
                     'show_fields' => 'nullable|array',
                 ]);

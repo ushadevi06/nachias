@@ -42,7 +42,12 @@ class SalesInvoiceItemsExport implements FromCollection, WithHeadings, WithMappi
             $query->where('brand_id', $this->filters['brand_id']);
         }
         if (!empty($this->filters['inv_no'])) {
-            $query->where('inv_no', $this->filters['inv_no']);
+            $rawSearchInv = $this->filters['inv_no'];
+            $dbInvNo = \App\Models\SalesInvoice::formatDbInvNo($rawSearchInv);
+            $query->where(function($q) use ($rawSearchInv, $dbInvNo) {
+                $q->where('inv_no', 'like', "%{$dbInvNo}%")
+                  ->orWhere('inv_no', 'like', "%{$rawSearchInv}%");
+            });
         }
         if (!empty($this->filters['inv_date_range'])) {
             $dates = explode(' to ', $this->filters['inv_date_range']);

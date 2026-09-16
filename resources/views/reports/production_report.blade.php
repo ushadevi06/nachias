@@ -18,12 +18,9 @@
                 </nav>
             </div>
             <div class="d-flex gap-2">
-                <button id="btn-excel" class="btn btn-outline-primary btn-sm rounded-pill"><i
-                        class="ri ri-file-excel-line me-1"></i> Excel</button>
-                <button id="btn-pdf" class="btn btn-outline-danger btn-sm rounded-pill"><i
-                        class="ri ri-file-pdf-line me-1"></i> PDF</button>
-                <button id="btn-print" class="btn btn-primary btn-sm rounded-pill px-3"><i
-                        class="ri ri-printer-line me-1"></i> Print</button>
+                <button id="btn-excel" class="btn btn-outline-primary btn-sm rounded-pill"><i class="ri ri-file-excel-line me-1"></i> Excel</button>
+                <button id="btn-pdf" class="btn btn-outline-danger btn-sm rounded-pill"><i class="ri ri-file-pdf-line me-1"></i> PDF</button>
+                <button id="btn-print" class="btn btn-primary btn-sm rounded-pill px-3"><i class="ri ri-printer-line me-1"></i> Print</button>
             </div>
         </div>
 
@@ -32,15 +29,17 @@
             <div class="card-body py-4">
                 <form id="productionReportForm" class="row g-3 align-items-end" onsubmit="return false;">
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select
+                        <label class="form-label small fw-bold text-primary"><i class="ri ri-file-chart-line me-1"></i>Select
                             Report Type</label>
                         <select class="form-select select2" id="report_type_select" name="report_type">
-                            <option value="production-wip" selected>🏭 Production WIP Unit Wise</option>
+                            <option value="production-wip" selected>📊 Production WIP Unit Wise</option>
                             <option value="cutting-section-average">✂️ Cutting Section Average Report</option>
-                            <option value="casino-cutting-wip">✂️ Casino Cutting WIP Report</option>
-                            <option value="department-efficiency">📊 Department Wise Efficiency Report</option>
+                            <option value="casino-cutting-wip">🏭 Casino Cutting WIP Report</option>
+                            <option value="stage-wise-wip">🔄 Stage wise WIP Report</option>
+                            <option value="production-planning">📋 Production Planning Report</option>
+                            <option value="department-efficiency">📈 Department Wise Efficiency Report</option>
                             <option value="employee-efficiency">👥 Employee Wise Efficiency Report</option>
-                            <option value="performance-report">👤 Performance Individual</option>
+                            <option value="performance-report">🎯 Performance Individual</option>
                             <option value="process-wise">⚙️ Production Report Section Wise</option>
                             <option value="completion-report">📅 Job Card Completed Date</option>
                             <option value="brand-production">🏷️ Brand Wise Unit Production</option>
@@ -56,7 +55,19 @@
                         <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}"
                             placeholder="DD-MM-YYYY">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">Brand</label>
+                        <select class="form-select select2" name="brand_id" id="brand_id_filter"
+                            data-placeholder="Select Brand">
+                            <option value=""></option>
+                            @foreach($brands ?? [] as $brand)
+                                <option value="{{ $brand->id }}" {{ request('brand_id') == $brand->id ? 'selected' : '' }}>
+                                    {{ $brand->brand_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <label class="form-label small fw-bold text-muted">Unit</label>
                         <select class="form-select select2" name="unit_id" id="unit_id_filter"
                             data-placeholder="Select Unit">
@@ -69,9 +80,9 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2 d-flex gap-1">
+                    <div class="col-md-1 d-flex gap-1">
                         <button type="submit" class="btn btn-primary w-100 rounded-pill p-2" title="Search">
-                            <i class="ri ri-search-line me-1"></i> Search
+                            <i class="ri ri-search-line"></i>
                         </button>
                         <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border p-2"
                             title="Reset">
@@ -146,12 +157,8 @@
                     <!-- Cutting Section Average Report -->
                     <div class="tab-pane fade" id="cutting-section-average" role="tabpanel">
                         <!-- Top Title Banner matching Image 1 -->
-                        <div class="cutting-report-banner mb-3 p-3 rounded-3 text-center border shadow-sm"
-                            style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);">
-                            <h5 class="mb-0 fw-bold text-dark text-uppercase" id="cuttingReportHeaderTitle"
-                                style="letter-spacing: 0.8px;">
-                                HO CUTTING SECTION AVERAGE REPORT - (2000 PCS PER DAY)
-                            </h5>
+                        <div class="cutting-report-banner mb-3 p-3 rounded-3 text-center border shadow-sm" style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);">
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase" id="cuttingReportHeaderTitle" style="letter-spacing: 0.8px;">HO CUTTING SECTION AVERAGE REPORT - (2000 PCS PER DAY)</h5>
                         </div>
 
                         <!-- Main Cutting Table -->
@@ -160,20 +167,13 @@
                                 id="cuttingSectionAverageTable" style="width: 100%;">
                                 <thead class="text-center align-middle" style="background-color: #f8f9fa;">
                                     <tr>
-                                        <th rowspan="2" class="align-middle fw-bold text-dark border"
-                                            style="background-color: #fce4d6; min-width: 95px;">DATE</th>
-                                        <th colspan="{{ count($cuttingEmployees) + 1 }}" class="fw-bold text-dark border"
-                                            style="background-color: #ffc000;">CUTTING MASTER</th>
-                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
-                                            style="background-color: #fff2cc; min-width: 90px;">CUTTING BUNDLEING QTY</th>
-                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
-                                            style="background-color: #fff2cc; min-width: 75px;">FUSING QTY</th>
-                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
-                                            style="background-color: #fff2cc; min-width: 70px;">LOGO QTY</th>
-                                        <th colspan="{{ count($cuttingPlants) + 1 }}" class="fw-bold text-dark border"
-                                            style="background-color: #ffc000;">CUTTING ISSUE</th>
-                                        <th rowspan="2" class="align-middle fw-bold text-dark border"
-                                            style="background-color: #fce4d6; min-width: 85px;">EFFICIENCY</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border" style="background-color: #fce4d6; min-width: 95px;">DATE</th>
+                                        <th colspan="{{ count($cuttingEmployees) + 1 }}" class="fw-bold text-dark border" style="background-color: #ffc000;">CUTTING MASTER</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap" style="background-color: #fff2cc; min-width: 90px;">CUTTING BUNDLEING QTY</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap" style="background-color: #fff2cc; min-width: 75px;">FUSING QTY</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap" style="background-color: #fff2cc; min-width: 70px;">LOGO QTY</th>
+                                        <th colspan="{{ count($cuttingPlants) + 1 }}" class="fw-bold text-dark border" style="background-color: #ffc000;">CUTTING ISSUE</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border" style="background-color: #fce4d6; min-width: 85px;">EFFICIENCY</th>
                                         <th rowspan="2" class="align-middle fw-bold text-dark border"
                                             style="background-color: #fce4d6; min-width: 65px;">1hr OT</th>
                                         <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
@@ -251,7 +251,7 @@
                                 <div class="card shadow-sm border border-light-subtle rounded-3 overflow-hidden">
                                     <div
                                         class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
-                                        <h6 class="mb-0 fw-bold text-white"><i class="ri-dashboard-line me-1"></i>
+                                        <h6 class="mb-0 fw-bold text-white"><i class="ri ri-dashboard-line me-1"></i>
                                             Performance & Target Summary</h6>
                                         <span class="badge bg-white text-primary rounded-pill px-2"
                                             id="cuttingSummaryMonthBadge">Current Period</span>
@@ -410,11 +410,11 @@
                                         <div class="d-flex align-items-center gap-2 mb-2">
                                             <h5 class="mb-0 fw-bold text-dark">Department Efficiency</h5>
                                             <div class="text-warning fs-5">
-                                                <i class="ri-star-fill"></i>
-                                                <i class="ri-star-fill"></i>
-                                                <i class="ri-star-fill"></i>
-                                                <i class="ri-star-fill"></i>
-                                                <i class="ri-star-fill"></i>
+                                                <i class="ri ri-star-fill"></i>
+                                                <i class="ri ri-star-fill"></i>
+                                                <i class="ri ri-star-fill"></i>
+                                                <i class="ri ri-star-fill"></i>
+                                                <i class="ri ri-star-fill"></i>
                                             </div>
                                         </div>
                                         <p class="text-muted small mb-0">Daily morning meeting performance score calculated
@@ -425,39 +425,30 @@
                                         <div
                                             class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
                                             <div class="d-flex align-items-center gap-3">
-                                                <div class="dept-eff-badge-display px-3 py-2 rounded-3 fw-bold fs-3 text-primary bg-white shadow-sm border"
-                                                    id="deptOverallEffVal">
-                                                    0%
-                                                </div>
+                                                <div class="dept-eff-badge-display px-3 py-2 rounded-3 fw-bold fs-3 text-primary bg-white shadow-sm border" id="deptOverallEffVal">0%</div>
                                                 <div class="flex-grow-1" style="min-width: 140px;">
                                                     <div class="d-flex justify-content-between small text-muted mb-1">
                                                         <span class="fw-semibold">Overall Status</span>
                                                         <span id="deptEffProgressLabel">0%</span>
                                                     </div>
                                                     <div class="progress" style="height: 10px; border-radius: 6px;">
-                                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                                                            id="deptEffProgressBar" role="progressbar" style="width: 0%">
+                                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="deptEffProgressBar" role="progressbar" style="width: 0%">
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="d-flex gap-2 text-center text-nowrap">
                                                 <div class="px-2 py-1 bg-white rounded border">
-                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
-                                                        style="font-size: 0.68rem;">Target</span>
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold" style="font-size: 0.68rem;">Target</span>
                                                     <span class="fw-bold text-dark small" id="deptSummaryTarget">-</span>
                                                 </div>
                                                 <div class="px-2 py-1 bg-white rounded border">
-                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
-                                                        style="font-size: 0.68rem;">Plan</span>
-                                                    <span class="fw-bold text-primary small" id="deptSummaryPlan">0
-                                                        Pcs</span>
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold" style="font-size: 0.68rem;">Plan</span>
+                                                    <span class="fw-bold text-primary small" id="deptSummaryPlan">0 Pcs</span>
                                                 </div>
                                                 <div class="px-2 py-1 bg-white rounded border">
-                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
-                                                        style="font-size: 0.68rem;">Actual</span>
-                                                    <span class="fw-bold text-success small" id="deptSummaryActual">0
-                                                        Pcs</span>
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold" style="font-size: 0.68rem;">Actual</span>
+                                                    <span class="fw-bold text-success small" id="deptSummaryActual">0 Pcs</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -488,16 +479,11 @@
                         <!-- DETAIL VIEW: In-Page Department Breakdown (Replaces Modal as per Task 3) -->
                         <div id="deptEfficiencyDetailView" class="d-none">
                             <!-- Top Action Bar with Back Button -->
-                            <div
-                                class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-light rounded-3 border gap-3">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-light rounded-3 border gap-3">
                                 <div class="d-flex align-items-center gap-3">
                                     <div>
-                                        <h5 class="mb-0 fw-bold text-primary d-flex align-items-center"
-                                            id="detailStageName">
-                                            Department Breakdown
-                                        </h5>
-                                        <small class="text-muted" id="detailStageSubheading">Job Cards, Tasks & Delay
-                                            Reasons</small>
+                                        <h5 class="mb-0 fw-bold text-primary d-flex align-items-center" id="detailStageName">Department Breakdown</h5>
+                                        <small class="text-muted" id="detailStageSubheading">Job Cards, Tasks & Delay Reasons</small>
                                     </div>
                                 </div>
                             </div>
@@ -507,24 +493,21 @@
                                 <div class="col-6 col-md-3">
                                     <div
                                         class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total
-                                            Tasks</span>
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Tasks</span>
                                         <h4 class="mb-0 fw-bold text-dark" id="detailTotalTasks">0</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div
                                         class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Plan
-                                            Qty</span>
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Plan Qty</span>
                                         <h4 class="mb-0 fw-bold text-primary" id="detailTotalPlan">0</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div
                                         class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Actual
-                                            Qty</span>
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Actual Qty</span>
                                         <h4 class="mb-0 fw-bold text-success" id="detailTotalActual">0</h4>
                                     </div>
                                 </div>
@@ -542,12 +525,12 @@
                             <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
                                 <div
                                     class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                    <h6 class="mb-0 fw-bold text-dark"><i class="ri-file-list-3-line me-1 text-primary"></i>
+                                    <h6 class="mb-0 fw-bold text-dark"><i class="ri ri-file-list-3-line me-1 text-primary"></i>
                                         Linked Job Cards & Tasks</h6>
                                     <div class="d-flex align-items-center gap-2">
                                         <button type="button"
                                             class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-dept-report">
-                                            <i class="ri-arrow-left-line me-1"></i> Back to Report
+                                            <i class="ri ri-arrow-left-line me-1"></i> Back to Report
                                         </button>
                                     </div>
                                 </div>
@@ -590,11 +573,11 @@
                                         <div class="d-flex align-items-center gap-2 mb-2">
                                             <h5 class="mb-0 fw-bold text-dark">Employee Efficiency</h5>
                                             <div class="text-warning fs-5">
-                                                <i class="ri-user-star-fill"></i>
-                                                <i class="ri-user-star-fill"></i>
-                                                <i class="ri-user-star-fill"></i>
-                                                <i class="ri-user-star-fill"></i>
-                                                <i class="ri-user-star-fill"></i>
+                                                <i class="ri ri-user-star-fill"></i>
+                                                <i class="ri ri-user-star-fill"></i>
+                                                <i class="ri ri-user-star-fill"></i>
+                                                <i class="ri ri-user-star-fill"></i>
+                                                <i class="ri ri-user-star-fill"></i>
                                             </div>
                                         </div>
                                         <p class="text-muted small mb-0">Daily individual employee productivity &
@@ -692,11 +675,11 @@
                                     <div class="btn-group rounded-pill p-1 bg-white border shadow-sm" role="group">
                                         <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 active"
                                             id="btnShowEmpTasks">
-                                            <i class="ri-task-line me-1"></i> Task-Wise Breakdown
+                                            <i class="ri ri-task-line me-1"></i> Task-Wise Breakdown
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
                                             id="btnShowEmpJobs">
-                                            <i class="ri-file-list-3-line me-1"></i> Job-Wise Summary
+                                            <i class="ri ri-file-list-3-line me-1"></i> Job-Wise Summary
                                         </button>
                                     </div>
                                 </div>
@@ -759,12 +742,12 @@
                                 <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
                                     <div
                                         class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                        <h6 class="mb-0 fw-bold text-dark"><i class="ri-task-line me-1 text-primary"></i>
+                                        <h6 class="mb-0 fw-bold text-dark"><i class="ri ri-task-line me-1 text-primary"></i>
                                             Task-Wise Performance Breakdown</h6>
                                         <div class="d-flex align-items-center gap-2">
                                             <button type="button"
                                                 class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-emp-report">
-                                                <i class="ri-arrow-left-line me-1"></i> Back to Report
+                                                <i class="ri ri-arrow-left-line me-1"></i> Back to Report
                                             </button>
                                         </div>
                                     </div>
@@ -797,16 +780,11 @@
                             <!-- SUB-VIEW 2: Job Card Wise Summary (Point 2) -->
                             <div id="empJobSubView" class="d-none">
                                 <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
-                                    <div
-                                        class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                        <h6 class="mb-0 fw-bold text-dark"><i
-                                                class="ri-file-list-3-line me-1 text-primary"></i>
-                                            Job Card Wise Summary</h6>
+                                    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <h6 class="mb-0 fw-bold text-dark"><i class="ri ri-file-list-3-line me-1 text-primary"></i> Job Card Wise Summary</h6>
+
                                         <div class="d-flex align-items-center gap-2">
-                                            <button type="button"
-                                                class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-emp-report">
-                                                <i class="ri-arrow-left-line me-1"></i> Back to Report
-                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-emp-report"><i class="ri ri-arrow-left-line me-1"></i> Back to Report</button>
                                         </div>
                                     </div>
                                     <div class="card-body py-4">
@@ -833,6 +811,16 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Stage wise WIP Report -->
+                    <div class="tab-pane fade" id="stage-wise-wip" role="tabpanel">
+                        @include('reports.production_report.stage_wise_wip')
+                    </div>
+
+                    <!-- Production Planning Report -->
+                    <div class="tab-pane fade" id="production-planning" role="tabpanel">
+                        @include('reports.production_report.production_planning')
                     </div>
                 </div>
             </div>
@@ -1096,6 +1084,7 @@
                     $('#reportTabsContent').css('opacity', '1');
                 }
             }
+            window.showReportLoading = showReportLoading;
 
             // Universal Server-side Export Action to export all records
             function serverSideExportAction(e, dt, button, config) {
@@ -1149,8 +1138,23 @@
 
                 dt.ajax.reload();
             }
+            window.serverSideExportAction = serverSideExportAction;
 
             function loadActiveTabTable(tabPaneId) {
+                if (tabPaneId === 'stage-wise-wip') {
+                    showReportLoading(true);
+                    if (typeof window.initStageWiseWipTable === 'function') {
+                        window.initStageWiseWipTable();
+                    }
+                    return;
+                }
+                if (tabPaneId === 'production-planning') {
+                    showReportLoading(true);
+                    if (typeof window.initProductionPlanningTable === 'function') {
+                        window.initProductionPlanningTable();
+                    }
+                    return;
+                }
                 const config = tableConfigs[tabPaneId];
                 if (!config) return;
 
@@ -1180,7 +1184,7 @@
                     destroy: true,
                     language: {
                         processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading report data...</div>',
-                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
+                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
                     },
                     ajax: {
                         url: "{{ url('production_reports/ajax') }}/" + config.type,
@@ -1615,7 +1619,7 @@
                     lengthMenu: [10, 25, 50, 100],
                     language: {
                         processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading task & delay details...</div>',
-                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No tasks found for this department with the selected filters.</div>',
+                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No tasks found for this department with the selected filters.</div>',
                         zeroRecords: '<div class="text-center py-3 text-muted">No matching records found</div>'
                     },
                     ajax: {
@@ -1829,7 +1833,7 @@
                 activeDetailStageName = stageName || 'Department';
 
                 // Update Heading & Breadcrumb
-                $('#detailStageName').html('<i class="ri-building-line me-2"></i> ' + activeDetailStageName + ' Breakdown');
+                $('#detailStageName').html('<i class="ri ri-building-line me-2"></i> ' + activeDetailStageName + ' Breakdown');
                 $('#detailStageSubheading').text('Tasks, Job Cards & Delay Reasons for ' + activeDetailStageName);
                 $('#active_report_title').html('<span class="text-muted">Department Efficiency &gt;</span> ' + activeDetailStageName);
 
@@ -1928,7 +1932,7 @@
                     lengthMenu: [10, 25, 50, 100],
                     language: {
                         processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading task details...</div>',
-                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No tasks found for this employee with the selected filters.</div>',
+                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No tasks found for this employee with the selected filters.</div>',
                         zeroRecords: '<div class="text-center py-3 text-muted">No matching records found</div>'
                     },
                     ajax: {
@@ -2114,7 +2118,7 @@
                     lengthMenu: [10, 25, 50, 100],
                     language: {
                         processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading job card summary...</div>',
-                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No job cards found for this employee with the selected filters.</div>',
+                        emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No job cards found for this employee with the selected filters.</div>',
                         zeroRecords: '<div class="text-center py-3 text-muted">No matching records found</div>'
                     },
                     ajax: {
@@ -2307,7 +2311,7 @@
                 activeEmpDesignation = designation || '-';
                 activeEmpSubView = initialView || 'tasks';
 
-                $('#empDetailTitle').html('<i class="ri-user-line me-2"></i> ' + activeEmpName);
+                $('#empDetailTitle').html('<i class="ri ri-user-line me-2"></i> ' + activeEmpName);
                 $('#empDetailSubtitle').text('Emp ID: ' + (activeEmpCode || '-') + ' | Designation: ' + (activeEmpDesignation || '-'));
                 $('#active_report_title').html('<span class="text-muted">Employee Wise Efficiency &gt;</span> ' + activeEmpName);
 
@@ -2446,6 +2450,22 @@
                 e.preventDefault();
                 const activeTabId = $('#report_type_select').val() || 'production-wip';
 
+                if (activeTabId === 'stage-wise-wip') {
+                    if (typeof window.initStageWiseWipTable === 'function') {
+                        showReportLoading(true);
+                        window.initStageWiseWipTable();
+                    }
+                    return;
+                }
+
+                if (activeTabId === 'production-planning') {
+                    if (typeof window.initProductionPlanningTable === 'function') {
+                        showReportLoading(true);
+                        window.initProductionPlanningTable();
+                    }
+                    return;
+                }
+
                 // If currently viewing department detail, refresh detail view with new filters
                 if (activeTabId === 'department-efficiency' && activeDetailStageId && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
@@ -2489,6 +2509,7 @@
                 e.preventDefault();
                 $('.start_date').val('');
                 $('.end_date').val('');
+                $('select[name="brand_id"]').val('').trigger('change');
                 $('select[name="unit_id"]').val('').trigger('change');
                 returnToDeptMainView();
                 returnToEmpMainView();
@@ -2497,6 +2518,18 @@
 
             // Top Header Export Handlers
             $('#btn-excel').on('click', function () {
+                if ($('#report_type_select').val() === 'stage-wise-wip') {
+                    if ($.fn.DataTable.isDataTable('#stageWiseWipTable')) {
+                        $('#stageWiseWipTable').DataTable().button('.buttons-excel').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'production-planning') {
+                    if ($.fn.DataTable.isDataTable('#productionPlanningTable')) {
+                        $('#productionPlanningTable').DataTable().button('.buttons-excel').trigger();
+                        return;
+                    }
+                }
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-excel').trigger();
@@ -2529,6 +2562,18 @@
                 }
             });
             $('#btn-pdf').on('click', function () {
+                if ($('#report_type_select').val() === 'stage-wise-wip') {
+                    if ($.fn.DataTable.isDataTable('#stageWiseWipTable')) {
+                        $('#stageWiseWipTable').DataTable().button('.buttons-pdf').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'production-planning') {
+                    if ($.fn.DataTable.isDataTable('#productionPlanningTable')) {
+                        $('#productionPlanningTable').DataTable().button('.buttons-pdf').trigger();
+                        return;
+                    }
+                }
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-pdf').trigger();
@@ -2561,6 +2606,18 @@
                 }
             });
             $('#btn-print').on('click', function () {
+                if ($('#report_type_select').val() === 'stage-wise-wip') {
+                    if ($.fn.DataTable.isDataTable('#stageWiseWipTable')) {
+                        $('#stageWiseWipTable').DataTable().button('.buttons-print').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'production-planning') {
+                    if ($.fn.DataTable.isDataTable('#productionPlanningTable')) {
+                        $('#productionPlanningTable').DataTable().button('.buttons-print').trigger();
+                        return;
+                    }
+                }
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-print').trigger();

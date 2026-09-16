@@ -1438,15 +1438,28 @@ class WarehouseReportController extends Controller
                 ]);
 
             case 'dispatch-report':
-                $query = SalesOrder::with(['customer.city', 'salesInvoices'])
-                    ->where('status', 'Dispatched')
+                $query = SalesOrder::with(['customer.city', 'salesInvoices.items'])
+                    ->where(function ($q) {
+                        $q->where('status', 'Dispatched')
+                          ->orWhereHas('salesInvoices');
+                    })
                     ->whereNull('deleted_at');
 
                 if ($request->from_date) {
-                    $query->where('so_date', '>=', date('Y-m-d', strtotime($request->from_date)));
+                    $fromDate = date('Y-m-d', strtotime($request->from_date));
+                    $query->where(function ($q) use ($fromDate) {
+                        $q->whereHas('salesInvoices', function ($iq) use ($fromDate) {
+                            $iq->where('inv_date', '>=', $fromDate);
+                        })->orWhere('so_date', '>=', $fromDate);
+                    });
                 }
                 if ($request->to_date) {
-                    $query->where('so_date', '<=', date('Y-m-d', strtotime($request->to_date)));
+                    $toDate = date('Y-m-d', strtotime($request->to_date));
+                    $query->where(function ($q) use ($toDate) {
+                        $q->whereHas('salesInvoices', function ($iq) use ($toDate) {
+                            $iq->where('inv_date', '<=', $toDate);
+                        })->orWhere('so_date', '<=', $toDate);
+                    });
                 }
                 if ($request->brand_id) {
                     $query->whereExists(function ($q) use ($request) {
@@ -1469,16 +1482,26 @@ class WarehouseReportController extends Controller
                 }
                 
                 if ($search) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('so_no', 'like', "%{$search}%")
-                          ->orWhereHas('customer', function($q2) use ($search) {
-                              $q2->where('name', 'like', "%{$search}%");
+                    $rawSearch = $search;
+                    $dbInvNo = \App\Models\SalesInvoice::formatDbInvNo($rawSearch);
+                    $query->where(function ($q) use ($rawSearch, $dbInvNo) {
+                        $q->where('so_no', 'like', "%{$rawSearch}%")
+                          ->orWhereHas('customer', function($q2) use ($rawSearch) {
+                              $q2->where('name', 'like', "%{$rawSearch}%");
+                          })
+                          ->orWhereHas('salesInvoices', function($iq) use ($rawSearch, $dbInvNo) {
+                              $iq->where('inv_no', 'like', "%{$rawSearch}%")
+                                ->orWhere('inv_no', 'like', "%{$dbInvNo}%");
                           });
                     });
                 }
 
                 $recordsTotal = $query->count();
                 $recordsFiltered = $recordsTotal;
+
+                if ($start >= $recordsTotal && $recordsTotal > 0) {
+                    $start = 0;
+                }
 
                 if ($length != -1) {
                     $query->skip($start)->take($length);
@@ -1488,15 +1511,26 @@ class WarehouseReportController extends Controller
                 $data = [];
                 
                 foreach ($dispatchReport as $so) {
-                    $invoiceIds = $so->salesInvoices->pluck('inv_no')->toArray();
+                    $invoiceIds = $so->salesInvoices->map(function($inv) {
+                        return \App\Models\SalesInvoice::formatDisplayInvNo($inv->inv_no);
+                    })->filter()->values()->toArray();
+
                     $invoicesHtml = !empty($invoiceIds) ? '<span class="badge bg-label-info">' . implode(', ', $invoiceIds) . '</span>' : '-';
 
+                    $latestInv = $so->salesInvoices->sortByDesc('inv_date')->first();
+                    $displayDate = $latestInv && $latestInv->inv_date ? date('d M Y', strtotime($latestInv->inv_date)) : date('d M Y', strtotime($so->so_date));
+
+                    $invoicedQty = $so->salesInvoices->sum(function($inv) {
+                        return $inv->items->sum('quantity');
+                    });
+                    $dispatchedQty = $invoicedQty > 0 ? $invoicedQty : (float)$so->total_qty;
+
                     $data[] = [
-                        'date' => date('d M Y', strtotime($so->so_date)),
+                        'date' => $displayDate,
                         'so_no' => '<strong>' . $so->so_no . '</strong>',
                         'customer' => $so->customer->name ?? '-',
                         'destination' => $so->customer->city->city_name ?? '-',
-                        'qty' => number_format($so->total_qty, 0),
+                        'qty' => number_format($dispatchedQty, 0),
                         'invoices' => $invoicesHtml,
                         'status' => '<span class="badge bg-label-success"><i class="ri-check-double-line align-middle me-1"></i> Dispatched</span>'
                     ];
@@ -3753,8 +3787,25 @@ class WarehouseReportController extends Controller
 
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('sales_invoices.inv_no', 'like', "%{$search}%")
-                  ->orWhere('sales_orders.so_no', 'like', "%{$search}%")
+                $q->where('sales_invoices.inv_no', 'like', "%{$search}%");
+
+                if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
+                    $sNum = (int)$sm[1];
+                    if ($sNum > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                        $dbNum = ($sNum >= 316) ? ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                        $q->orWhere('sales_invoices.inv_no', 'like', "%CDW/{$dbNum}%");
+                    }
+                } elseif (is_numeric(trim($search))) {
+                    $numVal = (int)trim($search);
+                    if ($numVal > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                        $cdwNum = ($numVal >= 316) ? ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                        $q->orWhere('sales_invoices.inv_no', 'like', "%CDW/{$cdwNum}/%");
+                    }
+                } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
+                    $q->orWhere('sales_invoices.inv_no', 'like', "%CDW/%");
+                }
+
+                $q->orWhere('sales_orders.so_no', 'like', "%{$search}%")
                   ->orWhere('customers.name', 'like', "%{$search}%")
                   ->orWhere('sales_invoice_items.art_no', 'like', "%{$search}%");
             });
@@ -3803,8 +3854,8 @@ class WarehouseReportController extends Controller
             $totSoldQty += $soldQty;
             $totAmount += $amount;
 
-            $invUrl = url('sales_invoices/view/' . $row->invoice_id);
-            $invBadge = '<a href="' . $invUrl . '" target="_blank" class="fw-bold text-primary text-decoration-underline">' . htmlspecialchars($row->inv_no) . '</a>';
+            $displayInvNo = \App\Models\SalesInvoice::formatDisplayInvNo($row->inv_no);
+            $invBadge = '<a href="' . $invUrl . '" target="_blank" class="fw-bold text-primary text-decoration-underline">' . htmlspecialchars($displayInvNo) . '</a>';
 
             $statusBadge = '<span class="badge bg-label-success">Active</span>';
             if ($row->invoice_status == 1 || strtolower($row->invoice_status) === 'paid') {

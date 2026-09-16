@@ -152,7 +152,7 @@
                                 </div>
                             </div>
                             <div class="col-md-6 d-flex align-items-center">
-                                <small class="text-muted"><i class="ri-information-line me-1"></i> Tip: Scan a barcode or type item code to quickly add it to the order.</small>
+                                <small class="text-muted"><i class="ri ri-information-line me-1"></i> Tip: Scan a barcode or type item code to quickly add it to the order.</small>
                             </div>
                         </div>
                         <div class="table-responsive p-1">
@@ -848,19 +848,6 @@ $(document).ready(function() {
 
     // Run trigger on page load if editing or has old values
     if (isEditing || $('#sales_invoice_ids').val()) {
-    @if(isset($creditNote) && $creditNote->einvoice_status === 'generated')
-    setTimeout(function() {
-        $('input, select, textarea').not('[name="show_fields[]"]').prop('disabled', true);
-        $('.select2').prop('disabled', true).trigger('change');
-        $('#submitBtn').prop('disabled', false);
-        $('.edit-charge, .remove-charge, .delete-btn').hide();
-        $('#barcode_scanner').closest('.col-lg-12').hide();
-        $('#charges_select').closest('.row').hide();
-        $('th:contains("ACTION"), th:contains("Action"), td:last-child').hide();
-
-        $('<div class="alert alert-info border-0 shadow-sm mt-3"><i class="ri-information-line me-2"></i>E-Invoice is generated. You can only update the <strong>"Show in Credit Note PDF"</strong> settings.</div>').insertBefore('.card:first');
-    }, 500);
-    @endif
         $('#sales_invoice_ids').trigger('change');
     }
 
@@ -1345,6 +1332,70 @@ $(document).ready(function() {
     if ($('#reason').val()) {
         $('#reason').trigger('change');
     }
+
+    @if(isset($creditNote) && ($creditNote->status === 'Approved' || $creditNote->einvoice_status === 'generated'))
+    function applyCreditNoteReadOnly() {
+        $('form.common-form input, form.common-form select, form.common-form textarea').each(function() {
+            var $el = $(this);
+            var nameAttr = $el.attr('name');
+
+            if (nameAttr === 'show_fields[]') {
+                return;
+            }
+
+            if ($el.attr('type') === 'hidden' && (nameAttr === '_token' || nameAttr === '_method')) {
+                return;
+            }
+            if ($el.attr('type') === 'submit' || $el.is('button') || $el.hasClass('btn')) {
+                return;
+            }
+
+            if ($el.is('select')) {
+                $el.prop('disabled', true);
+                if ($el.hasClass('select2-hidden-accessible')) {
+                    $el.select2({
+                        width: '100%',
+                        dropdownParent: $('body')
+                    });
+                }
+            } else if ($el.attr('type') === 'checkbox' || $el.attr('type') === 'radio' || $el.attr('type') === 'file' || $el.hasClass('flatpickr-input') || $el.hasClass('date-picker') || nameAttr === 'note_date') {
+                $el.prop('disabled', true);
+                if ($el.hasClass('flatpickr-input') || $el.hasClass('date-picker') || nameAttr === 'note_date') {
+                    $el.css('pointer-events', 'none');
+                }
+            } else {
+                $el.prop('readonly', true);
+            }
+        });
+
+        // Destroy flatpickr instances so they don't open on click
+        $('input').each(function() {
+            if (this._flatpickr) {
+                this._flatpickr.destroy();
+            }
+        });
+
+        // Hide item deletion and addition buttons
+        $('#barcode_scanner').closest('.row').hide();
+        $('#charges_select').closest('.card').hide();
+        $('.remove-item, .edit-charge, .remove-charge, .delete-btn').hide();
+        $('th:contains("ACTION"), th:contains("Action")').hide();
+        $('#item-rows tr').each(function() {
+            $(this).find('td:last-child').hide();
+        });
+    }
+
+    applyCreditNoteReadOnly();
+    $(document).ajaxStop(function() {
+        applyCreditNoteReadOnly();
+    });
+    setTimeout(applyCreditNoteReadOnly, 400);
+
+    // Re-enable disabled elements right before form submit so Laravel receives all values and validation passes
+    $('form.common-form').on('submit', function() {
+        $(this).find('select, input, textarea').prop('disabled', false);
+    });
+    @endif
 });
 </script>
 @endsection

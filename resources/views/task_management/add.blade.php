@@ -1885,6 +1885,7 @@
 
             function validateForm() {
                 var isFormValid = true;
+                var errorMessages = [];
 
                 $('.status-update-row').each(function() {
                     var row = $(this);
@@ -1896,10 +1897,14 @@
 
                     var isValid = true;
                     var errorMsg = "";
+                    var empName = row.find('h6').first().text().trim() || 'Employee';
+                    var svcName = row.find('small.text-muted').first().text().trim() || '';
+                    var titlePrefix = empName + (svcName ? ' (' + svcName + ')' : '') + ': ';
 
                     if ((completedQty + wastageQty) > assignedQty) {
                         isValid = false;
-                        errorMsg = "Completed and Wastage quantity for an employee cannot exceed Assigned quantity.";
+                        errorMsg = titlePrefix + "Completed (" + completedQty + ") + Wastage (" + wastageQty + ") cannot exceed Assigned quantity (" + assignedQty + ").";
+                        errorMessages.push(errorMsg);
                     }
 
                     if (row.find('.row-qc-checked').length > 0 && isValid) {
@@ -1909,12 +1914,14 @@
 
                         if (qcChecked > completedQty) {
                             isValid = false;
-                            errorMsg = "QC Checked quantity cannot exceed Completed quantity.";
+                            errorMsg = titlePrefix + "QC Checked (" + qcChecked + ") cannot exceed Completed quantity (" + completedQty + ").";
+                            errorMessages.push(errorMsg);
                         }
 
                         if (Math.abs((qcPassed + qcRejected) - qcChecked) > 0.01 && isValid) {
                             isValid = false;
-                            errorMsg = "QC Passed + Rejected must equal QC Checked.";
+                            errorMsg = titlePrefix + "QC Passed (" + qcPassed + ") + Rejected (" + qcRejected + ") must equal QC Checked (" + qcChecked + ").";
+                            errorMessages.push(errorMsg);
                         }
                     }
 
@@ -1932,7 +1939,7 @@
                     $('#common-validation-error').remove();
                 }
 
-                return { valid: isFormValid };
+                return { valid: isFormValid, message: errorMessages.join('<br>') };
             }
 
             $('.status-update-row').each(function() {
@@ -2055,32 +2062,45 @@
                 $('.status-update-row').each(function() {
                     var row = $(this);
                     var changed = false;
+                    var assignedQty = getAssignedQty(row);
 
-                    // Completed Qty
+                    // Completed Qty: Cap at assignedQty so employees with lower assigned qty (e.g. 38) do not exceed their limit
                     var completedInput = row.find('.row-completed-qty');
                     if (bulkCompleted !== '') {
-                        completedInput.val(bulkCompleted).removeAttr('data-user-modified');
+                        var targetComp = parseFloat(bulkCompleted) || 0;
+                        var finalComp = Math.min(targetComp, assignedQty);
+                        completedInput.val(finalComp).removeAttr('data-user-modified');
                         changed = true;
                     }
 
-                    // Wastage Qty
+                    // Wastage Qty: Cap so completed + wastage <= assignedQty
                     var wastageInput = row.find('.row-wastage-qty');
                     if (bulkWastage !== '') {
-                        wastageInput.val(bulkWastage).removeAttr('data-user-modified');
+                        var currentComp = parseFloat(completedInput.val()) || 0;
+                        var targetWastage = parseFloat(bulkWastage) || 0;
+                        var maxAllowedWastage = Math.max(0, assignedQty - currentComp);
+                        var finalWastage = Math.min(targetWastage, maxAllowedWastage);
+                        wastageInput.val(finalWastage).removeAttr('data-user-modified');
                         changed = true;
                     }
 
-                    // QC Checked
+                    // QC Checked: Cap at completedQty
                     var qcCheckedInput = row.find('.row-qc-checked');
                     if (qcCheckedInput.length > 0 && bulkQcChecked !== '') {
-                        qcCheckedInput.val(bulkQcChecked).removeAttr('data-user-modified');
+                        var currentComp = parseFloat(completedInput.val()) || 0;
+                        var targetQcChecked = parseFloat(bulkQcChecked) || 0;
+                        var finalQcChecked = Math.min(targetQcChecked, currentComp);
+                        qcCheckedInput.val(finalQcChecked).removeAttr('data-user-modified');
                         changed = true;
                     }
 
-                    // QC Passed
+                    // QC Passed: Cap at qcChecked
                     var qcPassedInput = row.find('.row-qc-passed');
                     if (qcPassedInput.length > 0 && bulkQcPassed !== '') {
-                        qcPassedInput.val(bulkQcPassed).removeAttr('data-user-modified');
+                        var currentQcChecked = parseFloat(row.find('.row-qc-checked').val()) || 0;
+                        var targetQcPassed = parseFloat(bulkQcPassed) || 0;
+                        var finalQcPassed = Math.min(targetQcPassed, currentQcChecked);
+                        qcPassedInput.val(finalQcPassed).removeAttr('data-user-modified');
                         changed = true;
                     }
 
@@ -2092,10 +2112,11 @@
                 var validation = validateForm();
                 
                 if (!validation.valid) {
+                    var errorHtml = validation.message || 'Please check the affected rows.';
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             title: 'Validation Error',
-                            text: 'Some applied quantities exceed their limits. ' + validation.message,
+                            html: '<div class="text-start small">' + errorHtml + '</div>',
                             icon: 'error',
                             customClass: {
                                 confirmButton: 'btn btn-primary'
@@ -2103,7 +2124,7 @@
                             buttonsStyling: false
                         });
                     } else {
-                        alert("Validation Error: \n" + validation.message + "\n\nPlease check the affected rows.");
+                        alert("Validation Error: \n" + errorHtml.replace(/<br>/g, '\n'));
                     }
                 }
 

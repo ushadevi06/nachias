@@ -53,6 +53,7 @@ class EInvoiceService
         $totalCgstVal = 0.00;
         $totalSgstVal = 0.00;
         $totalIgstVal = 0.00;
+        $totalDiscountVal = 0.00;
 
         $slNo = 1;
 
@@ -92,6 +93,7 @@ class EInvoiceService
             $totalCgstVal += $cgstAmt;
             $totalSgstVal += $sgstAmt;
             $totalIgstVal += $igstAmt;
+            $totalDiscountVal += $itemDiscount;
 
             $prdDesc = substr(
                 $item->stockEntryItem->finished_item_code ??
@@ -109,7 +111,7 @@ class EInvoiceService
                 "HsnCd" => (string) ($item->hsn_sac ?? "61099090"),
                 "Qty" => (float) number_format((float) $item->quantity, 2, '.', ''),
                 "Unit" => "PCS",
-                "UnitPrice" => (float) number_format((float) $item->rate, 2, '.', ''),
+                "UnitPrice" => (float) number_format((float) $itemRateVal, 2, '.', ''),
                 "TotAmt" => $totAmt,
                 "Discount" => $itemDiscount,
                 "AssAmt" => $assAmt,
@@ -205,8 +207,10 @@ class EInvoiceService
         \Log::info('E-Invoice Request Payload', [
             'invoice_id' => $invoice->id,
             'invoice_no' => $invoice->inv_no,
+            'total_discount' => (float) number_format($totalDiscountVal, 2, '.', ''),
             'payload' => $payload
         ]);
+
         $authData = $this->authenticate($setting);
         if (!$authData['success']) {
             return $authData;
@@ -620,7 +624,8 @@ class EInvoiceService
 
         $itemList = [];
         foreach ($invoice->items as $idx => $item) {
-            $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
+            $itemRateVal = (float) ($item->rate > 0 ? $item->rate : $item->mrp);
+            $totAmt = (float) number_format((float) $item->quantity * $itemRateVal, 2, '.', '');
             $salesDiscountPercent = (float) ($invoice->sales_discount ?? 0);
             $boxDiscountAmount = (float) ($invoice->box_discount_amount ?? 0);
 
@@ -989,8 +994,9 @@ class EInvoiceService
         $totInvVal = $expectedTot + $rndOffAmt;
 
         $precDocDtls = [];
-        if ($creditNote->sales_invoice_id) {
-            $originalInvoice = \App\Models\SalesInvoice::find($creditNote->sales_invoice_id);
+        $linkedInvoiceId = $creditNote->sales_invoice_id ?: (is_array($creditNote->sales_invoice_ids) ? ($creditNote->sales_invoice_ids[0] ?? null) : null);
+        if ($linkedInvoiceId) {
+            $originalInvoice = \App\Models\SalesInvoice::find($linkedInvoiceId);
             if ($originalInvoice) {
                 $precDocDtls[] = [
                     "InvNo" => $originalInvoice->inv_no,

@@ -510,7 +510,7 @@ $(document).ready(function() {
                 activeTable.DataTable().ajax.reload(function() {
                     submitBtn.html(originalBtnHtml).prop('disabled', false);
                     showWarehouseReportLoading(false);
-                }, false);
+                }, true);
             } else {
                 handleTabActivation('#' + activeTabId);
                 setTimeout(function() {

@@ -69,8 +69,17 @@ class BrandController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        $brand = $id ?Brand::findOrFail($id) : null;
+        $brand = $id ? Brand::findOrFail($id) : null;
+        $hasInvoices = false;
+        if ($brand) {
+            $hasInvoices = \App\Models\SalesInvoice::where('brand_id', $brand->id)->exists();
+        }
+
         if ($request->isMethod('post')) {
+            if ($hasInvoices && $brand) {
+                $request->merge(['code' => $brand->code]);
+            }
+
             $rules = [
                 'brand_name' => [
                     'required',
@@ -101,7 +110,7 @@ class BrandController extends Controller
             $validated = $request->validate($rules, $messages);
             $data = [
                 'brand_name' => $request->brand_name,
-                'code' => $request->code,
+                'code' => $hasInvoices && $brand ? $brand->code : $request->code,
                 'status' => $request->status,
                 'created_by' => auth()->id() ?? 1,
             ];
@@ -120,7 +129,7 @@ class BrandController extends Controller
                 return redirect('brands')->with('success', 'Brand added successfully');
             }
         }
-        return view('brands.add', compact('brand'));
+        return view('brands.add', compact('brand', 'hasInvoices'));
     }
 
     public function destroy($id)

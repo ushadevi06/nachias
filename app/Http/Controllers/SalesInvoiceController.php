@@ -128,17 +128,18 @@ class SalesInvoiceController extends Controller
                 $query->where(function ($q) use ($search, $numericSearch) {
                     $q->where('inv_no', 'like', "%{$search}%");
 
-                    // Map CD search to CDW for sequence numbers > 310
+                    // Map CD search to CDW for sequence numbers > CDW_CD_OFFSET
                     if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
                         $sNum = (int)$sm[1];
-                        if ($sNum > 310) {
-                            $cdwEq = 'CDW/' . ($sNum - 310);
+                        if ($sNum > SalesInvoice::CDW_CD_OFFSET) {
+                            $dbNum = ($sNum >= 316) ? ($sNum - SalesInvoice::CDW_CD_OFFSET + 1) : ($sNum - SalesInvoice::CDW_CD_OFFSET);
+                            $cdwEq = 'CDW/' . $dbNum;
                             $q->orWhere('inv_no', 'like', "%{$cdwEq}%");
                         }
                     } elseif (is_numeric(trim($search))) {
                         $numVal = (int)trim($search);
-                        if ($numVal > 310) {
-                            $cdwNum = $numVal - 310;
+                        if ($numVal > SalesInvoice::CDW_CD_OFFSET) {
+                            $cdwNum = ($numVal >= 316) ? ($numVal - SalesInvoice::CDW_CD_OFFSET + 1) : ($numVal - SalesInvoice::CDW_CD_OFFSET);
                             $q->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
                         }
                     } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
@@ -2657,17 +2658,18 @@ class SalesInvoiceController extends Controller
                 $query->where(function ($q) use ($search, $numericSearch) {
                     $q->where('inv_no', 'like', "%{$search}%");
 
-                    // Map CD search to CDW for sequence numbers > 310
+                    // Map CD search to CDW for sequence numbers > CDW_CD_OFFSET
                     if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
                         $sNum = (int)$sm[1];
-                        if ($sNum > 310) {
-                            $cdwEq = 'CDW/' . ($sNum - 310);
+                        if ($sNum > SalesInvoice::CDW_CD_OFFSET) {
+                            $dbNum = ($sNum >= 316) ? ($sNum - SalesInvoice::CDW_CD_OFFSET + 1) : ($sNum - SalesInvoice::CDW_CD_OFFSET);
+                            $cdwEq = 'CDW/' . $dbNum;
                             $q->orWhere('inv_no', 'like', "%{$cdwEq}%");
                         }
                     } elseif (is_numeric(trim($search))) {
                         $numVal = (int)trim($search);
-                        if ($numVal > 310) {
-                            $cdwNum = $numVal - 310;
+                        if ($numVal > SalesInvoice::CDW_CD_OFFSET) {
+                            $cdwNum = ($numVal >= 316) ? ($numVal - SalesInvoice::CDW_CD_OFFSET + 1) : ($numVal - SalesInvoice::CDW_CD_OFFSET);
                             $q->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
                         }
                     } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {

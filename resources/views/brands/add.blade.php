@@ -28,9 +28,13 @@
                                 <div class="col-md-6 col-xl-12">
                                     <div class="form-floating form-floating-outline">
                                         <input type="text" class="form-control @error('code') is-invalid @enderror" id="code" placeholder="Enter Brand Code"
-                                            name="code" value="{{ old('code', $brand->code ?? '') }}">
+                                            name="code" value="{{ old('code', $brand->code ?? '') }}"
+                                            {{ !empty($hasInvoices) ? 'readonly' : '' }}>
                                         <label for="code">Brand Code <span class="text-danger">*</span></label>
                                     </div>
+                                    @if(!empty($hasInvoices))
+                                        <div class="text-muted small mt-1"><i class="ri ri-lock-line text-warning"></i> Brand Code cannot be changed because sales invoices already exist for this brand.</div>
+                                    @endif
                                     @error('code')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror

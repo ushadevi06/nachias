@@ -16,7 +16,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Exports\CuttingSectionAverageExport;
+use App\Models\ProductionService;
+use App\Models\Brand;
+use App\Models\Style;
+use App\Models\ProcessSchedule;
 
 class ProductionReportController extends Controller
 {
@@ -30,8 +33,30 @@ class ProductionReportController extends Controller
         $units = ServiceProvider::where('status', 'Active')->orderBy('name', 'asc')->get();
         $cuttingEmployees = $this->getCuttingEmployees();
         $cuttingPlants = $this->getCuttingPlants();
+        $operationStages = OperationStage::whereNull('deleted_at')->orderBy('id')->get();
+        $usedBrandIds = DB::table('job_card_entries')->whereNotNull('brand_id')->distinct()->pluck('brand_id')->toArray();
+        $brands = Brand::whereNull('deleted_at')
+            ->whereIn('id', $usedBrandIds)
+            ->orderBy('brand_name')
+            ->get();
+        $allStageServices = ProductionService::whereNull('deleted_at')
+            ->where('status', 'Active')
+            ->orderBy('sequence')
+            ->orderBy('id')
+            ->get(['id', 'operation_stage_id', 'service_name', 'service_code'])
+            ->map(function ($s) {
+                return [
+                    'id' => $s->id,
+                    'operation_stage_id' => $s->operation_stage_id,
+                    'service_name' => $s->service_name,
+                    'service_code' => $s->service_code,
+                    'name' => $s->service_name,
+                    'code' => $s->service_code,
+                ];
+            })
+            ->groupBy('operation_stage_id');
 
-        return view('reports/production_report', compact('units', 'cuttingEmployees', 'cuttingPlants'));
+        return view('reports/production_report', compact('units', 'cuttingEmployees', 'cuttingPlants', 'operationStages', 'brands', 'allStageServices'));
     }
 
     public function getCuttingEmployees()
@@ -1632,6 +1657,12 @@ class ProductionReportController extends Controller
                         'meta' => $reportData['meta']
                     ]);
 
+                case 'stage-wise-wip':
+                    return $this->getStageWiseWipData($request);
+
+                case 'production-planning':
+                    return $this->getProductionPlanningData($request);
+
                 default:
                     return response()->json([
                         'draw' => $draw,
@@ -2110,5 +2141,519 @@ class ProductionReportController extends Controller
                 return null;
             }
         }
+    }
+
+    public function getStageWiseWipData(Request $request)
+    {
+        $draw = intval($request->draw ?? 1);
+        $start = intval($request->start ?? 0);
+        $rawLength = $request->get('length');
+        $length = ($rawLength !== null && intval($rawLength) == -1) ? -1 : intval($rawLength > 0 ? $rawLength : 10);
+        $isExport = ($request->get('export') == 1) || ($request->get('all') == 1) || ($length < 0);
+        $searchVal = $request->search;
+        $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
+        $search = trim($search);
+
+        $stageId = $request->operation_stage_id ?: $request->stage_id;
+        if (!$stageId) {
+            $stageId = OperationStage::where('operation_stage_name', 'like', '%CUTTING%')->value('id') ?? 1;
+        }
+        $currentStage = OperationStage::find($stageId);
+
+        $fromDate = $this->parseReportDate($request->from_date);
+        $toDate = $this->parseReportDate($request->to_date);
+        $brandId = $request->brand_id;
+        $unitId = $request->unit_id;
+
+        // Fetch active production services for this stage
+        $services = ProductionService::where('operation_stage_id', $stageId)->whereNull('deleted_at')->where('status', 'Active')->orderBy('sequence')->orderBy('id')->get(['id', 'service_name', 'service_code']);
+
+        // Base Query
+        $jcQuery = JobCardEntry::with([
+            'brand',
+            'fabricDetails.stockEntry.stockEntryItems.style',
+            'tasks' => function ($q) {
+                $q->whereNull('deleted_at');
+            },
+            'tasks.assignments' => function ($q) {
+                $q->whereNull('deleted_at');
+            }
+        ])
+        ->where('grand_total_qty', '>', 0)
+        ->whereNull('deleted_at');
+
+        if ($fromDate) {
+            $jcQuery->where('job_card_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $jcQuery->where('job_card_date', '<=', $toDate);
+        }
+        if ($brandId) {
+            $jcQuery->where('brand_id', $brandId);
+        }
+        if ($unitId) {
+            $jcQuery->where('service_provider_id', $unitId);
+        }
+
+        if ($search !== '') {
+            $jcQuery->where(function ($q) use ($search) {
+                $q->where('job_card_no', 'like', "%{$search}%")
+                  ->orWhere('reference_no', 'like', "%{$search}%")
+                  ->orWhereHas('brand', function ($bq) use ($search) {
+                      $bq->where('brand_name', 'like', "%{$search}%")
+                         ->orWhere('code', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $totalRecords = (clone $jcQuery)->count();
+        $recordsFiltered = $totalRecords;
+
+        // Fetch only the records required for the current page (or all if export)
+        $pageQuery = (clone $jcQuery)->orderBy('job_card_date', 'desc')->orderBy('id', 'desc');
+        if (!$isExport) {
+            $pageQuery->skip($start)->take($length);
+        }
+        $pageJobCards = $pageQuery->with([
+            'brand',
+            'fabricDetails',
+            'tasks' => function ($q) { $q->whereNull('deleted_at'); },
+            'tasks.assignments' => function ($q) { $q->whereNull('deleted_at'); }
+        ])->get();
+
+        $pageJobCardIds = $pageJobCards->pluck('id')->toArray();
+        $allJcIds = (clone $jcQuery)->pluck('id')->toArray();
+
+        // Distinct styles only for stock entries on the current page
+        $pageSeIds = $pageJobCards->flatMap->fabricDetails->pluck('stock_entry_id')->filter()->unique()->toArray();
+        $seStyles = [];
+        if (!empty($pageSeIds)) {
+            $seStyles = DB::table('stock_entry_items')
+                ->join('styles', 'stock_entry_items.style_id', '=', 'styles.id')
+                ->whereIn('stock_entry_items.stock_entry_id', $pageSeIds)
+                ->whereNull('stock_entry_items.deleted_at')
+                ->select('stock_entry_items.stock_entry_id', 'styles.code', 'styles.style_name')
+                ->distinct()
+                ->get()
+                ->groupBy('stock_entry_id');
+        }
+
+        // Schedules only for current page
+        $nextSchedules = DB::table('process_schedules')
+            ->whereIn('job_card_entry_id', $pageJobCardIds)
+            ->where('operation_stage_id', '>', $stageId)
+            ->whereNotNull('start_date')
+            ->where('start_date', '!=', '0000-00-00')
+            ->orderBy('operation_stage_id', 'asc')
+            ->get()
+            ->groupBy('job_card_entry_id');
+
+        // Receipts & movements only for current page
+        $receipts = DB::table('production_receipts')
+            ->join('production_receipt_items', 'production_receipts.id', '=', 'production_receipt_items.production_receipt_id')
+            ->whereIn('production_receipts.job_card_id', $pageJobCardIds)
+            ->select('production_receipts.job_card_id', DB::raw('SUM(production_receipt_items.completed_qty) as total_received'))
+            ->groupBy('production_receipts.job_card_id')
+            ->pluck('total_received', 'production_receipts.job_card_id')
+            ->toArray();
+
+        $movements = DB::table('production_movements')
+            ->whereIn('job_card_id', $pageJobCardIds)
+            ->where('operation_stage_id', $stageId)
+            ->whereNull('deleted_at')
+            ->select('job_card_id', DB::raw('SUM(outward_qty) as total_outward'))
+            ->groupBy('job_card_id')
+            ->pluck('total_outward', 'job_card_id')
+            ->toArray();
+
+        // Fast SQL Aggregate totals across all filtered job cards
+        $totalCuttingSum = (float) (clone $jcQuery)->sum('grand_total_qty');
+        $totalFsSum = (float) (clone $jcQuery)->sum('total_qty_fs');
+        $totalHsSum = (float) (clone $jcQuery)->sum('total_qty_hs');
+        $totalMtrsSum = (float) DB::table('job_card_fabric_details')
+            ->whereIn('job_card_entry_id', $allJcIds)
+            ->whereNull('deleted_at')
+            ->sum('mtr');
+
+        $totalStoreStockSum = (float) DB::table('production_receipts')
+            ->join('production_receipt_items', 'production_receipts.id', '=', 'production_receipt_items.production_receipt_id')
+            ->whereIn('production_receipts.job_card_id', $allJcIds)
+            ->sum('production_receipt_items.completed_qty');
+
+        $serviceWipSums = DB::table('task_assign_employees')
+            ->join('tasks', 'task_assign_employees.task_id', '=', 'tasks.id')
+            ->whereIn('tasks.job_card_entry_id', $allJcIds)
+            ->whereNull('task_assign_employees.deleted_at')
+            ->whereNull('tasks.deleted_at')
+            ->select('task_assign_employees.service_id', DB::raw('SUM(GREATEST(0, task_assign_employees.issue_qty - task_assign_employees.completed_qty)) as total_wip'))
+            ->groupBy('task_assign_employees.service_id')
+            ->pluck('total_wip', 'task_assign_employees.service_id')
+            ->toArray();
+
+        $serviceTotals = [];
+        foreach ($services as $svc) {
+            $serviceTotals[$svc->id] = (float) ($serviceWipSums[$svc->id] ?? 0);
+        }
+
+        // Abstract Matrix setup: only FG brands used in job card entries
+        $usedBrandIds = DB::table('job_card_entries')->whereNotNull('brand_id')->distinct()->pluck('brand_id')->toArray();
+        $allBrands = Brand::whereNull('deleted_at')->whereIn('id', $usedBrandIds)->orderBy('brand_name')->get(['id', 'brand_name', 'code']);
+
+        $allStyles = Style::whereNull('deleted_at')->orderBy('id')->get(['id', 'style_name', 'code']);
+
+        $styleKeys = [];
+        foreach ($allStyles as $st) {
+            $sKey = $st->code ?: $st->style_name;
+            $styleKeys[$sKey] = $sKey;
+        }
+
+        $matrix = [];
+        foreach ($allBrands as $br) {
+            $bKey = $br->code ?: $br->brand_name;
+            $matrix[$bKey] = array_fill_keys(array_keys($styleKeys), 0);
+            $matrix[$bKey]['TOTAL'] = 0;
+        }
+        $matrix['TOTAL'] = array_fill_keys(array_keys($styleKeys), 0);
+        $matrix['TOTAL']['TOTAL'] = 0;
+
+        $matrixRaw = DB::table('job_card_entries as jc')->leftJoin('brands as b', 'jc.brand_id', '=', 'b.id')->whereIn('jc.id', $allJcIds)->select('jc.id', 'jc.grand_total_qty', 'b.code as brand_code', 'b.brand_name')->get();
+
+        $allFdSeList = DB::table('job_card_fabric_details')->whereIn('job_card_entry_id', $allJcIds)->whereNull('deleted_at')->whereNotNull('stock_entry_id')->select('job_card_entry_id', 'stock_entry_id')->distinct()->get();
+
+        $allSeIds = $allFdSeList->pluck('stock_entry_id')->unique()->toArray();
+        $seToStyleMap = [];
+        if (!empty($allSeIds)) {
+            $seToStyleMap = DB::table('stock_entry_items')
+                ->join('styles', 'stock_entry_items.style_id', '=', 'styles.id')
+                ->whereIn('stock_entry_items.stock_entry_id', $allSeIds)
+                ->whereNull('stock_entry_items.deleted_at')
+                ->select('stock_entry_items.stock_entry_id', DB::raw('COALESCE(styles.code, styles.style_name) as style_code'))
+                ->distinct()
+                ->pluck('style_code', 'stock_entry_items.stock_entry_id')
+                ->toArray();
+        }
+
+        $jcPrimaryStyle = [];
+        foreach ($allFdSeList as $fdSe) {
+            if (!isset($jcPrimaryStyle[$fdSe->job_card_entry_id]) && isset($seToStyleMap[$fdSe->stock_entry_id])) {
+                $jcPrimaryStyle[$fdSe->job_card_entry_id] = $seToStyleMap[$fdSe->stock_entry_id];
+            }
+        }
+
+        foreach ($matrixRaw as $mRow) {
+            $bKey = $mRow->brand_code ?: ($mRow->brand_name ?: 'OTHER');
+            $stCode = $jcPrimaryStyle[$mRow->id] ?? 'PLN';
+            if (!isset($styleKeys[$stCode])) {
+                $stCode = 'PLN';
+            }
+            $qty = (float) $mRow->grand_total_qty;
+            if (!isset($matrix[$bKey])) {
+                $matrix[$bKey] = array_fill_keys(array_keys($styleKeys), 0);
+                $matrix[$bKey]['TOTAL'] = 0;
+            }
+            $matrix[$bKey][$stCode] = ($matrix[$bKey][$stCode] ?? 0) + $qty;
+            $matrix[$bKey]['TOTAL'] += $qty;
+            $matrix['TOTAL'][$stCode] = ($matrix['TOTAL'][$stCode] ?? 0) + $qty;
+            $matrix['TOTAL']['TOTAL'] += $qty;
+        }
+
+        // Only show FG brands that have active WIP quantity in this report
+        foreach ($matrix as $bKey => $bData) {
+            if ($bKey !== 'TOTAL' && empty($bData['TOTAL'])) {
+                unset($matrix[$bKey]);
+            }
+        }
+
+        // Build page rows
+        $rows = [];
+        $index = $start + 1;
+        $moreThan5DaysCount = 0;
+
+        foreach ($pageJobCards as $jc) {
+            $dateStr = $jc->job_card_date ? date('d-m-Y', strtotime($jc->job_card_date)) : '-';
+            $cutNo = $jc->job_card_no ?? $jc->reference_no ?? '-';
+            $totalMtrs = (float) $jc->fabricDetails->sum('mtr');
+
+            // Styles from indexed SE map
+            $jcStyles = [];
+            foreach ($jc->fabricDetails as $fd) {
+                if ($fd->stock_entry_id && isset($seStyles[$fd->stock_entry_id])) {
+                    foreach ($seStyles[$fd->stock_entry_id] as $st) {
+                        $stCode = $st->code ?: $st->style_name;
+                        $jcStyles[$stCode] = $stCode;
+                    }
+                }
+            }
+            $styleDisplay = !empty($jcStyles) ? implode(', ', $jcStyles) : 'PLN';
+
+            // Sleeves
+            $fsQty = (float) ($jc->total_qty_fs ?: $jc->fs_qty ?: $jc->fabricDetails->sum('fs_qty'));
+            $hsQty = (float) ($jc->total_qty_hs ?: $jc->hs_qty ?: $jc->fabricDetails->sum('hs_qty'));
+            $totalCuttingQty = (float) ($jc->grand_total_qty ?: ($fsQty + $hsQty));
+            $deliveryDate = $jc->delivery_date ? date('d-m-Y', strtotime($jc->delivery_date)) : '-';
+
+            // Days in WIP
+            $daysInWip = $jc->job_card_date ? Carbon::parse($jc->job_card_date)->diffInDays(now()) : 0;
+            if ($daysInWip > 5) {
+                $moreThan5DaysCount++;
+            }
+
+            // Next stage schedule / cutting sent date
+            $nextSched = isset($nextSchedules[$jc->id]) ? $nextSchedules[$jc->id]->first() : null;
+            $cuttingSentDate = ($nextSched && $nextSched->start_date) ? date('d-m-Y', strtotime($nextSched->start_date)) : '-';
+            $daysTaken = ($nextSched && $nextSched->start_date && $jc->job_card_date) ? Carbon::parse($jc->job_card_date)->diffInDays(Carbon::parse($nextSched->start_date)) : '-';
+
+            // Store stock
+            $stStock = isset($receipts[$jc->id]) ? (float) $receipts[$jc->id] : (isset($movements[$jc->id]) ? (float) $movements[$jc->id] : 0);
+
+            // Dynamic Services
+            $allAssignments = $jc->tasks->flatMap->assignments;
+            $serviceCols = [];
+            foreach ($services as $svc) {
+                $svcAss = $allAssignments->where('service_id', $svc->id);
+                $issued = $svcAss->sum('issue_qty');
+                $completed = $svcAss->sum('completed_qty');
+                $wip = max(0, $issued - $completed);
+
+                if ($svcAss->isNotEmpty() && $wip == 0 && $completed > 0) {
+                    $serviceCols['svc_' . $svc->id] = '<span class="badge bg-label-success" style="font-size: 0.72rem; padding: 2px 6px;">FINISH</span>';
+                } elseif ($wip > 0) {
+                    $serviceCols['svc_' . $svc->id] = '<span class="fw-bold text-dark">' . number_format($wip, 0) . '</span>';
+                } elseif ($svcAss->isNotEmpty() && $issued == 0) {
+                    $serviceCols['svc_' . $svc->id] = '<span class="badge bg-label-warning" style="font-size: 0.72rem; padding: 2px 6px;">PENDING</span>';
+                } else {
+                    $serviceCols['svc_' . $svc->id] = '-';
+                }
+            }
+
+            $brandCode = $jc->brand ? ($jc->brand->code ?: $jc->brand->brand_name) : 'OTHER';
+
+            $row = array_merge([
+                's_no' => $index++,
+                'date' => $dateStr,
+                'cut_no' => '<strong>' . htmlspecialchars($cutNo) . '</strong>',
+                'mtrs' => number_format($totalMtrs, 1),
+                'style' => htmlspecialchars($styleDisplay),
+                'fs_qty' => number_format($fsQty, 0),
+                'hs_qty' => number_format($hsQty, 0),
+                'total_cutting_qty' => '<strong>' . number_format($totalCuttingQty, 0) . '</strong>',
+                'delivery_date' => $deliveryDate,
+            ], $serviceCols, [
+                'days_in_wip' => $daysInWip,
+                'is_over_5_days' => $daysInWip > 5,
+                'cutting_sent_date' => $cuttingSentDate,
+                'days_taken' => $daysTaken,
+                'store_stock' => $stStock > 0 ? number_format($stStock, 0) : '-',
+                '_search_text' => strtolower($cutNo . ' ' . $styleDisplay . ' ' . $brandCode . ' ' . $dateStr)
+            ]);
+
+            $rows[] = $row;
+        }
+
+        $pageData = $rows;
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $pageData,
+            'meta' => [
+                'stage_id' => $stageId,
+                'stage_name' => $currentStage->operation_stage_name ?? 'CUTTING',
+                'services' => $services->map(fn($s) => ['id' => $s->id, 'name' => $s->service_name, 'code' => $s->service_code])->values(),
+                'more_than_5_days' => $moreThan5DaysCount,
+                'totals' => [
+                    'mtrs' => number_format($totalMtrsSum, 1),
+                    'fs_qty' => number_format($totalFsSum, 0),
+                    'hs_qty' => number_format($totalHsSum, 0),
+                    'total_cutting_qty' => number_format($totalCuttingSum, 0),
+                    'services' => array_map(fn($v) => $v > 0 ? number_format($v, 0) : '-', $serviceTotals),
+                    'store_stock' => number_format($totalStoreStockSum, 0),
+                ],
+                'abstract_matrix' => [
+                    'columns' => array_values($styleKeys),
+                    'rows' => $matrix,
+                ]
+            ]
+        ]);
+    }
+
+    public function getProductionPlanningData(Request $request)
+    {
+        $draw = intval($request->draw ?? 1);
+        $start = intval($request->start ?? 0);
+        $rawLength = $request->get('length');
+        $length = ($rawLength !== null && intval($rawLength) == -1) ? -1 : intval($rawLength > 0 ? $rawLength : 25);
+        $isExport = ($request->get('export') == 1) || ($request->get('all') == 1) || ($length < 0);
+        $searchVal = $request->search;
+        $search = is_array($searchVal) ? ($searchVal['value'] ?? '') : (is_string($searchVal) ? $searchVal : '');
+        $search = trim($search);
+
+        $fromDate = $this->parseReportDate($request->from_date);
+        $toDate = $this->parseReportDate($request->to_date);
+
+        // Default to today if date not provided
+        if (!$fromDate && !$toDate) {
+            $fromDate = Carbon::today()->format('Y-m-d');
+            $toDate = Carbon::today()->format('Y-m-d');
+        } elseif (!$fromDate) {
+            $fromDate = $toDate;
+        } elseif (!$toDate) {
+            $toDate = $fromDate;
+        }
+
+        $stageId = intval($request->get('stage_id', 1));
+        if ($stageId <= 0) {
+            $stageId = 1;
+        }
+
+        $currentStage = OperationStage::find($stageId);
+        $stageName = $currentStage ? strtoupper($currentStage->operation_stage_name) : 'CUTTING';
+
+        $unitId = $request->unit_id;
+        $brandId = $request->brand_id;
+
+        // Query task assignments
+        $assignQuery = TaskAssignEmployee::with([
+            'employee:id,name,emp_id',
+            'service:id,service_name,service_code,operation_stage_id',
+            'task.jobCard.brand',
+            'task.stage',
+        ])->where(function ($q) use ($stageId) {
+            $q->whereHas('service', function ($sq) use ($stageId) {
+                $sq->where('operation_stage_id', $stageId);
+            })->orWhereHas('task.stage', function ($sq) use ($stageId) {
+                $sq->where('operation_stage_id', $stageId);
+            });
+        });
+
+        // Filter by date
+        $assignQuery->where(function ($q) use ($fromDate, $toDate) {
+            $q->whereBetween('issue_date', [$fromDate, $toDate])
+              ->orWhere(function ($sub) use ($fromDate, $toDate) {
+                  $sub->whereNull('issue_date')->whereDate('created_at', '>=', $fromDate)->whereDate('created_at', '<=', $toDate);
+              });
+        });
+
+        // Filter by unit
+        if ($unitId) {
+            $assignQuery->whereHas('task.jobCard', function ($jq) use ($unitId) {
+                $jq->where('service_provider_id', $unitId);
+            });
+        }
+
+        // Filter by brand
+        if ($brandId) {
+            $assignQuery->whereHas('task.jobCard', function ($jq) use ($brandId) {
+                $jq->where('brand_id', $brandId);
+            });
+        }
+
+        $assignments = $assignQuery->orderBy('id', 'asc')->get();
+
+        $empCodes = $assignments->map(fn($a) => $a->employee->emp_id ?? null)->filter()->unique()->toArray();
+        $attendances = Attendance::whereIn('emp_code', $empCodes)
+            ->whereBetween('date', [$fromDate, $toDate])
+            ->get()
+            ->groupBy('emp_code');
+
+        $rows = [];
+        $sNo = 1;
+        $totalHours = 0;
+        $totalPlan = 0;
+        $totalIssue = 0;
+        $totalFinish = 0;
+        $totalPending = 0;
+
+        foreach ($assignments as $a) {
+            $emp = $a->employee;
+            $empName = $emp ? $emp->name : 'N/A';
+            $empCode = $emp ? $emp->emp_id : null;
+
+            $hrs = (float) ($a->total_hrs ?? 0);
+            if ($hrs == 0 && $empCode && isset($attendances[$empCode])) {
+                $hrs = (float) ($attendances[$empCode]->first()->work_hours ?? 0);
+            }
+            if ($hrs == 0) {
+                $hrs = 8.0;
+            }
+
+            $workName = $a->service ? $a->service->service_name : 'N/A';
+            $cutNo = $a->task ? ($a->task->job_card_no ?? ($a->task->jobCard ? $a->task->jobCard->job_card_no : '-')) : '-';
+
+            $planQty = 0;
+            if ($a->task && $a->task->stage && $a->task->stage->planned_qty > 0) {
+                $planQty = (float) $a->task->stage->planned_qty;
+            } elseif ($a->task && $a->task->issue_qty > 0) {
+                $planQty = (float) $a->task->issue_qty;
+            } elseif ($a->task && $a->task->jobCard && $a->task->jobCard->grand_total_qty > 0) {
+                $planQty = (float) $a->task->jobCard->grand_total_qty;
+            } else {
+                $planQty = (float) $a->issue_qty;
+            }
+
+            $issueQty = (float) $a->issue_qty;
+            $finishQty = (float) $a->completed_qty;
+            $pendingQty = max(0, $issueQty - $finishQty - (float) ($a->wastage_qty ?? 0));
+
+            $totalHours += $hrs;
+            $totalPlan += $planQty;
+            $totalIssue += $issueQty;
+            $totalFinish += $finishQty;
+            $totalPending += $pendingQty;
+
+            $rows[] = [
+                's_no' => $sNo++,
+                'name' => htmlspecialchars($empName),
+                'working_hours' => number_format($hrs, 1),
+                'work' => htmlspecialchars($workName),
+                'cut_no' => '<strong>' . htmlspecialchars($cutNo) . '</strong>',
+                'plan_qty' => number_format($planQty, 0),
+                'issue_qty' => number_format($issueQty, 0),
+                'completed_qty' => number_format($finishQty, 0),
+                'pending_qty' => number_format($pendingQty, 0),
+                'remarks' => htmlspecialchars($a->remarks ?: '-'),
+                '_search_text' => strtolower($empName . ' ' . $workName . ' ' . $cutNo . ' ' . ($a->remarks ?: ''))
+            ];
+        }
+
+        // Search filtering
+        $recordsTotal = count($rows);
+        if (!empty($search)) {
+            $rows = array_values(array_filter($rows, function ($r) use ($search) {
+                return strpos($r['_search_text'] ?? '', strtolower($search)) !== false;
+            }));
+            // Re-number s_no
+            foreach ($rows as $idx => &$rowRef) {
+                $rowRef['s_no'] = $idx + 1;
+            }
+        }
+        $recordsFiltered = count($rows);
+
+        // Pagination
+        if ($isExport) {
+            $pageData = $rows;
+        } else {
+            $pageData = array_slice($rows, $start, $length);
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $pageData,
+            'meta' => [
+                'stage_id' => $stageId,
+                'stage_name' => $stageName,
+                'total_employees' => count(array_unique(array_column($rows, 'name'))),
+                'total_hours' => number_format($totalHours, 1),
+                'total_plan' => number_format($totalPlan, 0),
+                'total_issue' => number_format($totalIssue, 0),
+                'total_finish' => number_format($totalFinish, 0),
+                'total_pending' => number_format($totalPending, 0),
+                'from_date' => date('d-m-Y', strtotime($fromDate)),
+                'to_date' => date('d-m-Y', strtotime($toDate)),
+            ]
+        ]);
     }
 }

@@ -168,8 +168,14 @@ class SalesInvoice extends Model
     }
 
     /**
-     * Convert DB invoice number (e.g. CDW/1/26-27) to display/E-invoice number (e.g. CD/311/26-27).
-     * Offset is 310 based on the last actual CD invoice CD/310/26-27.
+     * Base sequence offset to map internal CDW sequence numbers to public CD sequence numbers.
+     * Based on the last live CD invoice CD/313/26-27.
+     */
+    const CDW_CD_OFFSET = 313;
+
+    /**
+     * Convert DB invoice number (e.g. CDW/1/26-27) to display/E-invoice number (e.g. CD/314/26-27).
+     * Since CDW/3 was converted to CF/3302, numbers >= 4 collapse the gap so sequence is fully continuous.
      */
     public static function formatDisplayInvNo($invNo)
     {
@@ -180,7 +186,7 @@ class SalesInvoice extends Model
         if (preg_match('/^CDW\/(\d+)\/(.*)$/i', $invNo, $matches)) {
             $num = (int)$matches[1];
             $fy = $matches[2];
-            $newNum = 310 + $num;
+            $newNum = ($num >= 4) ? (self::CDW_CD_OFFSET + $num - 1) : (self::CDW_CD_OFFSET + $num);
             return "CD/{$newNum}/{$fy}";
         }
 
@@ -188,8 +194,8 @@ class SalesInvoice extends Model
     }
 
     /**
-     * Convert display/input invoice number (e.g. CD/311/26-27) back to DB format (e.g. CDW/1/26-27).
-     * Numbers <= 310 remain as CD.
+     * Convert display/input invoice number (e.g. CD/314/26-27) back to DB format (e.g. CDW/1/26-27).
+     * Numbers <= CDW_CD_OFFSET remain as CD.
      */
     public static function formatDbInvNo($invNo)
     {
@@ -200,8 +206,11 @@ class SalesInvoice extends Model
         if (preg_match('/^CD\/(\d+)\/(.*)$/i', $invNo, $matches)) {
             $num = (int)$matches[1];
             $fy = $matches[2];
-            if ($num > 310) {
-                $dbNum = $num - 310;
+            if ($num >= 316) {
+                $dbNum = $num - self::CDW_CD_OFFSET + 1;
+                return "CDW/{$dbNum}/{$fy}";
+            } elseif ($num > self::CDW_CD_OFFSET) {
+                $dbNum = $num - self::CDW_CD_OFFSET;
                 return "CDW/{$dbNum}/{$fy}";
             }
         }
@@ -231,6 +240,23 @@ class SalesInvoice extends Model
     public function getRawInvNoAttribute()
     {
         return $this->attributes['inv_no'] ?? null;
+    }
+
+    /**
+     * Accessor: Automatically formats invoice numbers inside QR code details for stickers and scans.
+     */
+    public function getQrDetailsAttribute($value)
+    {
+        if (empty($value)) {
+            return $value;
+        }
+
+        return preg_replace_callback('/CDW\/(\d+)\/([^\s\r\n]+)/i', function ($matches) {
+            $num = (int)$matches[1];
+            $fy = $matches[2];
+            $newNum = ($num >= 4) ? (self::CDW_CD_OFFSET + $num - 1) : (self::CDW_CD_OFFSET + $num);
+            return "CD/{$newNum}/{$fy}";
+        }, $value);
     }
 }
 

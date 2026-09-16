@@ -320,8 +320,25 @@ class SalesMarketingReportController extends Controller
                     }
                     if ($search) {
                         $countQuery->where(function($q) use ($search) {
-                            $q->where('inv_no', 'like', "%{$search}%")
-                              ->orWhereHas('customer', function($c) use ($search) {
+                            $q->where('inv_no', 'like', "%{$search}%");
+
+                            if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
+                                $sNum = (int)$sm[1];
+                                if ($sNum > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                                    $dbNum = ($sNum >= 316) ? ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                                    $q->orWhere('inv_no', 'like', "%CDW/{$dbNum}%");
+                                }
+                            } elseif (is_numeric(trim($search))) {
+                                $numVal = (int)trim($search);
+                                if ($numVal > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                                    $cdwNum = ($numVal >= 316) ? ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                                    $q->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
+                                }
+                            } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
+                                $q->orWhere('inv_no', 'like', "%CDW/%");
+                            }
+
+                            $q->orWhereHas('customer', function($c) use ($search) {
                                   $c->where('name', 'like', "%{$search}%")
                                     ->orWhere('gst_no', 'like', "%{$search}%")
                                     ->orWhereHas('place', function($p) use ($search) {
@@ -482,8 +499,25 @@ class SalesMarketingReportController extends Controller
                     }
                     if ($search) {
                         $countQuery->where(function($q) use ($search) {
-                            $q->where('inv_no', 'like', "%{$search}%")
-                              ->orWhereHas('customer', function($c) use ($search) {
+                            $q->where('inv_no', 'like', "%{$search}%");
+
+                            if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
+                                $sNum = (int)$sm[1];
+                                if ($sNum > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                                    $dbNum = ($sNum >= 316) ? ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                                    $q->orWhere('inv_no', 'like', "%CDW/{$dbNum}%");
+                                }
+                            } elseif (is_numeric(trim($search))) {
+                                $numVal = (int)trim($search);
+                                if ($numVal > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                                    $cdwNum = ($numVal >= 316) ? ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                                    $q->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
+                                }
+                            } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
+                                $q->orWhere('inv_no', 'like', "%CDW/%");
+                            }
+
+                            $q->orWhereHas('customer', function($c) use ($search) {
                                   $c->where('name', 'like', "%{$search}%");
                               });
                         });
