@@ -25,11 +25,15 @@
                                         <i class="ri ri-circle-fill me-1" style="font-size: 8px;"></i>
                                         {{ $isAvailable ? 'Online' : 'Offline' }}
                                     </span>
+                                    <span class="badge bg-label-info fs-tiny fw-normal px-2 py-1" title="Tamil voice notes automatically translated to English">
+                                        <i class="ri ri-mic-line me-1" style="font-size: 10px;"></i>
+                                        Tamil Voice Note
+                                    </span>
                                 </h5>
                                 <small class="text-muted">
                                     Model: <strong class="text-secondary">{{ $model }}</strong>
                                     <span class="mx-1">•</span> Local Ollama Inference
-                                    <span class="mx-1">•</span> Workflow Analysis
+                                    <span class="mx-1">•</span> Tamil Voice & Workflow Analysis
                                 </small>
                             </div>
                         </div>
@@ -75,6 +79,7 @@
                                 </div>
                                 <div class="chat-text" style="line-height: 1.6; word-break: break-word;">
                                     Hello! I am your <strong>ERP Flow Navigator AI</strong> assistant.<br>
+                                    You can ask questions in <strong>English</strong> or record a <strong>Tamil Voice Note (குரல் பதிவு)</strong> — your Tamil speech will be automatically translated to English and answered by the AI.<br>
                                     <strong>Click a quick question to test:</strong>
                                     <div class="d-flex flex-wrap gap-2 mt-2" id="quickPrompts">
                                         <button type="button" class="btn btn-sm btn-outline-primary quick-prompt-btn"
@@ -90,9 +95,13 @@
                                             <i class="ri ri-inbox-archive-line me-1"></i> Next stage after Goods Receipt
                                             (GRN)?
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary quick-prompt-btn"
-                                            data-query="How does the production process flow?">
-                                            <i class="ri ri-settings-4-line me-1"></i> How does Production process flow?
+                                        <button type="button" class="btn btn-sm btn-outline-info quick-prompt-btn"
+                                            data-query="கொள்முதல் ஆணை உருவான பிறகு அடுத்த கட்டம் என்ன?">
+                                            <i class="ri ri-translate-2 me-1"></i> தமிழ்: கொள்முதல் ஆணைக்கு அடுத்த கட்டம்?
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info quick-prompt-btn"
+                                            data-query="விற்பனை ஆணை உறுதி செய்யப்பட்ட பிறகு என்ன நடக்கும்?">
+                                            <i class="ri ri-translate-2 me-1"></i> தமிழ்: விற்பனை ஆணைக்கு அடுத்த படி?
                                         </button>
                                     </div>
                                 </div>
@@ -125,11 +134,40 @@
 
                     <!-- Chat Input Footer -->
                     <div class="card-footer bg-white border-top p-3">
+                        <!-- Active Tamil Voice Note Recording Bar -->
+                        <div id="voiceRecordingBar" class="d-none border border-danger rounded-3 p-2 px-3 mb-2 bg-label-danger d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="voice-recording-pulse"></div>
+                                <span class="fw-bold text-danger voice-rec-time" id="voiceTimer">00:00</span>
+                                <span class="badge bg-danger text-white fs-tiny px-2 py-1">Tamil (தமிழ்)</span>
+                                <div class="voice-wave-animation ms-1 d-none d-sm-flex">
+                                    <span></span><span></span><span></span><span></span><span></span>
+                                </div>
+                                <span class="text-dark small ms-2 fst-italic" id="liveTranscript" style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    Listening in Tamil (தமிழில் பேசவும்)...
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="cancelVoiceBtn" title="Discard voice note">
+                                    <i class="ri ri-close-line"></i> <span class="d-none d-sm-inline">Cancel</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger d-flex align-items-center gap-1 shadow-sm" id="sendVoiceBtn" title="Stop and send Tamil voice note">
+                                    <i class="ri ri-send-plane-fill"></i> <span>Send Note</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <form id="chatForm" onsubmit="return false;">
                             <div class="d-flex align-items-end gap-2">
+                                <button type="button" id="voiceRecordBtn"
+                                    class="btn btn-outline-primary d-flex align-items-center justify-content-center px-3"
+                                    style="height: 52px;"
+                                    title="Record Tamil Voice Note (தமிழில் குரல் பதிவு)">
+                                    <i class="ri ri-mic-line fs-5" id="micIcon"></i>
+                                </button>
                                 <div class="flex-grow-1 position-relative">
                                     <textarea id="userMessageInput" class="form-control border shadow-none" rows="2"
-                                        placeholder="Ask a question about the ERP workflow... (Enter to send, Shift+Enter for new line)"
+                                        placeholder="Ask in English or speak/type in Tamil (Enter to send, Shift+Enter for newline)..."
                                         style="resize: none; font-size: 14px; min-height: 52px; max-height: 120px;"
                                         required></textarea>
                                 </div>
@@ -143,8 +181,7 @@
                             <div class="d-flex justify-content-between align-items-center mt-2 px-1">
                                 <small class="text-muted d-flex align-items-center gap-1" style="font-size: 12px;">
                                     <i class="ri ri-information-line"></i>
-                                    <span>Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for a new
-                                        line</span>
+                                    <span>Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for newline, or click <i class="ri ri-mic-line text-primary"></i> to record <strong>Tamil Voice Note</strong></span>
                                 </small>
                                 <small class="text-muted" id="charCount" style="font-size: 11px;">0 / 2000</small>
                             </div>
@@ -183,6 +220,69 @@
             background-color: #d1d5db;
             border-radius: 3px;
         }
+
+        /* Tamil Voice Note Animations & Audio Player */
+        .voice-recording-pulse {
+            width: 12px;
+            height: 12px;
+            background-color: #ff3e1d;
+            border-radius: 50%;
+            animation: pulse-red 1.2s infinite;
+            display: inline-block;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 62, 29, 0.7); }
+            70% { transform: scale(1.15); box-shadow: 0 0 0 10px rgba(255, 62, 29, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 62, 29, 0); }
+        }
+        .voice-wave-animation {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            height: 18px;
+        }
+        .voice-wave-animation span {
+            width: 3px;
+            height: 100%;
+            background: #ff3e1d;
+            border-radius: 3px;
+            animation: wave 0.8s ease-in-out infinite alternate;
+        }
+        .voice-wave-animation span:nth-child(2) { animation-delay: 0.15s; height: 60%; }
+        .voice-wave-animation span:nth-child(3) { animation-delay: 0.3s; height: 95%; }
+        .voice-wave-animation span:nth-child(4) { animation-delay: 0.45s; height: 40%; }
+        .voice-wave-animation span:nth-child(5) { animation-delay: 0.6s; height: 80%; }
+        @keyframes wave {
+            0% { transform: scaleY(0.25); }
+            100% { transform: scaleY(1); }
+        }
+        .voice-audio-box audio {
+            height: 38px;
+            max-width: 100%;
+            border-radius: 20px;
+            outline: none;
+        }
+        .voice-pill-original {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 6px;
+        }
+        .voice-pill-translation {
+            background: rgba(255, 255, 255, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 6px;
+            color: #ffffff;
+        }
+        .voice-btn-active {
+            background-color: #ff3e1d !important;
+            border-color: #ff3e1d !important;
+            color: #ffffff !important;
+            animation: pulse-red 1.5s infinite;
+        }
     </style>
 
     <script>
@@ -195,9 +295,72 @@
             const $clearBtn = $('#clearChatBtn');
             const $charCount = $('#charCount');
 
-            // In-memory conversation history for the current browser session
+            // Voice recording elements
+            const $voiceRecordBtn = $('#voiceRecordBtn');
+            const $micIcon = $('#micIcon');
+            const $voiceRecordingBar = $('#voiceRecordingBar');
+            const $voiceTimer = $('#voiceTimer');
+            const $liveTranscript = $('#liveTranscript');
+            const $cancelVoiceBtn = $('#cancelVoiceBtn');
+            const $sendVoiceBtn = $('#sendVoiceBtn');
+
+            // In-memory conversation history
             let conversationHistory = [];
             let isProcessing = false;
+            let msgCounter = 0;
+
+            // Voice recording state
+            let isRecordingVoice = false;
+            let mediaRecorder = null;
+            let mediaStream = null;
+            let audioChunks = [];
+            let voiceTimerInterval = null;
+            let voiceSeconds = 0;
+            let capturedTamilTranscript = '';
+            let recognition = null;
+
+            // Initialize Web Speech API for Tamil (ta-IN)
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'ta-IN'; // Tamil (India)
+                recognition.continuous = true;
+                recognition.interimResults = true;
+
+                recognition.onresult = function (event) {
+                    let interim = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            capturedTamilTranscript += ' ' + event.results[i][0].transcript;
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
+                    }
+                    const fullTranscript = (capturedTamilTranscript + ' ' + interim).trim();
+                    if (fullTranscript) {
+                        $liveTranscript.text(fullTranscript);
+                        $messageInput.val(fullTranscript);
+                        $charCount.text(fullTranscript.length + ' / 2000');
+                    }
+                };
+
+                recognition.onerror = function (event) {
+                    console.warn('Speech recognition event:', event.error);
+                    if (event.error === 'not-allowed') {
+                        stopVoiceRecording(false);
+                        appendErrorMessage('Microphone access was denied. Please allow microphone permissions in your browser to record Tamil voice notes.');
+                    }
+                };
+
+                recognition.onend = function () {
+                    // Auto-restart if user is still in recording mode
+                    if (isRecordingVoice) {
+                        try {
+                            recognition.start();
+                        } catch (e) {}
+                    }
+                };
+            }
 
             // Auto-scroll to bottom of chat
             function scrollToBottom(smooth = true) {
@@ -214,6 +377,7 @@
 
             // Escape HTML to prevent XSS
             function escapeHtml(text) {
+                if (!text) return '';
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
@@ -222,67 +386,127 @@
             // Format text with line breaks, safe tags, bolding and navigation highlights
             function formatMessageText(text) {
                 let escaped = escapeHtml(text);
-
-                // Format markdown bold: **text**
                 escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-                // Highlight key ERP response labels
-                escaped = escaped.replace(/(ERP Module:|Page Name:|Menu Navigation:|Field Name:|Answer:|Explanation:|Current Stage:|Current Menu Navigation:|Next Expected Stage:|Next Menu Navigation:|Reason:|Flow:|Evidence:|Confidence:|Restrictions:)/g, '<strong class="text-primary">$1</strong>');
-
-                // Convert bullet points (* item or - item)
+                escaped = escaped.replace(/(ERP Module:|Page Name:|Page:|Menu Navigation:|Current Menu Navigation:|Next Expected Stage:|Next Menu Navigation:|Field Name:|Field Behavior:|Field Behavior \(புலத்தின் செயல்பாடு\):|Purpose:|Purpose \(நோக்கம்\):|Reason:|Reason \(காரணம்\):|Reason \/ Flow:|Explanation:|Explanation \(விளக்கம்\):|Answer:|Answer \(பதில்\):|Current Stage:|Related Workflow:|Flow:|Evidence:|Confidence:|Restrictions:|Restrictions \(கட்டுப்பாடு\):|URL:)/g, '<strong class="text-primary">$1</strong>');
                 escaped = escaped.replace(/^(\s*)[*\-]\s+(.*)$/gm, '$1<span class="text-secondary">•</span> $2');
-
-                // Replace newlines with <br>
                 escaped = escaped.replace(/\n/g, '<br>');
-
                 return escaped;
             }
 
+            // Check if string contains Tamil characters
+            function hasTamilCharacters(text) {
+                return /[\u0B80-\u0BFF]/.test(text);
+            }
+
             // Append User Message to UI
-            function appendUserMessage(text) {
+            function appendUserMessage(text, options = {}) {
                 const time = getCurrentTime();
                 const formatted = formatMessageText(text);
-                const html = `
-                        <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row">
-                            <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
-                                <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
-                                    You <i class="ri ri-user-3-fill text-white"></i>
-                                </div>
-                                <div class="chat-text" style="line-height: 1.6;">
-                                    ${formatted}
-                                </div>
-                                <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
-                                    ${time}
-                                </div>
-                            </div>
+                const msgId = 'user_msg_' + (++msgCounter);
+                const isVoice = !!options.isVoice;
+                const audioUrl = options.audioUrl || null;
+
+                let audioHtml = '';
+                if (audioUrl) {
+                    audioHtml = `
+                        <div class="voice-audio-box my-2">
+                            <audio controls src="${audioUrl}" class="w-100"></audio>
                         </div>
                     `;
+                }
+
+                let badgeHtml = '';
+                if (isVoice) {
+                    badgeHtml = `
+                        <div class="voice-pill-original small mb-2">
+                            <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                <i class="ri ri-mic-fill text-warning"></i> <strong>Recorded Tamil Voice Note:</strong>
+                            </div>
+                            <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
+                        </div>
+                    `;
+                } else if (hasTamilCharacters(text)) {
+                    badgeHtml = `
+                        <div class="voice-pill-original small mb-2">
+                            <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                <i class="ri ri-translate-2 text-warning"></i> <strong>Tamil Text Input:</strong>
+                            </div>
+                            <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
+                        </div>
+                    `;
+                } else {
+                    badgeHtml = `
+                        <div class="chat-text" style="line-height: 1.6;">${formatted}</div>
+                    `;
+                }
+
+                const html = `
+                    <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row" id="${msgId}">
+                        <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
+                            <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
+                                <span>You</span>
+                                ${isVoice ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-mic-line"></i> Voice Note</span>' : '<i class="ri ri-user-3-fill text-white ms-1"></i>'}
+                            </div>
+                            ${audioHtml}
+                            ${badgeHtml}
+                            <!-- Container for Translation pill once response returns -->
+                            <div class="user-msg-translation mt-2" style="display: none;"></div>
+                            <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
+                                ${time}
+                            </div>
+                        </div>
+                    </div>
+                `;
                 $loadingRow.before(html);
                 scrollToBottom();
+                return msgId;
             }
 
             // Append AI Message to UI
-            function appendAiMessage(text) {
+            function appendAiMessage(text, options = {}) {
                 const time = getCurrentTime();
                 const formatted = formatMessageText(text);
-                const html = `
-                        <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
-                            <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                <i class="ri ri-robot-2-line text-primary"></i>
-                            </div>
-                            <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
-                                <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
-                                    <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
-                                </div>
-                                <div class="chat-text" style="line-height: 1.6;">
-                                    ${formatted}
-                                </div>
-                                <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                    ${time}
-                                </div>
+                const isTamil = options.responseLanguage === 'ta';
+                const englishOriginal = options.englishOriginal || null;
+
+                let badgeHtml = isTamil
+                    ? '<span class="badge bg-label-info fs-tiny py-0 px-1 ms-1"><i class="ri ri-translate-2 me-1"></i>தமிழ் வெளியீடு (Tamil)</span>'
+                    : '<span class="badge bg-label-secondary fs-tiny py-0 px-1 ms-1">English Output</span>';
+
+                let originalToggleHtml = '';
+                if (englishOriginal && isTamil) {
+                    originalToggleHtml = `
+                        <div class="mt-3 pt-2 border-top">
+                            <button type="button" class="btn btn-xs btn-outline-secondary toggle-eng-btn py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" style="font-size: 11px;">
+                                <i class="ri ri-global-line"></i> <span class="toggle-eng-text">Show English Original / ஆங்கில வடிவம்</span>
+                            </button>
+                            <div class="english-original-box mt-2 p-2 bg-light rounded text-secondary small d-none" style="line-height: 1.5; word-break: break-word;">
+                                ${formatMessageText(englishOriginal)}
                             </div>
                         </div>
                     `;
+                }
+
+                const html = `
+                    <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
+                        <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                            <i class="ri ri-robot-2-line text-primary"></i>
+                        </div>
+                        <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
+                            <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
+                                <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
+                                ${badgeHtml}
+                            </div>
+                            <div class="chat-text" style="line-height: 1.6;">
+                                ${formatted}
+                            </div>
+                            ${originalToggleHtml}
+                            <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                ${time}
+                            </div>
+                        </div>
+                    </div>
+                `;
                 $loadingRow.before(html);
                 scrollToBottom();
             }
@@ -292,23 +516,23 @@
                 const time = getCurrentTime();
                 const formatted = formatMessageText(errorText);
                 const html = `
-                        <div class="d-flex justify-content-start mb-3 chat-bubble-row error-msg-row">
-                            <div class="avatar avatar-sm rounded-circle bg-label-danger me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                <i class="ri ri-error-warning-line text-danger"></i>
+                    <div class="d-flex justify-content-start mb-3 chat-bubble-row error-msg-row">
+                        <div class="avatar avatar-sm rounded-circle bg-label-danger me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                            <i class="ri ri-error-warning-line text-danger"></i>
+                        </div>
+                        <div class="chat-bubble bg-label-danger text-danger border border-danger p-3 rounded-3" style="max-width: 80%;">
+                            <div class="fw-semibold small d-flex align-items-center gap-1 mb-1">
+                                <i class="ri ri-alert-line"></i> Service Alert
                             </div>
-                            <div class="chat-bubble bg-label-danger text-danger border border-danger p-3 rounded-3" style="max-width: 80%;">
-                                <div class="fw-semibold small d-flex align-items-center gap-1 mb-1">
-                                    <i class="ri ri-alert-line"></i> Service Alert
-                                </div>
-                                <div class="chat-text small" style="line-height: 1.5;">
-                                    ${formatted}
-                                </div>
-                                <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                    ${time}
-                                </div>
+                            <div class="chat-text small" style="line-height: 1.5;">
+                                ${formatted}
+                            </div>
+                            <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                ${time}
                             </div>
                         </div>
-                    `;
+                    </div>
+                `;
                 $loadingRow.before(html);
                 scrollToBottom();
             }
@@ -319,30 +543,141 @@
                 if (loading) {
                     $loadingRow.removeClass('d-none');
                     $sendBtn.prop('disabled', true);
+                    $voiceRecordBtn.prop('disabled', true);
                     $messageInput.prop('disabled', true);
                     $sendIcon.removeClass('ri-send-plane-2-fill').addClass('ri-loader-4-line spinner-border-sm');
                     scrollToBottom();
                 } else {
                     $loadingRow.addClass('d-none');
                     $sendBtn.prop('disabled', false);
+                    $voiceRecordBtn.prop('disabled', false);
                     $messageInput.prop('disabled', false);
                     $sendIcon.removeClass('ri-loader-4-line spinner-border-sm').addClass('ri-send-plane-2-fill');
                     $messageInput.focus();
                 }
             }
 
+            // Voice Recording Controls
+            function startVoiceRecording() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    appendErrorMessage('Your browser does not support audio recording. Please use Google Chrome, Microsoft Edge, or Safari.');
+                    return;
+                }
+
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(function (stream) {
+                        mediaStream = stream;
+                        audioChunks = [];
+                        capturedTamilTranscript = '';
+                        voiceSeconds = 0;
+                        isRecordingVoice = true;
+
+                        // Start MediaRecorder
+                        try {
+                            mediaRecorder = new MediaRecorder(stream);
+                        } catch (e) {
+                            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                        }
+
+                        mediaRecorder.ondataavailable = function (e) {
+                            if (e.data && e.data.size > 0) {
+                                audioChunks.push(e.data);
+                            }
+                        };
+
+                        mediaRecorder.start(200);
+
+                        // Start Speech Recognition
+                        if (recognition) {
+                            try {
+                                recognition.start();
+                            } catch (e) {}
+                        }
+
+                        // UI Updates
+                        $voiceRecordingBar.removeClass('d-none');
+                        $voiceRecordBtn.addClass('voice-btn-active');
+                        $micIcon.removeClass('ri-mic-line').addClass('ri-mic-fill');
+                        $voiceTimer.text('00:00');
+                        $liveTranscript.text('Listening in Tamil (தமிழில் பேசவும்)...');
+
+                        voiceTimerInterval = setInterval(function () {
+                            voiceSeconds++;
+                            const mins = String(Math.floor(voiceSeconds / 60)).padStart(2, '0');
+                            const secs = String(voiceSeconds % 60).padStart(2, '0');
+                            $voiceTimer.text(`${mins}:${secs}`);
+                        }, 1000);
+                    })
+                    .catch(function (err) {
+                        console.error('Microphone error:', err);
+                        appendErrorMessage('Microphone access was not granted. Please check your browser microphone permissions.');
+                    });
+            }
+
+            function stopVoiceRecording(shouldSend = false) {
+                if (!isRecordingVoice) return;
+                isRecordingVoice = false;
+
+                clearInterval(voiceTimerInterval);
+                $voiceRecordingBar.addClass('d-none');
+                $voiceRecordBtn.removeClass('voice-btn-active');
+                $micIcon.removeClass('ri-mic-fill').addClass('ri-mic-line');
+
+                if (recognition) {
+                    try {
+                        recognition.stop();
+                    } catch (e) {}
+                }
+
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+
+                if (shouldSend) {
+                    setTimeout(function () {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+
+                        const reader = new FileReader();
+                        reader.onloadend = function () {
+                            const base64Audio = reader.result;
+                            const finalMessage = (capturedTamilTranscript || $messageInput.val()).trim();
+
+                            if (!finalMessage) {
+                                appendErrorMessage('No Tamil speech was detected. Please try recording again while speaking into your microphone.');
+                                return;
+                            }
+
+                            sendMessage(finalMessage, true, base64Audio, audioUrl);
+                        };
+                        reader.readAsDataURL(audioBlob);
+                    }, 350);
+                } else {
+                    audioChunks = [];
+                    capturedTamilTranscript = '';
+                }
+            }
+
             // Send Message Handler
-            function sendMessage() {
+            function sendMessage(customMessage = null, isVoice = false, audioBase64 = null, localAudioUrl = null) {
                 if (isProcessing) return;
 
-                const message = $messageInput.val().trim();
+                const message = (customMessage !== null ? customMessage : $messageInput.val()).trim();
                 if (!message) {
                     $messageInput.focus();
                     return;
                 }
 
-                // Display user message in UI
-                appendUserMessage(message);
+                // Display user message in UI and capture element id
+                const msgId = appendUserMessage(message, {
+                    isVoice: isVoice,
+                    audioUrl: localAudioUrl
+                });
 
                 // Clear input and reset char count
                 $messageInput.val('');
@@ -354,6 +689,8 @@
                 // Prepare request payload with recent history
                 const payload = {
                     message: message,
+                    is_voice: isVoice,
+                    audio: audioBase64,
                     history: conversationHistory
                 };
 
@@ -370,11 +707,38 @@
                         setLoading(false);
                         if (response && response.success) {
                             const aiReply = response.message;
-                            appendAiMessage(aiReply);
+                            const translatedMsg = response.translated_message;
+                            const isTranslated = response.is_translated;
 
-                            // Update session conversation history
-                            conversationHistory.push({ role: 'user', content: message });
-                            conversationHistory.push({ role: 'assistant', content: aiReply });
+                            // If text was translated, display translation pill in user bubble
+                            if (isTranslated && translatedMsg) {
+                                const $transContainer = $(`#${msgId}`).find('.user-msg-translation');
+                                const safeTranslation = escapeHtml(translatedMsg);
+                                $transContainer.html(`
+                                    <div class="voice-pill-translation small">
+                                        <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                            <i class="ri ri-translate-2 text-warning"></i> <strong>Translated to English (Input for LLM):</strong>
+                                        </div>
+                                        <div class="text-white fw-semibold" style="line-height: 1.5;">${safeTranslation}</div>
+                                    </div>
+                                `).slideDown(200);
+                            }
+
+                            // Append AI response (Tamil or English based on user input)
+                            appendAiMessage(aiReply, {
+                                responseLanguage: response.response_language || 'en',
+                                englishOriginal: response.english_message || null
+                            });
+
+                            // Update session conversation history (store English query for optimal LLM reasoning)
+                            conversationHistory.push({
+                                role: 'user',
+                                content: isTranslated ? translatedMsg : message
+                            });
+                            conversationHistory.push({
+                                role: 'assistant',
+                                content: response.english_message || aiReply
+                            });
                         } else {
                             const errorMsg = (response && response.message) ? response.message : 'AI service is currently unavailable.';
                             appendErrorMessage(errorMsg);
@@ -395,27 +759,71 @@
                 });
             }
 
+            // Voice Record Button Click (Toggle)
+            $voiceRecordBtn.on('click', function () {
+                if (isRecordingVoice) {
+                    stopVoiceRecording(true);
+                } else {
+                    startVoiceRecording();
+                }
+            });
+
+            // Cancel Voice Note
+            $cancelVoiceBtn.on('click', function () {
+                stopVoiceRecording(false);
+            });
+
+            // Send Voice Note
+            $sendVoiceBtn.on('click', function () {
+                stopVoiceRecording(true);
+            });
+
             // Form submit
             $('#chatForm').on('submit', function (e) {
                 e.preventDefault();
-                sendMessage();
+                if (isRecordingVoice) {
+                    stopVoiceRecording(true);
+                } else {
+                    sendMessage();
+                }
             });
 
             // Quick prompt button click handler
             $(document).on('click', '.quick-prompt-btn', function () {
                 const query = $(this).data('query');
                 if (query && !isProcessing) {
-                    $messageInput.val(query);
-                    $charCount.text(query.length + ' / 2000');
-                    sendMessage();
+                    if (isRecordingVoice) {
+                        stopVoiceRecording(false);
+                    }
+                    sendMessage(query);
                 }
+            });
+
+            // Toggle English original view for Tamil AI responses
+            $(document).on('click', '.toggle-eng-btn', function () {
+                const $btn = $(this);
+                const $box = $btn.siblings('.english-original-box');
+                $box.toggleClass('d-none');
+                const isHidden = $box.hasClass('d-none');
+                $btn.find('.toggle-eng-text').text(isHidden ? 'Show English Original / ஆங்கில வடிவம்' : 'Hide English Original / மறைக்கவும்');
             });
 
             // Enter key sends, Shift+Enter creates newline
             $messageInput.on('keydown', function (e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    sendMessage();
+                    if (isRecordingVoice) {
+                        stopVoiceRecording(true);
+                    } else {
+                        sendMessage();
+                    }
+                }
+            });
+
+            // Escape cancels recording
+            $(document).on('keydown', function (e) {
+                if (e.key === 'Escape' && isRecordingVoice) {
+                    stopVoiceRecording(false);
                 }
             });
 
@@ -423,8 +831,6 @@
             $messageInput.on('input', function () {
                 const len = $(this).val().length;
                 $charCount.text(len + ' / 2000');
-
-                // Auto-expand height
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });

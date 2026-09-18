@@ -46,4 +46,12 @@ return [
         'system_prompt' => env('OLLAMA_SYSTEM_PROMPT', ''),
     ],
 
+    'translation' => [
+        'enabled' => env('TRANSLATION_ENABLED', true),
+        'timeout' => (int) env('TRANSLATION_TIMEOUT', 10),
+        'default_target' => env('TRANSLATION_DEFAULT_TARGET', 'en'),
+        'mymemory_email' => env('MYMEMORY_EMAIL', 'admin@nachias.com'),
+        'cache_seconds' => (int) env('TRANSLATION_CACHE_SECONDS', 86400),
+    ],
+
 ];
