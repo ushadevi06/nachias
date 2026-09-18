@@ -1,0 +1,242 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Client\ConnectionException;
+use Throwable;
+
+class OllamaService
+{
+    protected string $url;
+    protected string $model;
+    protected int $timeout;
+    protected string $systemPrompt;
+
+    public function __construct()
+    {
+        $this->url = rtrim(config('services.ollama.url', 'http://127.0.0.1:11434'), '/');
+        $this->model = config('services.ollama.model', 'qwen2.5-coder:1.5b');
+        $this->timeout = (int) config('services.ollama.timeout', 120);
+        $this->systemPrompt = $this->loadSystemPrompt();
+    }
+
+    /**
+     * Load the system prompt from the file configured in .env / services.php.
+     */
+    protected function loadSystemPrompt(): string
+    {
+        // 1. Check file specified by OLLAMA_SYSTEM_PROMPT_FILE
+        $file = env('OLLAMA_SYSTEM_PROMPT_FILE') ?: config('services.ollama.system_prompt_file');
+        if (!empty($file)) {
+            $path = base_path($file);
+            if (file_exists($path) && is_readable($path)) {
+                return trim((string) file_get_contents($path));
+            }
+        }
+
+        // 2. Check if OLLAMA_SYSTEM_PROMPT points to a file or direct string
+        $promptSetting = env('OLLAMA_SYSTEM_PROMPT') ?: config('services.ollama.system_prompt', '');
+        if (!empty($promptSetting)) {
+            $path = base_path($promptSetting);
+            if (file_exists($path) && is_readable($path)) {
+                return trim((string) file_get_contents($path));
+            }
+            return (string) $promptSetting;
+        }
+
+        // 3. Fallback to system_prompt.txt in root directory
+        $defaultPath = base_path('system_prompt.txt');
+        if (file_exists($defaultPath) && is_readable($defaultPath)) {
+            return trim((string) file_get_contents($defaultPath));
+        }
+
+        return '';
+    }
+
+    /**
+     * Send chat messages to the local Ollama API.
+     *
+     * @param string $message The current user message
+     * @param array $history Recent conversation history (array of ['role' => 'user'|'assistant', 'content' => '...'])
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function chat(string $message, array $history = []): array
+    {
+        $cleanMessage = trim($message);
+        if ($cleanMessage === '') {
+            return [
+                'success' => false,
+                'message' => 'Please enter a message.',
+            ];
+        }
+
+        // Build messages array
+        $messages = [];
+
+        // 1. System Prompt (English-only ERP Flow Navigator)
+        $systemContent = $this->systemPrompt;
+        if (!empty($systemContent)) {
+            $messages[] = [
+                'role' => 'system',
+                'content' => $systemContent . "\n\nCRITICAL: Respond ONLY in English text. Do not output in Tamil or any other language.",
+            ];
+        }
+
+        // 2. Add sanitized recent history (limit to last 6 turns to avoid CPU/RAM overhead)
+        $recentHistory = array_slice($history, -6);
+        foreach ($recentHistory as $item) {
+            if (
+                is_array($item) &&
+                isset($item['role'], $item['content']) &&
+                in_array($item['role'], ['user', 'assistant'], true) &&
+                is_string($item['content']) &&
+                trim($item['content']) !== ''
+            ) {
+                $messages[] = [
+                    'role' => $item['role'],
+                    'content' => trim($item['content']),
+                ];
+            }
+        }
+
+        // 3. Current user message
+        $messages[] = [
+            'role' => 'user',
+            'content' => $cleanMessage,
+        ];
+
+        // Lightweight inference options tuned for CPU (Intel i5-4590T, 8GB RAM, no GPU)
+        $payload = [
+            'model' => $this->model,
+            'messages' => $messages,
+            'stream' => false,
+            'options' => [
+                'temperature' => 0.1,
+                'repeat_penalty' => 1.15,
+                'num_predict' => 450,
+                'num_ctx' => (int) (config('services.ollama.num_ctx') ?: env('OLLAMA_NUM_CTX', 8192)),
+            ],
+        ];
+
+        Log::info('Ollama chatbot request', [
+            'user_id' => auth()->id(),
+            'model' => $this->model,
+            'history_count' => count($recentHistory),
+        ]);
+
+        try {
+            $response = Http::timeout($this->timeout)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ])
+                ->post("{$this->url}/api/chat", $payload);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $replyContent = $data['message']['content'] ?? null;
+
+                if ($replyContent !== null && trim($replyContent) !== '') {
+                    return [
+                        'success' => true,
+                        'message' => trim($replyContent),
+                    ];
+                }
+
+                Log::warning('Ollama returned empty or malformed message content', [
+                    'user_id' => auth()->id(),
+                    'response' => $data,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => 'Unable to process the AI response.',
+                ];
+            }
+
+            // Handle HTTP error responses
+            $status = $response->status();
+            $body = $response->body();
+
+            Log::error('Ollama HTTP error response', [
+                'user_id' => auth()->id(),
+                'status' => $status,
+                'body' => $body,
+            ]);
+
+            if ($status === 404 || str_contains($body, 'model') && str_contains($body, 'not found')) {
+                return [
+                    'success' => false,
+                    'message' => "The AI model '{$this->model}' was not found. Please verify the local Ollama installation.",
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Unable to process the AI response.',
+            ];
+        } catch (ConnectionException $e) {
+            Log::error('Ollama connection failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            // Check if connection timed out
+            if (str_contains(strtolower($e->getMessage()), 'timed out') || str_contains(strtolower($e->getMessage()), 'timeout')) {
+                return [
+                    'success' => false,
+                    'message' => 'The AI response took too long. Please try again.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'AI service is unavailable. Please make sure Ollama is running.',
+            ];
+        } catch (Throwable $e) {
+            Log::error('Ollama request failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            if (str_contains(strtolower($e->getMessage()), 'timed out') || str_contains(strtolower($e->getMessage()), 'timeout')) {
+                return [
+                    'success' => false,
+                    'message' => 'The AI response took too long. Please try again.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'AI service is currently unavailable.',
+            ];
+        }
+    }
+
+    /**
+     * Check if Ollama service is reachable.
+     *
+     * @return bool
+     */
+    public function isAvailable(): bool
+    {
+        try {
+            $response = Http::timeout(3)->get("{$this->url}/api/tags");
+            return $response->successful();
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get configured model name.
+     *
+     * @return string
+     */
+    public function getModel(): string
+    {
+        return $this->model;
+    }
+}

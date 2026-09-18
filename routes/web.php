@@ -89,6 +89,7 @@ use App\Http\Controllers\SeasonController;
 use App\Http\Controllers\TicketManagementController;
 use App\Http\Controllers\FabricSizeController;
 use App\Http\Controllers\ItemPriceController;
+use App\Http\Controllers\ChatbotController;
 
 
 Route::get('/', function () {
@@ -114,6 +115,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/core-material-settings/get-art-brand/{art_no}', [CoreMaterialPlannerSettingController::class, 'getArtNoDetails']);
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
     Route::match(['get', 'post'], 'logout', [AuthController::class, 'logout']);
+
+    /* Chatbot */
+    Route::get('/chatbot', [ChatbotController::class, 'index'])->name('chatbot.index');
+    Route::post('/chatbot/message', [ChatbotController::class, 'sendMessage'])->name('chatbot.message');
 
     /* Roles */
     Route::get('/roles', [RoleController::class, 'index']);

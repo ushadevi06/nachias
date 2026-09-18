@@ -101,6 +101,14 @@ $isSuper = $user->id == 1;
                                     </a>
                                 </li>
 
+                                <!-- AI Assistant -->
+                                <li class="menu-item {{ request()->is('chatbot*') ? 'active' : '' }}">
+                                    <a href="{{ url('chatbot') }}" class="menu-link">
+                                        <i class="menu-icon icon-base ri ri-robot-2-line"></i>
+                                        <div>AI Assistant</div>
+                                    </a>
+                                </li>
+
                                 <!-- Master -->
                                 @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view colors') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view fabric-sizes') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view styles') || $user->can('view stores') || $user->can('view shipping-methods') || $user->can('view transport-mode') || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view shifts') || $user->can('view production-services') || $user->can('view warehouses') ||  $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent') || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items') || $user->can('view process-groups') || $user->can('view seasons') || $user->can('view retailers') || $user->can('view devices')))
                                     <li

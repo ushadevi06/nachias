@@ -37,4 +37,13 @@ return [
         'client_secret' => env('ORDERAXE_CLIENT_SECRET'),
     ],
 
+    'ollama' => [
+        'url' => env('OLLAMA_URL', 'http://127.0.0.1:11434'),
+        'model' => env('OLLAMA_MODEL', 'qwen2.5-coder:1.5b'),
+        'timeout' => (int) env('OLLAMA_TIMEOUT', 120),
+        'num_ctx' => (int) env('OLLAMA_NUM_CTX', 8192),
+        'system_prompt_file' => env('OLLAMA_SYSTEM_PROMPT_FILE', 'system_prompt.txt'),
+        'system_prompt' => env('OLLAMA_SYSTEM_PROMPT', ''),
+    ],
+
 ];
