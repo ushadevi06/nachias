@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\OllamaService;
+use App\Services\RAG\ErpRagRetrieverService;
 use App\Services\TranslationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,11 +14,16 @@ class ChatbotController extends Controller
 {
     protected OllamaService $ollamaService;
     protected TranslationService $translationService;
+    protected ErpRagRetrieverService $ragService;
 
-    public function __construct(OllamaService $ollamaService, TranslationService $translationService)
-    {
+    public function __construct(
+        OllamaService $ollamaService,
+        TranslationService $translationService,
+        ErpRagRetrieverService $ragService
+    ) {
         $this->ollamaService = $ollamaService;
         $this->translationService = $translationService;
+        $this->ragService = $ragService;
     }
 
     /**
@@ -79,8 +85,11 @@ class ChatbotController extends Controller
             ];
         }
 
-        // Send the translated English input to the Ollama LLM
-        $result = $this->ollamaService->chat($effectivePrompt, $history);
+        // 1. Retrieve authoritative ground-truth knowledge from ERP RAG
+        $ragResult = $this->ragService->retrieve($effectivePrompt, 4);
+
+        // 2. Send the translated English input + retrieved knowledge to the local Ollama LLM
+        $result = $this->ollamaService->chatWithRag($effectivePrompt, $ragResult['context'], $history);
 
         // If Ollama succeeds and user asked in Tamil (or requested Tamil):
         // Translate the final ERP response to Tamil while preserving English Page Names & Menu Navigation!
@@ -106,6 +115,19 @@ class ChatbotController extends Controller
         if (!empty($audioData)) {
             $result['audio'] = $audioData;
         }
+
+        // Attach RAG metadata & sources to response
+        $result['rag_sources'] = array_map(function ($chunk) {
+            return [
+                'title' => $chunk->title,
+                'source_type' => $chunk->source_type,
+                'module' => $chunk->module,
+                'screen' => $chunk->screen,
+                'menu_path' => $chunk->menu_path,
+                'url' => $chunk->url,
+            ];
+        }, $ragResult['chunks']);
+        $result['rag_intent'] = $ragResult['intent'];
 
         return response()->json($result);
     }

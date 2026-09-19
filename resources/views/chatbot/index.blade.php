@@ -468,10 +468,26 @@
                 const formatted = formatMessageText(text);
                 const isTamil = options.responseLanguage === 'ta';
                 const englishOriginal = options.englishOriginal || null;
+                const ragSources = options.ragSources || [];
 
                 let badgeHtml = isTamil
                     ? '<span class="badge bg-label-info fs-tiny py-0 px-1 ms-1"><i class="ri ri-translate-2 me-1"></i>தமிழ் வெளியீடு (Tamil)</span>'
                     : '<span class="badge bg-label-secondary fs-tiny py-0 px-1 ms-1">English Output</span>';
+
+                let ragSourcesHtml = '';
+                if (ragSources.length > 0) {
+                    const navSource = ragSources.find(s => s.menu_path && s.url);
+                    ragSourcesHtml = `
+                        <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1 align-items-center">
+                            <span class="badge bg-label-success fs-tiny py-1 px-2"><i class="ri ri-shield-check-line me-1"></i>RAG Grounded</span>
+                            ${navSource ? `
+                                <a href="${escapeHtml(navSource.url)}" class="badge bg-label-primary fs-tiny py-1 px-2 text-decoration-none d-inline-flex align-items-center gap-1" style="cursor: pointer;">
+                                    <i class="ri ri-compass-3-line"></i> ${escapeHtml(navSource.menu_path)} &nbsp;<span class="text-decoration-underline fw-bold">Open Screen →</span>
+                                </a>
+                            ` : ''}
+                        </div>
+                    `;
+                }
 
                 let originalToggleHtml = '';
                 if (englishOriginal && isTamil) {
@@ -500,6 +516,7 @@
                             <div class="chat-text" style="line-height: 1.6;">
                                 ${formatted}
                             </div>
+                            ${ragSourcesHtml}
                             ${originalToggleHtml}
                             <div class="text-end text-muted mt-1" style="font-size: 11px;">
                                 ${time}
@@ -727,7 +744,9 @@
                             // Append AI response (Tamil or English based on user input)
                             appendAiMessage(aiReply, {
                                 responseLanguage: response.response_language || 'en',
-                                englishOriginal: response.english_message || null
+                                englishOriginal: response.english_message || null,
+                                ragSources: response.rag_sources || [],
+                                ragIntent: response.rag_intent || 'general'
                             });
 
                             // Update session conversation history (store English query for optimal LLM reasoning)

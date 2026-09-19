@@ -64,6 +64,19 @@ class OllamaService
      */
     public function chat(string $message, array $history = []): array
     {
+        return $this->chatWithRag($message, '', $history);
+    }
+
+    /**
+     * Send chat messages to Ollama with dynamic RAG retrieved knowledge context.
+     *
+     * @param string $message The current user message
+     * @param string $ragContext Authoritative retrieved knowledge context
+     * @param array $history Recent conversation history
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function chatWithRag(string $message, string $ragContext = '', array $history = []): array
+    {
         $cleanMessage = trim($message);
         if ($cleanMessage === '') {
             return [
@@ -75,8 +88,23 @@ class OllamaService
         // Build messages array
         $messages = [];
 
-        // 1. System Prompt (English-only ERP Flow Navigator)
-        $systemContent = $this->systemPrompt;
+        // 1. System Prompt
+        if (!empty($ragContext)) {
+            // Lean, high-accuracy RAG system prompt (~200 words) tuned for Qwen 2.5 (1.5B)
+            $systemContent = "You are the \"Nachias ERP Flow Navigator AI\", an authoritative, read-only ERP navigation and workflow assistant for the Nachias ERP system.\n\n"
+                . "Your job is to answer the user's question clearly, accurately, and concisely based strictly on the RETRIEVED NACHIAS ERP KNOWLEDGE below.\n\n"
+                . "CRITICAL OPERATING RULES:\n"
+                . "1. NAVIGATION: When directing a user to a page or screen, use ONLY the exact \"Official Menu Path\" provided in the retrieved knowledge (e.g. System Utility > Logs & Audit Log). Do NOT invent steps like \"Go to Dashboard\" unless the screen is literally under Dashboard. Guide the user step-by-step through the exact menu hierarchy and state the direct URL.\n"
+                . "2. WORKFLOW & STAGES: When asked about processes or next steps, explain the documented workflow sequence in clear numbered steps.\n"
+                . "3. DATABASE SCHEMA: When asked about tables or database fields, specify the exact table name, primary key, and relevant column names from the retrieved schema.\n"
+                . "4. HONESTY: If the answer cannot be determined from the retrieved knowledge, reply honestly: \"I don't have documented information about that in the Nachias ERP knowledge base.\" Do NOT make up or hallucinate fake menus, paths, or URLs.\n"
+                . "5. READ-ONLY: You only explain and navigate. You never execute actions or modify data.\n"
+                . "6. LANGUAGE: Respond strictly in English text. (Tamil translation is handled automatically by the system).\n\n"
+                . $ragContext;
+        } else {
+            $systemContent = $this->systemPrompt;
+        }
+
         if (!empty($systemContent)) {
             $messages[] = [
                 'role' => 'system',
@@ -84,8 +112,8 @@ class OllamaService
             ];
         }
 
-        // 2. Add sanitized recent history (limit to last 6 turns to avoid CPU/RAM overhead)
-        $recentHistory = array_slice($history, -6);
+        // 2. Add sanitized recent history (limit to last 4 turns to avoid CPU/RAM overhead)
+        $recentHistory = array_slice($history, -4);
         foreach ($recentHistory as $item) {
             if (
                 is_array($item) &&
@@ -107,6 +135,14 @@ class OllamaService
             'content' => $cleanMessage,
         ];
 
+        return $this->sendChatPayload($messages, count($recentHistory));
+    }
+
+    /**
+     * Execute chat payload with Ollama API.
+     */
+    protected function sendChatPayload(array $messages, int $historyCount = 0): array
+    {
         // Lightweight inference options tuned for CPU (Intel i5-4590T, 8GB RAM, no GPU)
         $payload = [
             'model' => $this->model,
@@ -123,7 +159,7 @@ class OllamaService
         Log::info('Ollama chatbot request', [
             'user_id' => auth()->id(),
             'model' => $this->model,
-            'history_count' => count($recentHistory),
+            'history_count' => $historyCount,
         ]);
 
         try {
