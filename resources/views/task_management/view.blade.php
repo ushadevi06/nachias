@@ -26,6 +26,9 @@
                                     <option value="Completed">Completed</option>
                                 </select>
                             </div>
+                            <div class="col-md-4 col-lg-3">
+                                <input type="text" id="task_date_range" class="form-control" placeholder="Select Task Date Range">
+                            </div>
                             <div class="col-md-3">
                                 <button type="button" class="btn btn-primary" id="filter_btn">Filter</button>
                                 <button type="button" class="btn btn-secondary" id="reset_btn">Reset</button>
@@ -33,7 +36,7 @@
                         </div>
                     </div>
                     <div class="card-datatable table-responsive">
-                        <table class="datatables-task-mgmt table table-hover">
+                        <table class="datatables-products table table-hover">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -57,45 +60,60 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
-        var taskTable = $('.datatables-task-mgmt').DataTable({
-            responsive: true,
-            paging: true,
-            autoWidth: false,
-            searching: true,
-            ordering: true,
-            info: true,
-            lengthChange: true,
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: "{{ url('task_management') }}",
-                data: function(d) {
-                    d.status = $('#filter_status').val();
-                }
-            },
-            columns: [
-                {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-                {data: 'task_no', name: 'task_no'},
-                {data: 'plant', name: 'plant'},
-                {data: 'stage_dept', name: 'stage_dept'},
-                {data: 'start_date', name: 'start_date'},
-                {data: 'end_date', name: 'end_date'},
-                {data: 'status', name: 'status'},
-                {data: 'action', name: 'action', orderable: false, searchable: false},
-            ],
-            order: [[1, 'desc']],
-            dom: '<"d-flex justify-content-between align-items-center mx-0 row pt-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"d-flex justify-content-between mx-0 row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-            displayLength: 10,
-            lengthMenu: [10, 25, 50, 75, 100],
-        });
+        if ($('#task_date_range').length) {
+            $('#task_date_range').flatpickr({
+                mode: 'range',
+                dateFormat: 'd-m-Y',
+                allowInput: true
+            });
+        }
+
+        if ($('.datatables-products').length) {
+            $('.datatables-products').DataTable({
+                responsive: true,
+                paging: true,
+                autoWidth: false,
+                searching: true,
+                ordering: true,
+                info: true,
+                lengthChange: true,
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ url('task_management') }}",
+                    data: function(d) {
+                        d.status = $('#filter_status').val();
+                        d.task_date_range = $('#task_date_range').val();
+                    }
+                },
+                columns: [
+                    {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
+                    {data: 'task_no', name: 'task_no'},
+                    {data: 'plant', name: 'plant'},
+                    {data: 'stage_dept', name: 'stage_dept'},
+                    {data: 'start_date', name: 'start_date'},
+                    {data: 'end_date', name: 'end_date'},
+                    {data: 'status', name: 'status'},
+                    {data: 'action', name: 'action', orderable: false, searchable: false},
+                ],
+                order: [[1, 'desc']],
+                dom: '<"d-flex justify-content-between align-items-center mx-0 row pt-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"d-flex justify-content-between mx-0 row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                displayLength: 10,
+                lengthMenu: [10, 25, 50, 75, 100],
+            });
+        }
 
         $('#filter_btn').on('click', function() {
-            taskTable.ajax.reload();
+            $('.datatables-products').DataTable().ajax.reload();
         });
 
         $('#reset_btn').on('click', function() {
             $('#filter_status').val('').trigger('change');
-            taskTable.ajax.reload();
+            $('#task_date_range').val('');
+            if ($('#task_date_range')[0] && $('#task_date_range')[0]._flatpickr) {
+                $('#task_date_range')[0]._flatpickr.clear();
+            }
+            $('.datatables-products').DataTable().ajax.reload();
         });
     });
 

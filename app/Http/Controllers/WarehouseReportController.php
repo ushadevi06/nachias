@@ -48,7 +48,17 @@ class WarehouseReportController extends Controller
                     ->pluck('total_capacity', 'brand_id')
                     ->toArray();
 
-                $activeBrands = Brand::where('status', 'Active')->orderBy('id','desc')->get();
+                $brandIdsWithStock = StockEntryItem::where(function($q) use ($selectedWarehouseId) {
+                        $q->where('warehouse_id', $selectedWarehouseId)
+                          ->orWhereHas('stockEntry', function($se) use ($selectedWarehouseId) {
+                              $se->where('warehouse_id', $selectedWarehouseId);
+                          });
+                    })
+                    ->distinct()
+                    ->pluck('brand_id')
+                    ->toArray();
+
+                $activeBrands = Brand::where('status', 'Active')->whereIn('id', $brandIdsWithStock)->orderBy('id','desc')->get();
                 $reportData = [];
 
                 $totalCapacity = 0;
@@ -56,14 +66,12 @@ class WarehouseReportController extends Controller
                 $totalSingle = 0;
                 $totalTotalStock = 0;
                 $totalDamage = 0;
-                // For utilization: only count brands that have a configured capacity
                 $utilCapacity = 0;
                 $utilStock = 0;
 
                 foreach ($activeBrands as $brand) {
                     $capacityPcs = $capacities[$brand->id] ?? 0;
 
-                    // Fetch all finished goods stock items for this brand and warehouse
                     $stockItems = StockEntryItem::where('brand_id', $brand->id)
                         ->where(function($q) use ($selectedWarehouseId) {
                             $q->where('warehouse_id', $selectedWarehouseId)
@@ -121,7 +129,6 @@ class WarehouseReportController extends Controller
                     ];
                 }
 
-                // Utilization % based only on brands with configured capacity
                 $totalUtilizationPct = $utilCapacity > 0 ? round(($utilStock / $utilCapacity) * 100, 2) : 0;
 
                 $totals = [
@@ -268,7 +275,10 @@ class WarehouseReportController extends Controller
         $recordsTotal = DB::query()->fromSub($stockQuery, 'sub')->count();
         $recordsFiltered = $recordsTotal;
 
-        $totalsRow = DB::query()->fromSub($stockQuery, 'sub')->selectRaw('SUM(total_qty) as sum_qty, SUM(stock_value) as sum_value')->first();
+        $totalsRow = DB::query()->fromSub($stockQuery, 'sub')->selectRaw('
+            SUM(CASE WHEN total_qty > 0 THEN total_qty ELSE 0 END) as sum_qty, 
+            SUM(CASE WHEN stock_value > 0 THEN stock_value ELSE 0 END) as sum_value
+        ')->first();
         $totals = [
             'total_qty' => number_format($totalsRow->sum_qty ?? 0, 0),
             'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
@@ -621,8 +631,8 @@ class WarehouseReportController extends Controller
         $recordsFiltered = $recordsTotal;
 
         $totalsRow = DB::query()->fromSub($stockQuery, 'sub')->selectRaw('
-            SUM(total_qty) as sum_qty, 
-            SUM(stock_value) as sum_value,
+            SUM(CASE WHEN total_qty > 0 THEN total_qty ELSE 0 END) as sum_qty, 
+            SUM(CASE WHEN stock_value > 0 THEN stock_value ELSE 0 END) as sum_value,
             SUM(CASE WHEN total_min_stock > 0 AND total_qty < total_min_stock THEN (total_min_stock - total_qty) ELSE 0 END) as sum_low_stock,
             SUM(CASE WHEN total_max_stock > 0 AND total_qty > total_max_stock THEN (total_qty - total_max_stock) ELSE 0 END) as sum_excess_stock
         ')->first();
@@ -1105,58 +1115,17 @@ class WarehouseReportController extends Controller
 
                 $brandwiseSales = $query->get();
 
-                $daysDiff = (strtotime($toDate) - strtotime($fromDate)) / (60 * 60 * 24);
-                $prevToDate = date('Y-m-d', strtotime($fromDate . ' -1 day'));
-                $prevFromDate = date('Y-m-d', strtotime($prevToDate . " -$daysDiff days"));
-
-                $prevSales = SalesInvoiceItem::query()
-                    ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-                    ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
-                    ->leftJoin('brands', function($join) {
-                        $join->on(function($query) {
-                            $query->on('stock_entry_items.brand_id', '=', 'brands.id')
-                                ->orOn(function($sub) {
-                                    $sub->whereNull('stock_entry_items.brand_id')
-                                        ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                                        ->whereRaw("NOT EXISTS (
-                                            SELECT 1 FROM brands b2 
-                                            WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
-                                            AND LENGTH(b2.code) > LENGTH(brands.code)
-                                        )");
-                                });
-                        });
-                    })
-                    ->whereNull('sales_invoices.deleted_at')
-                    ->whereNull('sales_invoice_items.deleted_at')
-                    ->whereBetween('sales_invoices.inv_date', [$prevFromDate, $prevToDate]);
-
-                if ($request->brand_id) {
-                    $prevSales->where('brands.id', $request->brand_id);
-                }
-                if ($request->store_id) {
-                    $prevSales->where('sales_invoices.store_location_id', $request->store_id);
-                }
-
-                $prevSalesPlucked = $prevSales->select('brands.id as brand_id', DB::raw('SUM(sales_invoice_items.amount) as prev_sales_value'))
-                    ->groupBy('brands.id')
-                    ->pluck('prev_sales_value', 'brand_id');
+                $totalSalesValue = $salesTotalsRow->sum_value ?? 0;
 
                 $data = [];
                 foreach ($brandwiseSales as $sale) {
-                    $prevValue = $prevSalesPlucked[$sale->brand_id] ?? 0;
-                    if ($prevValue > 0) {
-                        $trend = (($sale->sales_value - $prevValue) / $prevValue) * 100;
-                    } else {
-                        $trend = $sale->sales_value > 0 ? 100 : 0;
-                    }
+                    $trend = $totalSalesValue > 0 ? round(($sale->sales_value / $totalSalesValue) * 100, 1) : 0;
 
                     $trendHtml = '';
                     if ($trend > 0) {
-                        $trendHtml = '<span class="text-success fw-bold"><i class="ri-arrow-up-line align-middle"></i> ' . number_format($trend, 1) . '%</span>';
-                    } elseif ($trend < 0) {
-                        $trendHtml = '<span class="text-danger fw-bold"><i class="ri-arrow-down-line align-middle"></i> ' . number_format(abs($trend), 1) . '%</span>';
+                        $trendHtml = '<span class="text-success fw-bold">' . number_format($trend, 1) . '%</span>';
                     } else {
-                        $trendHtml = '<span class="text-muted"><i class="ri-subtract-line align-middle"></i> 0.0%</span>';
+                        $trendHtml = '<span class="text-muted">0.0%</span>';
                     }
 
                     $data[] = [
@@ -1222,7 +1191,10 @@ class WarehouseReportController extends Controller
                 $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
                 $recordsFiltered = $recordsTotal;
 
-                $totalsRow = DB::query()->fromSub($query, 'sub')->selectRaw('SUM(total_qty) as sum_qty, SUM(stock_value) as sum_value')->first();
+                $totalsRow = DB::query()->fromSub($query, 'sub')->selectRaw('
+                    SUM(CASE WHEN total_qty > 0 THEN total_qty ELSE 0 END) as sum_qty, 
+                    SUM(CASE WHEN stock_value > 0 THEN stock_value ELSE 0 END) as sum_value
+                ')->first();
                 $totals = [
                     'total_qty' => number_format($totalsRow->sum_qty ?? 0, 0),
                     'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
@@ -1344,18 +1316,21 @@ class WarehouseReportController extends Controller
             case 'order-dispatch':
                 $query = SalesOrder::with(['customer'])
                     ->leftJoin('sales_invoices', 'sales_orders.id', '=', 'sales_invoices.so_id')
-                    ->leftJoin('sales_invoice_items', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
+                    ->leftJoin('sales_invoice_items', function($join) {
+                        $join->on('sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
+                             ->whereNull('sales_invoice_items.deleted_at');
+                    })
                     ->select(
                         'sales_orders.id',
                         'sales_orders.customer_id',
                         'sales_orders.so_no',
                         'sales_orders.so_date',
                         'sales_orders.total_qty as ordered_qty',
+                        DB::raw('COALESCE(SUM(CASE WHEN sales_invoice_items.is_extra = 1 THEN sales_invoice_items.quantity ELSE 0 END), 0) as open_order_qty'),
                         DB::raw('COALESCE(SUM(sales_invoice_items.quantity), 0) as dispatched_qty')
                     )
                     ->whereNull('sales_orders.deleted_at')
-                    ->whereNull('sales_invoices.deleted_at')
-                    ->whereNull('sales_invoice_items.deleted_at');
+                    ->whereNull('sales_invoices.deleted_at');
 
                 if ($request->from_date) {
                     $query->where('sales_orders.so_date', '>=', date('Y-m-d', strtotime($request->from_date)));
@@ -1392,7 +1367,7 @@ class WarehouseReportController extends Controller
                     });
                 }
 
-                $query->groupBy('sales_orders.id', 'sales_orders.customer_id', 'sales_orders.so_no', 'sales_orders.so_date', 'sales_orders.total_qty');
+                $query->groupBy('sales_orders.id', 'sales_orders.customer_id', 'sales_orders.so_no', 'sales_orders.so_date', 'sales_orders.total_qty')->orderBy('id','desc');
 
                 $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
                 $recordsFiltered = $recordsTotal;
@@ -1420,10 +1395,15 @@ class WarehouseReportController extends Controller
                             </div>
                         </div>';
 
+                    $openOrderQty = (int) $so->open_order_qty;
+
                     $data[] = [
                         'customer' => $so->customer->name ?? '-',
                         'so_no' => '<strong>' . $so->so_no . '</strong><br><span class="text-muted" style="font-size: 0.75rem;">' . date('d M Y', strtotime($so->so_date)) . '</span>',
                         'ordered_qty' => number_format($so->ordered_qty, 0),
+                        'open_order_qty' => $openOrderQty > 0
+                            ? '<span class="text-info fw-bold">' . number_format($openOrderQty, 0) . '</span>'
+                            : '<span class="text-muted">0</span>',
                         'dispatched_qty' => '<span class="text-primary fw-bold">' . number_format($so->dispatched_qty, 0) . '</span>',
                         'pending_qty' => '<span class="' . ($pending_qty > 0 ? 'text-danger' : 'text-success') . ' fw-bold">' . number_format($pending_qty, 0) . '</span>',
                         'fulfillment' => $fulfillmentHtml
@@ -1532,7 +1512,7 @@ class WarehouseReportController extends Controller
                         'destination' => $so->customer->city->city_name ?? '-',
                         'qty' => number_format($dispatchedQty, 0),
                         'invoices' => $invoicesHtml,
-                        'status' => '<span class="badge bg-label-success"><i class="ri-check-double-line align-middle me-1"></i> Dispatched</span>'
+                        'status' => '<span class="badge bg-label-success"><i class="ri ri-check-double-line align-middle me-1"></i> Dispatched</span>'
                     ];
                 }
 
@@ -1894,7 +1874,7 @@ class WarehouseReportController extends Controller
                     }
                     $brandHtml = !empty($brandBadges) ? implode('', $brandBadges) : '<span class="text-muted">-</span>';
 
-                    $actionHtml = '<a href="' . url('sales_orders/view/' . $so->id) . '" target="_blank" class="btn btn-sm btn-primary rounded-pill"><i class="ri-eye-line me-1"></i>View Order</a>';
+                    $actionHtml = '<a href="' . url('sales_orders/view/' . $so->id) . '" target="_blank" class="btn btn-sm btn-primary rounded-pill"><i class="ri ri-eye-line me-1"></i>View Order</a>';
 
                     $data[] = [
                         'so_no' => $soNoHtml,
@@ -2042,7 +2022,7 @@ class WarehouseReportController extends Controller
                                 'style' => 'cursor: pointer;',
                                 'class' => 'clickable-brand-row'
                             ],
-                            'brand' => '<strong class="text-uppercase text-primary">' . htmlspecialchars($bName) . ' <i class="ri-arrow-right-s-line ms-1 small"></i></strong>',
+                            'brand' => '<strong class="text-uppercase text-primary">' . htmlspecialchars($bName) . ' <i class="ri ri-arrow-right-s-line ms-1 small"></i></strong>',
                             'missed_orders' => '<span class="badge bg-label-danger px-3 py-1 fs-6 fw-bold">' . number_format($missedOrdersCount, 0) . '</span>',
                             'lost_value' => '<span class="text-danger fw-bold fs-6">₹' . number_format($totalLostValue, 2) . '</span>'
                         ];
@@ -2295,9 +2275,9 @@ class WarehouseReportController extends Controller
                     $uniquePendingArtNos = array_unique($pendingArtNos);
                     if (!empty($uniquePendingArtNos)) {
                         $countArtNos = count($uniquePendingArtNos);
-                        $awaitingHtml = '<button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 text-nowrap view-awaiting-art-nos" data-so-id="' . $so->so_id . '" data-so-no="' . htmlspecialchars($so->so_no) . '" data-count="' . $countArtNos . '" data-bs-toggle="tooltip" title="Click to view pending Art Nos hierarchy"><i class="ri-eye-line me-1"></i>View Art No (' . $countArtNos . ')</button>';
+                        $awaitingHtml = '<button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 text-nowrap view-awaiting-art-nos" data-so-id="' . $so->so_id . '" data-so-no="' . htmlspecialchars($so->so_no) . '" data-count="' . $countArtNos . '" data-bs-toggle="tooltip" title="Click to view pending Art Nos hierarchy"><i class="ri ri-eye-line me-1"></i>View Art No (' . $countArtNos . ')</button>';
                     } else {
-                        $awaitingHtml = '<span class="text-success small fw-bold"><i class="ri-check-double-line me-1"></i>None / Closed</span>';
+                        $awaitingHtml = '<span class="text-success small fw-bold"><i class="ri ri-check-double-line me-1"></i>None / Closed</span>';
                     }
 
                     // Place
@@ -2902,9 +2882,9 @@ class WarehouseReportController extends Controller
             $completionHtml = '<span class="badge ' . $pctBadgeClass . ' fw-bold px-2 py-1">' . number_format($completionPct, 1) . '%</span>';
 
             if ($countArtNos > 0) {
-                $awaitingHtml = '<button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 text-nowrap view-awaiting-art-nos" data-so-id="' . $so->so_id . '" data-so-no="' . htmlspecialchars($so->so_no) . '" data-count="' . $countArtNos . '"><i class="ri-eye-line me-1"></i>View Art No (' . $countArtNos . ')</button>';
+                $awaitingHtml = '<button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 text-nowrap view-awaiting-art-nos" data-so-id="' . $so->so_id . '" data-so-no="' . htmlspecialchars($so->so_no) . '" data-count="' . $countArtNos . '"><i class="ri ri-eye-line me-1"></i>View Art No (' . $countArtNos . ')</button>';
             } else {
-                $awaitingHtml = '<span class="text-success small fw-bold"><i class="ri-check-double-line me-1"></i>None / Closed</span>';
+                $awaitingHtml = '<span class="text-success small fw-bold"><i class="ri ri-check-double-line me-1"></i>None / Closed</span>';
             }
 
             $statusHtml = ($pendingQty <= 0) 
@@ -2917,9 +2897,7 @@ class WarehouseReportController extends Controller
                 $orderTypeBadge = '<span class="badge ' . $typeClass . '">' . htmlspecialchars($so->order_type) . '</span>';
             }
 
-            $orderaxeNoHtml = !empty($so->orderaxe_order_no) 
-                ? '<span class="fw-semibold text-dark">' . htmlspecialchars($so->orderaxe_order_no) . '</span>' 
-                : '<span class="text-muted">-</span>';
+            $orderaxeNoHtml = !empty($so->orderaxe_order_no) ? '<span class="fw-semibold text-dark">' . htmlspecialchars($so->orderaxe_order_no) . '</span>' : '<span class="text-muted">-</span>';
 
             $orderDateStr = !empty($so->request_date) ? date('d-m-Y', strtotime($so->request_date)) : (!empty($so->so_date) ? date('d-m-Y', strtotime($so->so_date)) : '-');
             $soDateStr = !empty($so->so_date) ? date('d-m-Y', strtotime($so->so_date)) : '-';
@@ -3004,7 +2982,6 @@ class WarehouseReportController extends Controller
                 $status = '<span class="badge bg-danger">Pending</span>';
             }
 
-            // Format Sleeve: parse JSON array if present, convert FS -> Full, HS -> Half
             $rawSleeve = $item->sleeve ?: $item->stock_sleeve;
             if (!empty($rawSleeve) && is_string($rawSleeve) && str_starts_with(trim($rawSleeve), '[')) {
                 $decoded = json_decode($rawSleeve, true);
@@ -3021,10 +2998,8 @@ class WarehouseReportController extends Controller
                 $sleeveFormatted = $rawSleeve ? htmlspecialchars($rawSleeve) : '-';
             }
 
-            // Size: use sales_order_items.size_id directly
             $sizeVal = $item->size_id ?: ($item->stock_size ?: '-');
 
-            // Format Category Name as Cw-White-F/S or Cw-White-H/S
             $formattedCategory = null;
             if (!empty($item->category_name)) {
                 $catStr = str_replace([' ', '_'], '-', trim($item->category_name));
@@ -3866,7 +3841,7 @@ class WarehouseReportController extends Controller
                 $statusBadge = '<span class="badge bg-label-danger">Cancelled</span>';
             }
 
-            $actionBtn = '<a href="' . $invUrl . '" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2"><i class="ri-eye-line me-1"></i>View</a>';
+            $actionBtn = '<a href="' . $invUrl . '" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2"><i class="ri ri-eye-line me-1"></i>View</a>';
 
             $data[] = [
                 'sno' => $sno++,

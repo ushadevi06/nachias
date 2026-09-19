@@ -119,15 +119,15 @@ class OrderaxeService
             }
 
             $transferMs = $orderData['transfer_to_erp_on'] ?? $orderData['submitted_on'] ?? $orderData['updated_at'] ?? $orderData['order_date'] ?? $orderData['date'] ?? $orderData['created_at'] ?? 0;
-            $soDate = date('Y-m-d');
             if ($transferMs > 0) {
                 $dt = new \DateTime('@' . (int)($transferMs / 1000));
                 $dt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
-                $soDate = $dt->format('Y-m-d');
-                if ($soDate < '2026-07-02') {
+                $transferDate = $dt->format('Y-m-d');
+                if ($transferDate < '2026-07-02') {
                     return 'skipped';
                 }
             }
+            $soDate = date('Y-m-d');
 
             $orderaxeRefId = $orderData['retailer']['reference_id'] ?? null;
             $deliveryDate = null;
@@ -137,7 +137,7 @@ class OrderaxeService
                 $deliveryDate = $delDt->format('Y-m-d');
             }
 
-            $createdMs = $orderData['created_at'] ?? $orderData['order_date'] ?? $orderData['submitted_on'] ?? 0;
+            $createdMs = $orderData['order_date'] ?? $orderData['created_at'] ?? $orderData['submitted_on'] ?? 0;
             $requestDate = $soDate;
             if ($createdMs > 0) {
                 $cDt = new \DateTime('@' . (int)($createdMs / 1000));
@@ -148,11 +148,11 @@ class OrderaxeService
             $existingOrder = SalesOrder::where('order_no', $orderNo)->first();
             
             if ($existingOrder) {
-                $existingOrder->update([
-                    'so_date' => $soDate,
-                    'request_date' => $requestDate,
-                    'delivery_date' => $deliveryDate ?? $existingOrder->delivery_date
-                ]);
+                $updateData = ['request_date' => $requestDate];
+                if (!empty($deliveryDate)) {
+                    $updateData['delivery_date'] = $deliveryDate;
+                }
+                $existingOrder->update($updateData);
                 return 'synced';
             }
 

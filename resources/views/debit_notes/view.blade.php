@@ -45,7 +45,7 @@
                                     <th>#</th>
                                     <th>Debit Note No.</th>
                                     <th>Date</th>
-                                    <th>Invoice No.</th>
+                                    <th>Invoice / Stock No.</th>
                                     <th>Supplier Name</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>

@@ -31,19 +31,60 @@
                                 @error('debit_note_date') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
+                                <div class="card p-2 border shadow-none bg-light h-100 d-flex justify-content-center">
+                                    <label class="form-label text-dark fw-semibold small mb-1">Debit Note Against <span class="text-danger">*</span></label>
+                                    <div class="d-flex gap-4 align-items-center">
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="debit_note_type" id="type_stock" value="stock" {{ old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice') == 'stock' ? 						'checked' : '' }} {{ isset($debitNote) ? 'disabled' : '' }}>
+                                            <label class="form-check-label fw-semibold" for="type_stock">Stock</label>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="debit_note_type" id="type_pi" value="purchase_invoice" {{ old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice') == 						'purchase_invoice' ? 'checked' : '' }} {{ isset($debitNote) ? 'disabled' : '' }}>
+                                            <label class="form-check-label fw-semibold" for="type_pi">Purchase Invoice</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if(isset($debitNote))
+                                    <input type="hidden" name="debit_note_type" value="{{ $debitNote->debit_note_type ?? 'purchase_invoice' }}">
+                                @endif
+                                @error('debit_note_type') <div class="text-danger">{{ $message }}</div> @enderror
+                            </div>
+
+                            @php
+                                $currentType = old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice');
+                                $selectName = $currentType == 'stock' ? 'stock_entry_id' : 'purchase_invoice_id';
+                            @endphp
+                            <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="purchase_invoice_id" name="purchase_invoice_id" class="form-select select2" data-placeholder="Select Invoice" {{ isset($debitNote) ? 'disabled' : '' }}>
-                                        <option value="">Select Invoice</option>
-                                        @foreach($purchaseInvoices as $invoice)
-                                            <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>{{ $invoice->invoice_no }}  ({{ $invoice->supplier->name ?? '' }} - {{ $invoice->supplier->code ?? '' }})</option>
-                                        @endforeach
+                                    <select id="document_select_id" name="{{ $selectName }}" class="form-select select2" data-placeholder="Select Document" {{ isset($debitNote) ? 'disabled' : '' }}>
+                                        <option value="">{{ $currentType == 'stock' ? 'Select Stock Entry' : 'Select Purchase Invoice' }}</option>
+                                        @if($currentType == 'stock')
+                                            @foreach($stockEntries as $entry)
+                                                @php
+                                                    $supplierName = $entry->grnEntry?->supplier?->name ?? '';
+                                                    $supplierCode = $entry->grnEntry?->supplier?->code ?? '';
+                                                    $supplierText = $supplierName ? " ($supplierName" . ($supplierCode ? " - $supplierCode" : "") . ")" : "";
+                                                    $entryNo = $entry->stock_entry_no ?: ('STK-' . $entry->id);
+                                                @endphp
+                                                <option value="{{ $entry->id }}" {{ (old('stock_entry_id', $debitNote->stock_entry_id ?? '') == $entry->id) ? 'selected' : '' }}>
+                                                    {{ $entryNo }}{{ $supplierText }}
+                                                </option>
+                                            @endforeach
+                                        @else
+                                            @foreach($purchaseInvoices as $invoice)
+                                                <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>
+                                                    {{ $invoice->invoice_no }} ({{ $invoice->supplier->name ?? '' }} - {{ $invoice->supplier->code ?? '' }})
+                                                </option>
+                                            @endforeach
+                                        @endif
                                     </select>
                                     @if(isset($debitNote))
-                                        <input type="hidden" name="purchase_invoice_id" value="{{ $debitNote->purchase_invoice_id }}">
+                                        <input type="hidden" name="{{ $selectName }}" value="{{ $debitNote->debit_note_type == 'stock' ? $debitNote->stock_entry_id : $debitNote->purchase_invoice_id }}">
                                     @endif
-                                    <label for="purchase_invoice_id">Select Purchase Invoice <span class="text-danger">*</span></label>
+                                    <label for="document_select_id" id="document_select_label">{{ $currentType == 'stock' ? 'Select Stock Entry' : 'Select Purchase Invoice' }} <span class="text-danger">*</span></label>
                                 </div>
                                 @error('purchase_invoice_id') <div class="text-danger">{{ $message }}</div> @enderror
+                                @error('stock_entry_id') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
@@ -77,46 +118,77 @@
 
                 <div class="card mb-4">
                     <div class="card-body">
-                        <div class="card-header-box">
-                            <h4>Item Details</h4>
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+                            <h4 class="mb-0">Item Details</h4>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="form-check m-0">
+                                    <input type="checkbox" id="select_all_items" class="form-check-input me-1">
+                                    <label for="select_all_items" class="form-check-label fw-bold small text-dark">Select All</label>
+                                </div>
+                                <div class="input-group input-group-sm" style="width: 280px;">
+                                    <span class="input-group-text bg-white"><i class="ri ri-search-line"></i></span>
+                                    <input type="text" id="item_search_input" class="form-control" placeholder="Search items (Art No, Name...)">
+                                </div>
+                            </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-bordered">
+                            <table class="table table-bordered align-middle" id="items_table">
                                 <thead>
-                                    <tr class="item-row">
-                                        <th>Select</th>
+                                    <tr class="item-row-header">
+                                        <th style="width: 70px;" class="text-center">Select</th>
                                         <th>Raw Material Name</th>
                                         <th>Art No</th>
                                         <th>Supplier Design Name</th>
-                                        <th>UOM</th>
-                                        <th>Quantity</th>
-                                        <th>Rate</th>
-                                        <th>Amount</th>
+                                        <th style="width: 90px;">UOM</th>
+                                        <th style="width: 140px;">Quantity</th>
+                                        <th style="width: 120px;">Rate</th>
+                                        <th style="width: 140px;">Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody id="items_tbody">
                                     @if(old('items'))
                                         @foreach(old('items') as $index => $item)
                                             @php
-                                             $invItemId = $item['purchase_invoice_item_id'] ?? 0;
-                                             $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->sum('qty_rejected');
-                                             $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $invItemId)
-                                                  ->when(isset($debitNote), function ($q) use ($debitNote) {
-                                                      $q->where('debit_note_id', '!=', $debitNote->id);
-                                                  })->sum('quantity');
-                                             $maxQty = $rejectedQty - $alreadyDebited;
+                                                $invItemId = $item['purchase_invoice_item_id'] ?? null;
+                                                $stkItemId = $item['stock_entry_item_id'] ?? null;
+                                                $maxQty = 0;
+                                                $supplierDesignName = '-';
+                                                $artNo = '-';
 
-                                             $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['rawMaterial.storeCategory', 'purchaseOrderItem', 'purchaseInvoice'])->find($invItemId);
-                                             $categoryName = $dbInvItem->rawMaterial->storeCategory->store_category_name ?? '-';
-                                             $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
-                                             $supplierDesignName = $poItem->supplier_design_name ?? '-';
-                                             $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->first();
-                                             $artNo = $grnItem->art_no ?? '-';
+                                                if ($invItemId) {
+                                                    $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->sum('qty_rejected');
+                                                    $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $invItemId)
+                                                        ->when(isset($debitNote), function ($q) use ($debitNote) {
+                                                            $q->where('debit_note_id', '!=', $debitNote->id);
+                                                        })->sum('quantity');
+                                                    $maxQty = max(0, $rejectedQty - $alreadyDebited);
+
+                                                    $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['rawMaterial.storeCategory', 'purchaseOrderItem', 'purchaseInvoice'])->find($invItemId);
+                                                    $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                                                    $supplierDesignName = $poItem->supplier_design_name ?? '-';
+                                                    $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->first();
+                                                    $artNo = $grnItem->art_no ?? '-';
+                                                } elseif ($stkItemId) {
+                                                    $dbStockItem = \App\Models\StockEntryItem::find($stkItemId);
+                                                    $rejectedQty = floatval(($dbStockItem->qty_rejected ?? 0) > 0 ? $dbStockItem->qty_rejected : ($dbStockItem->qty_in > 0 ? $dbStockItem->qty_in : $dbStockItem->qty_out));
+                                                    $alreadyDebited = \App\Models\DebitNoteItem::where('stock_entry_item_id', $stkItemId)
+                                                        ->when(isset($debitNote), function ($q) use ($debitNote) {
+                                                            $q->where('debit_note_id', '!=', $debitNote->id);
+                                                        })->sum('quantity');
+                                                    $maxQty = max(0, $rejectedQty - $alreadyDebited);
+                                                    $artNo = $dbStockItem->art_no ?? '-';
+                                                    $supplierDesignName = '-';
+                                                }
                                             @endphp
                                              <tr class="item-row">
                                                   <td>
                                                       <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
-                                                      <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item['purchase_invoice_item_id'] ?? '' }}">
+                                                      @if($invItemId)
+                                                          <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $invItemId }}">
+                                                      @endif
+                                                      @if($stkItemId)
+                                                          <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" value="{{ $stkItemId }}">
+                                                      @endif
                                                       <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
                                                   </td>
                                                   <td>
@@ -133,7 +205,7 @@
                                                      {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
                                                  </td>
                                                  <td>
-                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item['quantity'] ?? 0 }}" step="0.01" data-max="{{ $maxQty }}">
+                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item['quantity'] ?? 0 }}" 							step="0.01" data-max="{{ $maxQty }}">
                                                      @error('items.'.$index.'.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                      @enderror
@@ -149,22 +221,40 @@
                                                  </td>
                                              </tr>
                                          @endforeach
-                                     @elseif(isset($debitNote))
+                                    @elseif(isset($debitNote))
                                          @foreach($debitNote->items as $index => $item)
                                              @php
-                                                 $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
-                                                 $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
-                                                 $maxQty = $rejectedQty - $alreadyDebited;
-                                                 $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
-                                                 $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
-                                                 $supplierDesignName = $poItem->supplier_design_name ?? '-';
-                                                 $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
-                                                 $artNo = $grnItem->art_no ?? '-';
+                                                 $maxQty = 0;
+                                                 $supplierDesignName = '-';
+                                                 $artNo = '-';
+
+                                                 if ($item->purchase_invoice_item_id) {
+                                                     $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
+                                                     $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
+                                                     $maxQty = max(0, $rejectedQty - $alreadyDebited);
+                                                     $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
+                                                     $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                                                     $supplierDesignName = $poItem->supplier_design_name ?? '-';
+                                                     $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
+                                                     $artNo = $grnItem->art_no ?? '-';
+                                                 } elseif ($item->stock_entry_item_id) {
+                                                     $dbStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
+                                                     $rejectedQty = floatval(($dbStockItem->qty_rejected ?? 0) > 0 ? $dbStockItem->qty_rejected : ($dbStockItem->qty_in > 0 ? $dbStockItem->qty_in : $dbStockItem->qty_out));
+                                                     $alreadyDebited = \App\Models\DebitNoteItem::where('stock_entry_item_id', $item->stock_entry_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
+                                                     $maxQty = max(0, $rejectedQty - $alreadyDebited);
+                                                     $artNo = $dbStockItem->art_no ?? '-';
+                                                     $supplierDesignName = '-';
+                                                 }
                                              @endphp
                                              <tr class="item-row">
                                                  <td>
                                                      <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" checked>
-                                                     <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item->purchase_invoice_item_id }}">
+                                                     @if($item->purchase_invoice_item_id)
+                                                         <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item->purchase_invoice_item_id }}">
+                                                     @endif
+                                                     @if($item->stock_entry_item_id)
+                                                         <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" value="{{ $item->stock_entry_item_id }}">
+                                                     @endif
                                                      <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item->raw_material_id }}">
                                                  </td>
                                                  <td>
@@ -181,7 +271,7 @@
                                                      {{ $item->uom->uom_code ?? '-' }}
                                                  </td>
                                                  <td>
-                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item->quantity }}" step="0.01" data-max="{{ $maxQty }}">
+                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item->quantity }}" 							step="0.01" data-max="{{ $maxQty }}">
                                                      @error('items.'.$index.'.quantity')
                                                          <div class="text-danger small mt-1">{{ $message }}</div>
                                                      @enderror
@@ -195,10 +285,10 @@
                                                  </td>
                                              </tr>
                                          @endforeach
-                                     @else
-                                         <tr>
-                                             <td colspan="8" class="text-center">No items added yet.</td>
-                                         </tr>
+                                    @else
+                                        <tr>
+                                            <td colspan="8" class="text-center">No items added yet.</td>
+                                        </tr>
                                      @endif
                                 </tbody>
                             </table>
@@ -656,10 +746,65 @@
             calculateTotals();
             refreshChargeDropdownState();
         });
-        $('#purchase_invoice_id').on('change', function () {
-            let invoiceId = $(this).val();
-            if (invoiceId) {
-                $.get("{{ url('debit_notes/get-invoice-details') }}/" + invoiceId, function (res) {
+        if ($('#document_select_id').length) {
+            if ($('#document_select_id').hasClass('select2-hidden-accessible')) {
+                $('#document_select_id').select2('destroy');
+            }
+            $('#document_select_id').select2({
+                dropdownParent: $('#document_select_id').parent()
+            });
+        }
+
+        $('input[name="debit_note_type"]').on('change', function () {
+            let type = $(this).val();
+            let $select = $('#document_select_id');
+
+            if (type === 'stock') {
+                $('#document_select_label').html('Select Stock Entry <span class="text-danger">*</span>');
+                $select.attr('name', 'stock_entry_id');
+            } else {
+                $('#document_select_label').html('Select Purchase Invoice <span class="text-danger">*</span>');
+                $select.attr('name', 'purchase_invoice_id');
+            }
+
+            $('#supplier_name').val('');
+            $('#supplier_id_hidden').val('');
+            $('#items_tbody').html('<tr><td colspan="8" class="text-center">No items added yet.</td></tr>');
+            calculateTotals();
+
+            let url = type === 'stock' ? "{{ url('debit_notes/get-stock-entries') }}" : "{{ url('debit_notes/get-purchase-invoices') }}";
+
+            $.get(url, function (res) {
+                let list = res.entries || res.invoices || res;
+                if ($select.hasClass('select2-hidden-accessible')) {
+                    $select.select2('destroy');
+                }
+                $select.empty();
+                $select.append('<option value="">' + (type === 'stock' ? 'Select Stock Entry' : 'Select Purchase Invoice') + '</option>');
+                if (Array.isArray(list)) {
+                    $.each(list, function (i, doc) {
+                        $select.append('<option value="' + doc.id + '">' + doc.text + '</option>');
+                    });
+                }
+                $select.select2({
+                    dropdownParent: $select.parent()
+                });
+            });
+        });
+
+        $(document).on('change', '#document_select_id', function () {
+            let docId = $(this).val();
+            let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
+
+            $('#item_search_input').val('');
+            $('#select_all_items').prop('checked', false);
+
+            if (docId) {
+                let fetchUrl = type === 'stock'
+                    ? "{{ url('debit_notes/get-stock-details') }}/" + docId
+                    : "{{ url('debit_notes/get-invoice-details') }}/" + docId;
+
+                $.get(fetchUrl, function (res) {
                     if (res.success) {
                         $('#supplier_name').val(res.supplier_name);
                         $('#supplier_id_hidden').val(res.supplier_id);
@@ -674,46 +819,81 @@
 
                         let tbody = $('#items_tbody');
                         tbody.empty();
-                        res.items.forEach((item, index) => {
-                            tbody.append(`
-                                <tr class="item-row">
-                                    <td>
-                                        <input type="checkbox" name="items[${index}][selected]" value="1" class="form-check-input item-checkbox" checked>
-                                        <input type="hidden" name="items[${index}][purchase_invoice_item_id]" value="${item.id}">
-                                        <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
-                                    </td>
-                                    <td>
-                                        <span class="fw-bold">${item.raw_material_name}</span>
-                                    </td>
-                                    <td>${item.art_no || '-'}</td>
-                                    <td>${item.supplier_design_name || '-'}</td>
-                                    <td>
-                                        <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
-                                        ${item.uom_code}
-                                    </td>
-                                    <td>
-                                        <input type="number" name="items[${index}][quantity]" class="form-control item-qty" value="${item.quantity}" step="0.01" data-max="${item.max_quantity}">
-                                        <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
-                                    </td>
-                                    <td>
-                                        <input type="number" name="items[${index}][rate]" class="form-control item-rate" value="${item.rate}" step="0.01" readonly>
-                                    </td>
-                                    <td>
-                                        <input type="number" name="items[${index}][amount]" class="form-control item-amount" value="${parseFloat(item.amount).toFixed(2)}" step="0.01" readonly>
-                                    </td>
-                                </tr>
-                            `);
-                        });
+
+                        if (!res.items || res.items.length === 0) {
+                            tbody.append('<tr><td colspan="8" class="text-center">No items available for Debit Note.</td></tr>');
+                        } else {
+                            res.items.forEach((item, index) => {
+                                let itemHiddenId = type === 'stock'
+                                    ? `<input type="hidden" name="items[${index}][stock_entry_item_id]" value="${item.id}">`
+                                    : `<input type="hidden" name="items[${index}][purchase_invoice_item_id]" value="${item.id}">`;
+
+                                tbody.append(`
+                                    <tr class="item-row">
+                                        <td class="text-center">
+                                            <input type="checkbox" name="items[${index}][selected]" value="1" class="form-check-input item-checkbox">
+                                            ${itemHiddenId}
+                                            <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold">${item.raw_material_name}</span>
+                                        </td>
+                                        <td>${item.art_no || '-'}</td>
+                                        <td>${item.supplier_design_name || '-'}</td>
+                                        <td>
+                                            <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
+                                            ${item.uom_code}
+                                        </td>
+                                        <td>
+                                            <input type="number" name="items[${index}][quantity]" class="form-control item-qty" value="${item.quantity}" step="0.01" data-max="${item.max_quantity}">
+                                            <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="items[${index}][rate]" class="form-control item-rate" value="${item.rate}" step="0.01" readonly>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="items[${index}][amount]" class="form-control item-amount" value="${parseFloat(item.amount).toFixed(2)}" step="0.01" readonly>
+                                        </td>
+                                    </tr>
+                                `);
+                            });
+                        }
                         calculateTotals();
                     }
                 });
             } else {
                 $('#supplier_name').val('');
                 $('#supplier_id_hidden').val('');
-                $('#items_tbody').empty();
+                $('#items_tbody').html('<tr><td colspan="8" class="text-center">No items added yet.</td></tr>');
                 calculateTotals();
             }
         });
+
+        $(document).on('keyup input', '#item_search_input', function () {
+            let searchTerm = $(this).val().toLowerCase().trim();
+            $('#items_tbody tr.item-row').each(function () {
+                let rowText = $(this).text().toLowerCase();
+                if (searchTerm === '' || rowText.indexOf(searchTerm) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+            updateSelectAllState();
+        });
+
+        $(document).on('change', '#select_all_items', function () {
+            let isChecked = $(this).is(':checked');
+            $('#items_tbody tr.item-row:visible').find('.item-checkbox').prop('checked', isChecked);
+            calculateTotals();
+        });
+
+        function updateSelectAllState() {
+            let $visibleRows = $('#items_tbody tr.item-row:visible');
+            let totalVisible = $visibleRows.length;
+            let checkedVisible = $visibleRows.find('.item-checkbox:checked').length;
+            $('#select_all_items').prop('checked', totalVisible > 0 && totalVisible === checkedVisible);
+        }
 
         $('input[name="other_state"]').on('change', function () {
             if ($(this).val() === 'Y') {
@@ -751,12 +931,14 @@
                 row.find('.item-amount').val((qty * rate).toFixed(2));
             }
             calculateTotals();
+            updateSelectAllState();
         });
+
 
         $(document).on('change', '.item-checkbox, input[name="round_off_type"]', function () {
             calculateTotals();
         });
-
+        
         $(document).on('input', '#round_off', function () {
             calculateTotals();
         });
@@ -919,6 +1101,37 @@
         if (!$('input[name="other_state"]:checked').length) {
             $('#other_state_no').prop('checked', true);
         }
+        
+        function validateItemQty($input) {
+            let qty = parseFloat($input.val()) || 0;
+            let maxQty = parseFloat($input.attr('data-max'));
+            let $errDiv = $input.siblings('.qty-error-msg');
+
+            if (!isNaN(maxQty) && maxQty >= 0 && qty > maxQty) {
+                $input.addClass('is-invalid');
+                if ($errDiv.length) {
+                    $errDiv.text(`Exceeds max available (${maxQty})`).show();
+                }
+                return false;
+            } else {
+                $input.removeClass('is-invalid');
+                if ($errDiv.length) {
+                    $errDiv.text('').hide();
+                }
+                return true;
+            }
+        }
+
+        $(document).on('input change keyup blur', '.item-qty', function () {
+            validateItemQty($(this));
+            calculateTotals();
+        });
+
+
+		$('.item-qty').each(function () {
+            validateItemQty($(this));
+        });
+
         $(document).on('input', '.item-qty', function () {
             calculateTotals();
         });
@@ -930,8 +1143,9 @@
                 let $btn = $form.find('button[type="submit"]');
                 $btn.prop('disabled', false).html('Submit');
             };
+            let $checkedBoxes = $('.item-checkbox:checked');
 
-            if ($('.item-checkbox:checked').length === 0) {
+            if ($checkedBoxes.length === 0) {
                 e.preventDefault();
                 resetBtn();
                 if (typeof Swal !== 'undefined') {
@@ -946,7 +1160,52 @@
                 }
                 return false;
             }
+            let hasExceededQty = false;
+            let exceededItemName = '';
+            let exceededMaxQty = 0;
+            let exceededEnteredQty = 0;
+            let $exceededInput = null;
 
+            $checkedBoxes.each(function () {
+                let $row = $(this).closest('tr');
+                let $qtyInput = $row.find('.item-qty');
+                let qty = parseFloat($qtyInput.val()) || 0;
+                let maxQty = parseFloat($qtyInput.attr('data-max'));
+                let rawMatName = $row.find('td:nth-child(2)').text().trim();
+
+                if (!isNaN(maxQty) && maxQty >= 0 && qty > maxQty) {
+                    hasExceededQty = true;
+                    exceededItemName = rawMatName;
+                    exceededMaxQty = maxQty;
+                    exceededEnteredQty = qty;
+                    $exceededInput = $qtyInput;
+                    $qtyInput.addClass('is-invalid');
+                    let $errDiv = $qtyInput.siblings('.qty-error-msg');
+                    if ($errDiv.length) {
+                        $errDiv.text(`Exceeds max available (${maxQty})`).show();
+                    }
+                    return false;
+                }
+            });
+
+            if (hasExceededQty) {
+                e.preventDefault();
+                resetBtn();
+                if ($exceededInput) {
+                    $exceededInput.focus();
+                }
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Quantity Exceeded',
+                        html: `Quantity entered (<b>${exceededEnteredQty}</b>) for item <b>"${exceededItemName}"</b> exceeds the maximum available quantity of <b>${exceededMaxQty}</b>.`,
+                        confirmButtonColor: '#8c57ff'
+                    });
+                } else {
+                    alert(`Quantity entered (${exceededEnteredQty}) for item "${exceededItemName}" exceeds the maximum available quantity of ${exceededMaxQty}.`);
+                }
+                return false;
+            }
         });
         $(document).on('keypress', '.item-qty, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent', function (e) {
             if (e.which === 45 || e.which === 43) {

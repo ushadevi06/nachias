@@ -110,6 +110,7 @@ window.initWarehouseSummaryTable = function() {
         $('#warehouseSummaryTable').DataTable().destroy();
     }
     $('#warehouseSummaryTable').DataTable({
+        processing: true,
         responsive: true,
         paging: true,
         searching: true,
@@ -147,7 +148,7 @@ function drillDownToWarehouseSummaryStyle(brandId, brandName) {
     currentWhSumBrandName = brandName;
 
     $('#warehouseSummaryBreadcrumbs').attr('style', 'display: flex !important;');
-    $('#warehouseSummaryBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
+    $('#warehouseSummaryBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
 
     $('#warehouseSummaryBrandContainer').hide();
     $('#warehouseSummaryStyleContainer').show();
@@ -216,9 +217,7 @@ function loadWarehouseSummaryStylesTable(brandId, brandName) {
                 $('#whSumStyleFootSingle').text(json.totals.single_store_stock || '0');
                 $('#whSumStyleFootTotal').text(json.totals.total_stock || '0');
                 let utilText = json.totals.utilization_text || '0%';
-                $('#whSumStyleFootUtil')
-                    .html(json.totals.utilization || '<span class="badge bg-primary px-3 py-2 fs-6">0%</span>')
-                    .attr('data-export', utilText);
+                $('#whSumStyleFootUtil').html(json.totals.utilization || '<span class="badge bg-primary px-3 py-2 fs-6">0%</span>').attr('data-export', utilText);
                 $('#whSumStyleFootDamage').text(json.totals.damage_stock || '0');
             }
         }

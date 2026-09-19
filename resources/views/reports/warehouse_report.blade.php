@@ -25,7 +25,7 @@
         <div class="card-body py-4">
             <form id="warehouseReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('warehouse_reports') }}" onsubmit="return false;">
                 <div class="col-12 col-md-4 col-xl-2">
-                    <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
+                    <label class="form-label small fw-bold text-primary"><i class="ri ri-file-chart-line me-1"></i>Select Report Type</label>
                     <select class="form-select select2" id="report_type_select" name="report_type">
                         <option value="warehouse-summary" selected>🏬 Warehouse Summary</option>
                         <option value="brand-sales">📊 Brandwise Sales</option>
@@ -42,13 +42,11 @@
                         <option value="brandwise-completion">📈 Brandwise Completion</option>
                     </select>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2">
-                    <label class="form-label small fw-bold text-muted">From Date</label>
-                    <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
-                </div>
-                <div class="col-6 col-md-4 col-xl-2">
-                    <label class="form-label small fw-bold text-muted">To Date</label>
-                    <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
+                <div class="col-12 col-md-4 col-xl-3">
+                    <label class="form-label small fw-bold text-muted">Date Range</label>
+                    <input type="text" class="form-control report_date_range" id="warehouse_date_range" placeholder="DD-MM-YYYY to DD-MM-YYYY" value="{{ (request('from_date') && request('to_date')) ? (request('from_date') == request('to_date') ? request('from_date') : request('from_date') . ' to ' . request('to_date')) : (request('from_date') ?? '') }}">
+                    <input type="hidden" class="start_date" name="from_date" value="{{ request('from_date') }}">
+                    <input type="hidden" class="end_date" name="to_date" value="{{ request('to_date') }}">
                 </div>
                 <div class="col-6 col-md-4 col-xl-2">
                     <label class="form-label small fw-bold text-muted">Brand</label>
@@ -77,11 +75,11 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-12 col-md-4 col-xl-2 d-flex gap-1 align-items-end">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                        <i class="ri ri-search-line me-1"></i> Search
+                <div class="col-12 col-md-1 col-xl-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill p-2">
+                        <i class="ri ri-search-line me-1"></i>
                     </button>
-                    <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border">
+                    <button type="button" id="btn-reset-report" class="btn btn-light rounded-pill border p-2">
                         <i class="ri ri-refresh-line"></i>
                     </button>
                 </div>
@@ -108,7 +106,6 @@
                         @endforeach
                     </select>
                 </div>
-                <span class="badge bg-label-primary px-3 py-2 rounded-pill" id="active_report_badge">Warehouse Analytics</span>
             </div>
         </div>
         <div class="card-body py-4">
@@ -270,6 +267,21 @@
     .badge.bg-label-danger { background: #fee2e2; color: #991b1b; }
     .badge.bg-label-info { background: #e0f2fe; color: #0369a1; }
 
+    /* Processing Indicator Styling (3 Blue Dots Card) */
+    div.dataTables_processing {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1050;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 24px;
+        min-width: 200px;
+    }
+
 </style>
 @endsection
 
@@ -284,7 +296,6 @@ $.extend(true, $.fn.dataTable.defaults, {
             footer: true,
             title: function () {
                 var title = $('#active_report_title').text().trim() || 'Warehouse Report';
-                // Only use breadcrumb text when the drill-down breadcrumb nav is visible
                 var $breadcrumbEl = $('#warehouseSummaryBreadcrumbText span.text-primary');
                 if ($breadcrumbEl.length && $('#warehouseSummaryBreadcrumbs').is(':visible')) {
                     title += ' - ' + $breadcrumbEl.text().trim();
@@ -303,17 +314,14 @@ $.extend(true, $.fn.dataTable.defaults, {
                         return data;
                     },
                     footer: function (data, row, column, node) {
-                        // Use data-export attribute if set (e.g. utilization cell)
                         var exportVal = node ? $(node).attr('data-export') : undefined;
                         if (exportVal !== undefined) {
-                            // Prefix zero-width space so DataTables doesn't convert "12.26%" to 0.1226
                             return exportVal.indexOf('%') !== -1 ? '\u200B' + exportVal : exportVal;
                         }
                         if (typeof data === 'string') {
                             var temp = $('<div>').html(data);
                             temp.find('.no-export, .d-none, button, i, script').remove();
                             var txt = temp.text().trim();
-                            // Prevent % → decimal conversion by DataTables
                             return txt.indexOf('%') !== -1 ? '\u200B' + txt : txt;
                         }
                         return data;
@@ -323,10 +331,9 @@ $.extend(true, $.fn.dataTable.defaults, {
             customize: function (xlsx) {
                 var sheet   = xlsx.xl.worksheets['sheet1.xml'];
                 var styles  = xlsx.xl['styles.xml'];
-                var ZWS     = '\u200B'; // zero-width space prefix we added in format functions
+                var ZWS     = '\u200B'; 
 
-                // Collect all numFmtIds that represent percentage formats
-                var pctFmtIds = [9, 10]; // built-in: 9="0%", 10="0.00%"
+                var pctFmtIds = [9, 10]; 
                 $('numFmt', styles).each(function () {
                     var code = $(this).attr('formatCode') || '';
                     if (code.indexOf('%') !== -1) {
@@ -334,7 +341,6 @@ $.extend(true, $.fn.dataTable.defaults, {
                     }
                 });
 
-                // Build array: xf index → numFmtId
                 var xfs = [];
                 $('cellXfs xf', styles).each(function () {
                     xfs.push(parseInt($(this).attr('numFmtId') || 0, 10));
@@ -345,7 +351,6 @@ $.extend(true, $.fn.dataTable.defaults, {
                     var fmtId = xfs[s] || 0;
 
                     if (pctFmtIds.indexOf(fmtId) !== -1) {
-                        // Body rows: percentage-formatted numeric cell → convert to "X.XX%" string
                         var raw = parseFloat($('v', this).text());
                         if (!isNaN(raw)) {
                             var pctStr = parseFloat((raw * 100).toFixed(2)) + '%';
@@ -354,7 +359,6 @@ $.extend(true, $.fn.dataTable.defaults, {
                             $(this).append('<v>' + pctStr + '</v>');
                         }
                     } else if ($(this).attr('t') === 'str') {
-                        // Footer rows: strip the zero-width space prefix we added
                         var vEl = $(this).find('v');
                         if (vEl.length && vEl.text().charAt(0) === ZWS) {
                             vEl.text(vEl.text().substring(1));
@@ -369,7 +373,6 @@ $.extend(true, $.fn.dataTable.defaults, {
             footer: true,
             title: function () {
                 var title = $('#active_report_title').text().trim() || 'Warehouse Report';
-                // Only use breadcrumb text when the drill-down breadcrumb nav is visible
                 var $breadcrumbEl = $('#warehouseSummaryBreadcrumbText span.text-primary');
                 if ($breadcrumbEl.length && $('#warehouseSummaryBreadcrumbs').is(':visible')) {
                     title += ' - ' + $breadcrumbEl.text().trim();
@@ -388,7 +391,6 @@ $.extend(true, $.fn.dataTable.defaults, {
             footer: true,
             title: function () {
                 var title = $('#active_report_title').text().trim() || 'Warehouse Report';
-                // Only use breadcrumb text when the drill-down breadcrumb nav is visible
                 var $breadcrumbEl = $('#warehouseSummaryBreadcrumbText span.text-primary');
                 if ($breadcrumbEl.length && $('#warehouseSummaryBreadcrumbs').is(':visible')) {
                     title += ' - ' + $breadcrumbEl.text().trim();
@@ -466,7 +468,7 @@ $(document).ready(function() {
         }
         const originalBtnHtml = submitBtn.data('original-html');
 
-        submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...').prop('disabled', true);
+        submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span>').prop('disabled', true);
         showWarehouseReportLoading(true);
 
         let activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val() || 'warehouse-summary';
@@ -521,7 +523,6 @@ $(document).ready(function() {
         }
     });
 
-    // Auto-trigger initial search on load
     $('#warehouseReportForm').trigger('submit');
 
     function triggerWarehouseExport(buttonClass) {
@@ -530,7 +531,6 @@ $(document).ready(function() {
             $activeTab = $('#' + $('#report_type_select').val());
         }
 
-        // Find the relevant visible/active DataTable
         var targetDt = null;
         var tables = $activeTab.find('table:visible');
         if (!tables.length) {
@@ -562,13 +562,11 @@ $(document).ready(function() {
         var isServerSide = targetDt.settings()[0].oFeatures.bServerSide;
 
         if (isServerSide) {
-            // Server-side table: fetch ALL records before exporting
             var origLen = targetDt.page.len();
             showWarehouseReportLoading(true);
             targetDt.one('draw', function() {
                 showWarehouseReportLoading(false);
                 targetDt.button(buttonClass).trigger();
-                // Restore original page length after a short delay
                 setTimeout(function() {
                     targetDt.page.len(origLen).draw();
                 }, 300);
@@ -592,6 +590,10 @@ $(document).ready(function() {
     $(document).on('click', '#btn-reset-report', function(e) {
         e.preventDefault();
 
+        $('#warehouse_date_range').val('');
+        if ($('#warehouse_date_range')[0] && $('#warehouse_date_range')[0]._flatpickr) {
+            $('#warehouse_date_range')[0]._flatpickr.clear();
+        }
         $('.start_date').val('');
         $('.end_date').val('');
         $('select[name="brand_id"]').val('').trigger('change');

@@ -166,11 +166,11 @@
             const $table = $('.datatables-brandwise-minstock');
             if (!$table.length) return;
 
-            // Auto-select CASINO DHOTI SHIRTS if no brand is chosen
+            // Auto-select CASINO DHOTI if no brand is chosen
             let brandSelect = $('select[name="brand_id"]');
             if (!brandSelect.val()) {
                 let casinoOption = brandSelect.find('option').filter(function() {
-                    return $(this).text().toUpperCase().indexOf('CASINO') !== -1;
+                    return $(this).text().toUpperCase().indexOf('CASINO DHOTI') !== -1 || $(this).text().toUpperCase().indexOf('CASINO') !== -1;
                 }).first();
 
                 if (casinoOption.length) {
@@ -180,7 +180,7 @@
 
             const brandId = brandSelect.val();
             const selectedBrandText = (brandSelect.find('option:selected').text() || '').toUpperCase();
-            const isDhotiBrand = selectedBrandText.indexOf('CASINO DHOTI SHIRTS') !== -1;
+            const isDhotiBrand = selectedBrandText.indexOf('DHOTI') !== -1;
 
             if (isDhotiBrand) {
                 $('th.dhoti-col').show();

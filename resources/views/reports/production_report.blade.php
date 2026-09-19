@@ -34,6 +34,7 @@
                         <select class="form-select select2" id="report_type_select" name="report_type">
                             <option value="production-wip" selected>📊 Production WIP Unit Wise</option>
                             <option value="cutting-section-average">✂️ Cutting Section Average Report</option>
+                            <option value="final-finishing-average">✨ Final Finishing Average Report</option>
                             <option value="casino-cutting-wip">🏭 Casino Cutting WIP Report</option>
                             <option value="stage-wise-wip">🔄 Stage wise WIP Report</option>
                             <option value="production-planning">📋 Production Planning Report</option>
@@ -45,15 +46,13 @@
                             <option value="brand-production">🏷️ Brand Wise Unit Production</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-bold text-muted">From Date</label>
-                        <input type="text" class="form-control start_date" name="from_date"
-                            value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-bold text-muted">To Date</label>
-                        <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}"
-                            placeholder="DD-MM-YYYY">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Date Range</label>
+                        <input type="text" class="form-control report_date_range" id="production_date_range"
+                            placeholder="DD-MM-YYYY to DD-MM-YYYY"
+                            value="{{ (request('from_date') && request('to_date')) ? (request('from_date') == request('to_date') ? request('from_date') : request('from_date') . ' to ' . request('to_date')) : (request('from_date') ?? '') }}">
+                        <input type="hidden" class="start_date" name="from_date" value="{{ request('from_date') }}">
+                        <input type="hidden" class="end_date" name="to_date" value="{{ request('to_date') }}">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-bold text-muted">Brand</label>
@@ -84,7 +83,7 @@
                         <button type="submit" class="btn btn-primary w-100 rounded-pill p-2" title="Search">
                             <i class="ri ri-search-line"></i>
                         </button>
-                        <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border p-2"
+                        <button type="button" id="btn-reset-report" class="btn btn-light rounded-pill border p-2"
                             title="Reset">
                             <i class="ri ri-refresh-line"></i>
                         </button>
@@ -174,31 +173,21 @@
                                         <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap" style="background-color: #fff2cc; min-width: 70px;">LOGO QTY</th>
                                         <th colspan="{{ count($cuttingPlants) + 1 }}" class="fw-bold text-dark border" style="background-color: #ffc000;">CUTTING ISSUE</th>
                                         <th rowspan="2" class="align-middle fw-bold text-dark border" style="background-color: #fce4d6; min-width: 85px;">EFFICIENCY</th>
-                                        <th rowspan="2" class="align-middle fw-bold text-dark border"
-                                            style="background-color: #fce4d6; min-width: 65px;">1hr OT</th>
-                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap"
-                                            style="background-color: #fce4d6; min-width: 80px;">TARGET PER DAY</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border" style="background-color: #fce4d6; min-width: 65px;">1hr OT</th>
+                                        <th rowspan="2" class="align-middle fw-bold text-dark border text-wrap" style="background-color: #fce4d6; min-width: 80px;">TARGET PER DAY</th>
                                     </tr>
                                     <tr style="background-color: #fff2cc;">
                                         <!-- Dynamic Cutting Master Sub-headers -->
                                         @foreach($cuttingEmployees as $emp)
-                                            <th class="fw-bold text-dark border text-nowrap"
-                                                style="background-color: #ffc000; font-size: 0.8rem;"
-                                                title="{{ $emp->name }} (Emp ID: {{ $emp->emp_id }})">
-                                                {{ strtoupper($emp->name) }}
-                                            </th>
+                                            <th class="fw-bold text-dark border text-nowrap" style="background-color: #ffc000; font-size: 0.8rem;" title="{{ $emp->name }} (Emp ID: {{ $emp->emp_id }})">{{ strtoupper($emp->name) }}</th>
                                         @endforeach
-                                        <th class="fw-bold text-dark border"
-                                            style="background-color: #e6ac00; font-size: 0.8rem;">TOTAL QTY</th>
+                                        <th class="fw-bold text-dark border" style="background-color: #e6ac00; font-size: 0.8rem;">TOTAL QTY</th>
 
                                         <!-- Dynamic Cutting Issue Sub-headers -->
                                         @foreach($cuttingPlants as $plant)
-                                            <th class="fw-bold text-dark border text-nowrap"
-                                                style="background-color: #ffc000; font-size: 0.8rem;"
-                                                title="{{ $plant->name }}">{{ strtoupper($plant->code ?: $plant->name) }}</th>
+                                            <th class="fw-bold text-dark border text-nowrap" style="background-color: #ffc000; font-size: 0.8rem;" title="{{ $plant->name }}">{{ strtoupper($plant->code ?: $plant->name) }}</th>
                                         @endforeach
-                                        <th class="fw-bold text-dark border"
-                                            style="background-color: #e6ac00; font-size: 0.8rem;">TOTAL</th>
+                                        <th class="fw-bold text-dark border" style="background-color: #e6ac00; font-size: 0.8rem;">TOTAL</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -249,21 +238,16 @@
                         <div class="row mt-4 pt-2">
                             <div class="col-lg-6 col-md-8 col-sm-12">
                                 <div class="card shadow-sm border border-light-subtle rounded-3 overflow-hidden">
-                                    <div
-                                        class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
-                                        <h6 class="mb-0 fw-bold text-white"><i class="ri ri-dashboard-line me-1"></i>
-                                            Performance & Target Summary</h6>
-                                        <span class="badge bg-white text-primary rounded-pill px-2"
-                                            id="cuttingSummaryMonthBadge">Current Period</span>
+                                    <div class="card-header bg-primary text-white py-2 px-3 d-flex align-items-center justify-content-between">
+                                        <h6 class="mb-0 fw-bold text-white"><i class="ri ri-dashboard-line me-1"></i> Performance & Target Summary</h6>
+                                        <span class="badge bg-white text-primary rounded-pill px-2" id="cuttingSummaryMonthBadge">Current Period</span>
                                     </div>
                                     <div class="card-body p-0">
                                         <table class="table table-bordered mb-0 align-middle">
                                             <tbody>
                                                 <tr>
-                                                    <th class="bg-light text-dark fw-bold" style="width: 45%;">Monthly
-                                                        Target</th>
-                                                    <td colspan="3" class="fw-bold text-end pe-3 fs-6"
-                                                        id="summaryMonthlyTarget">0</td>
+                                                    <th class="bg-light text-dark fw-bold" style="width: 45%;">Monthly Target</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 fs-6" id="summaryMonthlyTarget">0</td>
                                                 </tr>
                                                 <tr class="bg-light text-center fw-bold small text-muted">
                                                     <td>Timing</td>
@@ -281,13 +265,11 @@
                                                     <th class="bg-light text-dark fw-bold">Target for Days worked</th>
                                                     <td class="text-center" id="summaryRegTarget">0</td>
                                                     <td class="text-center" id="summaryOtTarget">0</td>
-                                                    <td class="text-center fw-bold text-primary"
-                                                        id="summaryTotalWorkedTarget">0</td>
+                                                    <td class="text-center fw-bold text-primary" id="summaryTotalWorkedTarget">0</td>
                                                 </tr>
                                                 <tr>
                                                     <th class="bg-light text-dark fw-bold">Actual</th>
-                                                    <td colspan="3" class="fw-bold text-end pe-3 text-success fs-6"
-                                                        id="summaryActualIssue">0</td>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-success fs-6" id="summaryActualIssue">0</td>
                                                 </tr>
                                                 <tr>
                                                     <th class="bg-light text-dark fw-bold">Loss</th>
@@ -299,19 +281,15 @@
                                                 </tr>
                                                 <tr>
                                                     <th class="bg-light text-dark fw-bold">Efficiency</th>
-                                                    <td colspan="3" class="fw-bold text-end pe-3 text-info"
-                                                        id="summaryEfficiency">0%</td>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-info" id="summaryEfficiency">0%</td>
                                                 </tr>
                                                 <tr>
                                                     <th class="bg-light text-dark fw-bold">Days Backward</th>
-                                                    <td colspan="3" class="fw-bold text-end pe-3 text-warning"
-                                                        id="summaryDaysBackward">0</td>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-warning" id="summaryDaysBackward">0</td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="bg-light text-dark fw-bold">Target Per day to achieve Monthly
-                                                        Target</th>
-                                                    <td colspan="3" class="fw-bold text-end pe-3 text-primary fw-bold"
-                                                        id="summaryTargetPerDayToAchieve">0</td>
+                                                    <th class="bg-light text-dark fw-bold">Target Per day to achieve Monthly Target</th>
+                                                    <td colspan="3" class="fw-bold text-end pe-3 text-primary fw-bold" id="summaryTargetPerDayToAchieve">0</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -491,31 +469,26 @@
                             <!-- Summary KPI Chips for Selected Department -->
                             <div class="row g-3 mb-4" id="detailSummaryCards">
                                 <div class="col-6 col-md-3">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
                                         <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Tasks</span>
                                         <h4 class="mb-0 fw-bold text-dark" id="detailTotalTasks">0</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
                                         <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Plan Qty</span>
                                         <h4 class="mb-0 fw-bold text-primary" id="detailTotalPlan">0</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
                                         <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Actual Qty</span>
                                         <h4 class="mb-0 fw-bold text-success" id="detailTotalActual">0</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span
-                                            class="text-muted small fw-semibold text-uppercase d-block mb-1">Efficiency</span>
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Efficiency</span>
                                         <h4 class="mb-0 fw-bold text-info" id="detailStageEfficiency">0%</h4>
                                     </div>
                                 </div>
@@ -523,15 +496,10 @@
 
                             <!-- Table of Tasks & Delay Reasons -->
                             <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
-                                <div
-                                    class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                    <h6 class="mb-0 fw-bold text-dark"><i class="ri ri-file-list-3-line me-1 text-primary"></i>
-                                        Linked Job Cards & Tasks</h6>
+                                <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <h6 class="mb-0 fw-bold text-dark"><i class="ri ri-file-list-3-line me-1 text-primary"></i> Linked Job Cards & Tasks</h6>
                                     <div class="d-flex align-items-center gap-2">
-                                        <button type="button"
-                                            class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-dept-report">
-                                            <i class="ri ri-arrow-left-line me-1"></i> Back to Report
-                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-dept-report"><i class="ri ri-arrow-left-line me-1"></i> Back to Report</button>
                                     </div>
                                 </div>
                                 <div class="card-body py-4">
@@ -585,47 +553,36 @@
                                         </p>
                                     </div>
                                     <div class="col-md-7">
-                                        <div
-                                            class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+                                        <div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
                                             <div class="d-flex align-items-center gap-3">
-                                                <div class="dept-eff-badge-display px-3 py-2 rounded-3 fw-bold fs-3 text-primary bg-white shadow-sm border"
-                                                    id="empOverallEffVal">
-                                                    0%
-                                                </div>
+                                                <div class="dept-eff-badge-display px-3 py-2 rounded-3 fw-bold fs-3 text-primary bg-white shadow-sm border" id="empOverallEffVal">0%</div>
                                                 <div class="flex-grow-1" style="min-width: 140px;">
                                                     <div class="d-flex justify-content-between small text-muted mb-1">
                                                         <span class="fw-semibold">Overall Efficiency</span>
                                                         <span id="empEffProgressLabel">0%</span>
                                                     </div>
                                                     <div class="progress" style="height: 10px; border-radius: 6px;">
-                                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                                                            id="empEffProgressBar" role="progressbar" style="width: 0%">
+                                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="empEffProgressBar" role="progressbar" style="width: 0%">
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="d-flex gap-2 text-center text-nowrap">
                                                 <div class="px-2 py-1 bg-white rounded border">
-                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
-                                                        style="font-size: 0.68rem;">Employees</span>
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold" style="font-size: 0.68rem;">Employees</span>
                                                     <span class="fw-bold text-dark small" id="empSummaryCount">0</span>
                                                 </div>
                                                 <div class="px-2 py-1 bg-white rounded border">
-                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
-                                                        style="font-size: 0.68rem;">Hours</span>
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold" style="font-size: 0.68rem;">Hours</span>
                                                     <span class="fw-bold text-dark small" id="empSummaryHours">0 Hrs</span>
                                                 </div>
                                                 <div class="px-2 py-1 bg-white rounded border">
-                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
-                                                        style="font-size: 0.68rem;">Target</span>
-                                                    <span class="fw-bold text-primary small" id="empSummaryTarget">0
-                                                        Pcs</span>
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold" style="font-size: 0.68rem;">Target</span>
+                                                    <span class="fw-bold text-primary small" id="empSummaryTarget">0 Pcs</span>
                                                 </div>
                                                 <div class="px-2 py-1 bg-white rounded border">
-                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold"
-                                                        style="font-size: 0.68rem;">Completed</span>
-                                                    <span class="fw-bold text-success small" id="empSummaryActual">0
-                                                        Pcs</span>
+                                                    <span class="d-block extra-small text-muted text-uppercase fw-bold" style="font-size: 0.68rem;">Completed</span>
+                                                    <span class="fw-bold text-success small" id="empSummaryActual">0 Pcs</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -673,13 +630,9 @@
                                 <div class="d-flex flex-wrap align-items-center gap-2">
                                     <!-- View Mode Switcher Toggle: Task-Wise vs Job-Wise -->
                                     <div class="btn-group rounded-pill p-1 bg-white border shadow-sm" role="group">
-                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 active"
-                                            id="btnShowEmpTasks">
-                                            <i class="ri ri-task-line me-1"></i> Task-Wise Breakdown
+                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 active" id="btnShowEmpTasks"><i class="ri ri-task-line me-1"></i> Task-Wise Breakdown
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
-                                            id="btnShowEmpJobs">
-                                            <i class="ri ri-file-list-3-line me-1"></i> Job-Wise Summary
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="btnShowEmpJobs"><i class="ri ri-file-list-3-line me-1"></i> Job-Wise Summary
                                         </button>
                                     </div>
                                 </div>
@@ -745,8 +698,7 @@
                                         <h6 class="mb-0 fw-bold text-dark"><i class="ri ri-task-line me-1 text-primary"></i>
                                             Task-Wise Performance Breakdown</h6>
                                         <div class="d-flex align-items-center gap-2">
-                                            <button type="button"
-                                                class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-emp-report">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill btn-back-to-emp-report">
                                                 <i class="ri ri-arrow-left-line me-1"></i> Back to Report
                                             </button>
                                         </div>
@@ -821,6 +773,11 @@
                     <!-- Production Planning Report -->
                     <div class="tab-pane fade" id="production-planning" role="tabpanel">
                         @include('reports.production_report.production_planning')
+                    </div>
+
+                    <!-- Final Finishing Average Report -->
+                    <div class="tab-pane fade" id="final-finishing-average" role="tabpanel">
+                        @include('reports.production_report.final_finishing_average')
                     </div>
                 </div>
             </div>
@@ -919,6 +876,14 @@
 
         #cuttingSectionAverageTable tfoot th {
             font-size: 0.84rem;
+        }
+
+        #employeeEfficiencyTable tbody tr {
+            cursor: pointer;
+        }
+
+        #employeeEfficiencyTable tbody tr:hover {
+            background-color: #f0f4ff !important;
         }
     </style>
 @endsection
@@ -1155,6 +1120,13 @@
                     }
                     return;
                 }
+                if (tabPaneId === 'final-finishing-average') {
+                    showReportLoading(true);
+                    if (typeof window.initFinalFinishingAverageTable === 'function') {
+                        window.initFinalFinishingAverageTable();
+                    }
+                    return;
+                }
                 const config = tableConfigs[tabPaneId];
                 if (!config) return;
 
@@ -1193,6 +1165,7 @@
                             d.from_date = $('.start_date').val();
                             d.to_date = $('.end_date').val();
                             d.unit_id = $('select[name="unit_id"]').val();
+                            d.brand_id = $('select[name="brand_id"]').val();
                         }
                     },
                     drawCallback: function (settings) {
@@ -2361,9 +2334,9 @@
                 }
             }
 
-            // Employee Task-Wise Breakdown Click Handler (Point 1: clicking Employee Name)
             $(document).on('click', '.view-emp-tasks', function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 const empId = $(this).data('emp-id');
                 const empName = $(this).data('emp-name') || 'Employee';
                 const empCode = $(this).data('emp-code') || '';
@@ -2371,7 +2344,17 @@
                 openEmpDetailView(empId, empName, empCode, designation, 'tasks', true);
             });
 
-            // Employee Job-Wise Summary Click Handler (Point 2: clicking Target Qty)
+            $(document).on('click', '#employeeEfficiencyTable tbody tr', function (e) {
+                if ($(e.target).closest('a, button').length) return;
+                const $link = $(this).find('.view-emp-tasks');
+                if (!$link.length) return;
+                const empId = $link.data('emp-id');
+                const empName = $link.data('emp-name') || 'Employee';
+                const empCode = $link.data('emp-code') || '';
+                const designation = $link.data('designation') || '-';
+                openEmpDetailView(empId, empName, empCode, designation, 'tasks', true);
+            });
+
             $(document).on('click', '.view-emp-jobs', function (e) {
                 e.preventDefault();
                 const empId = $(this).data('emp-id');
@@ -2466,6 +2449,14 @@
                     return;
                 }
 
+                if (activeTabId === 'final-finishing-average') {
+                    if (typeof window.initFinalFinishingAverageTable === 'function') {
+                        showReportLoading(true);
+                        window.initFinalFinishingAverageTable();
+                    }
+                    return;
+                }
+
                 // If currently viewing department detail, refresh detail view with new filters
                 if (activeTabId === 'department-efficiency' && activeDetailStageId && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
@@ -2507,6 +2498,10 @@
             // Reset Button Handler
             $(document).on('click', '#btn-reset-report', function (e) {
                 e.preventDefault();
+                $('#production_date_range').val('');
+                if ($('#production_date_range')[0] && $('#production_date_range')[0]._flatpickr) {
+                    $('#production_date_range')[0]._flatpickr.clear();
+                }
                 $('.start_date').val('');
                 $('.end_date').val('');
                 $('select[name="brand_id"]').val('').trigger('change');
@@ -2527,6 +2522,12 @@
                 if ($('#report_type_select').val() === 'production-planning') {
                     if ($.fn.DataTable.isDataTable('#productionPlanningTable')) {
                         $('#productionPlanningTable').DataTable().button('.buttons-excel').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'final-finishing-average') {
+                    if ($.fn.DataTable.isDataTable('#finalFinishingAverageTable')) {
+                        $('#finalFinishingAverageTable').DataTable().button('.buttons-excel').trigger();
                         return;
                     }
                 }
@@ -2574,6 +2575,12 @@
                         return;
                     }
                 }
+                if ($('#report_type_select').val() === 'final-finishing-average') {
+                    if ($.fn.DataTable.isDataTable('#finalFinishingAverageTable')) {
+                        $('#finalFinishingAverageTable').DataTable().button('.buttons-pdf').trigger();
+                        return;
+                    }
+                }
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-pdf').trigger();
@@ -2615,6 +2622,12 @@
                 if ($('#report_type_select').val() === 'production-planning') {
                     if ($.fn.DataTable.isDataTable('#productionPlanningTable')) {
                         $('#productionPlanningTable').DataTable().button('.buttons-print').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'final-finishing-average') {
+                    if ($.fn.DataTable.isDataTable('#finalFinishingAverageTable')) {
+                        $('#finalFinishingAverageTable').DataTable().button('.buttons-print').trigger();
                         return;
                     }
                 }

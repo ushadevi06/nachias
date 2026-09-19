@@ -82,6 +82,7 @@
                     d.to_date = $('.end_date').val();
                     d.supplier_id = $('select[name="supplier_id"]').val();
                     d.art_no = $('select[name="art_no"]').val();
+                    d.brand_id = $('select[name="brand_id"]').val();
                 }
             },
             columns: columns,

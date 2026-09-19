@@ -1,167 +1,95 @@
 <div class="production-planning-wrapper">
-    <!-- Top Stage & Title Bar Card -->
-    <div class="card shadow-sm border mb-3">
-        <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2 border-bottom">
-            <div class="d-flex align-items-center gap-2">
-                <h5 class="mb-0 fw-bold text-dark text-uppercase" id="prodPlanningHeaderTitle" style="letter-spacing: 0.5px; font-size: 1.05rem;">
-                    📋 CUTTING SUPPORTERS REPORT
-                </h5>
-                <span class="badge bg-primary text-white rounded-pill px-3 py-1 fw-bold" id="prodPlanningDateBadge">{{ date('d-m-Y') }}</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <label class="small text-dark mb-0 fw-bold">Stage:</label>
-                <select id="prod_planning_stage_select" class="form-select form-select-sm fw-bold border-secondary" style="width: 200px;">
-                    @foreach($operationStages ?? [] as $stg)
-                        <option value="{{ $stg->id }}" {{ strtolower($stg->operation_stage_name) === 'cutting' || $stg->id == 1 ? 'selected' : '' }}>
-                            {{ $stg->operation_stage_name }}
-                        </option>
-                    @endforeach
-                </select>
+    <!-- Filter Toolbar -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-label-primary px-3 py-2 fw-semibold" id="prodPlanningDateBadge">{{ date('d-m-Y') }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <label class="small text-muted mb-0 fw-semibold">Stage:</label>
+            <select id="prod_planning_stage_select" class="form-select form-select-sm" style="width: 200px;">
+                @foreach($operationStages ?? [] as $stg)
+                    <option value="{{ $stg->id }}" {{ strtolower($stg->operation_stage_name) === 'cutting' || $stg->id == 1 ? 'selected' : '' }}>
+                        {{ $stg->operation_stage_name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+
+    <!-- KPI Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-2 col-md-4 col-6">
+            <div class="p-3 border rounded-3 text-center bg-white">
+                <span class="small fw-semibold d-block text-muted text-uppercase" style="font-size: 0.72rem;">Total Employees</span>
+                <h5 class="mb-0 fw-bold mt-1 text-primary" id="ppSummaryEmployees">0</h5>
             </div>
         </div>
-
-        <!-- KPI Summary Cards with Sharp High-Contrast Styling -->
-        <div class="card-body p-3 bg-light border-bottom">
-            <div class="row g-2">
-                <div class="col-lg-2 col-md-4 col-6">
-                    <div class="p-2 border rounded-3 text-center bg-white shadow-sm" style="border-top: 3px solid #3b82f6 !important;">
-                        <span class="small fw-bold d-block text-uppercase" style="font-size: 0.72rem; color: #475569;">Total Employees</span>
-                        <h5 class="mb-0 fw-bolder mt-1" style="font-size: 1.35rem; color: #0f172a;" id="ppSummaryEmployees">0</h5>
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-4 col-6">
-                    <div class="p-2 border rounded-3 text-center bg-white shadow-sm" style="border-top: 3px solid #6366f1 !important;">
-                        <span class="small fw-bold d-block text-uppercase" style="font-size: 0.72rem; color: #475569;">Working Hours</span>
-                        <h5 class="mb-0 fw-bolder mt-1" style="font-size: 1.35rem; color: #4338ca;" id="ppSummaryHours">0.0</h5>
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-4 col-6">
-                    <div class="p-2 border rounded-3 text-center bg-white shadow-sm" style="border-top: 3px solid #0284c7 !important;">
-                        <span class="small fw-bold d-block text-uppercase" style="font-size: 0.72rem; color: #475569;">Plan Qty</span>
-                        <h5 class="mb-0 fw-bolder mt-1" style="font-size: 1.35rem; color: #0284c7;" id="ppSummaryPlan">0</h5>
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-4 col-6">
-                    <div class="p-2 border rounded-3 text-center bg-white shadow-sm" style="border-top: 3px solid #475569 !important;">
-                        <span class="small fw-bold d-block text-uppercase" style="font-size: 0.72rem; color: #475569;">Issue Qty</span>
-                        <h5 class="mb-0 fw-bolder mt-1" style="font-size: 1.35rem; color: #0f172a;" id="ppSummaryIssue">0</h5>
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-4 col-6">
-                    <div class="p-2 border rounded-3 text-center bg-white shadow-sm" style="border-top: 3px solid #16a34a !important;">
-                        <span class="small fw-bold d-block text-uppercase" style="font-size: 0.72rem; color: #475569;">Finish Qty</span>
-                        <h5 class="mb-0 fw-bolder mt-1" style="font-size: 1.35rem; color: #16a34a;" id="ppSummaryFinish">0</h5>
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-4 col-6">
-                    <div class="p-2 border rounded-3 text-center bg-white shadow-sm" style="border-top: 3px solid #dc2626 !important;">
-                        <span class="small fw-bold d-block text-uppercase" style="font-size: 0.72rem; color: #475569;">Pending Qty</span>
-                        <h5 class="mb-0 fw-bolder mt-1" style="font-size: 1.35rem; color: #dc2626;" id="ppSummaryPending">0</h5>
-                    </div>
-                </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <div class="p-3 border rounded-3 text-center bg-white">
+                <span class="small fw-semibold d-block text-muted text-uppercase" style="font-size: 0.72rem;">Working Hours</span>
+                <h5 class="mb-0 fw-bold mt-1 text-info" id="ppSummaryHours">0.0</h5>
             </div>
         </div>
-
-        <!-- DataTable Container -->
-        <div class="card-body p-2">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle mb-0" id="productionPlanningTable" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th style="width: 50px;">S.NO</th>
-                            <th style="min-width: 170px;">NAME</th>
-                            <th style="width: 110px;">WORKING HOURS</th>
-                            <th style="min-width: 150px;">WORK</th>
-                            <th style="width: 130px;">CUT NO</th>
-                            <th style="width: 90px;" class="text-end">PLAN</th>
-                            <th style="width: 90px;" class="text-end">ISSUE</th>
-                            <th style="width: 90px;" class="text-end">FINISH</th>
-                            <th style="width: 90px;" class="text-end">PENDING</th>
-                            <th style="min-width: 120px;">REMARKS</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                    <tfoot>
-                        <tr>
-                            <th colspan="2" class="text-center">TOTAL</th>
-                            <th class="text-center" style="color: #4338ca !important;" id="ppFootHours">0.0</th>
-                            <th class="text-center">-</th>
-                            <th class="text-center">-</th>
-                            <th class="text-end" style="color: #0284c7 !important;" id="ppFootPlan">0</th>
-                            <th class="text-end" style="color: #0f172a !important;" id="ppFootIssue">0</th>
-                            <th class="text-end" style="color: #16a34a !important;" id="ppFootFinish">0</th>
-                            <th class="text-end" style="color: #dc2626 !important;" id="ppFootPending">0</th>
-                            <th class="text-center">-</th>
-                        </tr>
-                    </tfoot>
-                </table>
+        <div class="col-lg-2 col-md-4 col-6">
+            <div class="p-3 border rounded-3 text-center bg-white">
+                <span class="small fw-semibold d-block text-muted text-uppercase" style="font-size: 0.72rem;">Plan Qty</span>
+                <h5 class="mb-0 fw-bold mt-1 text-dark" id="ppSummaryPlan">0</h5>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <div class="p-3 border rounded-3 text-center bg-white">
+                <span class="small fw-semibold d-block text-muted text-uppercase" style="font-size: 0.72rem;">Issue Qty</span>
+                <h5 class="mb-0 fw-bold mt-1 text-secondary" id="ppSummaryIssue">0</h5>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <div class="p-3 border rounded-3 text-center bg-white">
+                <span class="small fw-semibold d-block text-muted text-uppercase" style="font-size: 0.72rem;">Finish Qty</span>
+                <h5 class="mb-0 fw-bold mt-1 text-success" id="ppSummaryFinish">0</h5>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6">
+            <div class="p-3 border rounded-3 text-center bg-white">
+                <span class="small fw-semibold d-block text-muted text-uppercase" style="font-size: 0.72rem;">Pending Qty</span>
+                <h5 class="mb-0 fw-bold mt-1 text-danger" id="ppSummaryPending">0</h5>
             </div>
         </div>
     </div>
+
+    <!-- Standard Normal Report DataTable -->
+    <div class="card-datatable table-responsive">
+        <table class="datatables-products table table-hover align-middle" id="productionPlanningTable" style="width: 100%;">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width: 50px;">S.NO</th>
+                    <th>NAME</th>
+                    <th class="text-center">WORKING HOURS</th>
+                    <th>WORK</th>
+                    <th class="text-center">CUT NO</th>
+                    <th class="text-end">PLAN</th>
+                    <th class="text-end">ISSUE</th>
+                    <th class="text-end">FINISH</th>
+                    <th class="text-end">PENDING</th>
+                    <th>REMARKS</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot class="bg-light fw-bold">
+                <tr>
+                    <th colspan="2" class="text-center">TOTAL</th>
+                    <th class="text-center text-info" id="ppFootHours">0.0</th>
+                    <th class="text-center">-</th>
+                    <th class="text-center">-</th>
+                    <th class="text-end" id="ppFootPlan">0</th>
+                    <th class="text-end" id="ppFootIssue">0</th>
+                    <th class="text-end text-success" id="ppFootFinish">0</th>
+                    <th class="text-end text-danger" id="ppFootPending">0</th>
+                    <th class="text-center">-</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 </div>
-
-<style>
-/* High-Contrast Production Planning Table Styling */
-#productionPlanningTable {
-    border: 1px solid #cbd5e1 !important;
-    font-size: 0.88rem !important;
-}
-
-#productionPlanningTable thead th {
-    background-color: #e2e8f0 !important;
-    color: #0f172a !important;
-    font-weight: 800 !important;
-    border: 1px solid #cbd5e1 !important;
-    padding: 8px 10px !important;
-    vertical-align: middle !important;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    font-size: 0.82rem !important;
-}
-
-#productionPlanningTable tbody td {
-    color: #0f172a !important;
-    border: 1px solid #e2e8f0 !important;
-    padding: 7px 10px !important;
-    vertical-align: middle !important;
-    font-weight: 600 !important;
-}
-
-#productionPlanningTable tbody tr:hover td {
-    background-color: #f1f5f9 !important;
-}
-
-#productionPlanningTable tfoot th {
-    background-color: #e2e8f0 !important;
-    color: #0f172a !important;
-    font-weight: 800 !important;
-    border: 1px solid #cbd5e1 !important;
-    padding: 9px 10px !important;
-    font-size: 0.88rem !important;
-}
-
-/* Crisp Text Colors for columns */
-.pp-dark-text {
-    color: #0f172a !important;
-    font-weight: 700 !important;
-}
-.pp-plan-text {
-    color: #0284c7 !important;
-    font-weight: 800 !important;
-}
-.pp-issue-text {
-    color: #0f172a !important;
-    font-weight: 800 !important;
-}
-.pp-finish-text {
-    color: #16a34a !important;
-    font-weight: 800 !important;
-}
-.pp-pending-text {
-    color: #dc2626 !important;
-    font-weight: 800 !important;
-}
-</style>
 
 <script>
 window.productionPlanningDt = null;
@@ -170,8 +98,7 @@ window.initProductionPlanningTable = function() {
     var stageId = $('#prod_planning_stage_select').val() || 1;
     var stageText = $('#prod_planning_stage_select option:selected').text().trim() || 'CUTTING';
     var fullTitle = stageText.toUpperCase() + ' SUPPORTERS REPORT';
-    
-    $('#prodPlanningHeaderTitle').text('📋 ' + fullTitle);
+
     $('#active_report_title').text('📋 ' + fullTitle);
 
     var fromDateVal = $('.start_date').val();
@@ -193,15 +120,15 @@ window.initProductionPlanningTable = function() {
         processing: true,
         serverSide: true,
         paging: true,
-        pageLength: 25,
+        pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        dom: '<"row align-items-center mb-2"<"col-sm-6"l><"col-sm-6 text-end"f>>rt<"row align-items-center mt-2"<"col-sm-5"i><"col-sm-7"p>>B',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>B',
         buttons: [
             {
                 extend: 'excelHtml5',
                 className: 'buttons-excel d-none',
                 title: function() {
-                    return ($('#prodPlanningHeaderTitle').text().replace('📋', '').trim()) + ' (' + $('#prodPlanningDateBadge').text() + ')';
+                    return ($('#active_report_title').text().replace('📋', '').trim()) + ' (' + $('#prodPlanningDateBadge').text() + ')';
                 },
                 footer: true,
                 exportOptions: {
@@ -221,7 +148,7 @@ window.initProductionPlanningTable = function() {
                 orientation: 'landscape',
                 pageSize: 'A4',
                 title: function() {
-                    return ($('#prodPlanningHeaderTitle').text().replace('📋', '').trim()) + ' (' + $('#prodPlanningDateBadge').text() + ')';
+                    return ($('#active_report_title').text().replace('📋', '').trim()) + ' (' + $('#prodPlanningDateBadge').text() + ')';
                 },
                 footer: true,
                 exportOptions: {
@@ -245,7 +172,7 @@ window.initProductionPlanningTable = function() {
                 extend: 'print',
                 className: 'buttons-print d-none',
                 title: function() {
-                    return '<h3 style="text-align:center; margin-bottom:10px;">' + ($('#prodPlanningHeaderTitle').text().replace('📋', '').trim()) + '</h3><div style="text-align:center; font-size:12px; margin-bottom:15px; color:#555;">Date: ' + $('#prodPlanningDateBadge').text() + '</div>';
+                    return '<h3 style="text-align:center; margin-bottom:10px;">' + ($('#active_report_title').text().replace('📋', '').trim()) + '</h3><div style="text-align:center; font-size:12px; margin-bottom:15px; color:#555;">Date: ' + $('#prodPlanningDateBadge').text() + '</div>';
                 },
                 footer: true,
                 exportOptions: {
@@ -265,16 +192,16 @@ window.initProductionPlanningTable = function() {
             }
         },
         columns: [
-            { data: 's_no', name: 's_no', className: 'text-center pp-dark-text' },
-            { data: 'name', name: 'name', className: 'pp-dark-text' },
-            { data: 'working_hours', name: 'working_hours', className: 'text-center pp-dark-text' },
-            { data: 'work', name: 'work', className: 'text-center pp-dark-text' },
-            { data: 'cut_no', name: 'cut_no', className: 'text-center pp-dark-text' },
-            { data: 'plan_qty', name: 'plan_qty', className: 'text-end pp-plan-text' },
-            { data: 'issue_qty', name: 'issue_qty', className: 'text-end pp-issue-text' },
-            { data: 'completed_qty', name: 'completed_qty', className: 'text-end pp-finish-text' },
-            { data: 'pending_qty', name: 'pending_qty', className: 'text-end pp-pending-text' },
-            { data: 'remarks', name: 'remarks', className: 'text-center pp-dark-text' }
+            { data: 's_no', name: 's_no', className: 'text-center' },
+            { data: 'name', name: 'name' },
+            { data: 'working_hours', name: 'working_hours', className: 'text-center' },
+            { data: 'work', name: 'work', className: 'text-center' },
+            { data: 'cut_no', name: 'cut_no', className: 'text-center' },
+            { data: 'plan_qty', name: 'plan_qty', className: 'text-end' },
+            { data: 'issue_qty', name: 'issue_qty', className: 'text-end' },
+            { data: 'completed_qty', name: 'completed_qty', className: 'text-end text-success fw-semibold' },
+            { data: 'pending_qty', name: 'pending_qty', className: 'text-end text-danger fw-semibold' },
+            { data: 'remarks', name: 'remarks', className: 'text-center' }
         ],
         drawCallback: function(settings) {
             var json = settings.json;
@@ -297,13 +224,9 @@ window.initProductionPlanningTable = function() {
                     $('#prodPlanningDateBadge').text(m.from_date === m.to_date ? m.from_date : (m.from_date + ' to ' + m.to_date));
                 }
             }
-            if (typeof hideReportLoading === 'function') {
-                hideReportLoading();
+            if (typeof showReportLoading === 'function') {
+                showReportLoading(false);
             }
-        },
-        language: {
-            emptyTable: "No planning / supporter records found for this stage and date",
-            processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading Supporters Report...'
         }
     });
 };

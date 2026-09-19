@@ -509,7 +509,13 @@
                                 @if(!empty($invoice->delivery_address))
                                     {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
                                 @else
-                                    {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->customer->address ?? '')))) !!}<br>
+                                    {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->customer->address_line_1 ?? '')))) !!}<br>
+                                    @if(!empty($invoice->customer->address_line_2))
+                                        {{ strtoupper($invoice->customer->address_line_2) }}<br>
+                                    @endif
+                                    @if(!empty($invoice->customer->address_line_3))
+                                        {{ strtoupper($invoice->customer->address_line_3) }}<br>
+                                    @endif
                                     @php
                                         $locParts = [];
                                         if ($invoice->customer->city->city_name ?? false) {
@@ -705,8 +711,7 @@
             <div style="position: absolute; bottom: 0; left: 0; width: 100%;">
                 <table style="width: 100%; border-collapse: collapse; page-break-inside: avoid;">
                     <tr>
-                        <td colspan="2"
-                            style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
+                        <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
                             <strong>Remarks :</strong> {{ $invoice->remarks ?? '' }}
                         </td>
                     </tr>

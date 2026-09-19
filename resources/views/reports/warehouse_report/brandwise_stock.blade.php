@@ -138,7 +138,7 @@
         currentBrandName = brandName;
 
         $('#brandwiseBreadcrumbs').attr('style', 'display: flex !important;');
-        $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
+        $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${brandName}</span>`);
         $('#btnBackToBrands').attr('onclick', 'renderBrandLevel()');
 
         reinitDataTable();
@@ -201,7 +201,7 @@
     }
 
     function drillDownToArtNo(brandId, brandName, styleId, styleName) {
-        $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')">${brandName}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${styleName}</span>`);
+        $('#breadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')">${brandName}</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${styleName}</span>`);
         $('#btnBackToBrands').attr('onclick', `drillDownToStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')`);
 
         reinitDataTable();

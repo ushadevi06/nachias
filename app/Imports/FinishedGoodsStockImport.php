@@ -28,6 +28,7 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
     protected array $brandCache = [];
     protected array $colorCache = [];
     protected array $styleCache = [];
+    protected ?Collection $allBrandsCache = null;
 
     public function collection(Collection $rows)
     {
@@ -79,35 +80,48 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         $color = $this->resolveColor($this->getRowValue($row, ['color_id', 'colorid', 'color']));
         $brandVal = $this->getRowValue($row, ['brand', 'brand_id', 'brand_name', 'brand_code']);
         
-        $styleVal = $this->getRowValue($row, ['style_id', 'styleid', 'style']);
-        if ($styleVal === null || trim((string)$styleVal) === '') {
-            throw new \Exception('Style is required.');
+        if (!$artNo) {
+            throw new \Exception('Art No is required.');
         }
-        $style = $this->resolveStyle($styleVal);
-        $sku = $this->nullableTrim($this->getRowValue($row, ['sku', 'sku_barcode', 'skubarcode', 'sku_barcode_', 'sku_barco']));
 
         if (!$finishedItemCode) {
             throw new \Exception('Product Code is required.');
         }
 
-        $resolvedBrand = null;
+        // If Art No is CRYSTAL, style should always be WHITE
+        if (strtoupper(trim($artNo)) === 'CRYSTAL') {
+            $style = $this->resolveStyle('WHITE');
+        } else {
+            $styleVal = $this->getRowValue($row, ['style_id', 'styleid', 'style']);
+            if ($styleVal === null || trim((string)$styleVal) === '') {
+                throw new \Exception('Style is required.');
+            }
+            $style = $this->resolveStyle($styleVal);
+        }
+        $sku = $this->nullableTrim($this->getRowValue($row, ['sku', 'sku_barcode', 'skubarcode', 'sku_barcode_', 'sku_barco']));
+
+        // 1. Detect Brand from Art No
+        $brandByArt = $this->resolveBrandByArtNo($artNo);
+
+        // 2. Detect Brand from Brand column (if provided in Excel)
+        $brandByCol = null;
         if ($brandVal !== null && trim((string)$brandVal) !== '') {
-            $resolvedBrand = $this->resolveBrand($brandVal);
-            if (!$resolvedBrand) {
+            $brandByCol = $this->resolveBrand($brandVal);
+            if (!$brandByCol) {
                 throw new \Exception("Brand '{$brandVal}' does not exist in the Brands master.");
             }
         }
 
+        // 3. Detect Brand and Style from Product Code (e.g. CF-PLN-FS -> CF and PLN)
+        $brandByProductCode = null;
         $parts = explode('-', $finishedItemCode);
         if (count($parts) >= 2) {
             $brandPart = trim($parts[0]);
             $stylePart = trim($parts[1]);
             
-            if (!$resolvedBrand) {
-                $resolvedBrand = $this->resolveBrand($brandPart);
-                if (!$resolvedBrand) {
-                    throw new \Exception("Brand '{$brandPart}' from Product Code '{$finishedItemCode}' does not exist in the Brands master.");
-                }
+            $brandByProductCode = $this->resolveBrand($brandPart);
+            if (!$brandByProductCode) {
+                throw new \Exception("Brand '{$brandPart}' from Product Code '{$finishedItemCode}' does not exist in the Brands master.");
             }
 
             $styleExists = \App\Models\Style::where('code', $stylePart)->orWhere('style_name', $stylePart)->exists();
@@ -116,8 +130,22 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             }
         }
 
-        if (!$artNo) {
-            throw new \Exception('Art No is required.');
+        // STRICT VALIDATION: Check for brand mismatches
+        if ($brandByArt && $brandByProductCode && $brandByArt->id !== $brandByProductCode->id) {
+            throw new \Exception("Art No '{$artNo}' belongs to Brand '{$brandByArt->brand_name}' ({$brandByArt->code}), but Product Code '{$finishedItemCode}' specifies Brand '{$brandByProductCode->brand_name}' ({$brandByProductCode->code}). Please correct the Art No or Product Code in your Excel sheet.");
+        }
+
+        if ($brandByArt && $brandByCol && $brandByArt->id !== $brandByCol->id) {
+            throw new \Exception("Art No '{$artNo}' belongs to Brand '{$brandByArt->brand_name}' ({$brandByArt->code}), but Brand column specifies '{$brandByCol->brand_name}'. Please correct the Excel sheet.");
+        }
+
+        if ($brandByProductCode && $brandByCol && $brandByProductCode->id !== $brandByCol->id) {
+            throw new \Exception("Brand column '{$brandByCol->brand_name}' does not match Product Code '{$finishedItemCode}' (Brand: '{$brandByProductCode->brand_name}'). Please correct the Excel sheet.");
+        }
+
+        $resolvedBrand = $brandByArt ?? $brandByProductCode ?? $brandByCol;
+        if (!$resolvedBrand) {
+            throw new \Exception("Could not determine Brand for Art No '{$artNo}' and Product Code '{$finishedItemCode}'. Please provide a valid Brand in the Excel sheet.");
         }
 
         $size = $this->nullableTrim($this->getRowValue($row, ['size']));
@@ -377,6 +405,29 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         $this->storeTypeCache[$lookup] = $record;
 
         return $record;
+    }
+
+    protected function resolveBrandByArtNo(?string $artNo): ?Brand
+    {
+        if (!$artNo) {
+            return null;
+        }
+
+        $artUpper = strtoupper(trim($artNo));
+        if ($this->allBrandsCache === null) {
+            $this->allBrandsCache = Brand::whereNotNull('code')
+                ->where('code', '!=', '')
+                ->orderByRaw('LENGTH(code) DESC')
+                ->get();
+        }
+
+        foreach ($this->allBrandsCache as $b) {
+            if (str_starts_with($artUpper, strtoupper($b->code))) {
+                return $b;
+            }
+        }
+
+        return null;
     }
 
     protected function resolveBrand(?string $brandCode): ?Brand

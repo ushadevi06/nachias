@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\SalesOrder;
+use App\Models\SalesOrderItem;
 use App\Models\SalesInvoice;
 use App\Models\Customer;
 use App\Models\SalesAgent;
@@ -125,21 +126,24 @@ class SalesMarketingReportController extends Controller
                         if ($fulfillmentStatus == 'Planned') $badgeClass = 'bg-label-warning';
 
                         $statusHtml = '<span class="badge ' . $badgeClass . ' rounded-pill">' . $fulfillmentStatus . '</span>';
-                        $soNoStr = htmlspecialchars((string)($order->so_no ?? '-'));
-                        $custStr = htmlspecialchars((string)(optional($order->customer)->name ?? '-'));
+                        $soNoRaw = (string)($order->so_no ?? '-');
+                        $custRaw = (string)(optional($order->customer)->name ?? '-');
+                        $soNoStr = htmlspecialchars($soNoRaw);
+                        $custStr = htmlspecialchars($custRaw);
                         $soDateStr = $order->so_date ? date('d-M-Y', strtotime((string)$order->so_date)) : '-';
                         $itemsJson = htmlspecialchars(json_encode($itemsData), ENT_QUOTES, 'UTF-8');
 
-                        $actionBtn = '<button type="button" class="btn btn-sm btn-label-primary rounded-pill view-order-modal-btn" data-so-no="' . $soNoStr . '" data-customer="' . $custStr . '" data-date="' . $soDateStr . '" data-status=\'' . htmlspecialchars($statusHtml, ENT_QUOTES, 'UTF-8') . '\' data-items=\'' . $itemsJson . '\'><i class="ri-eye-line me-1"></i>View Items</button>';
+                        $actionBtn = '<button type="button" class="btn btn-sm btn-label-primary rounded-pill view-order-modal-btn" data-so-no="' . $soNoStr . '" data-customer="' . $custStr . '" data-date="' . $soDateStr . '" data-status=\'' . htmlspecialchars($statusHtml, ENT_QUOTES, 'UTF-8') . '\' data-items=\'' . $itemsJson . '\'><i class="ri ri-eye-line me-1"></i>View Items</button>';
 
                         $data[] = [
-                            'so_no' => '<span class="text-primary fw-bold">' . $soNoStr . ' <i class="ri-arrow-right-s-line ms-1"></i></span>',
+                            'order_id' => $order->id,
+                            'so_no' => '<span class="text-primary fw-bold">' . $soNoStr . ' <i class="ri ri-arrow-right-s-line ms-1"></i></span>',
                             'so_date' => $soDateStr,
                             'customer' => $custStr,
                             'qty' => number_format($total_qty, 0),
                             'status' => $statusHtml,
-                            'so_no_raw' => $soNoStr,
-                            'customer_raw' => $custStr,
+                            'so_no_raw' => $soNoRaw,
+                            'customer_raw' => $custRaw,
                             'so_date_raw' => $soDateStr,
                             'status_html' => $statusHtml,
                             'items_data' => $itemsData
@@ -225,16 +229,19 @@ class SalesMarketingReportController extends Controller
                             }
                         }
 
-                        $soNoStr = htmlspecialchars((string)($order->so_no ?? '-'));
-                        $custName = htmlspecialchars((string)(optional($order->customer)->name ?? '-')) . ' (' . htmlspecialchars((string)(optional($order->customer)->code ?? '-')) . ')';
+                        $soNoRaw = (string)($order->so_no ?? '-');
+                        $custRaw = (string)(optional($order->customer)->name ?? '-') . ' (' . (string)(optional($order->customer)->code ?? '-') . ')';
+                        $soNoStr = htmlspecialchars($soNoRaw);
+                        $custName = htmlspecialchars($custRaw);
 
                         $data[] = [
+                            'order_id' => $order->id,
                             'so_no' => '<span class="text-primary fw-bold">' . $soNoStr . ' <i class="ri ri-arrow-right-s-line ms-1"></i></span>',
                             'customer' => $custName,
                             'ord_qty' => number_format($total_qty, 0),
                             'bal_qty' => '<span class="text-danger fw-bold">' . number_format($pending_qty, 0) . '</span>',
-                            'so_no_raw' => $soNoStr,
-                            'customer_raw' => $custName,
+                            'so_no_raw' => $soNoRaw,
+                            'customer_raw' => $custRaw,
                             'ord_qty_raw' => number_format($total_qty, 0),
                             'bal_qty_raw' => number_format($pending_qty, 0),
                             'items_data' => $itemsData ?? []
@@ -248,6 +255,83 @@ class SalesMarketingReportController extends Controller
                         'data' => $data
                     ]);
 
+                case 'order-items':
+                    $orderId = $request->order_id;
+                    $soNo = $request->so_no;
+
+                    $order = null;
+                    if (!empty($orderId) && is_numeric($orderId)) {
+                        $order = SalesOrder::find($orderId);
+                    }
+                    if (!$order && !empty($soNo)) {
+                        $order = SalesOrder::where('so_no', $soNo)->first();
+                    }
+
+                    if (!$order) {
+                        return response()->json([
+                            'draw' => $draw,
+                            'recordsTotal' => 0,
+                            'recordsFiltered' => 0,
+                            'data' => []
+                        ]);
+                    }
+
+                    $itemsBaseQuery = SalesOrderItem::where('sale_order_id', $order->id)->whereNull('deleted_at');
+                    $totalRecords = (clone $itemsBaseQuery)->count();
+
+                    $filteredQuery = clone $itemsBaseQuery;
+                    if ($search) {
+                        $filteredQuery->where(function($q) use ($search) {
+                            $q->where('item_name', 'like', "%{$search}%")
+                              ->orWhere('size_id', 'like', "%{$search}%")
+                              ->orWhere('sleeve', 'like', "%{$search}%")
+                              ->orWhere('qty', 'like', "%{$search}%");
+                        });
+                    }
+                    $filteredRecords = (clone $filteredQuery)->count();
+
+                    // Ordering
+                    $orderColIdx = $request->input('order.0.column');
+                    $orderDir = $request->input('order.0.dir', 'asc');
+                    $columnsMap = [
+                        1 => 'item_name',
+                        2 => 'size_id',
+                        3 => 'sleeve',
+                        4 => 'qty'
+                    ];
+
+                    if (isset($columnsMap[$orderColIdx])) {
+                        $filteredQuery->orderBy($columnsMap[$orderColIdx], $orderDir);
+                    } else {
+                        $filteredQuery->orderBy('id', 'asc');
+                    }
+
+                    if ($length !== -1) {
+                        $filteredQuery->offset($start)->limit($length);
+                    }
+
+                    $items = $filteredQuery->get();
+
+                    $data = [];
+                    foreach ($items as $item) {
+                        $s = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
+                        $sd = ($s == 'Full' || $s == 'Full Sleeve') ? 'F/S' : (($s == 'Half' || $s == 'Half Sleeve') ? 'H/S' : ($s ?? '-'));
+
+                        $data[] = [
+                            'name' => (string)($item->item_name ?? '-'),
+                            'size' => (string)($item->size_id ?? '-'),
+                            'sleeve' => (string)$sd,
+                            'qty' => number_format((float)($item->qty ?? 0), 0)
+                        ];
+                    }
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $filteredRecords,
+                        'data' => $data
+                    ]);
+
                 case 'comparison-report':
                     $currentYear = (int)date('Y');
                     $prevYear = $currentYear - 1;
@@ -258,19 +342,9 @@ class SalesMarketingReportController extends Controller
                         9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
                     ];
 
-                    $currentYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')
-                        ->whereYear('inv_date', $currentYear)
-                        ->whereNull('deleted_at')
-                        ->groupByRaw('month')
-                        ->pluck('total', 'month')
-                        ->toArray();
+                    $currentYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')->whereYear('inv_date', $currentYear)->whereNull('deleted_at')->groupByRaw('month')->pluck('total', 'month')->toArray();
 
-                    $prevYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')
-                        ->whereYear('inv_date', $prevYear)
-                        ->whereNull('deleted_at')
-                        ->groupByRaw('month')
-                        ->pluck('total', 'month')
-                        ->toArray();
+                    $prevYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')->whereYear('inv_date', $prevYear)->whereNull('deleted_at')->groupByRaw('month')->pluck('total', 'month')->toArray();
 
                     $comparisonData = [];
                     foreach ($months as $num => $name) {
@@ -280,9 +354,9 @@ class SalesMarketingReportController extends Controller
 
                         $growthHtml = '-';
                         if ($growth > 0) {
-                            $growthHtml = '<span class="text-success fw-bold"><i class="ti ti-arrow-up"></i> +' . number_format($growth, 1) . '%</span>';
+                            $growthHtml = '<span class="text-success fw-bold"><i class="ri ri-arrow-up"></i> +' . number_format($growth, 1) . '%</span>';
                         } elseif ($growth < 0) {
-                            $growthHtml = '<span class="text-danger fw-bold"><i class="ti ti-arrow-down"></i> ' . number_format($growth, 1) . '%</span>';
+                            $growthHtml = '<span class="text-danger fw-bold"><i class="ri ri-arrow-down"></i> ' . number_format($growth, 1) . '%</span>';
                         } else {
                             $growthHtml = '<span class="text-muted small">0%</span>';
                         }
@@ -398,8 +472,8 @@ class SalesMarketingReportController extends Controller
                     foreach ($invoices as $invoice) {
                         $isGenerated = (!empty($invoice->einvoice_status) && strtolower((string)$invoice->einvoice_status) === 'generated');
                         $einvoiceStatusBadge = $isGenerated 
-                            ? '<span class="badge bg-label-success rounded-pill px-3 py-1"><i class="ri-checkbox-circle-line me-1"></i>Generated</span>' 
-                            : '<span class="badge bg-label-danger rounded-pill px-3 py-1"><i class="ri-close-circle-line me-1"></i>Not Generated</span>';
+                            ? '<span class="badge bg-label-success rounded-pill px-3 py-1"><i class="ri ri-checkbox-circle-line me-1"></i>Generated</span>' 
+                            : '<span class="badge bg-label-danger rounded-pill px-3 py-1"><i class="ri ri-close-circle-line me-1"></i>Not Generated</span>';
                         $einvoiceStatusRaw = $isGenerated ? 'Generated' : 'Not Generated';
 
                         $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
@@ -538,8 +612,8 @@ class SalesMarketingReportController extends Controller
                         $soDispatched = $invoice->salesOrder && strtolower((string)$invoice->salesOrder->status) == 'dispatched';
                         $dispatched = (!empty($invoice->delivery_status) && strtolower((string)$invoice->delivery_status) == 'dispatched') || $soDispatched ? true : false;
                         
-                        $tickHtml = '<span class="text-success fw-bold fs-4"><i class="ri ri-check-line"></i></span>';
-                        $crossHtml = '<span class="text-danger fw-bold fs-4"><i class="ri ri-close-line"></i></span>';
+                        $tickHtml = '<span class="text-success fw-bold fs-4" title="✔"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                        $crossHtml = '<span class="text-danger fw-bold fs-4" title="✘"><i class="ri ri-close-line"></i><span class="export-symbol" style="display:none;">✘</span></span>';
                         
                         $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
                         $custStr = htmlspecialchars((string)(optional($invoice->customer)->name ?? '-'));
@@ -633,7 +707,7 @@ class SalesMarketingReportController extends Controller
                     $totalRecords = $countQuery->count();
 
                     $dataQuery = clone $countQuery;
-                    $notesQuery = $dataQuery->with(['customer', 'salesAgent', 'zone'])->orderBy('id', 'desc');
+                    $notesQuery = $dataQuery->with(['customer', 'salesAgent', 'zone'])->withSum('items', 'quantity')->orderBy('id', 'desc');
                     if ($length !== -1) {
                         $notesQuery->offset($start)->limit($length);
                     }
@@ -652,6 +726,7 @@ class SalesMarketingReportController extends Controller
                             'zone' => '<span class="badge bg-label-info rounded-pill">' . htmlspecialchars((string)(optional($note->zone)->zone_name ?? '-')) . '</span>',
                             'agent' => htmlspecialchars((string)(optional($note->salesAgent)->name ?? '-')),
                             'reason' => htmlspecialchars((string)($note->reason ?? '-')),
+                            'total_qty' => number_format((float)($note->items_sum_quantity ?? 0), 0),
                             'sub_total' => '₹' . number_format((float)($note->sub_total ?? 0), 2),
                             'discount' => '<span class="text-danger">-₹' . number_format((float)($note->discount ?? 0), 2) . '</span>',
                             'tax_amount' => '₹' . number_format((float)($note->tax_amount ?? 0), 2),

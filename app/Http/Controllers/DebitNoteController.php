@@ -42,6 +42,9 @@ class DebitNoteController extends Controller
                         ->orWhereHas('purchaseInvoice', function ($q2) use ($search) {
                             $q2->where('invoice_no', 'like', "%{$search}%");
                         })
+                        ->orWhereHas('stockEntry', function ($q3) use ($search) {
+                            $q3->where('stock_entry_no', 'like', "%{$search}%");
+                        })
                         ->orWhereHas('supplier', function ($q4) use ($search) {
                             $q4->where('name', 'like', "%{$search}%")
                                ->orWhere('code', 'like', "%{$search}%");
@@ -99,11 +102,18 @@ class DebitNoteController extends Controller
                 } */
                 $action .= '</div>';
 
+                $docNo = '-';
+                if (($note->debit_note_type ?? '') == 'stock' || $note->stock_entry_id) {
+                    $docNo = $note->stockEntry->stock_entry_no ?? ('STK-' . $note->stock_entry_id);
+                } else if ($note->purchaseInvoice) {
+                    $docNo = $note->purchaseInvoice->invoice_no;
+                }
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'debit_note_no' => $note->debit_note_no,
                     'debit_note_date' => $note->debit_note_date->format('d-m-Y'),
-                    'purchase_invoice_no' => $note->purchaseInvoice ? $note->purchaseInvoice->invoice_no : '-',
+                    'purchase_invoice_no' => $docNo,
                     'supplier_name' => $note->supplier ? $note->supplier->name : '-',
                     'grand_total' => '₹' . number_format($note->grand_total, 2),
                     'status' => $status,
@@ -149,8 +159,10 @@ class DebitNoteController extends Controller
             $rules = [
                 'debit_note_no' => [($id ? 'nullable' : 'required'), 'string', 'max:50', 'not_regex:/^0+$/', 'unique:debit_notes,debit_note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'debit_note_date' => 'required',
-                'purchase_invoice_id' => 'required|exists:purchase_invoices,id',
-                'supplier_id' => 'required|exists:suppliers,id',
+                'debit_note_type' => 'required|in:purchase_invoice,stock',
+                'purchase_invoice_id' => 'required_if:debit_note_type,purchase_invoice|nullable',
+                'stock_entry_id' => 'required_if:debit_note_type,stock|nullable',
+                'supplier_id' => 'required_if:debit_note_type,purchase_invoice|nullable|exists:suppliers,id',
                 'reason' => 'nullable|string|min:5|max:255',
                 'items' => 'required|array|min:1',
                 'items.*.quantity' => 'required_if:items.*.selected,1|numeric|gt:0',
@@ -233,18 +245,20 @@ class DebitNoteController extends Controller
                         if ($qty <= 0) {
                             $itemErrors["items.$index.quantity"] = "Quantity must be greater than 0.";
                         }
+                    
+                        if (!empty($item['purchase_invoice_item_id'])) {
+                            $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'])->sum('qty_rejected');
 
-                        $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'])->sum('qty_rejected');
+                            $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id']);
+                            if ($id) {
+                                $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
+                            }
+                            $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
 
-                        $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id']);
-                        if ($id) {
-                            $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
-                        }
-                        $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
-
-                        $availableQty = $rejectedQty - $alreadyDebited;
-                        if ($qty > $availableQty) {
-                            $itemErrors["items.$index.quantity"] = "Quantity exceeds available rejected quantity ($availableQty).";
+                            $availableQty = $rejectedQty - $alreadyDebited;
+                            if ($availableQty > 0 && $qty > $availableQty) {
+                                $itemErrors["items.$index.quantity"] = "Quantity exceeds available rejected quantity ($availableQty).";
+                            }
                         }
                     }
                 }
@@ -276,12 +290,16 @@ class DebitNoteController extends Controller
 
                     $referenceDocument = $filename;
                 }
+        
+                $debitNoteType = $request->debit_note_type ?? 'purchase_invoice';
 
                 $debitNoteData = [
                     'debit_note_no' => $request->debit_note_no,
                     'debit_note_date' => Carbon::parse($request->debit_note_date)->format('Y-m-d'),
-                    'purchase_invoice_id' => $request->purchase_invoice_id,
-                    'supplier_id' => $request->supplier_id,
+                    'debit_note_type' => $debitNoteType,
+                    'purchase_invoice_id' => $debitNoteType == 'purchase_invoice' ? $request->purchase_invoice_id : null,
+                    'stock_entry_id' => $debitNoteType == 'stock' ? $request->stock_entry_id : null,
+                    'supplier_id' => $request->supplier_id ?: null,
                     'reason' => $request->reason,
                     'other_state' => $request->other_state ?? 'N',
                     'igst_percent' => $request->igst_percent ?? 0,
@@ -319,7 +337,8 @@ class DebitNoteController extends Controller
                     if (isset($item['selected']) && $item['selected'] == '1') {
                         DebitNoteItem::create([
                             'debit_note_id' => $debitNote->id,
-                            'purchase_invoice_item_id' => $item['purchase_invoice_item_id'],
+                            'purchase_invoice_item_id' => $item['purchase_invoice_item_id'] ?? null,
+                            'stock_entry_item_id' => $item['stock_entry_item_id'] ?? null,
                             'raw_material_id' => $item['raw_material_id'],
                             'quantity' => $item['quantity'],
                             'uom_id' => $item['uom_id'],
@@ -377,6 +396,16 @@ class DebitNoteController extends Controller
             return false;
         })->values();
 
+        $stockEntries = \App\Models\StockEntry::with(['grnEntry.supplier', 'stockEntryItems'])
+            ->where(function ($q) {
+                $q->whereNull('entry_type')
+                  ->orWhere('entry_type', '!=', 'Finished Goods');
+            })
+            ->whereHas('stockEntryItems', function ($q) {
+                $q->whereNotNull('raw_material_id');
+            })
+            ->orderBy('id', 'desc')->get();
+
         $nextDebitNoteNo = '';
         if (!$id) {
             $setting = Setting::first();
@@ -390,7 +419,114 @@ class DebitNoteController extends Controller
             }
         }
 
-        return view('debit_notes.add', compact('debitNote', 'purchaseInvoices', 'nextDebitNoteNo', 'charges'));
+        return view('debit_notes.add', compact('debitNote', 'purchaseInvoices', 'nextDebitNoteNo', 'stockEntries', 'charges'));
+    }
+    
+    public function getStockEntries()
+    {
+        $stockEntries = \App\Models\StockEntry::with(['grnEntry.supplier'])
+            ->where(function ($q) {
+                $q->whereNull('entry_type')
+                  ->orWhere('entry_type', '!=', 'Finished Goods');
+            })
+            ->whereHas('stockEntryItems', function ($q) {
+                $q->whereNotNull('raw_material_id');
+            })
+            ->orderBy('id', 'desc')->get();
+
+        $data = $stockEntries->map(function ($entry) {
+            $supplierName = $entry->grnEntry?->supplier?->name ?? '';
+            $supplierCode = $entry->grnEntry?->supplier?->code ?? '';
+            $supplierText = $supplierName ? " ($supplierName" . ($supplierCode ? " - $supplierCode" : "") . ")" : "";
+            $entryNo = $entry->stock_entry_no ?: ('STK-' . $entry->id);
+            return [
+                'id' => $entry->id,
+                'text' => $entryNo . $supplierText
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'entries' => $data
+        ]);
+    }
+
+
+
+	public function getPurchaseInvoices()
+    {
+        $purchaseInvoices = PurchaseInvoice::with(['supplier', 'items'])
+            ->whereHas('grnEntries.grnEntryItems', function ($q) {
+                $q->where('qty_rejected', '>', 0);
+            })
+            ->orderBy('id', 'desc')->get();
+
+        $data = $purchaseInvoices->map(function ($invoice) {
+            $supplierName = $invoice->supplier->name ?? '';
+            $supplierCode = $invoice->supplier->code ?? '';
+            $supplierText = $supplierName ? " ($supplierName" . ($supplierCode ? " - $supplierCode" : "") . ")" : "";
+            return [
+                'id' => $invoice->id,
+                'text' => $invoice->invoice_no . $supplierText
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'invoices' => $data
+        ]);
+    }
+
+    public function getStockEntryDetails($id)
+    {
+        $stockEntry = \App\Models\StockEntry::with([
+            'grnEntry.supplier',
+            'grnEntry.purchaseInvoice',
+            'stockEntryItems.rawMaterial.storeCategory',
+            'stockEntryItems.uom'
+        ])->findOrFail($id);
+
+        $supplier = $stockEntry->grnEntry?->supplier ?? null;
+        $purchaseInvoice = $stockEntry->grnEntry?->purchaseInvoice ?? null;
+
+        $items = collect($stockEntry->stockEntryItems)->map(function ($item) {
+            $rejectedQty = floatval(($item->qty_rejected ?? 0) > 0 ? $item->qty_rejected : ($item->qty_in > 0 ? $item->qty_in : $item->qty_out));
+            $alreadyDebited = floatval(\App\Models\DebitNoteItem::where('stock_entry_item_id', $item->id)->sum('quantity'));
+            $availableQty = max(0, $rejectedQty - $alreadyDebited);
+            $rate = floatval($item->price ?? 0);
+            $categoryName = $item->rawMaterial?->storeCategory?->store_category_name ?? '-';
+            $artNo = $item->art_no ?? '-';
+
+            return [
+                'id' => $item->id,
+                'stock_entry_item_id' => $item->id,
+                'raw_material_id' => $item->raw_material_id,
+                'raw_material_name' => $item->rawMaterial ? $item->rawMaterial->name : '-',
+                'category_name' => $categoryName,
+                'art_no' => $artNo,
+                'supplier_design_name' => $item->finished_item_code ?? '-',
+                'uom_id' => $item->uom_id,
+                'uom_code' => $item->uom ? $item->uom->uom_code : '-',
+                'quantity' => $availableQty,
+                'max_quantity' => $availableQty,
+                'rate' => $rate,
+                'amount' => round($availableQty * $rate, 2),
+            ];
+        })->filter(function ($item) {
+            return $item['max_quantity'] > 0 && !empty($item['raw_material_id']);
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'supplier_id' => $supplier ? $supplier->id : ($purchaseInvoice ? $purchaseInvoice->supplier_id : ''),
+            'supplier_name' => $supplier ? ($supplier->name . ($supplier->code ? ' - ' . $supplier->code : '')) : ($purchaseInvoice && $purchaseInvoice->supplier ? $purchaseInvoice->supplier->name . ($purchaseInvoice->supplier->code ? ' - ' . $purchaseInvoice->supplier->code : '') : '-'),
+            'items' => $items,
+            'other_state' => $purchaseInvoice ? ($purchaseInvoice->other_state ? 'Y' : 'N') : 'N',
+            'igst_percent' => $purchaseInvoice->igst_percent ?? 0,
+            'cgst_percent' => $purchaseInvoice->cgst_percent ?? 0,
+            'sgst_percent' => $purchaseInvoice->sgst_percent ?? 0,
+            'discount_percent' => $purchaseInvoice->discount_percent ?? 0,
+        ]);
     }
 
     public function view($id)
@@ -398,7 +534,7 @@ class DebitNoteController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details debit-notes')) {
             return unauthorizedRedirect();
         }
-        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
         return view('debit_notes.view_details', compact('debitNote'));
     }
 
@@ -501,7 +637,7 @@ class DebitNoteController extends Controller
             return unauthorizedRedirect();
         }
 
-        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
         $setting = Setting::first();
 
         $totalInWords = numberToWords($debitNote->grand_total);
@@ -515,7 +651,7 @@ class DebitNoteController extends Controller
             return unauthorizedRedirect();
         }
 
-        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
         $setting = Setting::first();
 
         $totalInWords = numberToWords($debitNote->grand_total);

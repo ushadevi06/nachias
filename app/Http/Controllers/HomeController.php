@@ -767,26 +767,16 @@ class HomeController extends Controller
             $q->where('operation_stage_id', $cuttingStageId);
         })->pluck('id');
 
-        $issueProducedToday = JobCardIssueItem::whereDate('updated_at', $today)
-            ->whereNull('deleted_at')
-            ->sum('produced_qty');
+        $issueProducedToday = JobCardIssueItem::whereDate('updated_at', $today)->whereNull('deleted_at')->sum('produced_qty');
 
-        $movementOutwardToday = \App\Models\ProductionMovement::where('operation_stage_id', $cuttingStageId)
-            ->whereDate('created_at', $today)
-            ->whereNull('deleted_at')
-            ->sum('outward_qty');
+        $movementOutwardToday = \App\Models\ProductionMovement::where('operation_stage_id', $cuttingStageId)->whereDate('created_at', $today)->whereNull('deleted_at')->sum('outward_qty');
 
-        $taskCompletedToday = \App\Models\TaskAssignEmployee::whereIn('task_id', $cuttingTaskIds)
-            ->whereDate('updated_at', $today)
-            ->whereNull('deleted_at')
-            ->sum('completed_qty');
+        $taskCompletedToday = \App\Models\TaskAssignEmployee::whereIn('task_id', $cuttingTaskIds)->whereDate('updated_at', $today)->whereNull('deleted_at')->sum('completed_qty');
 
         $piecesCutToday = max(floatval($issueProducedToday), floatval($movementOutwardToday), floatval($taskCompletedToday));
 
         // 4. Active Job Card -> show all job cards with completed
-        $cuttingScheduleJcIds = ProcessSchedule::where('operation_stage_id', $cuttingStageId)
-            ->pluck('job_card_entry_id')
-            ->unique();
+        $cuttingScheduleJcIds = ProcessSchedule::where('operation_stage_id', $cuttingStageId)->pluck('job_card_entry_id')->unique();
 
         $cuttingJobCardsQuery = JobCardEntry::whereIn('id', $cuttingScheduleJcIds)->whereNull('deleted_at');
 
@@ -1506,6 +1496,12 @@ class HomeController extends Controller
         $start = max(0, intval($request->get('start', 0)));
         $length = intval($request->get('length', 10));
 
+        if ($request->has('page')) {
+            $page = max(1, intval($request->get('page', 1)));
+            $length = intval($request->get('per_page', $length));
+            $start = ($page - 1) * $length;
+        }
+
         if ($length < 0) {
             $pageRows = $summary;
         } else {
@@ -1519,10 +1515,18 @@ class HomeController extends Controller
         $totJcs = collect($summary)->sum('job_cards_count');
         $totUtil = $totIssued > 0 ? round(($totConsumed / $totIssued) * 100, 1) : 0;
 
+        $page = $length > 0 ? floor($start / $length) + 1 : 1;
+        $lastPage = $length > 0 ? ceil($recordsFiltered / $length) : 1;
+
         return response()->json([
             'draw' => intval($request->get('draw', 1)),
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
+            'total_records' => $recordsFiltered,
+            'from' => $recordsFiltered > 0 ? $start + 1 : 0,
+            'to' => min($start + count($pageRows), $recordsFiltered),
+            'current_page' => $page,
+            'last_page' => $lastPage,
             'data' => $pageRows,
             'totals' => [
                 'total_jcs' => number_format($totJcs) . ' JCs',
@@ -1535,23 +1539,160 @@ class HomeController extends Controller
         ]);
     }
 
+    public function getFabricUtilisationJobCardsAjax(Request $request)
+    {
+        $brandName = trim($request->get('brand_name', ''));
+        $brandId = $request->get('brand_id');
+        $style = trim($request->get('style', ''));
+        $serviceProvider = trim($request->get('service_provider', ''));
+        $title = trim($request->get('title', ''));
+
+        if (empty($brandName) && !empty($title)) {
+            $brandName = $title;
+        }
+
+        if ((empty($style) || empty($serviceProvider)) && strpos($brandName, ' - ') !== false) {
+            // Might be formatted like "Brand - Style (ServiceProvider)"
+            if (preg_match('/^(.*?)\s*-\s*(.*?)\s*\((.*?)\)$/', $brandName, $matches)) {
+                $brandName = trim($matches[1]);
+                $style = trim($matches[2]);
+                $serviceProvider = trim($matches[3]);
+            }
+        }
+
+        $search = '';
+        if ($request->has('search')) {
+            $s = $request->get('search');
+            if (is_array($s) && isset($s['value'])) {
+                $search = trim(strtolower($s['value']));
+            } else if (is_string($s)) {
+                $search = trim(strtolower($s));
+            }
+        }
+
+        $allData = $this->computeFabricUtilisationSummary();
+        $summary = $allData['summary'];
+
+        // Find matching group in summary
+        $matchingJobCards = [];
+        foreach ($summary as $item) {
+            $matchBrand = false;
+            if ($brandId !== null && $brandId !== '' && $item['brand_id'] == $brandId) {
+                $matchBrand = true;
+            } elseif (!empty($brandName) && strcasecmp($item['brand_name'], $brandName) === 0) {
+                $matchBrand = true;
+            } elseif (empty($brandId) && empty($brandName)) {
+                $matchBrand = true;
+            }
+
+            $matchStyle = (empty($style) || strcasecmp($item['style'], $style) === 0);
+            $matchSp = (empty($serviceProvider) || strcasecmp($item['service_provider'], $serviceProvider) === 0);
+
+            if ($matchBrand && $matchStyle && $matchSp) {
+                $matchingJobCards = array_merge($matchingJobCards, $item['job_cards'] ?? []);
+            }
+        }
+
+        // Fallback match if not found by exact match
+        if (empty($matchingJobCards) && (!empty($brandName) || !empty($style) || !empty($serviceProvider))) {
+            foreach ($summary as $item) {
+                $bMatch = empty($brandName) || stripos($item['brand_name'], $brandName) !== false;
+                $sMatch = empty($style) || stripos($item['style'], $style) !== false;
+                $spMatch = empty($serviceProvider) || stripos($item['service_provider'], $serviceProvider) !== false;
+                if ($bMatch && $sMatch && $spMatch) {
+                    $matchingJobCards = array_merge($matchingJobCards, $item['job_cards'] ?? []);
+                }
+            }
+        }
+
+        $recordsTotal = count($matchingJobCards);
+
+        // Apply search filtering
+        if (!empty($search)) {
+            $matchingJobCards = array_values(array_filter($matchingJobCards, function ($jc) use ($search) {
+                return (stripos($jc['job_card_no'] ?? '', $search) !== false)
+                    || (stripos($jc['service_provider'] ?? '', $search) !== false)
+                    || (stripos($jc['style'] ?? '', $search) !== false)
+                    || (stripos($jc['remarks'] ?? '', $search) !== false)
+                    || (stripos($jc['status'] ?? '', $search) !== false);
+            }));
+        }
+
+        $recordsFiltered = count($matchingJobCards);
+
+        // Sorting if requested by DataTables
+        $order = $request->get('order');
+        if (is_array($order) && !empty($order)) {
+            $colIdx = intval($order[0]['column'] ?? 0);
+            $dir = strtolower($order[0]['dir'] ?? 'asc');
+            $colMap = [
+                1 => 'job_card_no',
+                2 => 'date',
+                3 => 'delivery_date',
+                4 => 'no_of_days',
+                5 => 'service_provider',
+                6 => 'style',
+                7 => 'cutting_qty',
+                8 => 'fabric_issued',
+                9 => 'fabric_consumed',
+                10 => 'wastage',
+                11 => 'utilisation',
+                12 => 'remarks',
+                13 => 'status',
+            ];
+            if (isset($colMap[$colIdx])) {
+                $sortKey = $colMap[$colIdx];
+                usort($matchingJobCards, function ($a, $b) use ($sortKey, $dir) {
+                    $valA = $a[$sortKey] ?? '';
+                    $valB = $b[$sortKey] ?? '';
+                    if (is_numeric($valA) && is_numeric($valB)) {
+                        $cmp = $valA <=> $valB;
+                    } else {
+                        $cmp = strcasecmp(strval($valA), strval($valB));
+                    }
+                    return $dir === 'desc' ? -$cmp : $cmp;
+                });
+            }
+        }
+
+        // Totals for all matching job cards
+        $totCutting = collect($matchingJobCards)->sum('cutting_qty');
+        $totIssued = collect($matchingJobCards)->sum('fabric_issued');
+        $totConsumed = collect($matchingJobCards)->sum('fabric_consumed');
+        $totWastage = collect($matchingJobCards)->sum('wastage');
+        $totUtil = $totIssued > 0 ? round(($totConsumed / $totIssued) * 100, 1) : 0;
+
+        // Pagination
+        $start = max(0, intval($request->get('start', 0)));
+        $length = intval($request->get('length', 10));
+        if ($length < 0) {
+            $pageData = $matchingJobCards;
+        } else {
+            $pageData = array_slice($matchingJobCards, $start, $length);
+        }
+
+        return response()->json([
+            'draw' => intval($request->get('draw', 1)),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => array_values($pageData),
+            'totals' => [
+                'cutting_qty' => number_format($totCutting) . ' Pcs',
+                'fabric_issued' => number_format($totIssued, 2),
+                'fabric_consumed' => number_format($totConsumed, 2),
+                'wastage' => number_format($totWastage, 2),
+                'utilisation' => $totUtil . '%'
+            ]
+        ]);
+    }
+
     private function getCoreMaterialPlannerTotals()
     {
-        $totalStock = DB::table('stock_entry_items')
-            ->where('store_category_id', 1)
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
+        $totalStock = DB::table('stock_entry_items')->where('store_category_id', 1)->whereNull('deleted_at')->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
 
-        $totalWip = DB::table('job_card_fabric_details as jcfd')
-            ->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')
-            ->whereNull('jcfd.deleted_at')
-            ->where('jce.status', '!=', 'cancelled')
-            ->where('jce.status', '!=', 'Completed')
-            ->sum('jcfd.total_qty');
+        $totalWip = DB::table('job_card_fabric_details as jcfd')->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')->whereNull('jcfd.deleted_at')->where('jce.status', '!=', 'cancelled')->where('jce.status', '!=', 'Completed')->sum('jcfd.total_qty');
 
-        $totalFg = DB::table('stock_entry_items')
-            ->whereNull('store_category_id')
-            ->whereNull('deleted_at')
+        $totalFg = DB::table('stock_entry_items')->whereNull('store_category_id')->whereNull('deleted_at')
             ->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
 
         return [

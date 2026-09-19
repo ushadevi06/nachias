@@ -41,8 +41,8 @@
                             <div class="fw-bold text-dark">{{ $debitNote->debit_note_date->format('d M, Y') }}</div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Invoice</div>
-                            <div class="fw-bold text-dark">{{ $debitNote->purchaseInvoice->invoice_no ?? '-' }}</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Invoice / Stock No.</div>
+                            <div class="fw-bold text-dark">{{ (($debitNote->debit_note_type ?? '') == 'stock' || $debitNote->stock_entry_id) ? ($debitNote->stockEntry->stock_entry_no ?? ('STK-' . $debitNote->stock_entry_id)) : 	($debitNote->purchaseInvoice->invoice_no ?? '-') }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
@@ -104,11 +104,19 @@
                                 @else
                                     @foreach($debitNote->items as $index => $item)
                                     @php
-                                         $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
-                                         $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
-                                         $supplierDesignName = $poItem->supplier_design_name ?? '-';
-                                         $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
-                                         $artNo = $grnItem->art_no ?? '-';
+                                        $supplierDesignName = '-';
+                                        $artNo = '-';
+                                        if ($item->purchase_invoice_item_id) {
+                                            $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
+                                            $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                                            $supplierDesignName = $poItem->supplier_design_name ?? '-';
+                                            $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
+                                            $artNo = $grnItem->art_no ?? '-';
+                                        } elseif ($item->stock_entry_item_id) {
+                                            $dbStockItem = \App\Models\StockEntryItem::with('grnEntryItem')->find($item->stock_entry_item_id);
+                                            $artNo = $dbStockItem->art_no ?? $dbStockItem?->grnEntryItem?->art_no ?? '-';
+                                            $supplierDesignName = $dbStockItem->finished_item_code ?? '-';
+                                        }
                                     @endphp
                                     <tr>
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>

@@ -96,12 +96,24 @@ class OperationStageController extends Controller
                 'target' => 'nullable|integer|min:0',
                 'status' => 'required|in:Active,Inactive'
             ];
+
+            if ($request->has('unit_targets') && is_array($request->unit_targets)) {
+                $rules['unit_targets.*.service_provider_id'] = 'required|distinct|exists:service_providers,id';
+                $rules['unit_targets.*.target_qty'] = 'required|numeric|min:0';
+            }
+
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
                 'operation_stage_name.not_regex' => 'This field is an invalid format.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
+                'unit_targets.*.service_provider_id.required' => 'Unit / Service Provider is required.',
+                'unit_targets.*.service_provider_id.distinct' => 'Duplicate unit selected. Each unit must be unique.',
+                'unit_targets.*.service_provider_id.exists' => 'Selected unit is invalid.',
+                'unit_targets.*.target_qty.required' => 'Target quantity is required.',
+                'unit_targets.*.target_qty.numeric' => 'Target quantity must be a valid number.',
+                'unit_targets.*.target_qty.min' => 'Target quantity cannot be negative.',
             ];
             $validated = $request->validate($rules, $messages);
             $data = [
@@ -111,6 +123,7 @@ class OperationStageController extends Controller
                 'target' => $request->target !== null && $request->target !== '' ? (int) $request->target : null,
                 'status' => $request->status
             ];
+            $stageId = $id;
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 OperationStage::where('id', $id)->update($data);
@@ -120,13 +133,35 @@ class OperationStageController extends Controller
             } else {
                 $data['created_by'] = auth()->id();
                 $operationStage = OperationStage::create($data);
+                $stageId = $operationStage->id;
                 $newData = $operationStage->toArray();
                 addLog('create', 'Operation Stage', 'operation_stages', $operationStage->id, null, $newData);
                 $message = 'Operation Stage added successfully';
             }
+
+            if ($request->has('unit_targets') && is_array($request->unit_targets)) {
+                \App\Models\OperationStageTarget::where('operation_stage_id', $stageId)->delete();
+                foreach ($request->unit_targets as $item) {
+                    $spId = isset($item['service_provider_id']) ? (int) $item['service_provider_id'] : null;
+                    $tQty = isset($item['target_qty']) && $item['target_qty'] !== '' ? (int) $item['target_qty'] : null;
+                    if ($spId && $tQty !== null && $tQty >= 0) {
+                        \App\Models\OperationStageTarget::updateOrInsert(
+                            ['operation_stage_id' => $stageId, 'service_provider_id' => $spId],
+                            ['target_qty' => $tQty, 'created_at' => now(), 'updated_at' => now()]
+                        );
+                    }
+                }
+            } else {
+                \App\Models\OperationStageTarget::where('operation_stage_id', $stageId)->delete();
+            }
+
             return redirect('operation_stages')->with('success', $message);
         }
-        return view('operation_stages.add', compact('operationStage'));
+
+        $serviceProviders = ServiceProvider::where('status', 'Active')->orderBy('id','desc')->get();
+        $stageTargets = $operationStage ? $operationStage->targets : collect();
+
+        return view('operation_stages.add', compact('operationStage', 'serviceProviders', 'stageTargets'));
     }
 
     public function destroy($id)

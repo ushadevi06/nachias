@@ -186,8 +186,8 @@
           <table width="100%" cellpadding="6" cellspacing="0" style="border-bottom:4px double #000; line-height:1.4;">
             <tr>
               <td>
-                <strong style="font-size:16px;">{{ $debitNote->supplier->name }}</strong><br>
-                <strong>Sales Off / Postal Add:</strong> {{ $debitNote->supplier->address_line_1 }}
+                <strong style="font-size:16px;">{{ $debitNote->supplier->name ?? '' }}</strong><br>
+                <strong>Sales Off / Postal Add:</strong> {{ $debitNote->supplier->address_line_1 ?? }}
                 {{ $debitNote->supplier->address_line_2 ? ', ' . $debitNote->supplier->address_line_2 : '' }}
                 {{ $debitNote->supplier->address_line_3 ? ', ' . $debitNote->supplier->address_line_3 : '' }}
                 {{ $debitNote->supplier->city ? ', ' . $debitNote->supplier->city->city_name : '' }}
@@ -206,9 +206,13 @@
             <tr>
               <td width="50%" style="border-right: 1px solid #000;">
                 Debit Note No: <strong>{{ $debitNote->debit_note_no }}</strong><br>
-                Reference Invoice: <strong>{{ $debitNote->purchaseInvoice->invoice_no ?? '-' }}</strong><br>
+                @if(($debitNote->debit_note_type ?? '') == 'stock' || $debitNote->stock_entry_id)
+                  Reference Stock Entry: <strong>{{ $debitNote->stockEntry->stock_entry_no ?? ('STK-' . $debitNote->stock_entry_id) }}</strong><br>
+                @else
+                  Reference Invoice: <strong>{{ $debitNote->purchaseInvoice->invoice_no ?? '-' }}</strong><br>
+                @endif
                 Reason: <strong>{{ $debitNote->reason ?? '-' }}</strong>
-              </td>
+            </td>
               <td width="50%" style="padding:6px; line-height:1.4;">
                 Date: <strong>{{ $debitNote->debit_note_date->format('d/m/Y') }}</strong><br>
                 Destination: <strong>{{ $debitNote->supplier->city->city_name ?? '-' }}</strong><br>
@@ -291,11 +295,20 @@
           @foreach($chunk as $item)
             @php
               $overallIndex++;
-              $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
-              $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
-              $supplierDesignName = $poItem->supplier_design_name ?? '-';
-              $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
-              $artNo = $grnItem->art_no ?? '-';
+              $supplierDesignName = '-';
+              $artNo = '-';
+
+              if ($item->purchase_invoice_item_id) {
+                $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
+                $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where		('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                $supplierDesignName = $poItem->supplier_design_name ?? '-';
+                $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
+                $artNo = $grnItem->art_no ?? '-';
+              } elseif ($item->stock_entry_item_id) {
+                $dbStockItem = \App\Models\StockEntryItem::with('grnEntryItem')->find($item->stock_entry_item_id);
+                $artNo = $dbStockItem->art_no ?? $dbStockItem?->grnEntryItem?->art_no ?? '-';
+                $supplierDesignName = $dbStockItem->finished_item_code ?? '-';
+              }
             @endphp
             <tr>
               <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $overallIndex }}</td>

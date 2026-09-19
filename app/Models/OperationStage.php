@@ -25,4 +25,9 @@ class OperationStage extends Model
     {
         return $query->where('status', 'Active');
     }
+
+    public function targets()
+    {
+        return $this->hasMany(OperationStageTarget::class, 'operation_stage_id');
+    }
 }

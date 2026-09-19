@@ -38,13 +38,11 @@
                         <option value="outstanding-report" {{ request('report_type') == 'outstanding-report' || request('type') == 'outstanding-report' ? 'selected' : '' }}>💰 Zone Wise Outstanding</option>
                     </select>
                 </div>
-                <div class="col-6 col-md-2 col-xl-2">
-                    <label class="form-label small fw-bold text-muted">From Date</label>
-                    <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
-                </div>
-                <div class="col-6 col-md-2 col-xl-2">
-                    <label class="form-label small fw-bold text-muted">To Date</label>
-                    <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
+                <div class="col-12 col-md-4 col-xl-3">
+                    <label class="form-label small fw-bold text-muted">Date Range</label>
+                    <input type="text" class="form-control report_date_range" id="sales_marketing_date_range" placeholder="DD-MM-YYYY to DD-MM-YYYY" value="{{ (request('from_date') && request('to_date')) ? (request('from_date') == request('to_date') ? request('from_date') : request('from_date') . ' to ' . request('to_date')) : (request('from_date') ?? '') }}">
+                    <input type="hidden" class="start_date" name="from_date" value="{{ request('from_date') }}">
+                    <input type="hidden" class="end_date" name="to_date" value="{{ request('to_date') }}">
                 </div>
 
                 <div class="col-12 col-md-2 col-xl-2">
@@ -81,7 +79,7 @@
                     <button type="submit" class="btn btn-primary w-100 rounded-pill p-2" title="Search">
                         <i class="ri ri-search-line"></i>
                     </button>
-                    <button type="button" id="btn-reset-report" class="btn btn-outline-light rounded-pill border p-2" title="Reset">
+                    <button type="button" id="btn-reset-report" class="btn btn-light rounded-pill border p-2" title="Reset">
                         <i class="ri ri-refresh-line"></i>
                     </button>
                 </div>
@@ -358,6 +356,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @section('scripts')
 <script>
+function formatReportExportCell(data) {
+    if (typeof data === 'string') {
+        var temp = $('<div>').html(data);
+        var hasCheck = temp.find('.ri-check-line, .ri-checkbox-circle-line').length > 0 || data.indexOf('ri-check-line') !== -1 || data.indexOf('ri-checkbox-circle-line') !== -1;
+        var hasClose = temp.find('.ri-close-line, .ri-close-circle-line').length > 0 || data.indexOf('ri-close-line') !== -1 || data.indexOf('ri-close-circle-line') !== -1;
+
+        temp.find('.no-export, .d-none, button, i, script').remove();
+        var text = temp.text().trim();
+        if (!text) {
+            if (hasCheck) return '✔';
+            if (hasClose) return '✘';
+        }
+        return text;
+    }
+    return data;
+}
+
 $.extend(true, $.fn.dataTable.defaults, {
     processing: true,
     buttons: [
@@ -372,14 +387,7 @@ $.extend(true, $.fn.dataTable.defaults, {
             exportOptions: {
                 columns: ':not(.no-export)',
                 format: {
-                    body: function (data, row, column, node) {
-                        if (typeof data === 'string') {
-                            var temp = $('<div>').html(data);
-                            temp.find('.no-export, .d-none, button, i, script').remove();
-                            return temp.text().trim();
-                        }
-                        return data;
-                    },
+                    body: formatReportExportCell,
                     footer: function (data, row, column, node) {
                         if (typeof data === 'string') {
                             var temp = $('<div>').html(data);
@@ -394,10 +402,8 @@ $.extend(true, $.fn.dataTable.defaults, {
                 var sheet   = xlsx.xl.worksheets['sheet1.xml'];
                 var styles  = xlsx.xl['styles.xml'];
 
-                // Change built-in 0% (numFmtId 9) to 0.00% (numFmtId 10) in styles
                 $('cellXfs xf[numFmtId="9"]', styles).attr('numFmtId', '10');
 
-                // Collect all numFmtIds that represent percentage formats
                 var pctFmtIds = [9, 10, 167];
                 $('numFmt', styles).each(function () {
                     var code = $(this).attr('formatCode') || '';
@@ -441,14 +447,7 @@ $.extend(true, $.fn.dataTable.defaults, {
             exportOptions: {
                 columns: ':not(.no-export)',
                 format: {
-                    body: function (data, row, column, node) {
-                        if (typeof data === 'string') {
-                            var temp = $('<div>').html(data);
-                            temp.find('.no-export, .d-none, button, i, script').remove();
-                            return temp.text().trim();
-                        }
-                        return data;
-                    }
+                    body: formatReportExportCell
                 }
             }
         },
@@ -463,14 +462,7 @@ $.extend(true, $.fn.dataTable.defaults, {
             exportOptions: {
                 columns: ':not(.no-export)',
                 format: {
-                    body: function (data, row, column, node) {
-                        if (typeof data === 'string') {
-                            var temp = $('<div>').html(data);
-                            temp.find('.no-export, .d-none, button, i, script').remove();
-                            return temp.text().trim();
-                        }
-                        return data;
-                    }
+                    body: formatReportExportCell
                 }
             }
         }
@@ -613,6 +605,7 @@ $(document).ready(function() {
                 { data: 'zone', name: 'zone' },
                 { data: 'agent', name: 'agent' },
                 { data: 'reason', name: 'reason' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center fw-bold' },
                 { data: 'sub_total', name: 'sub_total', className: 'text-end' },
                 { data: 'discount', name: 'discount', className: 'text-end text-danger' },
                 { data: 'tax_amount', name: 'tax_amount', className: 'text-end' },
@@ -718,7 +711,6 @@ $(document).ready(function() {
             autoWidth: false,
             destroy: true,
             language: {
-                processing: '<div class="d-flex align-items-center justify-content-center py-4 text-primary fw-bold"><div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading report data...</div>',
                 emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
             },
             ajax: {
@@ -737,7 +729,7 @@ $(document).ready(function() {
             },
             columns: config.columns,
             footerCallback: config.footerCallback || function() {},
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
             pageLength: 10
         });
@@ -752,7 +744,6 @@ $(document).ready(function() {
         }
     }
 
-    // Select Report Type Change Listener
     $('#report_type_select').on('change', function() {
         const selectedType = $(this).val();
         const selectedText = $(this).find('option:selected').text();
@@ -765,7 +756,6 @@ $(document).ready(function() {
         loadActiveTabTable(selectedType, true);
     });
 
-    // Initialize Active Report on Page Load
     const initialReportType = $('#report_type_select').val() || 'order-report';
     const initialText = $('#report_type_select option:selected').text();
     if (initialText) {
@@ -776,7 +766,6 @@ $(document).ready(function() {
     updateFilterVisibility(initialReportType);
     loadActiveTabTable(initialReportType, true);
 
-    // Form Filter Submit listener
     $('#salesMarketingReportForm').on('submit', function(e) {
         e.preventDefault();
         const activeTabId = $('#report_type_select').val() || 'order-report';
@@ -819,14 +808,24 @@ $(document).ready(function() {
         loadActiveTabTable('order-report');
     };
 
-    function renderOrderItemLevel(soNo, customer, soDate, statusHtml, itemsData) {
+    function decodeHtmlEntities(str) {
+        if (!str) return '';
+        var txt = document.createElement('textarea');
+        txt.innerHTML = str;
+        return txt.value;
+    }
+
+    function renderOrderItemLevel(soNo, customer, soDate, statusHtml, orderId) {
         isOrderRootLevel = false;
 
-        $('#orderBreadcrumbText').text('Orders > ' + soNo + ' (' + customer + ')');
+        var cleanSoNo = decodeHtmlEntities(soNo);
+        var cleanCustomer = decodeHtmlEntities(customer);
+
+        $('#orderBreadcrumbText').text('Orders > ' + cleanSoNo + ' (' + cleanCustomer + ')');
         $('#orderBreadcrumbs').css('display', 'flex');
 
-        $('#level2SoNo').text(soNo);
-        $('#level2Customer').text(customer);
+        $('#level2SoNo').text(cleanSoNo);
+        $('#level2Customer').text(cleanCustomer);
         $('#level2SoDate').text(soDate);
         $('#level2Status').html(statusHtml);
         $('#selectedOrderInfoHeader').show();
@@ -843,27 +842,48 @@ $(document).ready(function() {
             <th class="text-end fw-bold pe-3">QUANTITY</th>
         `);
 
-        let rowsHtml = '';
-        if (itemsData && itemsData.length > 0) {
-            itemsData.forEach((item, idx) => {
-                rowsHtml += `
-                    <tr>
-                        <td class="text-center text-muted fw-bold">${idx + 1}</td>
-                        <td class="fw-medium text-dark">${item.name}</td>
-                        <td class="text-center"><span class="badge bg-label-secondary rounded-pill">${item.size}</span></td>
-                        <td class="text-center"><span class="badge bg-label-info rounded-pill">${item.sleeve}</span></td>
-                        <td class="text-end fw-bold pe-3">${item.qty}</td>
-                    </tr>
-                `;
-            });
-        } else {
-            rowsHtml = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</td></tr>';
-        }
-
-        $('#orderReportTbody').html(rowsHtml);
+        $('#orderReportTbody').empty();
 
         $('#orderReportTable').DataTable({
             processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ url('sales_marketing_reports/ajax/order-items') }}",
+                type: "GET",
+                data: function(d) {
+                    d.order_id = orderId;
+                    d.so_no = soNo;
+                }
+            },
+            columns: [
+                {
+                    data: null,
+                    className: 'text-center text-muted fw-bold',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                { data: 'name', name: 'item_name', className: 'fw-medium text-dark' },
+                {
+                    data: 'size',
+                    name: 'size_id',
+                    className: 'text-center',
+                    render: function(data) {
+                        return '<span class="badge bg-label-secondary rounded-pill">' + (data || '-') + '</span>';
+                    }
+                },
+                {
+                    data: 'sleeve',
+                    name: 'sleeve',
+                    className: 'text-center',
+                    render: function(data) {
+                        return '<span class="badge bg-label-info rounded-pill">' + (data || '-') + '</span>';
+                    }
+                },
+                { data: 'qty', name: 'qty', className: 'text-end fw-bold pe-3' }
+            ],
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -872,7 +892,11 @@ $(document).ready(function() {
             info: true,
             lengthChange: true,
             pageLength: 10,
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
+            lengthMenu: [10, 25, 50, 100],
+            language: {
+                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</div>'
+            },
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
         });
     }
 
@@ -884,13 +908,13 @@ $(document).ready(function() {
         const dt = $('#orderReportTable').DataTable();
         const rowData = dt.row(this).data();
 
-        if (rowData && rowData.items_data) {
+        if (rowData) {
             renderOrderItemLevel(
                 rowData.so_no_raw,
                 rowData.customer_raw,
                 rowData.so_date_raw,
                 rowData.status_html,
-                rowData.items_data
+                rowData.order_id || rowData.so_no_raw
             );
         }
     });
@@ -917,14 +941,17 @@ $(document).ready(function() {
         loadActiveTabTable('pending-report');
     };
 
-    function renderPendingOrderItemLevel(soNo, customer, ordQty, balQty, itemsData) {
+    function renderPendingOrderItemLevel(soNo, customer, ordQty, balQty, orderId) {
         isPendingOrderRootLevel = false;
 
-        $('#pendingBreadcrumbText').text('Pending Orders > ' + soNo + ' (' + customer + ')');
+        var cleanSoNo = decodeHtmlEntities(soNo);
+        var cleanCustomer = decodeHtmlEntities(customer);
+
+        $('#pendingBreadcrumbText').text('Pending Orders > ' + cleanSoNo + ' (' + cleanCustomer + ')');
         $('#pendingBreadcrumbs').css('display', 'flex');
 
-        $('#level2PendingSoNo').text(soNo);
-        $('#level2PendingCustomer').text(customer);
+        $('#level2PendingSoNo').text(cleanSoNo);
+        $('#level2PendingCustomer').text(cleanCustomer);
         $('#level2PendingOrdQty').text(ordQty);
         $('#level2PendingBalQty').text(balQty);
         $('#selectedPendingOrderInfoHeader').show();
@@ -941,27 +968,48 @@ $(document).ready(function() {
             <th class="text-end fw-bold pe-3">QUANTITY</th>
         `);
 
-        let rowsHtml = '';
-        if (itemsData && itemsData.length > 0) {
-            itemsData.forEach((item, idx) => {
-                rowsHtml += `
-                    <tr>
-                        <td class="text-center text-muted fw-bold">${idx + 1}</td>
-                        <td class="fw-medium text-dark">${item.name}</td>
-                        <td class="text-center"><span class="badge bg-label-secondary rounded-pill">${item.size}</span></td>
-                        <td class="text-center"><span class="badge bg-label-info rounded-pill">${item.sleeve}</span></td>
-                        <td class="text-end fw-bold pe-3">${item.qty}</td>
-                    </tr>
-                `;
-            });
-        } else {
-            rowsHtml = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</td></tr>';
-        }
-
-        $('#pendingReportTbody').html(rowsHtml);
+        $('#pendingReportTbody').empty();
 
         $('#pendingReportTable').DataTable({
             processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ url('sales_marketing_reports/ajax/order-items') }}",
+                type: "GET",
+                data: function(d) {
+                    d.order_id = orderId;
+                    d.so_no = soNo;
+                }
+            },
+            columns: [
+                {
+                    data: null,
+                    className: 'text-center text-muted fw-bold',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data, type, row, meta) {
+                        return meta.row + meta.settings._iDisplayStart + 1;
+                    }
+                },
+                { data: 'name', name: 'item_name', className: 'fw-medium text-dark' },
+                {
+                    data: 'size',
+                    name: 'size_id',
+                    className: 'text-center',
+                    render: function(data) {
+                        return '<span class="badge bg-label-secondary rounded-pill">' + (data || '-') + '</span>';
+                    }
+                },
+                {
+                    data: 'sleeve',
+                    name: 'sleeve',
+                    className: 'text-center',
+                    render: function(data) {
+                        return '<span class="badge bg-label-info rounded-pill">' + (data || '-') + '</span>';
+                    }
+                },
+                { data: 'qty', name: 'qty', className: 'text-end fw-bold pe-3' }
+            ],
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -970,7 +1018,12 @@ $(document).ready(function() {
             info: true,
             lengthChange: true,
             pageLength: 10,
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
+            lengthMenu: [10, 25, 50, 100],
+            language: {
+                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</div>',
+                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> Loading items...'
+            },
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
         });
     }
 
@@ -982,13 +1035,13 @@ $(document).ready(function() {
         const dt = $('#pendingReportTable').DataTable();
         const rowData = dt.row(this).data();
 
-        if (rowData && rowData.items_data) {
+        if (rowData) {
             renderPendingOrderItemLevel(
                 rowData.so_no_raw,
                 rowData.customer_raw,
                 rowData.ord_qty_raw,
                 rowData.bal_qty_raw,
-                rowData.items_data
+                rowData.order_id || rowData.so_no_raw
             );
         }
     });
@@ -996,6 +1049,10 @@ $(document).ready(function() {
     // Reset Button Handler (matches Warehouse Report pattern)
     $(document).on('click', '#btn-reset-report', function(e) {
         e.preventDefault();
+        $('#sales_marketing_date_range').val('');
+        if ($('#sales_marketing_date_range')[0] && $('#sales_marketing_date_range')[0]._flatpickr) {
+            $('#sales_marketing_date_range')[0]._flatpickr.clear();
+        }
         $('.start_date').val('');
         $('.end_date').val('');
         $('select[name="customer_id"]').val('').trigger('change');
@@ -1070,3 +1127,5 @@ $(document).ready(function() {
 });
 </script>
 @endsection
+
+

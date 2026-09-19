@@ -6,6 +6,7 @@
                 <th class="text-start ps-3">PRODUCT GROUP</th>
                 <th>WIDTH</th>
                 <th>PLAIN METERS</th>
+                <th>WHITE METERS</th>
                 <th>PRINT METERS</th>
                 <th>CHECKED METERS</th>
                 <th>STRIPED METERS</th>
@@ -17,6 +18,7 @@
             <tr class="fw-bold" style="background: #f1f5f9;">
                 <td colspan="3" class="text-end">TOTAL</td>
                 <td id="footer-casino-plain">0.00</td>
+                <td id="footer-casino-white">0.00</td>
                 <td id="footer-casino-print">0.00</td>
                 <td id="footer-casino-checked">0.00</td>
                 <td id="footer-casino-striped">0.00</td>
@@ -51,6 +53,7 @@
                     d.from_date = $('.start_date').val();
                     d.to_date = $('.end_date').val();
                     d.supplier_id = $('select[name="supplier_id"]').val();
+                    d.brand_id = $('select[name="brand_id"]').val();
                 }
             },
             columns: [
@@ -58,6 +61,7 @@
                 { data: 'brand_name', className: 'text-start ps-3 fw-medium text-dark' },
                 { data: 'width' },
                 { data: 'plain' },
+                { data: 'white' },
                 { data: 'print' },
                 { data: 'checked' },
                 { data: 'striped' },
@@ -67,6 +71,7 @@
                 var json = settings.json;
                 if (json && json.totals) {
                     $('#footer-casino-plain').html(json.totals.plain);
+                    $('#footer-casino-white').html(json.totals.white);
                     $('#footer-casino-print').html(json.totals.print);
                     $('#footer-casino-checked').html(json.totals.checked);
                     $('#footer-casino-striped').html(json.totals.striped);

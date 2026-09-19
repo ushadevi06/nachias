@@ -101,6 +101,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
     Route::get('/dashboard/service-wip', [HomeController::class, 'getServiceWipDetails']);
     Route::get('/dashboard/fabric-utilisation', [HomeController::class, 'getFabricUtilisationAjax']);
+    Route::get('/dashboard/fabric-utilisation-job-cards', [HomeController::class, 'getFabricUtilisationJobCardsAjax']);
     Route::get('/dashboard/core-material-planner', [HomeController::class, 'getCoreMaterialPlannerAjax']);
     Route::get('/dashboard/core-planner', [HomeController::class, 'getCoreMaterialPlannerAjax']);
     Route::get('/dashboard/supplier-performance', [HomeController::class, 'getSupplierPerformanceAjax']);
@@ -115,6 +116,64 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/core-material-settings/get-art-brand/{art_no}', [CoreMaterialPlannerSettingController::class, 'getArtNoDetails']);
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
     Route::match(['get', 'post'], 'logout', [AuthController::class, 'logout']);
+
+    Route::get('/fix-finished-goods-brand-mismatches', function () {
+        $brands = DB::table('brands')
+            ->whereNotNull('code')
+            ->where('code', '!=', '')
+            ->orderByRaw('LENGTH(code) DESC')
+            ->get();
+
+        $items = DB::table('stock_entry_items')
+            ->where('stock_type', 'finished_goods')
+            ->whereNull('deleted_at')
+            ->whereNotNull('art_no')
+            ->where('art_no', '!=', '')
+            ->select('id', 'art_no', 'brand_id')
+            ->get();
+
+        $updatedCount = 0;
+        $details = [];
+
+        DB::transaction(function () use ($items, $brands, &$updatedCount, &$details) {
+            foreach ($items as $item) {
+                $art = strtoupper(trim($item->art_no));
+                $matchedBrand = null;
+                foreach ($brands as $b) {
+                    if (str_starts_with($art, strtoupper($b->code))) {
+                        $matchedBrand = $b;
+                        break;
+                    }
+                }
+                if ($matchedBrand && $item->brand_id != $matchedBrand->id) {
+                    DB::table('stock_entry_items')->where('id', $item->id)->update(['brand_id' => $matchedBrand->id]);
+                    $updatedCount++;
+                    $details[$matchedBrand->brand_name] = ($details[$matchedBrand->brand_name] ?? 0) + 1;
+                }
+            }
+
+            // Also ensure CRYSTAL style is set to WHITE (style_id = 7)
+            $whiteStyle = DB::table('styles')->where('style_name', 'WHITE')->orWhere('code', 'WHT')->first();
+            if ($whiteStyle) {
+                $crystalUpdated = DB::table('stock_entry_items')
+                    ->where('art_no', 'CRYSTAL')
+                    ->where(function($q) use ($whiteStyle) {
+                        $q->whereNull('style_id')->orWhere('style_id', '!=', $whiteStyle->id);
+                    })
+                    ->update(['style_id' => $whiteStyle->id]);
+                if ($crystalUpdated > 0) {
+                    $details['CRYSTAL_STYLE_TO_WHITE'] = $crystalUpdated;
+                }
+            }
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Successfully updated items to their correct brand_id and styles.",
+            'updated_count' => $updatedCount,
+            'breakdown' => $details
+        ]);
+    });
 
     /* Chatbot */
     Route::get('/chatbot', [ChatbotController::class, 'index'])->name('chatbot.index');
@@ -549,6 +608,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('debit_notes/view/{id}', [DebitNoteController::class, 'view']);
     Route::get('debit_notes/delete/{id}', [DebitNoteController::class, 'destroy']);
     Route::get('debit_notes/get-invoice-details/{id}', [DebitNoteController::class, 'getInvoiceDetails']);
+    Route::get('debit_notes/get-stock-details/{id}', [DebitNoteController::class, 'getStockEntryDetails']);
+    Route::get('debit_notes/get-stock-entries', [DebitNoteController::class, 'getStockEntries']);
     Route::get('debit_notes/get-supplier-invoices/{id}', [DebitNoteController::class, 'getSupplierInvoices']);
     Route::get('debit_notes/print/{id}', [DebitNoteController::class, 'print']);
     Route::get('debit_notes/download/{id}', [DebitNoteController::class, 'download']);
@@ -806,4 +867,210 @@ Route::get('/run-permission-seeder', function () {
         '--class' => 'Database\\Seeders\\PermissionSeeder'
     ]);
 });
+
+Route::get('/update-orderaxe-request-dates', function (\Illuminate\Http\Request $request, \App\Services\OrderaxeService $orderaxeService) {
+    date_default_timezone_set('Asia/Kolkata');
+
+    $getMismatchedCount = function() {
+        return \App\Models\SalesOrder::whereNotNull('delivery_date')
+            ->whereNotNull('request_date')
+            ->where('delivery_date', '!=', '0000-00-00')
+            ->where('request_date', '!=', '0000-00-00')
+            ->whereColumn('delivery_date', '<', 'request_date')
+            ->count();
+    };
+
+    // AJAX CHUNK HANDLER
+    if ($request->ajax() || $request->get('action') === 'sync_chunk') {
+        $timestamp = (int)\Illuminate\Support\Facades\Cache::get('orderaxe_partial_sync_ts', 0);
+        $orders = $orderaxeService->fetchOrders($timestamp, 100);
+
+        $updatedCount = 0;
+        $nextTs = $timestamp;
+        $reachedEnd = false;
+
+        if (!empty($orders) && is_array($orders)) {
+            foreach ($orders as $item) {
+                $orderNo = $item['order_no'] ?? null;
+                if (!$orderNo) continue;
+
+                $orderDateMs = $item['order_date'] ?? $item['created_at'] ?? $item['submitted_on'] ?? 0;
+                if (!$orderDateMs) continue;
+
+                $cDt = new \DateTime('@' . (int)($orderDateMs / 1000));
+                $cDt->setTimezone(new \DateTimeZone('Asia/Kolkata'));
+                $orderDate = $cDt->format('Y-m-d');
+
+                $affected = \App\Models\SalesOrder::where('order_no', $orderNo)
+                    ->where(function ($q) use ($orderDate) {
+                        $q->whereNull('request_date')
+                          ->orWhere('request_date', '!=', $orderDate);
+                    })
+                    ->update(['request_date' => $orderDate]);
+
+                if ($affected > 0) {
+                    $updatedCount += $affected;
+                }
+            }
+
+            $lastOrder = end($orders);
+            $nextTs = $lastOrder['updated_at'] ?? $lastOrder['order_date'] ?? $lastOrder['created_at'] ?? 0;
+            if ($nextTs <= $timestamp || count($orders) < 100) {
+                $reachedEnd = true;
+                \Illuminate\Support\Facades\Cache::forget('orderaxe_partial_sync_ts');
+            } else {
+                \Illuminate\Support\Facades\Cache::put('orderaxe_partial_sync_ts', $nextTs + 1, 3600);
+            }
+        } else {
+            $reachedEnd = true;
+            \Illuminate\Support\Facades\Cache::forget('orderaxe_partial_sync_ts');
+        }
+
+        $remaining = $getMismatchedCount();
+
+        return response()->json([
+            'status' => 'success',
+            'orders_checked' => count($orders ?? []),
+            'orders_updated' => $updatedCount,
+            'remaining_mismatched' => $remaining,
+            'next_timestamp' => $nextTs,
+            'is_finished' => $reachedEnd || $remaining === 0,
+        ]);
+    }
+
+    // RESET TIMESTAMP IF REQUESTED
+    if ($request->has('reset')) {
+        \Illuminate\Support\Facades\Cache::forget('orderaxe_partial_sync_ts');
+        return redirect('/update-orderaxe-request-dates');
+    }
+
+    $initialRemaining = $getMismatchedCount();
+
+    // INTERACTIVE BROWSER UI
+    return response('<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orderaxe Request Date Partial Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f6f9; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+        .sync-card { max-width: 650px; margin: 50px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 30px; }
+        .log-box { max-height: 250px; overflow-y: auto; background: #1e1e2f; color: #a6e22e; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="sync-card">
+        <h3 class="fw-bold text-dark mb-2">Orderaxe Request Date Sync</h3>
+        <p class="text-muted">Fixing sales orders where Delivery Date was earlier than Order Date by syncing with Orderaxe API in safe batches.</p>
+        
+        <div class="d-flex justify-content-between align-items-center p-3 mb-4 bg-light rounded border">
+            <div>
+                <span class="text-muted small d-block">Mismatched Orders Remaining</span>
+                <span class="fs-2 fw-bold text-danger" id="remainingCount">' . $initialRemaining . '</span>
+            </div>
+            <div>
+                <span class="text-muted small d-block">Orders Updated This Session</span>
+                <span class="fs-2 fw-bold text-success" id="sessionUpdated">0</span>
+            </div>
+        </div>
+
+        <div class="progress mb-3" style="height: 22px; border-radius: 8px;">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%;">0%</div>
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button id="startBtn" class="btn btn-primary fw-bold px-4" onclick="startPartialSync()">
+                ▶ Start Partial Sync
+            </button>
+            <button id="pauseBtn" class="btn btn-outline-secondary" onclick="pauseSync()" disabled>
+                ⏸ Pause
+            </button>
+            <a href="?reset=1" class="btn btn-outline-danger ms-auto" onclick="return confirm(\'Reset sync timestamp back to 0?\')">
+                🔄 Reset Timestamp
+            </a>
+        </div>
+
+        <h6 class="fw-bold mb-2">Sync Activity Log:</h6>
+        <div class="log-box" id="logBox">
+            <div>[Ready] Click "Start Partial Sync" to begin safely syncing in chunks...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let isRunning = false;
+    let totalUpdated = 0;
+    let startRemaining = ' . max(1, $initialRemaining) . ';
+
+    function appendLog(msg) {
+        const box = document.getElementById("logBox");
+        const time = new Date().toLocaleTimeString();
+        box.innerHTML += "<div>[" + time + "] " + msg + "</div>";
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function startPartialSync() {
+        if (isRunning) return;
+        isRunning = true;
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("pauseBtn").disabled = false;
+        appendLog("<span style=\'color:#66d9ef\'>Starting sync process in safe 100-record chunks...</span>");
+        processNextChunk();
+    }
+
+    function pauseSync() {
+        isRunning = false;
+        document.getElementById("startBtn").disabled = false;
+        document.getElementById("pauseBtn").disabled = true;
+        appendLog("<span style=\'color:#fd971f\'>Sync paused by user.</span>");
+    }
+
+    async function processNextChunk() {
+        if (!isRunning) return;
+
+        try {
+            const response = await fetch("?action=sync_chunk", {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            const data = await response.json();
+
+            totalUpdated += data.orders_updated;
+            document.getElementById("sessionUpdated").innerText = totalUpdated;
+            document.getElementById("remainingCount").innerText = data.remaining_mismatched;
+
+            const progress = Math.min(100, Math.round(((startRemaining - data.remaining_mismatched) / startRemaining) * 100));
+            const bar = document.getElementById("progressBar");
+            bar.style.width = Math.max(progress, 5) + "%";
+            bar.innerText = progress + "%";
+
+            appendLog("Batch checked " + data.orders_checked + " orders → Updated: " + data.orders_updated + " (Remaining: " + data.remaining_mismatched + ")");
+
+            if (data.is_finished || data.remaining_mismatched === 0) {
+                isRunning = false;
+                bar.className = "progress-bar bg-success";
+                bar.style.width = "100%";
+                bar.innerText = "100% Completed!";
+                document.getElementById("startBtn").disabled = false;
+                document.getElementById("pauseBtn").disabled = true;
+                appendLog("<span style=\'color:#a6e22e; font-weight:bold;\'>🎉 All mismatched orders resolved! Remaining count is 0.</span>");
+                return;
+            }
+
+            // Small 300ms pause between batches to keep server light
+            setTimeout(processNextChunk, 300);
+
+        } catch (err) {
+            isRunning = false;
+            document.getElementById("startBtn").disabled = false;
+            document.getElementById("pauseBtn").disabled = true;
+            appendLog("<span style=\'color:#f92672\'>Error during chunk: " + err.message + ". Click Start to resume.</span>");
+        }
+    }
+</script>
+</body>
+</html>');
+});
+
 

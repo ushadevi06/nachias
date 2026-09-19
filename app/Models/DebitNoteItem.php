@@ -13,6 +13,7 @@ class DebitNoteItem extends Model
     protected $fillable = [
         'debit_note_id',
         'purchase_invoice_item_id',
+        'stock_entry_item_id',
         'raw_material_id',
         'quantity',
         'uom_id',

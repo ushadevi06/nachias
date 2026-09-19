@@ -47,7 +47,7 @@ $(document).ready(function () {
         allowInput: true
     });
 
-    $('.inv_date, .invoice_date, .bill_date, .note_date, .issue_date, .stock_date, .receipt-date, .doc-date, .grn_date, .sup_inv_date, .validity_date, .start_date, .end_date, .date-picker, .dynamic-stage-date, .issue-date, .due-date, .deadline-date, .cutting_date').flatpickr({
+    $('.inv_date, .invoice_date, .bill_date, .note_date, .issue_date, .stock_date, .receipt-date, .doc-date, .grn_date, .sup_inv_date, .validity_date, .start_date:not([type="hidden"]), .end_date:not([type="hidden"]), .date-picker, .dynamic-stage-date, .issue-date, .due-date, .deadline-date, .cutting_date').flatpickr({
         dateFormat: 'd-m-Y',
         allowInput: true
     });
@@ -80,7 +80,56 @@ $(document).ready(function () {
         allowInput: true
     });
 
-    $("#start_date, #end_date, #completion_date, #issue_date").flatpickr({
+    // Unified Report Date Range Handler
+    $('.report_date_range, .report-date-range').each(function () {
+        var $rangeInput = $(this);
+        var $form = $rangeInput.closest('form');
+        var $from = $form.find('.start_date, input[name="from_date"]');
+        var $to = $form.find('.end_date, input[name="to_date"]');
+
+        $rangeInput.flatpickr({
+            mode: 'range',
+            dateFormat: 'd-m-Y',
+            allowInput: true,
+            onChange: function (selectedDates, dateStr, instance) {
+                if (selectedDates.length === 2) {
+                    $from.val(instance.formatDate(selectedDates[0], 'd-m-Y'));
+                    $to.val(instance.formatDate(selectedDates[1], 'd-m-Y'));
+                } else if (selectedDates.length === 1) {
+                    var single = instance.formatDate(selectedDates[0], 'd-m-Y');
+                    $from.val(single);
+                    $to.val(single);
+                } else {
+                    $from.val('');
+                    $to.val('');
+                }
+            },
+            onClose: function (selectedDates, dateStr, instance) {
+                if (selectedDates.length === 1) {
+                    var single = instance.formatDate(selectedDates[0], 'd-m-Y');
+                    $from.val(single);
+                    $to.val(single);
+                }
+            }
+        });
+
+        $rangeInput.on('input change', function () {
+            var val = $(this).val().trim();
+            if (!val) {
+                $from.val('');
+                $to.val('');
+            } else if (val.indexOf(' to ') !== -1) {
+                var parts = val.split(' to ');
+                $from.val(parts[0].trim());
+                $to.val(parts[1].trim());
+            } else {
+                $from.val(val);
+                $to.val(val);
+            }
+        });
+    });
+
+    $("#start_date:not([type=\"hidden\"]), #end_date:not([type=\"hidden\"]), #completion_date, #issue_date").flatpickr({
         dateFormat: 'd-m-Y',
         allowInput: true
     });

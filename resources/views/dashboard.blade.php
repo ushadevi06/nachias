@@ -18,13 +18,7 @@
                 </nav>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <button type="button"
-                    class="btn btn-sm btn-outline-warning border shadow-sm fw-semibold d-flex align-items-center gap-1"
-                    onclick="activateErpTab('#tab-production'); setTimeout(function(){ document.getElementById('cuttingDashboardCard')?.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 120);"
-                    title="View Cutting Department Today's Dashboard">
-                    <i class="ri ri-scissors-cut-line text-warning"></i>
-                    <span class="d-none d-sm-inline">Cutting Dashboard</span>
-                </button>
+
                 <div class="badge bg-white text-dark border px-3 py-2 shadow-sm d-flex align-items-center">
                     <i class="ri ri-calendar-check-line text-primary me-2 fs-6"></i>
                     <span class="small fw-semibold">{{ date('d M, Y') }} | FY
@@ -1264,35 +1258,47 @@
 
                         <!-- Brand-wise Stock & Min Stock Table with 3-Level Drill-Down -->
                         <div class="card border-0 shadow-sm mb-5" id="fabricInventoryCard">
-                            <div
-                                class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div>
                                     <h6 class="mb-0 fw-bold text-dark">
                                         <i class="ri ri-store-2-line me-2 text-info"></i>Fabric Inventory Dashboard
                                     </h6>
-                                    <small class="text-muted">Click brand or style to drill down into deeper levels</small>
+                                </div>
+                                <div id="fabricHeaderBackBtn" style="display:none !important;">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-fabric-back-report">
+                                        <i class="ri ri-arrow-left-line me-1"></i> Back to Report
+                                    </button>
                                 </div>
                             </div>
 
                             <!-- Breadcrumb Navigation (hidden at level 1) -->
-                            <div id="fabricBreadcrumbBar" class="px-3 pt-2 pb-1 border-bottom bg-light" style="display:none;">
-                                <nav class="d-flex align-items-center gap-1 small flex-wrap">
-                                    <a href="#" id="fabricBcRoot" class="text-info fw-semibold text-decoration-none">
-                                        <i class="ri ri-store-2-line me-1"></i>Fabric Inventory
-                                    </a>
-                                    <i class="ri ri-arrow-right-s-line text-muted"></i>
-                                    <a href="#" id="fabricBcBrand" class="text-primary fw-semibold text-decoration-none"
-                                        style="display:none;"></a>
-                                    <span id="fabricBcBrandPlain" class="text-muted" style="display:none;"></span>
-                                    <span id="fabricBcStyleSep" class="text-muted" style="display:none;"><i
-                                            class="ri ri-arrow-right-s-line"></i></span>
-                                    <span id="fabricBcStyle" class="text-dark fw-semibold" style="display:none;"></span>
-                                </nav>
+                            <div id="fabricBreadcrumbBar" class="px-3 py-2 border-bottom bg-light" style="display:none !important;">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-fabric-back-report">
+                                            <i class="ri ri-arrow-left-line me-1"></i> Back to Report
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" id="btnFabricBackToStyle" style="display:none !important;">
+                                            <i class="ri ri-arrow-left-s-line me-1"></i> Back to Styles
+                                        </button>
+                                        <nav class="d-flex align-items-center gap-1 small flex-wrap ms-1">
+                                            <a href="#" id="fabricBcRoot" class="text-info fw-semibold text-decoration-none">
+                                                <i class="ri ri-store-2-line me-1"></i>Fabric Inventory
+                                            </a>
+                                            <i class="ri ri-arrow-right-s-line text-muted"></i>
+                                            <a href="#" id="fabricBcBrand" class="text-primary fw-semibold text-decoration-none"
+                                                style="display:none;"></a>
+                                            <span id="fabricBcBrandPlain" class="text-muted" style="display:none;"></span>
+                                            <span id="fabricBcStyleSep" class="text-muted" style="display:none;"><i
+                                                    class="ri ri-arrow-right-s-line"></i></span>
+                                            <span id="fabricBcStyle" class="text-dark fw-semibold" style="display:none;"></span>
+                                        </nav>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="card-datatable table-responsive px-3 pb-3">
-                                <table class="table table-hover align-middle mb-0 small" id="fabricDrilldownTable"
-                                    style="width: 100%;">
+                                <table class="table table-hover align-middle mb-0 small" id="fabricDrilldownTable" style="width: 100%;">
                                 </table>
                             </div>
                         </div>
@@ -1305,25 +1311,36 @@
                                     <h6 class="mb-0 fw-bold text-dark">
                                         <i class="ri ri-scissors-2-line me-2 text-primary"></i>Accessories Inventory Dashboard
                                     </h6>
-                                    <small class="text-muted">Click brand to drill down into raw materials</small>
+                                </div>
+                                <div id="accessoriesHeaderBackBtn" style="display:none !important;">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-accessories-back-report">
+                                        <i class="ri ri-arrow-left-line me-1"></i> Back to Report
+                                    </button>
                                 </div>
                             </div>
 
                             <!-- Breadcrumb Navigation (hidden at level 1) -->
-                            <div id="accessoriesBreadcrumbBar" class="px-3 pt-2 pb-1 border-bottom bg-light"
-                                style="display:none;">
-                                <nav class="d-flex align-items-center gap-1 small flex-wrap">
-                                    <a href="#" id="accessoriesBcRoot" class="text-info fw-semibold text-decoration-none">
-                                        <i class="ri ri-scissors-2-line me-1"></i>Accessories Inventory
-                                    </a>
-                                    <i class="ri ri-arrow-right-s-line text-muted"></i>
-                                    <a href="#" id="accessoriesBcBrand" class="text-primary fw-semibold text-decoration-none"
-                                        style="display:none;"></a>
-                                    <span id="accessoriesBcBrandPlain" class="text-muted" style="display:none;"></span>
-                                    <span id="accessoriesBcStyleSep" class="text-muted" style="display:none;"><i
-                                            class="ri ri-arrow-right-s-line"></i></span>
-                                    <span id="accessoriesBcStyle" class="text-dark fw-semibold" style="display:none;"></span>
-                                </nav>
+                            <div id="accessoriesBreadcrumbBar" class="px-3 py-2 border-bottom bg-light"
+                                style="display:none !important;">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-accessories-back-report">
+                                            <i class="ri ri-arrow-left-line me-1"></i> Back to Report
+                                        </button>
+                                        <nav class="d-flex align-items-center gap-1 small flex-wrap ms-1">
+                                            <a href="#" id="accessoriesBcRoot" class="text-info fw-semibold text-decoration-none">
+                                                <i class="ri ri-scissors-2-line me-1"></i>Accessories Inventory
+                                            </a>
+                                            <i class="ri ri-arrow-right-s-line text-muted"></i>
+                                            <a href="#" id="accessoriesBcBrand" class="text-primary fw-semibold text-decoration-none"
+                                                style="display:none;"></a>
+                                            <span id="accessoriesBcBrandPlain" class="text-muted" style="display:none;"></span>
+                                            <span id="accessoriesBcStyleSep" class="text-muted" style="display:none;"><i
+                                                    class="ri ri-arrow-right-s-line"></i></span>
+                                            <span id="accessoriesBcStyle" class="text-dark fw-semibold" style="display:none;"></span>
+                                        </nav>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="card-datatable table-responsive px-3 pb-3">
@@ -1422,8 +1439,6 @@
                                         <i class="ri ri-stack-line me-2 text-warning"></i>Core Material Stock & Production
                                         Pipeline
                                     </h6>
-                                    <small class="text-muted">Showing fabric art numbers, current warehouse stock, active WIP,
-                                        and finished goods inventory</small>
                                 </div>
                                 <div class="card-body p-3">
                                     <div class="table-responsive">
@@ -1563,8 +1578,6 @@
                                         <h6 class="mb-0 fw-bold text-dark">
                                             <i class="ri ri-line-chart-line me-2 text-success"></i>Brand-wise Fabric Utilisation
                                         </h6>
-                                        <small class="text-muted">Click any brand row to drill down into its job cards, style,
-                                            plants, and remarks</small>
                                     </div>
                                 </div>
                                 <div class="card-datatable table-responsive px-3 pb-3">
@@ -1617,46 +1630,40 @@
                                     <small class="text-muted">Showing plant service provider, style, issued meters, consumed,
                                         wastage, and remarks</small>
                                 </div>
-                                <div class="search-box">
-                                    <input type="text" id="utilJobCardSearchInput" class="form-control form-control-sm"
-                                        placeholder="Search Job Card / Plant..." style="width: 250px;">
-                                </div>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                                    <table class="table table-hover align-middle mb-0" id="utilJobCardsTable">
-                                        <thead class="bg-light sticky-top" style="z-index: 2;">
-                                            <tr>
-                                                <th style="width: 45px;">#</th>
-                                                <th>JOB CARD NO</th>
-                                                <th>ISSUE DATE</th>
-                                                <th>DELIVERY DATE</th>
-                                                <th class="text-center">NO OF DAYS</th>
-                                                <th>SERVICE PROVIDER (PLANT)</th>
-                                                <th>STYLE</th>
-                                                <th class="text-end">CUTTING QTY (PCS)</th>
-                                                <th class="text-end">FABRIC ISSUED (M)</th>
-                                                <th class="text-end">FABRIC CONSUMED (M)</th>
-                                                <th class="text-end">WASTAGE (M)</th>
-                                                <th class="text-center">UTILISATION %</th>
-                                                <th>REMARKS</th>
-                                                <th class="text-center">STATUS</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="small"></tbody>
-                                        <tfoot class="bg-light fw-bold" style="position: sticky; bottom: 0; z-index: 2;">
-                                            <tr>
-                                                <td colspan="7" class="text-end">TOTAL:</td>
-                                                <td id="utilJcFootCutting" class="text-end text-dark">0 Pcs</td>
-                                                <td id="utilJcFootIssued" class="text-end text-dark">0.00</td>
-                                                <td id="utilJcFootConsumed" class="text-end text-success">0.00</td>
-                                                <td id="utilJcFootWastage" class="text-end text-danger">0.00</td>
-                                                <td id="utilJcFootUtil" class="text-center text-primary">0%</td>
-                                                <td colspan="2"></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
+                            <div class="card-datatable table-responsive px-3 pb-3">
+                                <table class="table table-hover align-middle mb-0" id="utilJobCardsTable" style="width: 100%;">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th style="width: 45px;">#</th>
+                                            <th>JOB CARD NO</th>
+                                            <th>ISSUE DATE</th>
+                                            <th>DELIVERY DATE</th>
+                                            <th class="text-center">NO OF DAYS</th>
+                                            <th>SERVICE PROVIDER (PLANT)</th>
+                                            <th>STYLE</th>
+                                            <th class="text-end">CUTTING QTY (PCS)</th>
+                                            <th class="text-end">FABRIC ISSUED (M)</th>
+                                            <th class="text-end">FABRIC CONSUMED (M)</th>
+                                            <th class="text-end">WASTAGE (M)</th>
+                                            <th class="text-center">UTILISATION %</th>
+                                            <th>REMARKS</th>
+                                            <th class="text-center">STATUS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small"></tbody>
+                                    <tfoot class="bg-light fw-bold">
+                                        <tr>
+                                            <td colspan="7" class="text-end">TOTAL:</td>
+                                            <td id="utilJcFootCutting" class="text-end text-dark">0 Pcs</td>
+                                            <td id="utilJcFootIssued" class="text-end text-dark">0.00</td>
+                                            <td id="utilJcFootConsumed" class="text-end text-success">0.00</td>
+                                            <td id="utilJcFootWastage" class="text-end text-danger">0.00</td>
+                                            <td id="utilJcFootUtil" class="text-center text-primary">0%</td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -2455,11 +2462,10 @@
                         { data: 'safety_stock', name: 'safety_stock', className: 'text-end', defaultContent: '—' },
                         { data: 'next_po', name: 'next_po', className: 'text-center', defaultContent: '—' }
                     ],
-                    dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                    dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
                     language: {
                         search: "",
-                        searchPlaceholder: "Search Art No / Item / Brand...",
-                        processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
+                        searchPlaceholder: "Search Art No / Item / Brand..."
                     },
                     drawCallback: function (settings) {
                         var json = settings.json;
@@ -2645,7 +2651,9 @@
             });
 
             // 7. Fabric Utilisation Initial Load & Search
-            loadFabricUtilisation(1);
+            if (!$('#utilBrandTable').length || !$.fn.DataTable) {
+                loadFabricUtilisation(1);
+            }
 
             const brandSearch = document.getElementById('utilBrandSearchInput');
             if (brandSearch) {
@@ -2720,13 +2728,16 @@
                             if (u >= 95) badgeClass = 'bg-success text-white';
                             else if (u >= 90) badgeClass = 'bg-warning text-dark';
 
-                            const sNo = res.from + idx;
+                            const fromVal = (res && typeof res.from === 'number' && !isNaN(res.from)) 
+                                ? res.from 
+                                : (((currentUtilPage || 1) - 1) * (utilPerPage || 10) + 1);
+                            const sNo = fromVal + idx;
                             const tr = document.createElement('tr');
                             tr.className = 'util-brand-row';
                             tr.style.cursor = 'pointer';
                             tr.onclick = function () {
                                 const title = `${row.brand_name} - ${row.style} (${row.service_provider})`;
-                                drillDownToUtilBrand(title, row.job_cards);
+                                drillDownToUtilBrand(title, row.brand_id, row.brand_name, row.style, row.service_provider);
                             };
 
                             tr.innerHTML = `
@@ -2835,67 +2846,184 @@
             loadFabricUtilisation(page);
         };
 
-        function drillDownToUtilBrand(brandName, jobCards) {
-            document.getElementById('utilBrandContainer').style.display = 'none';
-            document.getElementById('utilBreadcrumbs').style.setProperty('display', 'flex', 'important');
-            document.getElementById('utilBreadcrumbBrandName').textContent = brandName;
-            document.getElementById('utilActiveBrandHeaderTitle').textContent = brandName + ' - Job Cards';
-            document.getElementById('utilJobCardsContainer').style.display = 'block';
+        function drillDownToUtilBrand(brandTitle, brandId, brandName, style, serviceProvider) {
+            let filterBrandId = brandId;
+            let filterBrandName = brandName;
+            let filterStyle = style;
+            let filterServiceProvider = serviceProvider;
 
-            const tbody = document.querySelector('#utilJobCardsTable tbody');
-            tbody.innerHTML = '';
-
-            let totCutting = 0;
-            let totIssued = 0;
-            let totConsumed = 0;
-            let totWastage = 0;
-
-            if (jobCards && jobCards.length > 0) {
-                jobCards.forEach(function (jc, index) {
-                    totCutting += parseFloat(jc.cutting_qty || 0);
-                    totIssued += parseFloat(jc.fabric_issued || 0);
-                    totConsumed += parseFloat(jc.fabric_consumed || 0);
-                    totWastage += parseFloat(jc.wastage || 0);
-
-                    const u = parseFloat(jc.utilisation || 0);
-                    let badgeClass = 'bg-danger text-white';
-                    if (u >= 95) badgeClass = 'bg-success text-white';
-                    else if (u >= 90) badgeClass = 'bg-warning text-dark';
-
-                    const row = document.createElement('tr');
-                    row.className = 'util-jc-row';
-                    row.innerHTML = `
-                        <td class="text-muted fw-bold">${index + 1}</td>
-                        <td class="fw-bold text-primary jc-no">${jc.job_card_no}</td>
-                        <td class="text-muted">${jc.issue_date || jc.date || '-'}</td>
-                        <td class="text-muted">${jc.delivery_date || '-'}</td>
-                        <td class="text-center"><span class="badge bg-label-info font-monospace fw-bold">${jc.no_of_days || '-'}</span></td>
-                        <td class="fw-bold jc-plant">${jc.service_provider}</td>
-                        <td><span class="badge bg-label-secondary">${jc.style}</span></td>
-                        <td class="text-end fw-bold text-dark">${parseInt(jc.cutting_qty || 0).toLocaleString('en-IN')} Pcs</td>
-                        <td class="text-end fw-bold text-dark">${parseFloat(jc.fabric_issued || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td class="text-end fw-bold text-success">${parseFloat(jc.fabric_consumed || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td class="text-end fw-bold ${parseFloat(jc.wastage || 0) > 0 ? 'text-danger' : 'text-muted'}">${parseFloat(jc.wastage || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td class="text-center"><span class="badge ${badgeClass} fw-bold px-2 py-1">${u}%</span></td>
-                        <td class="text-muted small">${jc.remarks || '-'}</td>
-                        <td class="text-center"><span class="badge bg-label-info rounded-pill">${jc.status}</span></td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            } else {
-                tbody.innerHTML = `<tr><td colspan="14" class="text-center text-muted py-4">No job cards found for ${brandName}.</td></tr>`;
+            if (typeof brandId === 'object' && brandId !== null && !Array.isArray(brandId)) {
+                filterBrandId = brandId.brand_id;
+                filterBrandName = brandId.brand_name;
+                filterStyle = brandId.style;
+                filterServiceProvider = brandId.service_provider;
             }
 
-            const overallPct = totIssued > 0 ? ((totConsumed / totIssued) * 100).toFixed(1) : 0;
-            const elJcFootCutting = document.getElementById('utilJcFootCutting');
-            if (elJcFootCutting) elJcFootCutting.textContent = parseInt(totCutting).toLocaleString('en-IN') + ' Pcs';
-            document.getElementById('utilJcFootIssued').textContent = totIssued.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('utilJcFootConsumed').textContent = totConsumed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('utilJcFootWastage').textContent = totWastage.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('utilJcFootUtil').textContent = overallPct + '%';
+            document.getElementById('utilBrandContainer').style.display = 'none';
+            document.getElementById('utilBreadcrumbs').style.setProperty('display', 'flex', 'important');
+            document.getElementById('utilBreadcrumbBrandName').textContent = brandTitle;
+            document.getElementById('utilActiveBrandHeaderTitle').textContent = brandTitle + ' - Job Cards';
+            document.getElementById('utilJobCardsContainer').style.display = 'block';
 
-            const jcSearch = document.getElementById('utilJobCardSearchInput');
-            if (jcSearch) jcSearch.value = '';
+            if ($.fn.DataTable.isDataTable('#utilJobCardsTable')) {
+                $('#utilJobCardsTable').DataTable().destroy();
+                $('#utilJobCardsTable tbody').empty();
+            }
+
+            $('#utilJobCardsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                autoWidth: false,
+                ajax: {
+                    url: "{{ url('/dashboard/fabric-utilisation-job-cards') }}",
+                    type: "GET",
+                    data: function (d) {
+                        d.brand_id = filterBrandId;
+                        d.brand_name = filterBrandName;
+                        d.style = filterStyle;
+                        d.service_provider = filterServiceProvider;
+                        d.title = brandTitle;
+                    },
+                    dataSrc: function (json) {
+                        if (json.totals) {
+                            $('#utilJcFootCutting').text(json.totals.cutting_qty || '0 Pcs');
+                            $('#utilJcFootIssued').text(json.totals.fabric_issued || '0.00');
+                            $('#utilJcFootConsumed').text(json.totals.fabric_consumed || '0.00');
+                            $('#utilJcFootWastage').text(json.totals.wastage || '0.00');
+                            $('#utilJcFootUtil').text(json.totals.utilisation || '0%');
+                        }
+                        return json.data || [];
+                    }
+                },
+                dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                language: {
+                    search: "",
+                    searchPlaceholder: "Search Job Card / Plant / Style..."
+                },
+                columns: [
+                    {
+                        data: null,
+                        orderable: false,
+                        width: '45px',
+                        render: function (data, type, row, meta) {
+                            let start = 0;
+                            if (meta && meta.settings && typeof meta.settings._iDisplayStart === 'number') {
+                                start = meta.settings._iDisplayStart;
+                            }
+                            let rowIdx = (meta && typeof meta.row === 'number') ? meta.row : 0;
+                            return '<span class="text-muted fw-bold">' + (start + rowIdx + 1) + '</span>';
+                        }
+                    },
+                    {
+                        data: 'job_card_no',
+                        className: 'fw-bold text-primary',
+                        render: function (data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'issue_date',
+                        className: 'text-muted',
+                        render: function (data, type, row) {
+                            return data || row.date || '-';
+                        }
+                    },
+                    {
+                        data: 'delivery_date',
+                        className: 'text-muted',
+                        render: function (data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'no_of_days',
+                        className: 'text-center',
+                        render: function (data) {
+                            return '<span class="badge bg-label-info font-monospace fw-bold">' + (data || '-') + '</span>';
+                        }
+                    },
+                    {
+                        data: 'service_provider',
+                        className: 'fw-bold',
+                        render: function (data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'style',
+                        render: function (data) {
+                            return '<span class="badge bg-label-secondary">' + (data || '-') + '</span>';
+                        }
+                    },
+                    {
+                        data: 'cutting_qty',
+                        className: 'text-end fw-bold text-dark',
+                        render: function (data) {
+                            return parseInt(data || 0).toLocaleString('en-IN') + ' Pcs';
+                        }
+                    },
+                    {
+                        data: 'fabric_issued',
+                        className: 'text-end fw-bold text-dark',
+                        render: function (data) {
+                            return parseFloat(data || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        }
+                    },
+                    {
+                        data: 'fabric_consumed',
+                        className: 'text-end fw-bold text-success',
+                        render: function (data) {
+                            return parseFloat(data || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        }
+                    },
+                    {
+                        data: 'wastage',
+                        className: 'text-end fw-bold',
+                        render: function (data) {
+                            let val = parseFloat(data || 0);
+                            let cls = val > 0 ? 'text-danger' : 'text-muted';
+                            return '<span class="' + cls + '">' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>';
+                        }
+                    },
+                    {
+                        data: 'utilisation',
+                        className: 'text-center',
+                        render: function (data) {
+                            let u = parseFloat(data || 0);
+                            let badgeClass = 'bg-danger text-white';
+                            if (u >= 95) badgeClass = 'bg-success text-white';
+                            else if (u >= 90) badgeClass = 'bg-warning text-dark';
+                            return '<span class="badge ' + badgeClass + ' fw-bold px-2 py-1">' + u + '%</span>';
+                        }
+                    },
+                    {
+                        data: 'remarks',
+                        className: 'text-muted small',
+                        render: function (data) {
+                            return data || '-';
+                        }
+                    },
+                    {
+                        data: 'status',
+                        className: 'text-center',
+                        render: function (data) {
+                            return '<span class="badge bg-label-info rounded-pill">' + (data || '-') + '</span>';
+                        }
+                    }
+                ],
+                drawCallback: function (settings) {
+                    var json = settings.json;
+                    if (json && json.totals) {
+                        $('#utilJcFootCutting').text(json.totals.cutting_qty || '0 Pcs');
+                        $('#utilJcFootIssued').text(json.totals.fabric_issued || '0.00');
+                        $('#utilJcFootConsumed').text(json.totals.fabric_consumed || '0.00');
+                        $('#utilJcFootWastage').text(json.totals.wastage || '0.00');
+                        $('#utilJcFootUtil').text(json.totals.utilisation || '0%');
+                    }
+                }
+            });
         }
 
         window.showUtilBrandLevel = function () {
@@ -2907,7 +3035,7 @@
         // ==========================================
         // Fabric Inventory Drill-Down Logic (DataTables)
         // ==========================================
-        let currentFabricLevel = 'brand'; // 'brand', 'style', 'artno'
+        let currentFabricLevel = 'brand';
         let activeFabricBrandId = null;
         let activeFabricBrandName = '';
         let activeFabricStyleId = null;
@@ -2918,7 +3046,9 @@
             activeFabricBrandId = null;
             activeFabricStyleId = null;
             $('#fabricBcBrand, #fabricBcBrandPlain, #fabricBcStyleSep, #fabricBcStyle').hide();
-            $('#fabricBreadcrumbBar').hide();
+            $('#fabricBreadcrumbBar').attr('style', 'display: none !important;');
+            $('#fabricHeaderBackBtn').attr('style', 'display: none !important;');
+            $('#btnFabricBackToStyle').attr('style', 'display: none !important;');
             fetchFabricDrilldown('brand', null, null);
         }
 
@@ -2927,7 +3057,9 @@
             activeFabricBrandId = brandId;
             activeFabricBrandName = brandName;
 
-            $('#fabricBreadcrumbBar').show();
+            $('#fabricBreadcrumbBar').attr('style', 'display: block !important;');
+            $('#fabricHeaderBackBtn').attr('style', 'display: block !important;');
+            $('#btnFabricBackToStyle').attr('style', 'display: none !important;');
             $('#fabricBcBrand').hide();
             $('#fabricBcBrandPlain').text(brandName).show();
             $('#fabricBcStyleSep, #fabricBcStyle').hide();
@@ -2940,6 +3072,9 @@
             activeFabricStyleId = styleId;
             activeFabricStyleName = styleName;
 
+            $('#fabricBreadcrumbBar').attr('style', 'display: block !important;');
+            $('#fabricHeaderBackBtn').attr('style', 'display: block !important;');
+            $('#btnFabricBackToStyle').attr('style', 'display: inline-block !important;');
             $('#fabricBcBrandPlain').hide();
             $('#fabricBcBrand').text(activeFabricBrandName).show();
             $('#fabricBcStyleSep').show();
@@ -3059,6 +3194,13 @@
                 }
             );
 
+            let tfootHtml = '<tfoot class="table-light border-top fw-bold" style="border-top: 2px solid #dee2e6;"><tr>';
+            for (let i = 0; i < tableColumns.length; i++) {
+                tfootHtml += '<th></th>';
+            }
+            tfootHtml += '</tr></tfoot>';
+            $('#fabricDrilldownTable').html(tfootHtml);
+
             $('#fabricDrilldownTable').DataTable({
                 processing: true,
                 serverSide: true,
@@ -3074,6 +3216,59 @@
                     }
                 },
                 columns: tableColumns,
+                footerCallback: function (row, data, start, end, display) {
+                    var api = this.api();
+                    var json = api.ajax.json();
+                    if (!json || !json.totals) return;
+
+                    var totals = json.totals;
+                    var stockFormatted = parseFloat(totals.stock || 0).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    var stockValueFormatted = '₹' + parseFloat(totals.stock_value || 0).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    var minStockVal = parseFloat(totals.min_stock || 0);
+                    var minStockFormatted = minStockVal > 0
+                        ? minStockVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : '—';
+
+                    var shortageVal = parseFloat(totals.shortage || 0);
+                    var shortageFormatted = shortageVal > 0
+                        ? '<span class="badge bg-warning text-dark fw-bold px-2 py-1">' + shortageVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>'
+                        : '<span class="text-muted">—</span>';
+
+                    var excessVal = parseFloat(totals.excess || 0);
+                    var excessFormatted = excessVal > 0
+                        ? '<span class="badge bg-danger text-white fw-bold px-2 py-1">' + excessVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>'
+                        : '<span class="text-muted">—</span>';
+
+                    var isArtNo = (level === 'artno');
+                    var labelCol = 1;
+                    var widthCol = isArtNo ? 2 : -1;
+                    var stockCol = isArtNo ? 3 : 2;
+                    var valCol   = isArtNo ? 4 : 3;
+                    var daysCol  = isArtNo ? 5 : 4;
+                    var minCol   = isArtNo ? 6 : 5;
+                    var shortCol = isArtNo ? 7 : 6;
+                    var excCol   = isArtNo ? 8 : 7;
+                    var statCol  = isArtNo ? 9 : 8;
+
+                    $(api.column(0).footer()).html('');
+                    $(api.column(labelCol).footer()).html('<span class="fw-bold text-uppercase text-dark">Total</span>');
+                    if (widthCol !== -1) {
+                        $(api.column(widthCol).footer()).html('');
+                    }
+                    $(api.column(stockCol).footer()).addClass('text-end fw-bold text-dark').html(stockFormatted);
+                    $(api.column(valCol).footer()).addClass('text-end fw-bold text-success').html(stockValueFormatted);
+                    $(api.column(daysCol).footer()).addClass('text-center text-muted').html('—');
+                    $(api.column(minCol).footer()).addClass('text-center fw-bold text-dark').html(minStockFormatted);
+                    $(api.column(shortCol).footer()).addClass('text-center').html(shortageFormatted);
+                    $(api.column(excCol).footer()).addClass('text-center').html(excessFormatted);
+                    $(api.column(statCol).footer()).addClass('text-center').html('');
+                },
                 createdRow: function (row, data) {
                     if (level === 'brand') {
                         $(row).css('cursor', 'pointer').on('click', function () {
@@ -3099,7 +3294,8 @@
             currentAccessoriesLevel = 'brand';
             activeAccessoriesBrandId = null;
             $('#accessoriesBcBrand, #accessoriesBcBrandPlain, #accessoriesBcStyleSep, #accessoriesBcStyle').hide();
-            $('#accessoriesBreadcrumbBar').hide();
+            $('#accessoriesBreadcrumbBar').attr('style', 'display: none !important;');
+            $('#accessoriesHeaderBackBtn').attr('style', 'display: none !important;');
             fetchAccessoriesDrilldown('brand', null);
         }
 
@@ -3108,7 +3304,8 @@
             activeAccessoriesBrandId = brandId;
             activeAccessoriesBrandName = brandName;
 
-            $('#accessoriesBreadcrumbBar').show();
+            $('#accessoriesBreadcrumbBar').attr('style', 'display: block !important;');
+            $('#accessoriesHeaderBackBtn').attr('style', 'display: block !important;');
             $('#accessoriesBcBrandPlain').hide();
             $('#accessoriesBcBrand').text(brandName).show();
             $('#accessoriesBcStyleSep, #accessoriesBcStyle').hide();
@@ -3126,6 +3323,13 @@
             if (level === 'artno') {
                 firstColHeader = 'RAW MATERIAL';
             }
+
+            let accTfootHtml = '<tfoot class="table-light border-top fw-bold" style="border-top: 2px solid #dee2e6;"><tr>';
+            for (let i = 0; i < 9; i++) {
+                accTfootHtml += '<th></th>';
+            }
+            accTfootHtml += '</tr></tfoot>';
+            $('#accessoriesDrilldownTable').html(accTfootHtml);
 
             $('#accessoriesDrilldownTable').DataTable({
                 processing: true,
@@ -3224,6 +3428,45 @@
                         }
                     }
                 ],
+                footerCallback: function (row, data, start, end, display) {
+                    var api = this.api();
+                    var json = api.ajax.json();
+                    if (!json || !json.totals) return;
+
+                    var totals = json.totals;
+                    var stockFormatted = parseFloat(totals.stock || 0).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    var stockValueFormatted = '₹' + parseFloat(totals.stock_value || 0).toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    var minStockVal = parseFloat(totals.min_stock || 0);
+                    var minStockFormatted = minStockVal > 0
+                        ? minStockVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : '—';
+
+                    var shortageVal = parseFloat(totals.shortage || 0);
+                    var shortageFormatted = shortageVal > 0
+                        ? '<span class="badge bg-warning text-dark fw-bold px-2 py-1">' + shortageVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>'
+                        : '<span class="text-muted">—</span>';
+
+                    var excessVal = parseFloat(totals.excess || 0);
+                    var excessFormatted = excessVal > 0
+                        ? '<span class="badge bg-danger text-white fw-bold px-2 py-1">' + excessVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>'
+                        : '<span class="text-muted">—</span>';
+
+                    $(api.column(0).footer()).html('');
+                    $(api.column(1).footer()).html('<span class="fw-bold text-uppercase text-dark">Total</span>');
+                    $(api.column(2).footer()).addClass('text-end fw-bold text-dark').html(stockFormatted);
+                    $(api.column(3).footer()).addClass('text-end fw-bold text-success').html(stockValueFormatted);
+                    $(api.column(4).footer()).addClass('text-center text-muted').html('—');
+                    $(api.column(5).footer()).addClass('text-center fw-bold text-dark').html(minStockFormatted);
+                    $(api.column(6).footer()).addClass('text-center').html(shortageFormatted);
+                    $(api.column(7).footer()).addClass('text-center').html(excessFormatted);
+                    $(api.column(8).footer()).addClass('text-center').html('');
+                },
                 createdRow: function (row, data) {
                     if (level === 'brand') {
                         $(row).css('cursor', 'pointer').on('click', function () {
@@ -3240,6 +3483,17 @@
             showFabricLevel1();
             showAccessoriesLevel1();
 
+            // Back to Report Button Clicks - Fabric
+            $('.btn-fabric-back-report').on('click', function (e) {
+                e.preventDefault();
+                showFabricLevel1();
+            });
+
+            $('#btnFabricBackToStyle').on('click', function (e) {
+                e.preventDefault();
+                loadFabricStyleLevel(activeFabricBrandId, activeFabricBrandName);
+            });
+
             // Breadcrumb Clicks - Fabric
             $('#fabricBcRoot').on('click', function (e) {
                 e.preventDefault();
@@ -3249,6 +3503,12 @@
             $('#fabricBcBrand').on('click', function (e) {
                 e.preventDefault();
                 loadFabricStyleLevel(activeFabricBrandId, activeFabricBrandName);
+            });
+
+            // Back to Report Button Clicks - Accessories
+            $('.btn-accessories-back-report').on('click', function (e) {
+                e.preventDefault();
+                showAccessoriesLevel1();
             });
 
             // Breadcrumb Clicks - Accessories
@@ -3284,8 +3544,12 @@
                             data: null,
                             orderable: false,
                             render: function (data, type, row, meta) {
-                                let start = (meta.settings && meta.settings._iDisplayStart !== undefined) ? meta.settings._iDisplayStart : 0;
-                                return '<span class="text-muted fw-bold">' + (meta.row + start + 1) + '</span>';
+                                let start = 0;
+                                if (meta && meta.settings && typeof meta.settings._iDisplayStart === 'number') {
+                                    start = meta.settings._iDisplayStart;
+                                }
+                                let rowIdx = (meta && typeof meta.row === 'number') ? meta.row : 0;
+                                return '<span class="text-muted fw-bold">' + (start + rowIdx + 1) + '</span>';
                             }
                         },
                         {
@@ -3367,7 +3631,7 @@
                         $(row).css('cursor', 'pointer').addClass('util-brand-row');
                         $(row).on('click', function () {
                             let title = (data.brand_name || '') + ' - ' + (data.style || '') + ' (' + (data.service_provider || '') + ')';
-                            drillDownToUtilBrand(title, data.job_cards || []);
+                            drillDownToUtilBrand(title, data.brand_id, data.brand_name, data.style, data.service_provider);
                         });
                     }
                 });

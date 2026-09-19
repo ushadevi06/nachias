@@ -8,6 +8,7 @@
                 <th>Zone</th>
                 <th>Sales Executive</th>
                 <th>Reason</th>
+                <th class="text-center">Total Qty</th>
                 <th class="text-end">Sub Total</th>
                 <th class="text-end">Discount</th>
                 <th class="text-end">Tax Amt</th>

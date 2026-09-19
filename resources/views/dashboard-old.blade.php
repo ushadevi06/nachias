@@ -1460,7 +1460,6 @@
                 <h6 class="mb-0 fw-bold text-dark">
                     <i class="ri ri-stack-line me-2 text-warning"></i>Core Material Stock & Production Pipeline
                 </h6>
-                <small class="text-muted">Showing fabric art numbers, current warehouse stock, active WIP, and finished goods inventory</small>
             </div>
             <div class="card-body p-3">
                 <div class="table-responsive">

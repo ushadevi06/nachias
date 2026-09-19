@@ -34,14 +34,17 @@ class TaskManagementController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = Task::with(['jobCard.serviceProvider', 'stage.operationStage', 'operationStage', 'assignments.assignee', 'assignments.service']);
+            $query = Task::with(['jobCard.serviceProvider', 'stage.serviceProvider', 'stage.operationStage', 'operationStage', 'assignments.assignee', 'assignments.service']);
+
+            $this->applyPlantFilter($query);
 
             $totalRecords = $query->count();
 
             if ($request->has('search') && !empty($request->input('search')['value'])) {
-                $search = $request->input('search')['value'];
+                $search = trim($request->input('search')['value']);
                 $query->where(function ($q) use ($search) {
                     $q->where('task_no', 'like', "%{$search}%")
+                      ->orWhere('job_card_no', 'like', "%{$search}%")
                       ->orWhere('status', 'like', "%{$search}%")
                       ->orWhere('issue_date', 'like', "%{$search}%")
                       ->orWhere(DB::raw('DATE_FORMAT(issue_date, "%d-%m-%Y")'), 'like', "%{$search}%")
@@ -50,11 +53,23 @@ class TaskManagementController extends Controller
                       ->orWhereHas('jobCard', function($q2) use ($search) {
                           $q2->where('job_card_no', 'like', "%{$search}%");
                       })
-                      ->orWhereHas('jobCard.serviceProvider', function($q3) use ($search) {
-                          $q3->where('name', 'like', "%{$search}%");
+                      // Plant search matching effective displayed plant name
+                      ->orWhereHas('stage.serviceProvider', function($q3b) use ($search) {
+                          $q3b->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhere(function($qPlant) use ($search) {
+                          $qPlant->where(function($qNoStageSp) {
+                              $qNoStageSp->whereDoesntHave('stage')
+                                         ->orWhereHas('stage', function($qNullSp) {
+                                             $qNullSp->whereNull('scheduled_to');
+                                         });
+                          })->whereHas('jobCard.serviceProvider', function($qJcSp) use ($search) {
+                              $qJcSp->where('name', 'like', "%{$search}%");
+                          });
                       })
                       ->orWhereHas('stage', function($q4) use ($search) {
-                          $q4->where('start_date', 'like', "%{$search}%")
+                          $q4->where('stage', 'like', "%{$search}%")
+                             ->orWhere('start_date', 'like', "%{$search}%")
                              ->orWhere('end_date', 'like', "%{$search}%")
                              ->orWhere('due_date', 'like', "%{$search}%")
                              ->orWhere(DB::raw('DATE_FORMAT(start_date, "%d-%m-%Y")'), 'like', "%{$search}%")
@@ -66,12 +81,58 @@ class TaskManagementController extends Controller
                       })
                       ->orWhereHas('stage.operationStage', function($q6) use ($search) {
                           $q6->where('operation_stage_name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('assignee', function($q7) use ($search) {
+                          $q7->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('assignments.assignee', function($q8) use ($search) {
+                          $q8->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('assignments.service', function($q9) use ($search) {
+                          $q9->where('service_name', 'like', "%{$search}%");
                       });
                 });
             }
 
             if ($request->has('status') && !empty($request->status)) {
                 $query->where('status', $request->status);
+            }
+
+            if (!empty($request->task_date_range)) {
+                $dates = explode(' to ', $request->task_date_range);
+                if (count($dates) == 2) {
+                    try {
+                        $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                        $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
+                    } catch (\Exception $e) {
+                        $startDate = Carbon::parse(trim($dates[0]))->startOfDay();
+                        $endDate = Carbon::parse(trim($dates[1]))->endOfDay();
+                    }
+                    $query->where(function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('issue_date', [$startDate, $endDate])
+                          ->orWhereBetween('due_date', [$startDate, $endDate])
+                          ->orWhereHas('stage', function ($qStage) use ($startDate, $endDate) {
+                              $qStage->whereBetween('start_date', [$startDate, $endDate])
+                                     ->orWhereBetween('due_date', [$startDate, $endDate])
+                                     ->orWhereBetween('end_date', [$startDate, $endDate]);
+                          });
+                    });
+                } elseif (count($dates) == 1) {
+                    try {
+                        $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                    } catch (\Exception $e) {
+                        $startDate = Carbon::parse(trim($dates[0]))->startOfDay();
+                    }
+                    $query->where(function ($q) use ($startDate) {
+                        $q->whereDate('issue_date', $startDate)
+                          ->orWhereDate('due_date', $startDate)
+                          ->orWhereHas('stage', function ($qStage) use ($startDate) {
+                              $qStage->whereDate('start_date', $startDate)
+                                     ->orWhereDate('due_date', $startDate)
+                                     ->orWhereDate('end_date', $startDate);
+                          });
+                    });
+                }
             }
 
             $filteredRecords = $query->count();
@@ -122,7 +183,7 @@ class TaskManagementController extends Controller
                 }
 
                 // Plant Name
-                $plantName = ($t->jobCard && $t->jobCard->serviceProvider) ? $t->jobCard->serviceProvider->name : '-';
+                $plantName = ($stage && $stage->serviceProvider) ? $stage->serviceProvider->name : (($t->jobCard && $t->jobCard->serviceProvider) ? $t->jobCard->serviceProvider->name : '-');
 
                 $startDate = $t->issue_date ? date('d-m-Y', strtotime($t->issue_date)) : (($stage && $stage->start_date) ? date('d-m-Y', strtotime($stage->start_date)) : '-');
                 $endDate = $t->due_date ? date('d-m-Y', strtotime($t->due_date)) : (($stage && $stage->due_date) ? date('d-m-Y', strtotime($stage->due_date)) : '-');
@@ -146,14 +207,9 @@ class TaskManagementController extends Controller
                 }
                 $action .= '</div>';
 
-                $jcBadge = '';
-                if ($t->is_additional) {
-                    $jcBadge = ' <span class="badge bg-warning text-dark ms-1" style="font-size:10px;"><i class="ri ri-add-line"></i> Extra Batch' . ($t->job_card_fabric_detail_id ? ' #' . $t->job_card_fabric_detail_id : '') . '</span>';
-                }
-
                 $data[] = [
                     'DT_RowIndex' => $start + $index + 1,
-                    'task_no' => $t->task_no . '<br><small class="text-muted">' . ($t->jobCard ? $t->jobCard->job_card_no : '') . '</small>' . $jcBadge,
+                    'task_no' => $t->task_no . '<br><small class="text-muted">' . ($t->jobCard ? $t->jobCard->job_card_no : '') . '</small>',
                     'plant' => $plantName,
                     'stage_dept' => $stageName,
                     'start_date' => $startDate,
@@ -181,7 +237,9 @@ class TaskManagementController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $tasks = Task::with(['jobCard', 'stage.operationStage', 'operationStage', 'assignments', 'additionalBatch'])->get();
+        $query = Task::with(['jobCard', 'stage.operationStage', 'operationStage', 'assignments']);
+        $this->applyPlantFilter($query);
+        $tasks = $query->get();
         $allStatuses = TaskStatus::all();
 
         $boards = [];
@@ -275,6 +333,10 @@ class TaskManagementController extends Controller
                 'assignments.service',
                 'additionalBatch'
             ])->findOrFail($id);
+            
+            if (!$this->isUserAllowedForTask($task)) {
+                return unauthorizedRedirect();
+            }
 
             if ($task->is_additional) {
                 $isAdditional = true;
@@ -305,6 +367,12 @@ class TaskManagementController extends Controller
         } else {
             if (request()->has('job_card_id')) {
                 $jobCard = JobCardEntry::with(['fabricDetails.quantities'])->find(request()->job_card_id);
+
+                if ($jobCard && auth()->id() != 1 && auth()->user() && auth()->user()->service_provider_id) {
+                    if ($jobCard->service_provider_id && $jobCard->service_provider_id != auth()->user()->service_provider_id) {
+                        return redirect('task_management')->with('danger', 'You do not have access to tasks for this plant.');
+                    }
+                }
                 if ($jobCard) {
                     $jobCardId = $jobCard->id;
                     $stages = ProcessSchedule::with(['operationStage', 'serviceProvider'])->where('job_card_entry_id', $jobCardId)->get();
@@ -649,12 +717,28 @@ class TaskManagementController extends Controller
 
 
         $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT);
-        $users = User::where('id', '!=', 1)->where('status', 'Active')->get();
-        $supervisors = User::join('roles', 'users.role_id', '=', 'roles.id')
+        
+        $usersQuery = User::where('id', '!=', 1)->where('status', 'Active');
+        if (auth()->user() && auth()->user()->service_provider_id) {
+            $usersQuery->where('service_provider_id', auth()->user()->service_provider_id);
+        }
+        $users = $usersQuery->get();
+
+        if ($task && $task->assignments) {
+            $assignedUserIds = $task->assignments->pluck('issued_to')->filter()->toArray();
+            if (!empty($assignedUserIds)) {
+                $extraUsers = User::whereIn('id', $assignedUserIds)->get();
+                $users = $users->merge($extraUsers)->unique('id');
+            }
+        }
+
+        $supervisorsQuery = User::join('roles', 'users.role_id', '=', 'roles.id')
             ->whereIn('roles.name', ['Production Supervisor', 'Supervisor', 'Unit Supervisor', 'Cutting Supervisor'])
-            ->where('users.status', 'Active')
-            ->select('users.*')
-            ->get();
+            ->where('users.status', 'Active');
+        if (auth()->user() && auth()->user()->service_provider_id) {
+            $supervisorsQuery->where('users.service_provider_id', auth()->user()->service_provider_id);
+        }
+        $supervisors = $supervisorsQuery->select('users.*')->get();
         $allStatuses = TaskStatus::pluck('name')->toArray();
         if (empty($allStatuses)) {
             $allStatuses = ['Planned', 'In Progress', 'Completed', 'Hold'];
@@ -1448,5 +1532,52 @@ class TaskManagementController extends Controller
                 }
             }
         }
+    }
+    private function applyPlantFilter($query)
+    {
+        if (auth()->user() && auth()->user()->service_provider_id) {
+            $userSpId = auth()->user()->service_provider_id;
+            $query->where(function ($q) use ($userSpId) {
+                // 1. Task stage scheduled_to matches user's service provider
+                $q->whereHas('stage', function ($q2) use ($userSpId) {
+                    $q2->where('scheduled_to', $userSpId);
+                })
+                // 2. OR if task stage has no scheduled_to (or no stage), job card service_provider_id matches
+                ->orWhere(function ($q3) use ($userSpId) {
+                    $q3->where(function ($q4) {
+                        $q4->whereDoesntHave('stage')
+                           ->orWhereHas('stage', function ($q5) {
+                               $q5->whereNull('scheduled_to');
+                           });
+                    })->whereHas('jobCard', function ($q6) use ($userSpId) {
+                        $q6->where('service_provider_id', $userSpId);
+                    });
+                });
+            });
+        }
+        return $query;
+    }
+
+    private function isUserAllowedForTask($task)
+    {
+        if (!auth()->user() || !auth()->user()->service_provider_id) {
+            return true;
+        }
+
+        $userSpId = auth()->user()->service_provider_id;
+
+        $task->loadMissing(['jobCard', 'stage']);
+
+        $stageSpId = $task->stage->scheduled_to ?? null;
+        if ($stageSpId) {
+            return $stageSpId == $userSpId;
+        }
+
+        $jcSpId = $task->jobCard->service_provider_id ?? null;
+        if ($jcSpId) {
+            return $jcSpId == $userSpId;
+        }
+
+        return false;
     }
 }

@@ -129,7 +129,7 @@ function drillDownToBrandOrders(brandId, brandName) {
     currentCompletionBrandName = brandName;
 
     $('#brandwiseCompletionBreadcrumbs').attr('style', 'display: flex !important;');
-    $('#brandwiseCompletionBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; Brand: <span class="text-primary fw-bold">${brandName}</span>`);
+    $('#brandwiseCompletionBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; Brand: <span class="text-primary fw-bold">${brandName}</span>`);
     $('#btnBackToCompletionBrands').attr('onclick', 'renderBrandwiseCompletionBrandsLevel()');
 
     reinitBrandwiseCompletionTable();
@@ -226,7 +226,7 @@ function drillDownToBrandOrderArtNos(soId, soNo) {
     currentCompletionSoNo = soNo;
 
     $('#brandwiseCompletionBreadcrumbs').attr('style', 'display: flex !important;');
-    $('#brandwiseCompletionBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; Brand: <span class="text-secondary cursor-pointer" onclick="drillDownToBrandOrders(${currentCompletionBrandId}, '${currentCompletionBrandName.replace(/'/g, "\\'")}')">${currentCompletionBrandName}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; Order No: <span class="text-danger fw-bold">${soNo}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">Awaiting Art Numbers</span>`);
+    $('#brandwiseCompletionBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; Brand: <span class="text-secondary cursor-pointer" onclick="drillDownToBrandOrders(${currentCompletionBrandId}, '${currentCompletionBrandName.replace(/'/g, "\\'")}')">${currentCompletionBrandName}</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; Order No: <span class="text-danger fw-bold">${soNo}</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">Awaiting Art Numbers</span>`);
     $('#btnBackToCompletionBrands').attr('onclick', `drillDownToBrandOrders(${currentCompletionBrandId}, '${currentCompletionBrandName.replace(/'/g, "\\'")}')`);
 
     reinitBrandwiseCompletionTable();

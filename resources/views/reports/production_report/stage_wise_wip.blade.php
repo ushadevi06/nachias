@@ -154,7 +154,7 @@ function buildStageWipHeaders(services, stageName) {
     theadHtml += '<th class="text-center" style="background-color: #e0f2fe; min-width: 85px;">Date</th>';
     theadHtml += '<th class="text-center" style="background-color: #e0f2fe; min-width: 95px;">CUT NO</th>';
     theadHtml += '<th class="text-center" style="background-color: #e0f2fe; min-width: 80px;">UOM / MTRS</th>';
-    theadHtml += '<th class="text-center" style="background-color: #e0f2fe; min-width: 80px;">STYLE</th>';
+    theadHtml += '<th class="text-center" style="background-color: #e0f2fe; min-width: 110px;">STYLE</th>';
     theadHtml += '<th class="text-center" style="background-color: #e0f2fe; min-width: 75px;">SLEEVE (Full)</th>';
     theadHtml += '<th class="text-center" style="background-color: #e0f2fe; min-width: 75px;">SLEEVE (Half)</th>';
     theadHtml += '<th class="text-center" style="background-color: #bae6fd; min-width: 90px;">TOTAL ' + (stageName || 'CUTTING') + ' QTY</th>';

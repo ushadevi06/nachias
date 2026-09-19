@@ -1,20 +1,63 @@
+18-09:
+    CREATE TABLE `operation_stage_targets` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `operation_stage_id` BIGINT UNSIGNED NOT NULL,
+    `service_provider_id` BIGINT UNSIGNED NOT NULL,
+    `target_qty` INT NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP NULL DEFAULT NULL,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL,
 
-07-09
--- 1. Job Card Entries Table
-ALTER TABLE `job_card_entries`
-    ADD COLUMN `additional_qty` INT NOT NULL DEFAULT 0 AFTER `grand_total_qty`;
+    PRIMARY KEY (`id`),
 
--- 2. Job Card Fabric Details Table
-ALTER TABLE `job_card_fabric_details`
-    ADD COLUMN `is_additional` TINYINT NOT NULL DEFAULT 0 AFTER `job_card_entry_id`;
+    KEY `operation_stage_targets_operation_stage_id_index`
+        (`operation_stage_id`),
 
--- 3. Tasks Table
-ALTER TABLE `tasks`
-    ADD COLUMN `is_additional` TINYINT NOT NULL DEFAULT 0 AFTER `stage_id`,
-    ADD COLUMN `job_card_fabric_detail_id` BIGINT UNSIGNED NULL AFTER `is_additional`;
+    KEY `operation_stage_targets_service_provider_id_index`
+        (`service_provider_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Production Receipts Table
-ALTER TABLE `production_receipts`
-    ADD COLUMN `is_additional` TINYINT NOT NULL DEFAULT 0 AFTER `job_card_id`,
-    ADD COLUMN `job_card_fabric_detail_id` BIGINT UNSIGNED NULL AFTER `is_additional`;
-ALTER TABLE `job_card_fabric_details` ADD `additional_batch_no` VARCHAR(50) NULL AFTER `is_additional`;
+CREATE TABLE `core_material_planner_settings` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `art_no` VARCHAR(255) NOT NULL,
+    `brand_id` BIGINT UNSIGNED NULL,
+    `daily_consumption` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `supplier_lead_time` INT NOT NULL DEFAULT 0,
+    `safety_stock` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    `status` ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
+    `created_by` BIGINT UNSIGNED NULL,
+    `updated_by` BIGINT UNSIGNED NULL,
+    `created_at` TIMESTAMP NULL DEFAULT NULL,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL,
+    `deleted_at` TIMESTAMP NULL DEFAULT NULL,
+
+    PRIMARY KEY (`id`),
+
+    KEY `core_material_planner_settings_art_no_index`
+        (`art_no`),
+
+    KEY `core_material_planner_settings_brand_id_index`
+        (`brand_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `styles`
+ADD COLUMN `average_consumption` INT NOT NULL DEFAULT 0
+AFTER `code`;
+
+
+19-09:
+ALTER TABLE debit_notes
+ADD COLUMN debit_note_type VARCHAR(255) NOT NULL DEFAULT 'purchase_invoice' AFTER debit_note_date,
+ADD COLUMN stock_entry_id BIGINT UNSIGNED NULL AFTER purchase_invoice_id;
+
+ALTER TABLE debit_note_items
+ADD COLUMN stock_entry_item_id BIGINT UNSIGNED NULL AFTER purchase_invoice_item_id;
+
+ALTER TABLE credit_notes
+ADD COLUMN box_discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00
+AFTER discount;
+
+ALTER TABLE debit_notes MODIFY COLUMN purchase_invoice_id BIGINT(20) UNSIGNED NULL;
+
+ALTER TABLE debit_notes MODIFY COLUMN supplier_id BIGINT(20) UNSIGNED NULL;
+
+ALTER TABLE debit_note_items MODIFY COLUMN purchase_invoice_item_id BIGINT(20) UNSIGNED;

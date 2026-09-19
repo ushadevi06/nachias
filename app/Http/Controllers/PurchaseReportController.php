@@ -224,6 +224,10 @@ class PurchaseReportController extends Controller
             });
         }
 
+        if ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
+        }
+
         if ($isMinStock && $request->art_no) {
             $query->where(function($q) use ($request) {
                 $q->where('art_no', $request->art_no)
@@ -400,6 +404,10 @@ class PurchaseReportController extends Controller
             });
         }
 
+        if ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
+        }
+
         $toDate = $request->to_date ? date('Y-m-d 23:59:59', strtotime($request->to_date)) : now();
         $query->where('created_at', '<=', $toDate);
         
@@ -476,6 +484,9 @@ class PurchaseReportController extends Controller
         if ($request->to_date) {
             $query->whereDate('job_card_date', '<=', date('Y-m-d', strtotime($request->to_date)));
         }
+        if ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
+        }
 
         $jobCards = $query->get();
 
@@ -518,13 +529,7 @@ class PurchaseReportController extends Controller
 
     private function getReturnGoodsData($storeCategoryId, Request $request)
     {
-        $query = DB::table('debit_note_items as items')
-            ->join('debit_notes as dn', 'items.debit_note_id', '=', 'dn.id')
-            ->join('raw_materials as rm', 'items.raw_material_id', '=', 'rm.id')
-            ->join('suppliers as sup', 'dn.supplier_id', '=', 'sup.id')
-            ->where('rm.store_category_id', $storeCategoryId)
-            ->whereNull('dn.deleted_at')
-            ->whereNull('items.deleted_at');
+        $query = DB::table('debit_note_items as items')->join('debit_notes as dn', 'items.debit_note_id', '=', 'dn.id')->join('raw_materials as rm', 'items.raw_material_id', '=', 'rm.id')->join('suppliers as sup', 'dn.supplier_id', '=', 'sup.id')->where('rm.store_category_id', $storeCategoryId)->whereNull('dn.deleted_at')->whereNull('items.deleted_at');
 
         if ($request->from_date) {
             $query->whereDate('dn.debit_note_date', '>=', date('Y-m-d', strtotime($request->from_date)));
@@ -555,6 +560,7 @@ class PurchaseReportController extends Controller
         });
         
         $plainStyleId = isset($styles['PLAIN']) ? $styles['PLAIN']->id : null;
+        $whiteStyleId = isset($styles['WHITE']) ? $styles['WHITE']->id : null;
         $printStyleId = isset($styles['PRINT']) ? $styles['PRINT']->id : null;
         $checkedStyleId = isset($styles['CHECKED']) ? $styles['CHECKED']->id : null;
         $stripedStyleId = isset($styles['STRIPED']) ? $styles['STRIPED']->id : null;
@@ -575,11 +581,19 @@ class PurchaseReportController extends Controller
             ->whereHas('brand', function($q) {
                 $q->where('brand_name', 'like', 'CASINO%');
             });
+
+        if ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
+        }
             
         $items = $query->get();
         $grouped = [];
         
-        $casinoBrands = \App\Models\Brand::where('brand_name', 'like', 'CASINO%')->get();
+        $casinoBrandsQuery = \App\Models\Brand::where('brand_name', 'like', 'CASINO%');
+        if ($request->brand_id) {
+            $casinoBrandsQuery->where('id', $request->brand_id);
+        }
+        $casinoBrands = $casinoBrandsQuery->get();
             
         foreach ($casinoBrands as $brand) {
             $brandItems = $items->where('brand_id', $brand->id);
@@ -593,6 +607,7 @@ class PurchaseReportController extends Controller
                     }
                     
                     $plainMeters = $wItems->where('style_id', $plainStyleId)->sum('quantity');
+                    $whiteMeters = $wItems->where('style_id', $whiteStyleId)->sum('quantity');
                     $printMeters = $wItems->where('style_id', $printStyleId)->sum('quantity');
                     $checkedMeters = $wItems->where('style_id', $checkedStyleId)->sum('quantity');
                     $stripedMeters = $wItems->where('style_id', $stripedStyleId)->sum('quantity');
@@ -602,6 +617,7 @@ class PurchaseReportController extends Controller
                         'brand_name' => $brand->brand_name,
                         'width' => $widthVal,
                         'plain' => $plainMeters,
+                        'white' => $whiteMeters,
                         'print' => $printMeters,
                         'checked' => $checkedMeters,
                         'striped' => $stripedMeters,
@@ -1087,6 +1103,7 @@ class PurchaseReportController extends Controller
 
                 $totals = [
                     'plain' => number_format(collect($casinoData)->sum('plain'), 2),
+                    'white' => number_format(collect($casinoData)->sum('white'), 2),
                     'print' => number_format(collect($casinoData)->sum('print'), 2),
                     'checked' => number_format(collect($casinoData)->sum('checked'), 2),
                     'striped' => number_format(collect($casinoData)->sum('striped'), 2),
@@ -1104,6 +1121,7 @@ class PurchaseReportController extends Controller
                         'brand_name' => $row['brand_name'],
                         'width' => $row['width'] ?: '-',
                         'plain' => number_format($row['plain'], 2),
+                        'white' => number_format($row['white'], 2),
                         'print' => number_format($row['print'], 2),
                         'checked' => number_format($row['checked'], 2),
                         'striped' => number_format($row['striped'], 2),
@@ -1634,7 +1652,7 @@ class PurchaseReportController extends Controller
         $reportDate = date('d.m.Y');
         $title = strtoupper($brandName) . ' STOCK DETAILS ' . $reportDate;
         $fileName = str_replace([' ', '/', '\\', ':', '*'], '_', strtoupper($brandName)) . '_STOCK_DETAILS_' . date('Ymd_His') . '.xlsx';
-        $isDhotiBrand = (strpos(strtoupper($brandName), 'CASINO DHOTI SHIRTS') !== false);
+        $isDhotiBrand = (strpos(strtoupper($brandName), 'CASINO DHOTI SHIRT') !== false);
 
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\BrandwiseMinStockExport($brandwiseData, $brandName, $reportDate, $title, $isDhotiBrand),

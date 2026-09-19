@@ -13,7 +13,9 @@ class DebitNote extends Model
     protected $fillable = [
         'debit_note_no',
         'debit_note_date',
+        'debit_note_type',
         'purchase_invoice_id',
+        'stock_entry_id',
         'supplier_id',
         'reason',
         'other_state',
@@ -73,5 +75,9 @@ class DebitNote extends Model
     public function unifiedPayments()
     {
         return $this->hasMany(Payment::class, 'reference_id')->where('reference_type', 'Debit Note');
+    }
+    public function stockEntry()
+    {
+        return $this->belongsTo(StockEntry::class);
     }
 }
