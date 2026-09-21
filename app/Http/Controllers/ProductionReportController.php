@@ -20,6 +20,7 @@ use App\Models\ProductionService;
 use App\Models\Brand;
 use App\Models\Style;
 use App\Models\ProcessSchedule;
+use App\Models\OperationStageTarget;
 
 class ProductionReportController extends Controller
 {
@@ -1644,6 +1645,29 @@ class ProductionReportController extends Controller
                         'meta' => $reportData['meta']
                     ]);
 
+                case 'unit-line-average':
+                    $reportData = $this->getUnitLineAverageData($request);
+                    $rows = $reportData['rows'];
+                    $totalRecords = count($rows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $rows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = $isExport ? $filteredRows : ($length > 0 ? array_slice($filteredRows, $start, $length) : $filteredRows);
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'meta' => $reportData['meta']
+                    ]);
+
                 case 'production-planning':
                     return $this->getProductionPlanningData($request);
 
@@ -2284,6 +2308,322 @@ class ProductionReportController extends Controller
             'worked_days' => $workedDaysCount,
             'total_row' => $totalRow,
             'average_row' => $avgRow,
+        ];
+
+        return [
+            'calcFromDate' => $calcFromDate,
+            'calcToDate' => $calcToDate,
+            'unitId' => $unitId,
+            'unitName' => $unitName,
+            'rows' => $rows,
+            'totalRow' => $totalRow,
+            'avgRow' => $avgRow,
+            'meta' => $meta
+        ];
+    }
+
+    public function getUnitLineAverageData(Request $request)
+    {
+        $fromDate = $this->parseReportDate($request->from_date);
+        $toDate = $this->parseReportDate($request->to_date);
+        $unitId = $request->unit_id;
+        $brandId = $request->brand_id;
+        $unitName = null;
+        if ($unitId) {
+            $unitObj = ServiceProvider::find($unitId);
+            if ($unitObj) {
+                $unitName = $unitObj->name;
+            }
+        }
+
+        if (!$fromDate || !$toDate) {
+            $latestDate = TaskAssignEmployee::whereNotNull('issue_date')->max('issue_date');
+            if (!$latestDate) {
+                $latestDate = date('Y-m-d');
+            }
+            $latestCarbon = Carbon::parse($latestDate);
+            $calcFromDate = $fromDate ?: $latestCarbon->copy()->startOfMonth()->format('Y-m-d');
+            $calcToDate = $toDate ?: $latestCarbon->copy()->endOfMonth()->format('Y-m-d');
+        } else {
+            $calcFromDate = $fromDate;
+            $calcToDate = $toDate;
+        }
+
+        $fromCarbon = Carbon::parse($calcFromDate);
+        $toCarbon = Carbon::parse($calcToDate);
+        if ($fromCarbon->format('Y-m') === $toCarbon->format('Y-m')) {
+            $periodLabel = strtoupper($fromCarbon->format('F Y'));
+            $periodShortLabel = $fromCarbon->format('M Y');
+        } else {
+            $periodLabel = strtoupper($fromCarbon->format('F Y')) . ' - ' . strtoupper($toCarbon->format('F Y'));
+            $periodShortLabel = $fromCarbon->format('M Y') . ' - ' . $toCarbon->format('M Y');
+        }
+
+        // Operation Stage for Stitching / Assemble
+        $stitchingStage = OperationStage::where('operation_stage_name', 'like', '%ASSEMBLE%')
+            ->orWhere('operation_stage_name', 'like', '%STITCH%')
+            ->first();
+        $stitchingStageId = $stitchingStage ? $stitchingStage->id : 3;
+
+        // Target Resolution from Master (strictly required from master)
+        if ($unitId) {
+            $targetRecord = OperationStageTarget::where('service_provider_id', $unitId)
+                ->where(function ($q) use ($stitchingStageId) {
+                    $q->where('operation_stage_id', $stitchingStageId)
+                      ->orWhereIn('operation_stage_id', [2, 3]);
+                })->first();
+
+            if (!$targetRecord) {
+                $targetRecord = OperationStageTarget::where('service_provider_id', $unitId)->first();
+            }
+
+            if ($targetRecord && (float)$targetRecord->target_qty > 0) {
+                $dailyTarget = (float)$targetRecord->target_qty;
+            } elseif ($stitchingStage && (float)$stitchingStage->target > 0) {
+                $dailyTarget = (float)$stitchingStage->target;
+            } else {
+                $dailyTarget = 900;
+            }
+
+            $unitDisplayName = $unitName ? strtoupper($unitName) : 'UNIT #' . $unitId;
+            $reportTitle = $unitDisplayName . ' AVERAGE REPORT - ' . $periodLabel;
+            $unitLabel = $unitDisplayName;
+        } else {
+            $sumTargets = (float) OperationStageTarget::whereIn('operation_stage_id', [2, 3])->sum('target_qty');
+            if ($sumTargets > 0) {
+                $dailyTarget = $sumTargets;
+            } elseif ($stitchingStage && (float)$stitchingStage->target > 0) {
+                $dailyTarget = (float)$stitchingStage->target;
+            } else {
+                $dailyTarget = 900;
+            }
+
+            $unitDisplayName = 'ALL UNITS';
+            $reportTitle = 'ALL UNITS AVERAGE REPORT - ' . $periodLabel;
+            $unitLabel = 'ALL UNITS';
+        }
+
+        // Assignments query
+        $assignQuery = TaskAssignEmployee::whereBetween('issue_date', [$calcFromDate, $calcToDate])
+            ->whereNull('deleted_at')
+            ->with(['service', 'task.jobCard.serviceProvider']);
+
+        if ($unitId) {
+            $assignQuery->whereHas('task.jobCard', function ($jq) use ($unitId) {
+                $jq->where('service_provider_id', $unitId);
+            });
+        }
+        if ($brandId) {
+            $assignQuery->whereHas('task.jobCard', function ($jq) use ($brandId) {
+                $jq->where('brand_id', $brandId);
+            });
+        }
+        $allAssignments = $assignQuery->get();
+
+        // Deliveries to Head Office query
+        $receiptQuery = DB::table('production_receipts')
+            ->join('production_receipt_items', 'production_receipts.id', '=', 'production_receipt_items.production_receipt_id')
+            ->whereBetween('production_receipts.receipt_date', [$calcFromDate, $calcToDate])
+            ->select('production_receipts.receipt_date', DB::raw('SUM(production_receipt_items.completed_qty) as total_delivery'))
+            ->groupBy('production_receipts.receipt_date');
+
+        if ($unitId) {
+            $receiptQuery->join('job_card_entries', 'production_receipts.job_card_id', '=', 'job_card_entries.id')
+                ->where('job_card_entries.service_provider_id', $unitId);
+            if ($brandId) {
+                $receiptQuery->where('job_card_entries.brand_id', $brandId);
+            }
+        }
+        $dailyDeliveries = $receiptQuery->pluck('total_delivery', 'receipt_date')->toArray();
+
+        // Attendance OT query
+        $attendanceQuery = Attendance::whereBetween('date', [$calcFromDate, $calcToDate])
+            ->where(function ($q) {
+                $q->where('status', 'Overtime')->orWhere('work_hours', '>', 9);
+            });
+
+        if ($unitId) {
+            $unitEmpCodes = DB::table('users')->where('service_provider_id', $unitId)->whereNotNull('emp_id')->whereNull('deleted_at')->pluck('emp_id')->filter()->toArray();
+            if (!empty($unitEmpCodes)) {
+                $attendanceQuery->whereIn('emp_code', $unitEmpCodes);
+            }
+        }
+        $otDates = $attendanceQuery->pluck('date')->map(fn($d) => Carbon::parse($d)->format('Y-m-d'))->unique()->flip()->toArray();
+
+        // Active non-Sunday dates
+        $curr = Carbon::parse($calcFromDate);
+        $end = Carbon::parse($calcToDate);
+        $activeDates = collect();
+        while ($curr->lte($end)) {
+            if (!$curr->isSunday()) {
+                $activeDates->push($curr->format('Y-m-d'));
+            }
+            $curr->addDay();
+        }
+
+        $totalWorkingDaysInMonth = $activeDates->count();
+        $assignsByDate = $allAssignments->groupBy(fn($a) => Carbon::parse($a->issue_date)->format('Y-m-d'));
+
+        $rows = [];
+        $summaryColTotals = [
+            'n_patti' => 0,
+            'back_shoulder' => 0,
+            'sleeve' => 0,
+            'collar' => 0,
+            'cuff' => 0,
+            'assemble' => 0,
+            'kaja' => 0,
+            'button' => 0,
+            'trimming' => 0,
+            'checking' => 0,
+            'ho_deliver' => 0,
+        ];
+
+        $workedDaysCount = 0;
+        $cumulativeDeliveries = 0;
+        $cumulativeTarget = 0;
+
+        foreach ($activeDates as $dateStr) {
+            $cDate = Carbon::parse($dateStr);
+            $dFormatted = $cDate->format('d-m-Y');
+
+            $dayAssigns = $assignsByDate->get($dateStr, collect());
+
+            $colQuantities = [
+                'n_patti' => 0,
+                'back_shoulder' => 0,
+                'sleeve' => 0,
+                'collar' => 0,
+                'cuff' => 0,
+                'assemble' => 0,
+                'kaja' => 0,
+                'button' => 0,
+                'trimming' => 0,
+                'checking' => 0,
+            ];
+
+            foreach ($dayAssigns as $as) {
+                $sName = strtoupper($as->service ? $as->service->service_name : '');
+                $sCode = strtoupper($as->service ? $as->service->service_code : '');
+                $qty = (float) ($as->completed_qty > 0 ? $as->completed_qty : $as->issue_qty);
+
+                if (str_contains($sName, 'N.PATTI') || str_contains($sCode, 'N.PATTI') || str_contains($sName, 'BUTTON PATTI')) {
+                    $colQuantities['n_patti'] += $qty;
+                } elseif (str_contains($sName, 'BACK & SHOULDER') || str_contains($sCode, 'BACK & SHOULDER') || (str_contains($sName, 'SHOULDER') && !str_contains($sName, 'SLEEVE'))) {
+                    $colQuantities['back_shoulder'] += $qty;
+                } elseif ((str_contains($sName, 'SLEEVE') || str_contains($sCode, 'SLEEVE')) && !str_contains($sName, 'SIDE ATTACH')) {
+                    $colQuantities['sleeve'] += $qty;
+                } elseif (str_contains($sName, 'COLLAR') || str_contains($sCode, 'COLLAR')) {
+                    $colQuantities['collar'] += $qty;
+                } elseif (str_contains($sName, 'CUFF') || str_contains($sCode, 'CUFF')) {
+                    $colQuantities['cuff'] += $qty;
+                } elseif (str_contains($sName, 'ASSAMBLE') || str_contains($sName, 'ASSEMBLE') || str_contains($sName, 'FRONT ATTACH') || str_contains($sName, 'SIDE ATTACH')) {
+                    $colQuantities['assemble'] += $qty;
+                } elseif (str_contains($sName, 'KAJA') || str_contains($sCode, 'KAJA')) {
+                    $colQuantities['kaja'] += $qty;
+                } elseif (str_contains($sName, 'BUTTON') || str_contains($sCode, 'BUTTON')) {
+                    $colQuantities['button'] += $qty;
+                } elseif (str_contains($sName, 'TRIM') || str_contains($sCode, 'TRIM')) {
+                    $colQuantities['trimming'] += $qty;
+                } elseif (str_contains($sName, 'CHECK') || str_contains($sCode, 'CHECK')) {
+                    $colQuantities['checking'] += $qty;
+                }
+            }
+
+            $deliveryQty = (float) ($dailyDeliveries[$dateStr] ?? 0);
+
+            // Cumulative MTD Efficiency calculation
+            $workedDaysCount++;
+            $cumulativeDeliveries += $deliveryQty;
+            $cumulativeTarget += $dailyTarget;
+            $effPercent = $cumulativeTarget > 0 ? round(($cumulativeDeliveries / $cumulativeTarget) * 100, 1) : 0;
+
+            $hasOt = isset($otDates[$dateStr]);
+            $otText = $hasOt ? 'YES' : 'NO';
+
+            foreach ($colQuantities as $k => $v) {
+                $summaryColTotals[$k] += $v;
+            }
+            $summaryColTotals['ho_deliver'] += $deliveryQty;
+
+            $rows[] = [
+                'date' => $dFormatted,
+                'n_patti' => $colQuantities['n_patti'] > 0 ? number_format($colQuantities['n_patti'], 0) : '-',
+                'back_shoulder' => $colQuantities['back_shoulder'] > 0 ? number_format($colQuantities['back_shoulder'], 0) : '-',
+                'sleeve' => $colQuantities['sleeve'] > 0 ? number_format($colQuantities['sleeve'], 0) : '-',
+                'collar' => $colQuantities['collar'] > 0 ? number_format($colQuantities['collar'], 0) : '-',
+                'cuff' => $colQuantities['cuff'] > 0 ? number_format($colQuantities['cuff'], 0) : '-',
+                'assemble' => $colQuantities['assemble'] > 0 ? number_format($colQuantities['assemble'], 0) : '-',
+                'kaja' => $colQuantities['kaja'] > 0 ? number_format($colQuantities['kaja'], 0) : '-',
+                'button' => $colQuantities['button'] > 0 ? number_format($colQuantities['button'], 0) : '-',
+                'trimming' => $colQuantities['trimming'] > 0 ? number_format($colQuantities['trimming'], 0) : '-',
+                'checking' => $colQuantities['checking'] > 0 ? number_format($colQuantities['checking'], 0) : '-',
+                'ho_deliver' => $deliveryQty > 0 ? number_format($deliveryQty, 0) : '-',
+                'efficiency' => $effPercent . '%',
+                'efficiency_val' => $effPercent,
+                'ot' => $otText,
+                '_search_text' => strtolower($dFormatted . ' ' . implode(' ', $colQuantities) . ' ' . $deliveryQty . ' ' . $otText)
+            ];
+        }
+
+        // Store Stock: Checked qty ready in unit store waiting for delivery
+        $storeStockQty = max(0, $summaryColTotals['checking'] - $summaryColTotals['ho_deliver']);
+        $storeStockEff = $cumulativeTarget > 0 ? round(($storeStockQty / $cumulativeTarget) * 100, 1) : 0;
+
+        $storeStockRow = [
+            'label' => 'Store Stock',
+            'ho_deliver' => $storeStockQty > 0 ? number_format($storeStockQty, 0) : '-',
+            'efficiency' => $storeStockQty > 0 ? ($storeStockEff . '%') : '-',
+        ];
+
+        // Overall month efficiency
+        $overallEfficiency = $cumulativeTarget > 0 ? round(($summaryColTotals['ho_deliver'] / $cumulativeTarget) * 100, 1) : 0;
+
+        $totalRow = [
+            'date' => 'Total',
+            'n_patti' => $summaryColTotals['n_patti'] > 0 ? number_format($summaryColTotals['n_patti'], 0) : '-',
+            'back_shoulder' => $summaryColTotals['back_shoulder'] > 0 ? number_format($summaryColTotals['back_shoulder'], 0) : '-',
+            'sleeve' => $summaryColTotals['sleeve'] > 0 ? number_format($summaryColTotals['sleeve'], 0) : '-',
+            'collar' => $summaryColTotals['collar'] > 0 ? number_format($summaryColTotals['collar'], 0) : '-',
+            'cuff' => $summaryColTotals['cuff'] > 0 ? number_format($summaryColTotals['cuff'], 0) : '-',
+            'assemble' => $summaryColTotals['assemble'] > 0 ? number_format($summaryColTotals['assemble'], 0) : '-',
+            'kaja' => $summaryColTotals['kaja'] > 0 ? number_format($summaryColTotals['kaja'], 0) : '-',
+            'button' => $summaryColTotals['button'] > 0 ? number_format($summaryColTotals['button'], 0) : '-',
+            'trimming' => $summaryColTotals['trimming'] > 0 ? number_format($summaryColTotals['trimming'], 0) : '-',
+            'checking' => $summaryColTotals['checking'] > 0 ? number_format($summaryColTotals['checking'], 0) : '-',
+            'ho_deliver' => $summaryColTotals['ho_deliver'] > 0 ? number_format($summaryColTotals['ho_deliver'], 0) : '-',
+            'efficiency' => $overallEfficiency . '%',
+            'ot' => '-'
+        ];
+
+        $divDays = $workedDaysCount > 0 ? $workedDaysCount : 1;
+        $avgRow = [
+            'date' => 'AVG',
+            'n_patti' => number_format($summaryColTotals['n_patti'] / $divDays, 0),
+            'back_shoulder' => number_format($summaryColTotals['back_shoulder'] / $divDays, 0),
+            'sleeve' => number_format($summaryColTotals['sleeve'] / $divDays, 0),
+            'collar' => number_format($summaryColTotals['collar'] / $divDays, 0),
+            'cuff' => number_format($summaryColTotals['cuff'] / $divDays, 0),
+            'assemble' => number_format($summaryColTotals['assemble'] / $divDays, 0),
+            'kaja' => number_format($summaryColTotals['kaja'] / $divDays, 0),
+            'button' => number_format($summaryColTotals['button'] / $divDays, 0),
+            'trimming' => number_format($summaryColTotals['trimming'] / $divDays, 0),
+            'checking' => number_format($summaryColTotals['checking'] / $divDays, 0),
+            'ho_deliver' => number_format($summaryColTotals['ho_deliver'] / $divDays, 0),
+            'efficiency' => '-',
+            'ot' => '-'
+        ];
+
+        $meta = [
+            'report_title' => $reportTitle,
+            'report_period' => $periodShortLabel,
+            'target_qty' => number_format($dailyTarget, 0),
+            'unit_label' => $unitLabel,
+            'working_days' => $totalWorkingDaysInMonth,
+            'monthly_target' => number_format($dailyTarget * $totalWorkingDaysInMonth, 0),
+            'store_stock_row' => $storeStockRow,
+            'total_row' => $totalRow,
+            'avg_row' => $avgRow,
         ];
 
         return [

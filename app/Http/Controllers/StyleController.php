@@ -6,7 +6,10 @@ use App\Models\Style;
 use App\Models\PurchaseOrderItem;
 use App\Models\StockEntryItem;
 use App\Models\Item;
+use App\Models\Brand;
+use App\Models\StyleBrandConsumption;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StyleController extends Controller
 {
@@ -54,7 +57,6 @@ class StyleController extends Controller
                     'DT_RowIndex' => $i++,
                     'style_name' => $row->style_name,
                     'code'       => $row->code,
-                    'average_consumption' => $row->average_consumption ?? '-',
                     'status'     => $status,
                     'action'     => $action,
                 ];
@@ -77,7 +79,9 @@ class StyleController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        $style = $id ? Style::findOrFail($id) : null;
+        $style = $id ? Style::with('brandConsumptions')->findOrFail($id) : null;
+        $brands = Brand::active()->orderBy('id','desc')->get();
+
         if ($request->isMethod('post')) {
             $rules = [
                 'style_name' => [
@@ -97,8 +101,14 @@ class StyleController extends Controller
                     'regex:/^(?!0+$).*$/',
                     'unique:styles,code,' . $id . ',id,deleted_at,NULL'
                 ],
-                'average_consumption' => 'required|integer|min:0',
-                'status'     => 'required|in:Active,Inactive'
+                'status'     => 'required|in:Active,Inactive',
+                'brands'     => 'nullable|array',
+                'brands.*.brand_id' => [
+                    'required',
+                    'distinct',
+                    'exists:brands,id',
+                ],
+                'brands.*.average_consumption' => 'required|numeric|min:1',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
@@ -107,28 +117,52 @@ class StyleController extends Controller
                 '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
-                'average_consumption.integer' => 'This field must be an integer.',
-                'average_consumption.min'     => 'This field must be at least :min.',
+                '*.distinct' => 'Duplicate brand selected. Each brand can only be selected once.',
+                'brands.*.brand_id.required' => 'Please select a brand.',
+                'brands.*.brand_id.distinct' => 'Duplicate brand selected. Each brand can only be selected once.',
+                'brands.*.brand_id.exists' => 'Selected brand is invalid.',
+                'brands.*.average_consumption.required' => 'Please enter average consumption.',
+                'brands.*.average_consumption.numeric' => 'Average consumption must be a number.',
+                'brands.*.average_consumption.min' => 'Average consumption must be at least 1.',
             ];
             $request->validate($rules, $messages);
 
-            $data = $request->only(['style_name', 'code', 'average_consumption', 'status']);
+            $data = $request->only(['style_name', 'code', 'status']);
+            $brandsInput = $request->input('brands', []);
+            if (!empty($brandsInput)) {
+                $firstB = reset($brandsInput);
+                $data['average_consumption'] = $firstB['average_consumption'] ?? null;
+            }
 
             if ($id) {
                 $data['updated_by'] = auth()->id();
-                Style::where('id', $id)->update($data);
+                $style = Style::findOrFail($id);
+                $style->update($data);
                 addLog('update', 'Style', 'styles', $id, null, $data);
                 $msg = 'Style updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
-                $newStyle = Style::create($data);
-                addLog('create', 'Style', 'styles', $newStyle->id, null, $data);
+                $style = Style::create($data);
+                addLog('create', 'Style', 'styles', $style->id, null, $data);
                 $msg = 'Style added successfully';
+            }
+
+            $style->brandConsumptions()->delete();
+            if (!empty($brandsInput)) {
+                foreach ($brandsInput as $bRow) {
+                    if (!empty($bRow['brand_id']) && isset($bRow['average_consumption'])) {
+                        StyleBrandConsumption::create([
+                            'style_id' => $style->id,
+                            'brand_id' => $bRow['brand_id'],
+                            'average_consumption' => $bRow['average_consumption'],
+                        ]);
+                    }
+                }
             }
 
             return redirect('styles')->with('success', $msg);
         }
-        return view('styles.add', compact('style'));
+        return view('styles.add', compact('style', 'brands'));
     }
 
     public function destroy($id)

@@ -203,7 +203,30 @@
 <body>
     @php
         $allItems = collect($purchaseOrder->items);
-        $itemChunks = $allItems->chunk(15);
+        $totalItemCount = $allItems->count();
+
+        $pages = [];
+        $remaining = collect($allItems);
+
+        if ($totalItemCount === 0) {
+            $pages[] = collect();
+        } else {
+            while ($remaining->count() > 0) {
+                if ($remaining->count() <= 7) {
+                    $pages[] = $remaining;
+                    $remaining = collect();
+                } else if ($remaining->count() <= 12) {
+                    $pages[] = $remaining;
+                    $remaining = collect();
+                    $pages[] = collect();
+                } else {
+                    $pages[] = $remaining->take(12);
+                    $remaining = $remaining->slice(12)->values();
+                }
+            }
+        }
+
+        $itemChunks = collect($pages);
         $totalChunks = count($itemChunks);
         $globalIndex = 0;
     @endphp
@@ -425,13 +448,12 @@
                 @if($chunkIndex == $totalChunks - 1)
                 @php
                     $lastChunkCount = count($chunk);
-                    $dummyRowsNeeded = ($lastChunkCount < 10) ? (10 - $lastChunkCount) : 1;
-                    $extraHeightStyle = ($lastChunkCount >= 10) ? 'height: 470px;' : 'height: 30px;';
+                    $dummyRowsNeeded = $lastChunkCount === 0 ? 6 : max(0, 6 - $lastChunkCount);
                 @endphp
 
                 @for($i = 0; $i < $dummyRowsNeeded; $i++)
                     <tr style="page-break-inside: avoid;">
-                        <td style="{{ $extraHeightStyle }}">&nbsp;</td>
+                        <td style="height: 24px;">&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>

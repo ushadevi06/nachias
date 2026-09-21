@@ -520,18 +520,14 @@ $totalChunks = count($pages);
                             <td width="5%">:</td>
                             <td>
                                 <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
-                                @if(!empty($invoice->delivery_address))
-                                    {!! nl2br(e(mb_strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address), 'UTF-8'))) !!}<br>
-                                @else
-                                    {{ strtoupper($invoice->customer->address_line_1 ?? '') }}<br>
-                                    @if(!empty($invoice->customer->address_line_2))
-                                        {{ strtoupper($invoice->customer->address_line_2) }}<br>
-                                    @endif
-                                    @if(!empty($invoice->customer->address_line_3))
-                                        {{ strtoupper($invoice->customer->address_line_3) }}<br>
-                                    @endif
-                                    {{ strtoupper($invoice->customer->city->city_name ?? '') }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}<br>
+                                {{ strtoupper($invoice->customer->address_line_1 ?? '') }}<br>
+                                @if(!empty($invoice->customer->address_line_2))
+                                    {{ strtoupper($invoice->customer->address_line_2) }}<br>
                                 @endif
+                                @if(!empty($invoice->customer->address_line_3))
+                                    {{ strtoupper($invoice->customer->address_line_3) }}<br>
+                                @endif
+                                {{ strtoupper($invoice->customer->city->city_name ?? '') }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}<br>
                                 {{ $invoice->customer->mobile_no ?? ''}}
                             </td>
                         </tr>

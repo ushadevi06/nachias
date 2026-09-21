@@ -110,11 +110,11 @@ class TaskManagementController extends Controller
                     }
                     $query->where(function ($q) use ($startDate, $endDate) {
                         $q->whereBetween('issue_date', [$startDate, $endDate])
-                          ->orWhereBetween('due_date', [$startDate, $endDate])
-                          ->orWhereHas('stage', function ($qStage) use ($startDate, $endDate) {
-                              $qStage->whereBetween('start_date', [$startDate, $endDate])
-                                     ->orWhereBetween('due_date', [$startDate, $endDate])
-                                     ->orWhereBetween('end_date', [$startDate, $endDate]);
+                          ->orWhere(function ($q2) use ($startDate, $endDate) {
+                              $q2->whereNull('issue_date')
+                                 ->whereHas('stage', function ($qStage) use ($startDate, $endDate) {
+                                     $qStage->whereBetween('start_date', [$startDate, $endDate]);
+                                 });
                           });
                     });
                 } elseif (count($dates) == 1) {
@@ -125,11 +125,11 @@ class TaskManagementController extends Controller
                     }
                     $query->where(function ($q) use ($startDate) {
                         $q->whereDate('issue_date', $startDate)
-                          ->orWhereDate('due_date', $startDate)
-                          ->orWhereHas('stage', function ($qStage) use ($startDate) {
-                              $qStage->whereDate('start_date', $startDate)
-                                     ->orWhereDate('due_date', $startDate)
-                                     ->orWhereDate('end_date', $startDate);
+                          ->orWhere(function ($q2) use ($startDate) {
+                              $q2->whereNull('issue_date')
+                                 ->whereHas('stage', function ($qStage) use ($startDate) {
+                                     $qStage->whereDate('start_date', $startDate);
+                                 });
                           });
                     });
                 }

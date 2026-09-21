@@ -1489,13 +1489,32 @@ class WarehouseReportController extends Controller
 
                 $dispatchReport = $query->orderBy('id', 'desc')->get();
                 $data = [];
-                
                 foreach ($dispatchReport as $so) {
-                    $invoiceIds = $so->salesInvoices->map(function($inv) {
-                        return \App\Models\SalesInvoice::formatDisplayInvNo($inv->inv_no);
-                    })->filter()->values()->toArray();
+                    $invoicesData = $so->salesInvoices->map(function($inv) {
+                        return [
+                            'id' => $inv->id,
+                            'no' => \App\Models\SalesInvoice::formatDisplayInvNo($inv->inv_no),
+                        ];
+                    })->filter(function($item) {
+                        return !empty($item['no']);
+                    })->values();
 
-                    $invoicesHtml = !empty($invoiceIds) ? '<span class="badge bg-label-info">' . implode(', ', $invoiceIds) . '</span>' : '-';
+                    if ($invoicesData->isNotEmpty()) {
+                        $allInvoicesStr = $invoicesData->pluck('no')->implode(', ');
+                        $chunks = $invoicesData->chunk(3);
+                        $rowsHtml = [];
+                        foreach ($chunks as $chunk) {
+                            $rowBadges = [];
+                            foreach ($chunk as $inv) {
+                                $url = url('sales_invoices/view/' . $inv['id']);
+                                $rowBadges[] = '<a href="' . $url . '" target="_blank" class="badge bg-label-info text-nowrap px-2 py-1 fw-semibold text-decoration-none" style="font-size: 0.72rem;" title="View Invoice">' . htmlspecialchars($inv['no']) . '</a>';
+                            }
+                            $rowsHtml[] = '<div class="d-flex flex-wrap gap-1 justify-content-center">' . implode('', $rowBadges) . '</div>';
+                        }
+                        $invoicesHtml = '<div class="d-flex flex-column gap-1 py-1" data-export="' . htmlspecialchars($allInvoicesStr) . '" style="max-height: 180px; overflow-y: auto; min-width: 260px; margin: 0 auto; padding: 4px 2px;">' . implode('', $rowsHtml) . '</div>';
+                    } else {
+                        $invoicesHtml = '-';
+                    }
 
                     $latestInv = $so->salesInvoices->sortByDesc('inv_date')->first();
                     $displayDate = $latestInv && $latestInv->inv_date ? date('d M Y', strtotime($latestInv->inv_date)) : date('d M Y', strtotime($so->so_date));
@@ -3829,6 +3848,7 @@ class WarehouseReportController extends Controller
             $totSoldQty += $soldQty;
             $totAmount += $amount;
 
+            $invUrl = url('sales_invoices/view/' . $row->invoice_id);
             $displayInvNo = \App\Models\SalesInvoice::formatDisplayInvNo($row->inv_no);
             $invBadge = '<a href="' . $invUrl . '" target="_blank" class="fw-bold text-primary text-decoration-underline">' . htmlspecialchars($displayInvNo) . '</a>';
 

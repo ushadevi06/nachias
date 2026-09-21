@@ -1,3 +1,20 @@
+<style>
+    div.dataTables_processing {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1050;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 24px;
+        min-width: 220px;
+        text-align: center;
+    }
+</style>
+
 <!-- Breadcrumb Bar for Drilldown -->
 <div class="mb-3 d-flex align-items-center" id="stockDrilldownBreadcrumbs" style="display: none !important;">
     <button class="btn btn-sm btn-outline-secondary me-2" onclick="renderStockLevel1()" id="btnBackToStockReport">
@@ -327,73 +344,74 @@
         if ($.fn.DataTable.isDataTable('#stockDrilldownTable')) {
             $('#stockDrilldownTable').DataTable().clear().destroy();
         }
-        $('#stockDrilldownTable tbody').html('<tr><td colspan="19" class="text-center py-4 text-primary fw-semibold"><span class="spinner-border spinner-border-sm me-2"></span>Loading detailed transactions...</td></tr>');
+        $('#stockDrilldownTable tbody').empty();
 
-        $.ajax({
-            url: window.location.pathname,
-            method: 'GET',
-            data: {
-                report_type: 'stock-report-drilldown',
-                brand_id: currentBrandId,
-                brand: currentBrandName,
-                fabric_width_id: currentFabricWidthId,
-                width: currentWidthName,
-                style_id: styleId || '',
-                style_name: styleName,
-                from_date: $('.start_date').val(),
-                to_date: $('.end_date').val(),
-                supplier_id: $('select[name="supplier_id"]').val()
-            },
-            dataType: 'json',
-            success: function(response) {
-                let items = response.data || [];
-                if (response.totals) {
-                    $('#footer-drill-opening-qty').text(response.totals.opening_qty);
-                    $('#footer-drill-opening-val').text(response.totals.opening_value);
-                    $('#footer-drill-inward-qty').text(response.totals.inward_qty);
-                    $('#footer-drill-inward-val').text(response.totals.inward_value);
-                    $('#footer-drill-outward-qty').text(response.totals.outward_qty);
-                    $('#footer-drill-outward-val').text(response.totals.outward_value);
-                    $('#footer-drill-closing-qty').text(response.totals.closing_qty);
-                    $('#footer-drill-closing-val').text(response.totals.closing_value);
-                }
-
-                const dt3 = $('#stockDrilldownTable').DataTable({
-                    data: items,
-                    autoWidth: false,
-                    scrollX: true,
-                    scrollCollapse: true,
-                    columns: [
-                        { data: 'sno', className: 'text-center' },
-                        { data: 'width', className: 'text-center fw-semibold' },
-                        { data: 'location', className: 'text-center fw-bold text-primary' },
-                        { data: 'art_no', className: 'fw-bold text-dark' },
-                        { data: 'uom', className: 'text-center' },
-                        { data: 'inward_date', className: 'text-center' },
-                        { data: 'doc_type' },
-                        { data: 'doc_number', className: 'fw-semibold' },
-                        { data: 'opening_qty', className: 'text-end' },
-                        { data: 'opening_value', className: 'text-end' },
-                        { data: 'inward_qty', className: 'text-end text-success fw-semibold' },
-                        { data: 'inward_value', className: 'text-end text-success fw-semibold' },
-                        { data: 'outward_doc_type' },
-                        { data: 'outward_doc_number', className: 'fw-semibold text-danger' },
-                        { data: 'outward_date', className: 'text-center' },
-                        { data: 'outward_qty', className: 'text-end text-danger fw-semibold' },
-                        { data: 'outward_value', className: 'text-end text-danger fw-semibold' },
-                        { data: 'closing_qty', className: 'text-end fw-bold' },
-                        { data: 'closing_value', className: 'text-end fw-bold text-primary' }
-                    ],
-                    dom: '<"row mb-3 align-items-center"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-end"f>>t<"row mt-3 align-items-center"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-end"p>>',
-                    pageLength: 10,
-                    bLengthChange: true,
-                    bFilter: true,
-                    bInfo: true,
-                    language: {
-                        emptyTable: 'No detailed stock transactions found for this style.'
+        const dt3 = $('#stockDrilldownTable').DataTable({
+            destroy: true,
+            processing: true,
+            autoWidth: false,
+            scrollX: true,
+            scrollCollapse: true,
+            ajax: {
+                url: window.location.pathname,
+                type: 'GET',
+                data: function(d) {
+                    d.report_type = 'stock-report-drilldown';
+                    d.brand_id = currentBrandId;
+                    d.brand = currentBrandName;
+                    d.fabric_width_id = currentFabricWidthId;
+                    d.width = currentWidthName;
+                    d.style_id = styleId || '';
+                    d.style_name = styleName;
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
+                    d.supplier_id = $('select[name="supplier_id"]').val();
+                },
+                dataSrc: function(response) {
+                    if (response.totals) {
+                        $('#footer-drill-opening-qty').text(response.totals.opening_qty);
+                        $('#footer-drill-opening-val').text(response.totals.opening_value);
+                        $('#footer-drill-inward-qty').text(response.totals.inward_qty);
+                        $('#footer-drill-inward-val').text(response.totals.inward_value);
+                        $('#footer-drill-outward-qty').text(response.totals.outward_qty);
+                        $('#footer-drill-outward-val').text(response.totals.outward_value);
+                        $('#footer-drill-closing-qty').text(response.totals.closing_qty);
+                        $('#footer-drill-closing-val').text(response.totals.closing_value);
                     }
-                });
-
+                    return response.data || [];
+                }
+            },
+            columns: [
+                { data: 'sno', className: 'text-center' },
+                { data: 'width', className: 'text-center fw-semibold' },
+                { data: 'location', className: 'text-center fw-bold text-primary' },
+                { data: 'art_no', className: 'fw-bold text-dark' },
+                { data: 'uom', className: 'text-center' },
+                { data: 'inward_date', className: 'text-center' },
+                { data: 'doc_type' },
+                { data: 'doc_number', className: 'fw-semibold' },
+                { data: 'opening_qty', className: 'text-end' },
+                { data: 'opening_value', className: 'text-end' },
+                { data: 'inward_qty', className: 'text-end text-success fw-semibold' },
+                { data: 'inward_value', className: 'text-end text-success fw-semibold' },
+                { data: 'outward_doc_type' },
+                { data: 'outward_doc_number', className: 'fw-semibold text-danger' },
+                { data: 'outward_date', className: 'text-center' },
+                { data: 'outward_qty', className: 'text-end text-danger fw-semibold' },
+                { data: 'outward_value', className: 'text-end text-danger fw-semibold' },
+                { data: 'closing_qty', className: 'text-end fw-bold' },
+                { data: 'closing_value', className: 'text-end fw-bold text-primary' }
+            ],
+            dom: '<"row mb-3 align-items-center"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-end"f>>t<"row mt-3 align-items-center"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-end"p>>',
+            pageLength: 10,
+            bLengthChange: true,
+            bFilter: true,
+            bInfo: true,
+            language: {
+                emptyTable: 'No detailed stock transactions found for this style.',
+                processing: '<div class="py-2 text-primary fw-semibold"><span class="spinner-border spinner-border-sm me-2"></span>Loading detailed transactions...</div>'
+            },
+            initComplete: function() {
                 setTimeout(function() {
                     dt3.columns.adjust().draw(false);
                 }, 150);

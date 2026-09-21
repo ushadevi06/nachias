@@ -610,6 +610,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('debit_notes/get-invoice-details/{id}', [DebitNoteController::class, 'getInvoiceDetails']);
     Route::get('debit_notes/get-stock-details/{id}', [DebitNoteController::class, 'getStockEntryDetails']);
     Route::get('debit_notes/get-stock-entries', [DebitNoteController::class, 'getStockEntries']);
+    Route::get('debit_notes/get-purchase-invoices', [DebitNoteController::class, 'getPurchaseInvoices']);
     Route::get('debit_notes/get-supplier-invoices/{id}', [DebitNoteController::class, 'getSupplierInvoices']);
     Route::get('debit_notes/print/{id}', [DebitNoteController::class, 'print']);
     Route::get('debit_notes/download/{id}', [DebitNoteController::class, 'download']);
@@ -733,6 +734,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Logs & Audit Log */
     Route::get('logs', [LogController::class, 'index']);
+    Route::get('logs/view/{id}', [LogController::class, 'show']);
+    Route::get('logs/show/{id}', [LogController::class, 'show']);
     Route::get('logs/details/{id}', [LogController::class, 'getLogDetails']);
 
     /* Backup & Restore */

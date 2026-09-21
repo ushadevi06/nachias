@@ -35,12 +35,12 @@
                                     <label class="form-label text-dark fw-semibold small mb-1">Debit Note Against <span class="text-danger">*</span></label>
                                     <div class="d-flex gap-4 align-items-center">
                                         <div class="form-check m-0">
-                                            <input class="form-check-input" type="radio" name="debit_note_type" id="type_stock" value="stock" {{ old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice') == 'stock' ? 						'checked' : '' }} {{ isset($debitNote) ? 'disabled' : '' }}>
-                                            <label class="form-check-label fw-semibold" for="type_stock">Stock</label>
-                                        </div>
-                                        <div class="form-check m-0">
-                                            <input class="form-check-input" type="radio" name="debit_note_type" id="type_pi" value="purchase_invoice" {{ old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice') == 						'purchase_invoice' ? 'checked' : '' }} {{ isset($debitNote) ? 'disabled' : '' }}>
+                                            <input class="form-check-input" type="radio" name="debit_note_type" id="type_pi" value="purchase_invoice" {{ old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice') == 'purchase_invoice' ? 'checked' : '' }} {{ isset($debitNote) ? 'disabled' : '' }}>
                                             <label class="form-check-label fw-semibold" for="type_pi">Purchase Invoice</label>
+                                        </div>
+                                          <div class="form-check m-0">
+                                            <input class="form-check-input" type="radio" name="debit_note_type" id="type_stock" value="stock" {{ old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice') == 'stock' ? 'checked' : '' }} {{ isset($debitNote) ? 'disabled' : '' }}>
+                                            <label class="form-check-label fw-semibold" for="type_stock">Stock</label>
                                         </div>
                                     </div>
                                 </div>
@@ -86,10 +86,23 @@
                                 @error('purchase_invoice_id') <div class="text-danger">{{ $message }}</div> @enderror
                                 @error('stock_entry_id') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
-                            <div class="col-md-4">
+                            @php
+                                $initialSupplierId = old('supplier_id', $debitNote->supplier_id ?? '');
+                                $initialSupplierName = '';
+                                if ($initialSupplierId) {
+                                    $suppModel = \App\Models\Supplier::find($initialSupplierId);
+                                    if ($suppModel) {
+                                        $initialSupplierName = $suppModel->name . ($suppModel->code ? ' - ' . $suppModel->code : '');
+                                    }
+                                } elseif (isset($debitNote) && $debitNote->supplier) {
+                                    $initialSupplierName = $debitNote->supplier->name . ($debitNote->supplier->code ? ' - ' . $debitNote->supplier->code : '');
+                                }
+                                $showSupplierCol = !empty($initialSupplierId) && !empty($initialSupplierName) && trim($initialSupplierName) !== '-';
+                            @endphp
+                            <div class="col-md-4" id="supplier_col" style="{{ $showSupplierCol ? '' : 'display: none;' }}">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="hidden" id="supplier_id_hidden" name="supplier_id" value="{{ old('supplier_id', $debitNote->supplier_id ?? '') }}">
-                                    <input type="text" id="supplier_name" class="form-control" value="{{ old('supplier_id') ? (\App\Models\Supplier::find(old('supplier_id'))?->name . (\App\Models\Supplier::find(old('supplier_id'))?->code ? ' - ' . \App\Models\Supplier::find(old('supplier_id'))?->code : '')) : (isset($debitNote) && $debitNote->supplier ? $debitNote->supplier->name . ($debitNote->supplier->code ? ' - ' . $debitNote->supplier->code : '') : '') }}" readonly>
+                                    <input type="hidden" id="supplier_id_hidden" name="supplier_id" value="{{ $initialSupplierId }}">
+                                    <input type="text" id="supplier_name" class="form-control" value="{{ $initialSupplierName }}" readonly>
                                     <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
                                 </div>
                                 @error('supplier_id') <div class="text-danger">{{ $message }}</div> @enderror
@@ -769,7 +782,32 @@
 
             $('#supplier_name').val('');
             $('#supplier_id_hidden').val('');
+            $('#supplier_col').hide();
+			
+            $('#item_search_input').val('');
+            $('#select_all_items').prop('checked', false);
+			
             $('#items_tbody').html('<tr><td colspan="8" class="text-center">No items added yet.</td></tr>');
+			
+            $('#added_charges_list').empty();
+            $('#charges_table').addClass('d-none');
+            $('#charges_select').val('').trigger('change');
+            $('#charge_amount').val('');
+            $('#charge_tax_type').val('Pre-GST').trigger('change');
+            refreshChargeDropdownState();
+			
+            $('#discount_percent').val(0);
+            $('#discount_amount').val(0);
+            $('#discount_amt_display').text('₹0.00');
+            $('#round_off').val('0.00');
+            $('#round_off_add').prop('checked', true);
+			
+            $('#other_state_no').prop('checked', true);
+            $('#igst_percent').val(0);
+            $('#cgst_percent').val(0);
+            $('#sgst_percent').val(0);
+            toggleTaxDivs();
+			
             calculateTotals();
 
             let url = type === 'stock' ? "{{ url('debit_notes/get-stock-entries') }}" : "{{ url('debit_notes/get-purchase-invoices') }}";
@@ -806,8 +844,15 @@
 
                 $.get(fetchUrl, function (res) {
                     if (res.success) {
-                        $('#supplier_name').val(res.supplier_name);
-                        $('#supplier_id_hidden').val(res.supplier_id);
+                        if (res.supplier_id && res.supplier_name && res.supplier_name.trim() !== '' && res.supplier_name.trim() !== '-') {
+                            $('#supplier_name').val(res.supplier_name);
+                            $('#supplier_id_hidden').val(res.supplier_id);
+                            $('#supplier_col').show();
+                        } else {
+                            $('#supplier_name').val('');
+                            $('#supplier_id_hidden').val('');
+                            $('#supplier_col').hide();
+                        }
 
                         $('input[name="other_state"][value="' + res.other_state + '"]').prop('checked', true);
                         $('#igst_percent').val(res.igst_percent);
@@ -864,11 +909,12 @@
             } else {
                 $('#supplier_name').val('');
                 $('#supplier_id_hidden').val('');
+                $('#supplier_col').hide();
                 $('#items_tbody').html('<tr><td colspan="8" class="text-center">No items added yet.</td></tr>');
                 calculateTotals();
             }
         });
-
+    
         $(document).on('keyup input', '#item_search_input', function () {
             let searchTerm = $(this).val().toLowerCase().trim();
             $('#items_tbody tr.item-row').each(function () {
@@ -887,6 +933,17 @@
             $('#items_tbody tr.item-row:visible').find('.item-checkbox').prop('checked', isChecked);
             calculateTotals();
         });
+
+        function updateSupplierVisibility() {
+            let suppId = $('#supplier_id_hidden').val();
+            let suppName = $('#supplier_name').val();
+            if (suppId && suppName && suppName.trim() !== '' && suppName.trim() !== '-') {
+                $('#supplier_col').show();
+            } else {
+                $('#supplier_col').hide();
+            }
+        }
+        updateSupplierVisibility();
 
         function updateSelectAllState() {
             let $visibleRows = $('#items_tbody tr.item-row:visible');

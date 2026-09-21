@@ -85,6 +85,59 @@
     }
 </style>
 
+<!-- Breadcrumb Bar for Brandwise PO Drilldown -->
+<div class="mb-3 d-flex align-items-center" id="brandwisePoBreadcrumbs" style="display: none !important;">
+    <button class="btn btn-sm btn-outline-secondary me-2" onclick="backToBrandwiseReport()" id="btnBackToBrandwise">
+        <i class="ri ri-arrow-left-line me-1"></i> Back to Brandwise Report
+    </button>
+    <span class="text-dark fw-bold" id="brandwisePoBreadcrumbText"></span>
+</div>
+
+<!-- Level 2: Brandwise PO Drilldown Container -->
+<div id="brandwisePoDrilldownContainer" style="display: none;">
+    <div class="card shadow-sm border mb-3">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <h6 class="mb-0 fw-bold text-primary d-flex align-items-center gap-2">
+                <i class="ri ri-file-list-3-line"></i>
+                <span id="brandwisePoCardTitle">Purchase Orders</span>
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table id="brandwisePoTable" class="table premium-table table-hover mb-0" style="width: 100%; font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 45px;" class="text-center">#</th>
+                            <th>PO NO</th>
+                            <th class="text-center">PO DATE</th>
+                            <th>SUPPLIER</th>
+                            <th>PRODUCT (ART NO)</th>
+                            <th class="text-end">ORDER (MTRS)</th>
+                            <th class="text-end">RECEIVED (MTRS)</th>
+                            <th class="text-end">BALANCE (MTRS)</th>
+                            <th class="text-center">DUE DATE</th>
+                            <th class="text-center">DELAY</th>
+                            <th class="text-center">STATUS</th>
+                            <th>REMARKS</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background: #f1f5f9;">
+                            <td colspan="5" class="text-end">TOTAL:</td>
+                            <td id="brandwise-po-total-ordered" class="text-end text-primary">0.00</td>
+                            <td id="brandwise-po-total-received" class="text-end text-success">0.00</td>
+                            <td id="brandwise-po-total-balance" class="text-end text-danger">0.00</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="brandwiseMainContainer">
 <div class="d-flex align-items-center justify-content-end mb-3 px-1">
     <div class="dataTables_filter">
         <label class="d-inline-flex align-items-center gap-2 small fw-semibold text-muted">
@@ -154,6 +207,7 @@
         <ul class="pagination pagination-sm mb-0" id="brandwise-minstock-pagination">
         </ul>
     </nav>
+</div>
 </div>
 
 <script>
@@ -257,11 +311,34 @@
                         }
 
                         // Row 1: MIN
+                        const orderFabricNum = parseFloat((item.order_fabric || '').toString().replace(/,/g, '')) || 0;
+                        let orderFabricDisplay = '';
+                        if (orderFabricNum > 0) {
+                            let poBadgesHtml = '';
+                            if (item.po_numbers && item.po_numbers.length > 0) {
+                                poBadgesHtml = item.po_numbers.map(function(po) {
+                                    return `<span class="badge bg-light text-dark border px-1 py-0 fw-semibold" style="font-size: 0.68rem; cursor: pointer;" onclick="drilldownBrandwisePo('${(item.art_no || '').replace(/'/g, "\\'")}')" title="Click to view ${po} details">${po}</span>`;
+                                }).join('');
+                            }
+
+                            orderFabricDisplay = `
+                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                    <span class="fw-bold">${item.order_fabric}</span>
+                                    <button type="button" class="btn btn-xs btn-outline-primary mt-1 py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.70rem; line-height: 1.4; border-radius: 4px;" onclick="drilldownBrandwisePo('${(item.art_no || '').replace(/'/g, "\\'")}')" title="View Purchase Orders for ${item.art_no}">
+                                        <i class="ri ri-eye-line"></i> View
+                                    </button>
+                                    ${poBadgesHtml ? `<div class="d-flex flex-column gap-1 align-items-center mt-1">${poBadgesHtml}</div>` : ''}
+                                </div>
+                            `;
+                        } else {
+                            orderFabricDisplay = item.order_fabric || '0.00';
+                        }
+
                         html += `
                         <tr class="border-top border-secondary">
                             <td rowspan="${totalRowspan}" class="align-middle fw-bold sticky-col-sno">${rowNumber}</td>
                             <td rowspan="${totalRowspan}" class="align-middle fw-bold text-dark text-start sticky-col-product">${item.art_no}</td>
-                            <td rowspan="${totalRowspan}" class="align-middle fw-bold text-end bg-white">${item.order_fabric}</td>
+                            <td rowspan="${totalRowspan}" class="align-middle fw-bold text-end bg-white">${orderFabricDisplay}</td>
                             <td rowspan="${totalRowspan}" class="align-middle fw-bold text-end bg-white">${item.fabric_stock}</td>
                             <td rowspan="${totalRowspan}" class="align-middle fw-bold text-end bg-white dhoti-col">${item.dhoti_stock}</td>
                             <td rowspan="${totalRowspan}" class="align-middle fw-bold text-end bg-white dhoti-col">${item.dhoti_reorder}</td>
@@ -457,5 +534,73 @@
         if ($('#report_type_select').val() === 'brandwise-minstock-report') {
             window.loadBrandwiseMinStockTable(0, pageLength);
         }
+
+        window.drilldownBrandwisePo = function(artNo) {
+            $('#brandwiseMainContainer').hide();
+            $('#brandwisePoBreadcrumbs').attr('style', 'display: flex !important;');
+            $('#brandwisePoBreadcrumbText').html(`Brandwise Minimum Stock &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">Purchase Orders for ${artNo}</span>`);
+            $('#brandwisePoCardTitle').text(`Purchase Orders for ${artNo}`);
+            $('#brandwisePoDrilldownContainer').show();
+
+            if ($.fn.DataTable.isDataTable('#brandwisePoTable')) {
+                $('#brandwisePoTable').DataTable().clear().destroy();
+            }
+            $('#brandwisePoTable tbody').empty();
+            $('#brandwise-po-total-ordered').text('0.00');
+            $('#brandwise-po-total-received').text('0.00');
+            $('#brandwise-po-total-balance').text('0.00');
+
+            $('#brandwisePoTable').DataTable({
+                processing: true,
+                serverSide: false,
+                ajax: {
+                    url: window.location.pathname,
+                    type: 'GET',
+                    data: function(d) {
+                        d.report_type = 'brandwise-po-drilldown';
+                        d.art_no = artNo;
+                        d.supplier_id = $('select[name="supplier_id"]').val() || '';
+                        d.brand_id = $('select[name="brand_id"]').val() || '';
+                    },
+                    dataSrc: function(json) {
+                        if (json.totals) {
+                            $('#brandwise-po-total-ordered').text(json.totals.order_qty || '0.00');
+                            $('#brandwise-po-total-received').text(json.totals.received_qty || '0.00');
+                            $('#brandwise-po-total-balance').text(json.totals.balance_qty || '0.00');
+                        }
+                        return json.data || [];
+                    }
+                },
+                columns: [
+                    { data: 'DT_RowIndex', className: 'text-center' },
+                    { data: 'po_number', className: 'fw-semibold' },
+                    { data: 'po_date', className: 'text-center' },
+                    { data: 'supplier_name', className: 'fw-semibold' },
+                    { data: 'art_no', className: 'fw-bold text-dark' },
+                    { data: 'order_qty', className: 'text-end fw-bold text-primary' },
+                    { data: 'received_qty', className: 'text-end fw-bold text-success' },
+                    { data: 'balance_qty', className: 'text-end fw-bold text-danger' },
+                    { data: 'due_date', className: 'text-center' },
+                    { data: 'delay', className: 'text-center' },
+                    { data: 'status', className: 'text-center' },
+                    { data: 'remarks', className: 'small text-muted' }
+                ],
+                dom: '<"row p-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row p-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                pageLength: 10,
+                bLengthChange: true,
+                bFilter: true,
+                bInfo: true,
+                language: {
+                    emptyTable: 'No purchase orders found for this product.',
+                    processing: '<span class="spinner-border spinner-border-sm me-2"></span>Loading purchase orders...'
+                }
+            });
+        };
+
+        window.backToBrandwiseReport = function() {
+            $('#brandwisePoBreadcrumbs').attr('style', 'display: none !important;');
+            $('#brandwisePoDrilldownContainer').hide();
+            $('#brandwiseMainContainer').show();
+        };
     });
 </script>

@@ -75,7 +75,7 @@ class LogController extends Controller
                     'module' => ucwords(str_replace(['_', '-'], ' ', $log->module)),
                     'action_type' => $actionDisplay,
                     'description' => $log->description ?: ucwords(str_replace(['_', '-'], ' ', $log->module)) . ' ' . ucwords(str_replace('_', ' ', $log->action_type)) . ' by ' . ($log->user->name ?? 'System'),
-                    'action' => '<div class="d-flex align-items-center"><button class="btn btn-view" onclick="viewLogDetails(' . $log->id . ')"><i class="icon-base ri ri-eye-line"></i></button></div>',
+                    'action' => '<div class="d-flex align-items-center"><a href="' . url('logs/view/' . $log->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a></div>',
                 ];
             }
 
@@ -87,6 +87,110 @@ class LogController extends Controller
             ]);
         }
         return view('logs.view');
+    }
+
+    public function show($id)
+    {
+        $log = \App\Models\Log::with('user')->findOrFail($id);
+
+        $oldValues = $log->old_values ? json_decode($log->old_values, true) : [];
+        $newValues = $log->new_values ? json_decode($log->new_values, true) : [];
+
+        $excludeFields = ['id', 'created_by', 'updated_by', 'deleted_at'];
+        $changedFields = [];
+
+        $formatValue = function ($value) {
+            if (is_null($value) || $value === '') {
+                return '-';
+            }
+            if (is_bool($value)) {
+                return $value ? 'Yes' : 'No';
+            }
+            if (is_array($value)) {
+                return json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            }
+            if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
+                try {
+                    return \Carbon\Carbon::parse($value)->format('d-m-Y h:i A');
+                } catch (\Exception $e) {
+                    return $value;
+                }
+            }
+            return (string) $value;
+        };
+
+        if ($log->action_type == 'create') {
+            foreach (($newValues ?: []) as $key => $value) {
+                if (in_array($key, $excludeFields)) continue;
+                $isArray = is_array($value);
+                $changedFields[] = [
+                    'field' => ucwords(str_replace('_', ' ', $key)),
+                    'raw_field' => $key,
+                    'old' => '-',
+                    'new' => $formatValue($value),
+                    'is_array' => $isArray,
+                    'status' => 'added'
+                ];
+            }
+        } elseif ($log->action_type == 'delete') {
+            foreach (($oldValues ?: []) as $key => $value) {
+                if (in_array($key, $excludeFields)) continue;
+                $isArray = is_array($value);
+                $changedFields[] = [
+                    'field' => ucwords(str_replace('_', ' ', $key)),
+                    'raw_field' => $key,
+                    'old' => $formatValue($value),
+                    'new' => '-',
+                    'is_array' => $isArray,
+                    'status' => 'removed'
+                ];
+            }
+        } else {
+            $allKeys = array_unique(array_merge(array_keys($oldValues ?: []), array_keys($newValues ?: [])));
+            foreach ($allKeys as $key) {
+                if (in_array($key, $excludeFields)) continue;
+                $oldVal = $oldValues[$key] ?? null;
+                $newVal = $newValues[$key] ?? null;
+
+                if ($oldVal != $newVal) {
+                    $isArray = is_array($oldVal) || is_array($newVal);
+                    $changedFields[] = [
+                        'field' => ucwords(str_replace('_', ' ', $key)),
+                        'raw_field' => $key,
+                        'old' => $formatValue($oldVal),
+                        'new' => $formatValue($newVal),
+                        'is_array' => $isArray,
+                        'status' => 'modified'
+                    ];
+                }
+            }
+        }
+
+        // Parse user agent for simple human readable display
+        $deviceInfo = 'Unknown Device';
+        if (!empty($log->user_agent)) {
+            $ua = $log->user_agent;
+            $platform = 'Unknown OS';
+            if (preg_match('/windows|win32/i', $ua)) $platform = 'Windows';
+            elseif (preg_match('/macintosh|mac os x/i', $ua)) $platform = 'macOS';
+            elseif (preg_match('/android/i', $ua)) $platform = 'Android';
+            elseif (preg_match('/iphone|ipad|ipod/i', $ua)) $platform = 'iOS';
+            elseif (preg_match('/linux/i', $ua)) $platform = 'Linux';
+
+            $browser = 'Unknown Browser';
+            if (preg_match('/edg/i', $ua)) $browser = 'Microsoft Edge';
+            elseif (preg_match('/chrome|crios/i', $ua)) $browser = 'Google Chrome';
+            elseif (preg_match('/firefox|fxios/i', $ua)) $browser = 'Mozilla Firefox';
+            elseif (preg_match('/safari/i', $ua) && !preg_match('/chrome/i', $ua)) $browser = 'Apple Safari';
+            elseif (preg_match('/opera|opr/i', $ua)) $browser = 'Opera';
+
+            $deviceInfo = $browser . ' on ' . $platform;
+        }
+
+        $prettyOldJson = !empty($oldValues) ? json_encode($oldValues, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : null;
+        $prettyNewJson = !empty($newValues) ? json_encode($newValues, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : null;
+
+        return view('logs.view_details', compact('log', 'changedFields', 'oldValues', 'newValues', 'deviceInfo', 'prettyOldJson', 'prettyNewJson'));
     }
 
     public function getLogDetails($id)

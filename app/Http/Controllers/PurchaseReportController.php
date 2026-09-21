@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +19,9 @@ class PurchaseReportController extends Controller
         if ($request->ajax() && ($request->has('draw') || ($request->has('report_type') && !$request->has('fetch_report')))) {
             if ($request->report_type === 'stock-report-drilldown') {
                 return $this->getStockReportDrilldownData($request);
+            }
+            if ($request->report_type === 'brandwise-po-drilldown') {
+                return $this->getBrandwisePoDrilldownData($request);
             }
             return $this->getReportJson($request, true);
         }
@@ -41,11 +44,7 @@ class PurchaseReportController extends Controller
 
         $suppliers = Supplier::where('status', 'Active')->get();
         $brands = \App\Models\Brand::active()->orderBy('brand_name', 'asc')->get();
-        $artNos = \App\Models\GrnEntryItem::whereNotNull('art_no')
-            ->where('art_no', '!=', '')
-            ->distinct()
-            ->orderBy('art_no', 'asc')
-            ->pluck('art_no');
+        $artNos = \App\Models\GrnEntryItem::whereNotNull('art_no')->where('art_no', '!=', '')->distinct()->orderBy('art_no', 'asc')->pluck('art_no');
         return view('reports.purchase_reports.fabric_store', compact('suppliers', 'artNos', 'brands'));
     }
 
@@ -69,8 +68,38 @@ class PurchaseReportController extends Controller
             return response()->json($html);
         }
 
+        $stockBrandIds = DB::table('stock_entry_items as sei')
+            ->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
+            ->whereNotNull('sei.brand_id')
+            ->where('sei.brand_id', '>', 0)
+            ->where(function($q) {
+                $q->where('sei.store_category_id', 2)
+                  ->orWhere('sei.store_type_id', 2)
+                  ->orWhere('rm.store_category_id', 2);
+            })
+            ->whereNull('sei.deleted_at')
+            ->pluck('sei.brand_id')
+            ->toArray();
+
+        $poBrandIds = DB::table('purchase_order_items as poi')
+            ->leftJoin('purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+            ->leftJoin('raw_materials as rm', 'poi.raw_material_id', '=', 'rm.id')
+            ->whereNotNull('poi.brand_id')
+            ->where('poi.brand_id', '>', 0)
+            ->where(function($q) {
+                $q->where('poi.store_category_id', 2)
+                  ->orWhere('po.store_type_id', 2)
+                  ->orWhere('rm.store_category_id', 2);
+            })
+            ->whereNull('poi.deleted_at')
+            ->pluck('poi.brand_id')
+            ->toArray();
+
+        $accessoriesBrandIds = array_unique(array_merge($stockBrandIds, $poBrandIds));
+        $brands = \App\Models\Brand::whereIn('id', $accessoriesBrandIds)->orderBy('brand_name', 'asc')->get();
+
         $suppliers = Supplier::where('status', 'Active')->get();
-        return view('reports.purchase_reports.accessories_store', compact('suppliers'));
+        return view('reports.purchase_reports.accessories_store', compact('suppliers', 'brands'));
     }
 
     private function buildSupplierPerformanceData($suppliers, Request $request)
@@ -123,9 +152,7 @@ class PurchaseReportController extends Controller
 
     private function getAccessoriesSupplierPerformanceData(Request $request)
     {
-        $query = Supplier::with(['purchaseOrders', 'debitNotes', 'storeType'])
-            ->where('status', 'Active')
-            ->whereHas('storeType', function($q) { $q->where('id', 2); }); 
+        $query = Supplier::with(['purchaseOrders', 'debitNotes', 'storeType'])->where('status', 'Active')->whereHas('storeType', function($q) { $q->where('id', 2); }); 
         if ($request->supplier_id) {
             $query->where('id', $request->supplier_id);
         }
@@ -154,6 +181,9 @@ class PurchaseReportController extends Controller
             $query->whereHas('purchaseInvoice', function($q) use ($request) {
                 $q->where('supplier_id', $request->supplier_id);
             });
+        }
+        if ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
         }
 
         $items = $query->get();
@@ -376,9 +406,7 @@ class PurchaseReportController extends Controller
             )->groupBy('raw_material_id')->get();
 
             foreach ($costItems as $c) {
-                $avgCosts[$c->raw_material_id] = $c->total_qty > 0
-                    ? (float) $c->total_amount / (float) $c->total_qty
-                    : 0;
+                $avgCosts[$c->raw_material_id] = $c->total_qty > 0 ? (float) $c->total_amount / (float) $c->total_qty : 0;
             }
         }
 
@@ -476,7 +504,7 @@ class PurchaseReportController extends Controller
 
     private function getConsumptionData(Request $request)
     {
-        $query = \App\Models\JobCardEntry::with('brand')->where('status', '!=', 'cancelled')->whereNotNull('job_card_date');
+        $query = \App\Models\JobCardEntry::with(['brand', 'issueItems', 'fabricDetails'])->where('status', '!=', 'cancelled')->whereNotNull('job_card_date');
 
         if ($request->from_date) {
             $query->whereDate('job_card_date', '>=', date('Y-m-d', strtotime($request->from_date)));
@@ -493,17 +521,33 @@ class PurchaseReportController extends Controller
         $consumptionData = [];
 
         foreach ($jobCards as $jobCard) {
-            $garments = $jobCard->grand_total_qty;
-            $average = $jobCard->average;
-            $totalFabric = $garments * $average;
+            $garments = floatval($jobCard->grand_total_qty);
+            $wastage = floatval($jobCard->issueItems ? $jobCard->issueItems->sum('qty_wastage') : 0);
+            $usedFromItems = floatval($jobCard->issueItems ? $jobCard->issueItems->sum('qty_used') : 0);
+            $issueFromItems = floatval($jobCard->issueItems ? $jobCard->issueItems->sum('qty_issue') : 0);
+            $usedFromFd = floatval($jobCard->fabricDetails ? $jobCard->fabricDetails->sum('used_qty') : 0);
+
+            if ($usedFromItems > 0) {
+                $fabricUsed = $usedFromItems;
+            } elseif ($issueFromItems > 0) {
+                $fabricUsed = max(0, $issueFromItems - $wastage);
+            } elseif ($usedFromFd > 0) {
+                $fabricUsed = max(0, $usedFromFd - $wastage);
+            } else {
+                $fabricUsed = max(0, ($garments * floatval($jobCard->average)) - $wastage);
+            }
+
+            $totalFabric = $fabricUsed + $wastage;
+            $average = $garments > 0 ? round($totalFabric / $garments, 2) : floatval($jobCard->average);
 
             if ($garments > 0 && $totalFabric > 0) {
                 $consumptionData[] = [
                     'date' => $jobCard->job_card_date,
                     'job_card_no' => $jobCard->job_card_no,
                     'brand' => $jobCard->brand ? $jobCard->brand->brand_name : 'N/A',
+                    'total_fabric' => $fabricUsed,
+                    'wastage' => $wastage,
                     'total_garments' => $garments,
-                    'total_fabric' => $totalFabric,
                     'average' => $average,
                     'status' => $jobCard->status,
                 ];
@@ -529,7 +573,13 @@ class PurchaseReportController extends Controller
 
     private function getReturnGoodsData($storeCategoryId, Request $request)
     {
-        $query = DB::table('debit_note_items as items')->join('debit_notes as dn', 'items.debit_note_id', '=', 'dn.id')->join('raw_materials as rm', 'items.raw_material_id', '=', 'rm.id')->join('suppliers as sup', 'dn.supplier_id', '=', 'sup.id')->where('rm.store_category_id', $storeCategoryId)->whereNull('dn.deleted_at')->whereNull('items.deleted_at');
+        $query = DB::table('debit_note_items as items')
+            ->join('debit_notes as dn', 'items.debit_note_id', '=', 'dn.id')
+            ->join('raw_materials as rm', 'items.raw_material_id', '=', 'rm.id')
+            ->leftJoin('suppliers as sup', 'dn.supplier_id', '=', 'sup.id')
+            ->where('rm.store_category_id', $storeCategoryId)
+            ->whereNull('dn.deleted_at')
+            ->whereNull('items.deleted_at');
 
         if ($request->from_date) {
             $query->whereDate('dn.debit_note_date', '>=', date('Y-m-d', strtotime($request->from_date)));
@@ -542,13 +592,25 @@ class PurchaseReportController extends Controller
         }
 
         return $query->select([
+            'dn.id as debit_note_id',
             'dn.debit_note_date as return_date',
             'dn.debit_note_no as return_no',
-            'sup.name as supplier_name',
+            DB::raw("COALESCE(sup.name, '-') as supplier_name"),
             'rm.name as item_name',
             'items.quantity',
             'items.rate',
-            'items.amount',
+            'items.amount as item_amount',
+            'dn.sub_total as dn_sub_total',
+            'dn.discount_percent as dn_discount_percent',
+            'dn.discount_amount as dn_discount_amount',
+            'dn.taxable_amount as dn_taxable_amount',
+            'dn.cgst_percent as dn_cgst_percent',
+            'dn.sgst_percent as dn_sgst_percent',
+            'dn.igst_percent as dn_igst_percent',
+            'dn.tax_amount as dn_tax_amount',
+            'dn.round_off as dn_round_off',
+            'dn.round_off_type as dn_round_off_type',
+            'dn.grand_total as dn_grand_total',
             'dn.reason'
         ])->orderBy('dn.debit_note_date', 'desc')->get();
     }
@@ -665,6 +727,11 @@ class PurchaseReportController extends Controller
                 if ($request->supplier_id) {
                     $baseQuery->where('supplier_id', $request->supplier_id);
                 }
+                if ($request->brand_id) {
+                    $baseQuery->whereHas('items', function($q) use ($request) {
+                        $q->where('brand_id', $request->brand_id);
+                    });
+                }
 
                 $totalRecords = (clone $baseQuery)->count();
 
@@ -684,17 +751,21 @@ class PurchaseReportController extends Controller
                 $sumOrdered = 0;
                 $sumReceived = 0;
                 if ($filteredPoIds->isNotEmpty()) {
-                    $sumOrdered = (float) DB::table('purchase_order_items')
-                        ->whereIn('purchase_order_id', $filteredPoIds)
-                        ->whereNull('deleted_at')
-                        ->sum('quantity');
+                    $itemQuery = DB::table('purchase_order_items')->whereIn('purchase_order_id', $filteredPoIds)->whereNull('deleted_at');
+                    if ($request->brand_id) {
+                        $itemQuery->where('brand_id', $request->brand_id);
+                    }
+                    $sumOrdered = (float) $itemQuery->sum('quantity');
 
-                    $sumReceived = (float) DB::table('purchase_invoice_items')
+                    $invItemQuery = DB::table('purchase_invoice_items')
                         ->join('purchase_order_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id')
                         ->whereIn('purchase_order_items.purchase_order_id', $filteredPoIds)
                         ->whereNull('purchase_invoice_items.deleted_at')
-                        ->whereNull('purchase_order_items.deleted_at')
-                        ->sum('purchase_invoice_items.qty_received');
+                        ->whereNull('purchase_order_items.deleted_at');
+                    if ($request->brand_id) {
+                        $invItemQuery->where('purchase_order_items.brand_id', $request->brand_id);
+                    }
+                    $sumReceived = (float) $invItemQuery->sum('purchase_invoice_items.qty_received');
                 }
                 $sumPending = max(0, $sumOrdered - $sumReceived);
 
@@ -704,8 +775,17 @@ class PurchaseReportController extends Controller
                     'total_pending' => number_format($sumPending, 2),
                 ];
 
-                $query->with(['supplier', 'items.rawMaterial', 'items.purchaseInvoiceItems'])
-                    ->orderBy('id', 'desc');
+                $query->with([
+                    'supplier',
+                    'items' => function($q) use ($request) {
+                        if ($request->brand_id) {
+                            $q->where('brand_id', $request->brand_id);
+                        }
+                    },
+                    'items.rawMaterial',
+                    'items.purchaseInvoiceItems.purchaseInvoice',
+                    'purchaseInvoices'
+                ])->orderBy('id', 'desc');
 
                 if ($length != -1) {
                     $query->offset($start)->limit($length);
@@ -719,12 +799,36 @@ class PurchaseReportController extends Controller
                     $totalReceivedPo = 0;
                     $itemsData = [];
                     $itemSno = 1;
+                    $latestReceiptDate = null;
+
+                    // Collect latest receipt/invoice date from purchase invoices
+                    if ($po->purchaseInvoices && $po->purchaseInvoices->isNotEmpty()) {
+                        foreach ($po->purchaseInvoices as $inv) {
+                            $iDate = $inv->invoice_date ?: $inv->created_at;
+                            if ($iDate) {
+                                $parsed = \Carbon\Carbon::parse($iDate)->startOfDay();
+                                if (!$latestReceiptDate || $parsed->gt($latestReceiptDate)) {
+                                    $latestReceiptDate = $parsed;
+                                }
+                            }
+                        }
+                    }
 
                     foreach ($po->items as $item) {
                         $itemOrd = (float) $item->quantity;
                         $itemRec = (float) $item->purchaseInvoiceItems->sum('qty_received');
                         $itemBal = max(0, $itemOrd - $itemRec);
                         $totalReceivedPo += $itemRec;
+
+                        foreach ($item->purchaseInvoiceItems as $pItem) {
+                            $iDate = ($pItem->purchaseInvoice ? $pItem->purchaseInvoice->invoice_date : null) ?: $pItem->created_at;
+                            if ($iDate) {
+                                $parsed = \Carbon\Carbon::parse($iDate)->startOfDay();
+                                if (!$latestReceiptDate || $parsed->gt($latestReceiptDate)) {
+                                    $latestReceiptDate = $parsed;
+                                }
+                            }
+                        }
 
                         $itemsData[] = [
                             'sno' => $itemSno++,
@@ -738,16 +842,28 @@ class PurchaseReportController extends Controller
 
                     $delayHtml = '-';
                     if ($po->due_date) {
+                        $dueDate = \Carbon\Carbon::parse($po->due_date)->startOfDay();
+
                         if ($totalPendingPo <= 0 || strtolower($po->status) == 'closed' || $po->is_self_closed) {
-                            $delayHtml = '<span class="badge bg-label-success">Completed</span>';
+                            // Completed orders: Compare actual receipt date with Expected Delivery date
+                            if ($latestReceiptDate) {
+                                if ($latestReceiptDate->gt($dueDate)) {
+                                    $diffDays = $latestReceiptDate->diffInDays($dueDate);
+                                    $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days Delay</span>';
+                                } else {
+                                    $delayHtml = '<span class="text-success fw-bold">On Time</span>';
+                                }
+                            } else {
+                                $delayHtml = '<span class="text-success fw-bold">On Time</span>';
+                            }
                         } else {
-                            $dueDate = \Carbon\Carbon::parse($po->due_date)->startOfDay();
+                            // Pending orders: Compare today with Expected Delivery date
                             $today = now()->startOfDay();
                             if ($today->gt($dueDate)) {
                                 $diffDays = $today->diffInDays($dueDate);
-                                $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days</span>';
+                                $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days Delay</span>';
                             } else {
-                                $delayHtml = '<span class="text-success">On Time</span>';
+                                $delayHtml = '<span class="text-success fw-bold">On Time</span>';
                             }
                         }
                     }
@@ -922,8 +1038,9 @@ class PurchaseReportController extends Controller
                 $filteredRecords = count($consumptionData);
 
                 $totals = [
+                    'total_fabric' => number_format(collect($consumptionData)->sum('total_fabric'), 2),
+                    'total_wastage' => number_format(collect($consumptionData)->sum('wastage'), 2),
                     'total_garments' => number_format(collect($consumptionData)->sum('total_garments')),
-                    'total_fabric' => number_format(collect($consumptionData)->sum('total_fabric'), 2)
                 ];
 
                 if ($length != -1) {
@@ -938,8 +1055,9 @@ class PurchaseReportController extends Controller
                         'date' => $row['date'] ? date('d-M-Y', strtotime($row['date'])) : '-',
                         'job_card_no' => $row['job_card_no'],
                         'brand' => $row['brand'],
-                        'total_garments' => number_format($row['total_garments']),
                         'total_fabric' => number_format($row['total_fabric'], 2),
+                        'wastage' => number_format($row['wastage'], 2),
+                        'total_garments' => number_format($row['total_garments']),
                         'average' => number_format($row['average'], 2),
                         'status' => $statusBadge,
                     ];
@@ -1022,18 +1140,120 @@ class PurchaseReportController extends Controller
 
                 $filteredRecords = count($returnGoodsData);
 
+                $calcRows = [];
+                $totalQty = 0;
+                $totalSubTotal = 0;
+                $totalDiscount = 0;
+                $totalTaxable = 0;
+                $totalCgst = 0;
+                $totalSgst = 0;
+                $totalIgst = 0;
+                $totalRoundOff = 0;
+                $totalGrandTotal = 0;
+
+                foreach ($returnGoodsData as $row) {
+                    $rowArr = (array) $row;
+                    $itemQty = (float) ($rowArr['quantity'] ?? 0);
+                    $itemRate = (float) ($rowArr['rate'] ?? 0);
+                    $itemAmount = (float) ($rowArr['item_amount'] ?? ($itemQty * $itemRate));
+                    $dnSubTotal = (float) ($rowArr['dn_sub_total'] ?? 0);
+                    $ratio = ($dnSubTotal > 0) ? ($itemAmount / $dnSubTotal) : 1.0;
+
+                    $subTotal = $itemAmount;
+                    $dnDiscount = (float) ($rowArr['dn_discount_amount'] ?? 0);
+                    $discount = round($dnDiscount * $ratio, 2);
+
+                    $dnTaxable = (float) ($rowArr['dn_taxable_amount'] ?? 0);
+                    if ($dnTaxable > 0) {
+                        $taxableValue = round($dnTaxable * $ratio, 2);
+                    } else {
+                        $taxableValue = round($subTotal - $discount, 2);
+                    }
+
+                    $cgstPercent = (float) ($rowArr['dn_cgst_percent'] ?? 0);
+                    $sgstPercent = (float) ($rowArr['dn_sgst_percent'] ?? 0);
+                    $igstPercent = (float) ($rowArr['dn_igst_percent'] ?? 0);
+
+                    $cgstAmount = round($taxableValue * ($cgstPercent / 100), 2);
+                    $sgstAmount = round($taxableValue * ($sgstPercent / 100), 2);
+                    $igstAmount = round($taxableValue * ($igstPercent / 100), 2);
+
+                    $dnRoundOff = (float) ($rowArr['dn_round_off'] ?? 0);
+                    $roundOffType = $rowArr['dn_round_off_type'] ?? 'Add';
+                    $signedRoundOff = ($roundOffType === 'Less') ? -$dnRoundOff : $dnRoundOff;
+                    $itemRoundOff = round($signedRoundOff * $ratio, 2);
+
+                    $dnGrandTotal = (float) ($rowArr['dn_grand_total'] ?? 0);
+                    if ($ratio >= 0.999 && $ratio <= 1.001) {
+                        $totalAmount = $dnGrandTotal;
+                        $itemRoundOff = $signedRoundOff;
+                        $discount = $dnDiscount;
+                        if ($dnTaxable > 0) $taxableValue = $dnTaxable;
+                        if ($igstPercent > 0 && (float)($rowArr['dn_tax_amount'] ?? 0) > 0 && $cgstPercent == 0 && $sgstPercent == 0) {
+                            $igstAmount = (float)$rowArr['dn_tax_amount'];
+                        }
+                    } else {
+                        $totalAmount = round($taxableValue + $cgstAmount + $sgstAmount + $igstAmount + $itemRoundOff, 2);
+                    }
+
+                    $totalQty += $itemQty;
+                    $totalSubTotal += $subTotal;
+                    $totalDiscount += $discount;
+                    $totalTaxable += $taxableValue;
+                    $totalCgst += $cgstAmount;
+                    $totalSgst += $sgstAmount;
+                    $totalIgst += $igstAmount;
+                    $totalRoundOff += $itemRoundOff;
+                    $totalGrandTotal += $totalAmount;
+
+                    $calcRows[] = [
+                        'row' => $rowArr,
+                        'sub_total' => $subTotal,
+                        'discount' => $discount,
+                        'taxable_value' => $taxableValue,
+                        'cgst_percent' => $cgstPercent,
+                        'cgst_amount' => $cgstAmount,
+                        'sgst_percent' => $sgstPercent,
+                        'sgst_amount' => $sgstAmount,
+                        'igst_percent' => $igstPercent,
+                        'igst_amount' => $igstAmount,
+                        'round_off' => $itemRoundOff,
+                        'total_amount' => $totalAmount,
+                    ];
+                }
+
                 $totals = [
-                    'quantity' => number_format(collect($returnGoodsData)->sum('quantity'), 2),
-                    'amount' => number_format(collect($returnGoodsData)->sum('amount'), 2),
+                    'quantity' => number_format($totalQty, 2),
+                    'sub_total' => number_format($totalSubTotal, 2),
+                    'discount' => number_format($totalDiscount, 2),
+                    'taxable_value' => number_format($totalTaxable, 2),
+                    'cgst_amount' => number_format($totalCgst, 2),
+                    'sgst_amount' => number_format($totalSgst, 2),
+                    'igst_amount' => number_format($totalIgst, 2),
+                    'round_off' => ($totalRoundOff != 0 ? ($totalRoundOff > 0 ? '+' : '') . number_format($totalRoundOff, 2) : '0.00'),
+                    'grand_total' => number_format($totalGrandTotal, 2),
                 ];
 
                 if ($length != -1) {
-                    $returnGoodsData = array_slice($returnGoodsData, $start, $length);
+                    $calcRows = array_slice($calcRows, $start, $length);
                 }
 
                 $count = $start + 1;
-                foreach ($returnGoodsData as $row) {
-                    $rowArr = (array) $row;
+                foreach ($calcRows as $calc) {
+                    $rowArr = $calc['row'];
+                    $cgstDisplay = ($calc['cgst_percent'] > 0 || $calc['cgst_amount'] > 0)
+                        ? number_format($calc['cgst_percent'], 2) . '% (' . number_format($calc['cgst_amount'], 2) . ')'
+                        : '-';
+                    $sgstDisplay = ($calc['sgst_percent'] > 0 || $calc['sgst_amount'] > 0)
+                        ? number_format($calc['sgst_percent'], 2) . '% (' . number_format($calc['sgst_amount'], 2) . ')'
+                        : '-';
+                    $igstDisplay = ($calc['igst_percent'] > 0 || $calc['igst_amount'] > 0)
+                        ? number_format($calc['igst_percent'], 2) . '% (' . number_format($calc['igst_amount'], 2) . ')'
+                        : '-';
+                    $roundOffDisplay = ($calc['round_off'] != 0)
+                        ? (($calc['round_off'] > 0 ? '+' : '') . number_format($calc['round_off'], 2))
+                        : '0.00';
+
                     $data[] = [
                         'DT_RowIndex' => $count++,
                         'return_date' => $rowArr['return_date'] ? date('d-M-Y', strtotime($rowArr['return_date'])) : '-',
@@ -1042,7 +1262,20 @@ class PurchaseReportController extends Controller
                         'item_name' => $rowArr['item_name'],
                         'quantity' => number_format($rowArr['quantity'], 2),
                         'rate' => number_format($rowArr['rate'], 2),
-                        'amount' => number_format($rowArr['amount'], 2),
+                        'sub_total' => number_format($calc['sub_total'], 2),
+                        'discount' => number_format($calc['discount'], 2),
+                        'taxable_value' => number_format($calc['taxable_value'], 2),
+                        'cgst_percent' => ($calc['cgst_percent'] > 0) ? number_format($calc['cgst_percent'], 2) . '%' : '-',
+                        'cgst_amount' => ($calc['cgst_amount'] > 0) ? number_format($calc['cgst_amount'], 2) : '0.00',
+                        'sgst_percent' => ($calc['sgst_percent'] > 0) ? number_format($calc['sgst_percent'], 2) . '%' : '-',
+                        'sgst_amount' => ($calc['sgst_amount'] > 0) ? number_format($calc['sgst_amount'], 2) : '0.00',
+                        'igst_percent' => ($calc['igst_percent'] > 0) ? number_format($calc['igst_percent'], 2) . '%' : '-',
+                        'igst_amount' => ($calc['igst_amount'] > 0) ? number_format($calc['igst_amount'], 2) : '0.00',
+                        'cgst' => $cgstDisplay,
+                        'sgst' => $sgstDisplay,
+                        'igst' => $igstDisplay,
+                        'round_off' => $roundOffDisplay,
+                        'total_amount' => number_format($calc['total_amount'], 2),
                         'reason' => $rowArr['reason'] ?: '-',
                     ];
                 }
@@ -1158,6 +1391,9 @@ class PurchaseReportController extends Controller
                 $data = array_values($brandwiseData);
                 break;
 
+            case 'brandwise-po-drilldown':
+                return $this->getBrandwisePoDrilldownData($request);
+
             case 'cost-report':
                 $costData = $this->getAverageCostData($request);
                 $totalRecords = count($costData);
@@ -1203,12 +1439,7 @@ class PurchaseReportController extends Controller
         $toDate   = $request->to_date   ? date('Y-m-d', strtotime($request->to_date))   : null;
         
         if (!$brandId) {
-            $firstBrand = DB::table('brands')
-                ->where('status', 'Active')
-                ->whereNull('deleted_at')
-                ->where('brand_name', 'like', 'CASINO%')
-                ->first() 
-                ?? DB::table('brands')->where('status', 'Active')->whereNull('deleted_at')->first();
+            $firstBrand = DB::table('brands')->where('status', 'Active')->whereNull('deleted_at')->where('brand_name', 'like', 'CASINO%')->first() ?? DB::table('brands')->where('status', 'Active')->whereNull('deleted_at')->first();
             $brandId = $firstBrand ? $firstBrand->id : null;
         }
 
@@ -1216,25 +1447,10 @@ class PurchaseReportController extends Controller
             return [];
         }
 
-        $artNos = DB::table('stock_entry_items')
-            ->where('brand_id', $brandId)
-            ->whereNotNull('art_no')
-            ->where('art_no', '!=', '')
-            ->whereNull('deleted_at')
-            ->distinct()
-            ->pluck('art_no')
-            ->toArray();
+        $artNos = DB::table('stock_entry_items')->where('brand_id', $brandId)->whereNotNull('art_no')->where('art_no', '!=', '')->whereNull('deleted_at')->distinct()->pluck('art_no')->toArray();
 
         if (empty($artNos)) {
-            $artNos = DB::table('job_card_fabric_details as jcfd')
-                ->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')
-                ->where('jce.brand_id', $brandId)
-                ->whereNotNull('jcfd.art_no')
-                ->where('jcfd.art_no', '!=', '')
-                ->whereNull('jcfd.deleted_at')
-                ->distinct()
-                ->pluck('jcfd.art_no')
-                ->toArray();
+            $artNos = DB::table('job_card_fabric_details as jcfd')->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')->where('jce.brand_id', $brandId)->whereNotNull('jcfd.art_no')->where('jcfd.art_no', '!=', '')->whereNull('jcfd.deleted_at')->distinct()->pluck('jcfd.art_no')->toArray();
         }
 
         if (empty($artNos)) {
@@ -1300,19 +1516,25 @@ class PurchaseReportController extends Controller
         // BULK QUERIES FOR ALL ART NOS (Run ONCE, outside loop)
         // -------------------------------------------------------------
         // Order Fabric PO Qty per art_no
-        $orderFabricMap = DB::table('grn_entry_items as gei')
+        $orderFabricMap = DB::table('grn_entry_items as gei')->join('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')->leftJoin('purchase_invoices as pi', 'ge.purchase_invoice_id', '=', 'pi.id')->leftJoin('purchase_orders as po', 'pi.purchase_order_id', '=', 'po.id')->where('po.store_type_id', 1)->whereIn('gei.art_no', $artNos)->whereNull('ge.deleted_at')->whereNull('gei.deleted_at')->whereNull('pi.deleted_at')->whereNull('po.deleted_at')->select('gei.art_no', DB::raw('SUM(gei.qty_ordered) as total_qty'))->groupBy('gei.art_no')->pluck('total_qty', 'art_no');
+
+        // Order Fabric PO Numbers per art_no
+        $orderFabricPoNumbers = DB::table('grn_entry_items as gei')
             ->join('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')
             ->leftJoin('purchase_invoices as pi', 'ge.purchase_invoice_id', '=', 'pi.id')
             ->leftJoin('purchase_orders as po', 'pi.purchase_order_id', '=', 'po.id')
             ->where('po.store_type_id', 1)
             ->whereIn('gei.art_no', $artNos)
+            ->whereNotNull('po.po_number')
             ->whereNull('ge.deleted_at')
             ->whereNull('gei.deleted_at')
             ->whereNull('pi.deleted_at')
             ->whereNull('po.deleted_at')
-            ->select('gei.art_no', DB::raw('SUM(gei.qty_ordered) as total_qty'))
-            ->groupBy('gei.art_no')
-            ->pluck('total_qty', 'art_no');
+            ->select('gei.art_no', 'po.po_number')
+            ->distinct()
+            ->orderBy('po.id', 'desc')
+            ->get()
+            ->groupBy('art_no');
 
         // Fabric Stock per art_no (include store_type_id = 1 or stock_type = raw_material)
         $fabricStockMap = DB::table('stock_entry_items')
@@ -1323,36 +1545,28 @@ class PurchaseReportController extends Controller
             ->where('brand_id', $brandId)
             ->whereIn('art_no', $artNos)
             ->whereNull('deleted_at')
-            ->select('art_no', DB::raw('SUM(qty_in - COALESCE(qty_out, 0)) as total_stock'))
-            ->groupBy('art_no')
-            ->pluck('total_stock', 'art_no');
+            ->select('art_no', DB::raw('SUM(qty_in - COALESCE(qty_out, 0)) as total_stock'))->groupBy('art_no')->pluck('total_stock', 'art_no');
 
         // FG Min Stock records bulk
-        $minRecordsBulk = DB::table('fg_min_stocks as fms')
-            ->join('stock_entry_items as sei', 'fms.stock_entry_item_id', '=', 'sei.id')
-            ->whereIn('sei.art_no', $artNos)
-            ->where('fms.status', 'Active')
-            ->whereNull('fms.deleted_at')
-            ->whereNull('sei.deleted_at')
-            ->select('sei.art_no', 'sei.sleeve_type', 'sei.size', 'fms.min_stock')
-            ->get()
-            ->groupBy('art_no');
+        $minRecordsBulk = DB::table('fg_min_stocks as fms')->join('stock_entry_items as sei', 'fms.stock_entry_item_id', '=', 'sei.id')->whereIn('sei.art_no', $artNos)->where('fms.status', 'Active')->whereNull('fms.deleted_at')->whereNull('sei.deleted_at')->select('sei.art_no', 'sei.sleeve_type', 'sei.size', 'fms.min_stock')->get()->groupBy('art_no');
 
         // FG Current Stock bulk
-        $fgQuery = DB::table('stock_entry_items')
-            ->whereIn('art_no', $artNos)
-            ->where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at');
+        $fgQuery = DB::table('stock_entry_items')->whereIn('art_no', $artNos)->where('stock_type', 'finished_goods')->whereNull('deleted_at');
         if ($fromDate) {
             $fgQuery->whereDate('created_at', '>=', $fromDate);
         }
         if ($toDate) {
             $fgQuery->whereDate('created_at', '<=', $toDate);
         }
-        $fgRecordsBulk = $fgQuery->select('art_no', 'sleeve_type', 'size', DB::raw('SUM(qty_in - COALESCE(qty_out, 0)) as total_qty'))
-            ->groupBy('art_no', 'sleeve_type', 'size')
-            ->get()
-            ->groupBy('art_no');
+        $fgRecordsBulk = $fgQuery->select('art_no', 'sleeve_type', 'size', DB::raw('SUM(qty_in - COALESCE(qty_out, 0)) as total_qty'))->groupBy('art_no', 'sleeve_type', 'size')->get()->groupBy('art_no');
+
+        // Job Cards moved to FG via Posted Production Receipts
+        $fgJcIds = DB::table('production_receipts')
+            ->where('status', 'Posted')
+            ->whereNotNull('job_card_id')
+            ->pluck('job_card_id')
+            ->unique()
+            ->toArray();
 
         // WIP bulk - Group by art_no, job_card_id, job_card_no, remarks, size
         $wipQuery = DB::table('job_card_matrix_quantities as jcmq')
@@ -1360,7 +1574,8 @@ class PurchaseReportController extends Controller
             ->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')
             ->leftJoin('service_providers as sp', 'jce.service_provider_id', '=', 'sp.id')
             ->whereIn('jcfd.art_no', $artNos)
-            ->whereNotIn('jce.status', ['cancelled', 'Completed'])
+            ->whereNotIn('jce.status', ['cancelled'])
+            ->whereNotIn('jce.id', $fgJcIds)
             ->whereNull('jcmq.deleted_at')
             ->whereNull('jcfd.deleted_at');
         if ($fromDate) {
@@ -1398,28 +1613,11 @@ class PurchaseReportController extends Controller
         $tasksByJc = collect();
         $opsByJc = collect();
         if (!empty($allWipJcIds)) {
-            $schedulesByJc = DB::table('process_schedules')
-                ->whereIn('job_card_entry_id', $allWipJcIds)
-                ->whereNull('deleted_at')
-                ->select('id', 'job_card_entry_id', 'stage', 'status')
-                ->orderBy('id', 'asc')
-                ->get()
-                ->groupBy('job_card_entry_id');
+            $schedulesByJc = DB::table('process_schedules')->whereIn('job_card_entry_id', $allWipJcIds)->whereNull('deleted_at')->select('id', 'job_card_entry_id', 'stage', 'status')->orderBy('id', 'asc')->get()->groupBy('job_card_entry_id');
 
-            $tasksByJc = DB::table('tasks')
-                ->whereIn('job_card_entry_id', $allWipJcIds)
-                ->whereNull('deleted_at')
-                ->select('id', 'job_card_entry_id', 'stage_id', 'status')
-                ->get()
-                ->groupBy('job_card_entry_id');
+            $tasksByJc = DB::table('tasks')->whereIn('job_card_entry_id', $allWipJcIds)->whereNull('deleted_at')->select('id', 'job_card_entry_id', 'stage_id', 'status')->get()->groupBy('job_card_entry_id');
 
-            $opsByJc = DB::table('job_card_operations as jco')
-                ->leftJoin('operation_stages as os', 'jco.operation_stage_id', '=', 'os.id')
-                ->whereIn('jco.job_card_entry_id', $allWipJcIds)
-                ->select('jco.id', 'jco.job_card_entry_id', 'jco.operation_stage_id', 'os.operation_stage_name')
-                ->orderBy('jco.id', 'asc')
-                ->get()
-                ->groupBy('job_card_entry_id');
+            $opsByJc = DB::table('job_card_operations as jco')->leftJoin('operation_stages as os', 'jco.operation_stage_id', '=', 'os.id')->whereIn('jco.job_card_entry_id', $allWipJcIds)->select('jco.id', 'jco.job_card_entry_id', 'jco.operation_stage_id', 'os.operation_stage_name')->orderBy('jco.id', 'asc')->get()->groupBy('job_card_entry_id');
         }
 
         $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
@@ -1489,6 +1687,12 @@ class PurchaseReportController extends Controller
                 foreach ($wipByJc as $jcNo => $jcSizes) {
                     $firstRec = $jcSizes->first();
                     $stageStatus = $this->resolveJobCardCurrentStage($firstRec->job_card_id ?? 0, $schedulesByJc, $tasksByJc, $opsByJc);
+
+                    // Skip completed or moved to FG
+                    if (in_array($firstRec->job_card_id ?? 0, $fgJcIds)) {
+                        continue;
+                    }
+
                     $wipItem = [
                         'label' => 'WIP-' . $wipIdx++,
                         'unit' => ($firstRec && !empty($firstRec->unit_name)) ? $firstRec->unit_name : '-',
@@ -1517,7 +1721,9 @@ class PurchaseReportController extends Controller
                     $wipItem['gross_total'] = $wipItem['fs_tl'] + $wipItem['hs_tl'];
                     $wipList[] = $wipItem;
                 }
-            } else {
+            }
+
+            if (empty($wipList)) {
                 $emptyWip = [
                     'label' => 'WIP-1',
                     'unit' => '-',
@@ -1544,9 +1750,14 @@ class PurchaseReportController extends Controller
             }
             $matrixTot['gross_total'] = $matrixTot['fs_tl'] + $matrixTot['hs_tl'];
 
+            $artPoNumbers = isset($orderFabricPoNumbers[$artNo]) 
+                ? $orderFabricPoNumbers[$artNo]->pluck('po_number')->unique()->values()->toArray() 
+                : [];
+
             $result[] = [
                 'art_no'        => $artNo,
                 'order_fabric'  => number_format($orderFabricVal, 2),
+                'po_numbers'    => $artPoNumbers,
                 'fabric_stock'  => number_format($fabricStockVal, 2),
                 'dhoti_stock'   => number_format($dhotiStockVal, 2),
                 'dhoti_reorder' => number_format($dhotiReorderVal, 2),
@@ -2284,5 +2495,147 @@ class PurchaseReportController extends Controller
             ]
         ]);
     }
+
+    public function getBrandwisePoDrilldownData(Request $request)
+    {
+        $artNo = $request->art_no;
+        if (empty($artNo)) {
+            return response()->json([
+                'draw' => intval($request->draw ?? 1),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'totals' => [
+                    'order_qty' => '0.00',
+                    'received_qty' => '0.00',
+                    'balance_qty' => '0.00',
+                ]
+            ]);
+        }
+
+        $query = DB::table('grn_entry_items as gei')
+            ->join('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')
+            ->leftJoin('purchase_invoices as pi', 'ge.purchase_invoice_id', '=', 'pi.id')
+            ->leftJoin('purchase_orders as po', 'pi.purchase_order_id', '=', 'po.id')
+            ->leftJoin('suppliers as sup', 'po.supplier_id', '=', 'sup.id')
+            ->where('po.store_type_id', 1)
+            ->where('gei.art_no', $artNo)
+            ->whereNull('ge.deleted_at')
+            ->whereNull('gei.deleted_at')
+            ->whereNull('pi.deleted_at')
+            ->whereNull('po.deleted_at');
+
+        if ($request->filled('supplier_id')) {
+            $query->where('po.supplier_id', $request->supplier_id);
+        }
+
+        $records = $query->select(
+            'po.id as po_id',
+            'po.po_number',
+            'po.po_date',
+            'po.due_date',
+            'po.reference_date',
+            'po.status',
+            'po.is_self_closed',
+            'po.remarks',
+            'sup.name as supplier_name',
+            'gei.art_no',
+            DB::raw('SUM(gei.qty_ordered) as order_qty'),
+            DB::raw('SUM(gei.qty_received) as received_qty'),
+            DB::raw('MAX(pi.invoice_date) as latest_inv_date')
+        )
+        ->groupBy(
+            'po.id',
+            'po.po_number',
+            'po.po_date',
+            'po.due_date',
+            'po.reference_date',
+            'po.status',
+            'po.is_self_closed',
+            'po.remarks',
+            'sup.name',
+            'gei.art_no'
+        )
+        ->orderBy('po.id', 'desc')
+        ->get();
+
+        $data = [];
+        $today = \Carbon\Carbon::today();
+        $totalOrder = 0;
+        $totalReceived = 0;
+        $totalBalance = 0;
+
+        foreach ($records as $index => $row) {
+            $orderQty = floatval($row->order_qty ?? 0);
+            $receivedQty = floatval($row->received_qty ?? 0);
+            $balanceQty = max(0, $orderQty - $receivedQty);
+
+            $totalOrder += $orderQty;
+            $totalReceived += $receivedQty;
+            $totalBalance += $balanceQty;
+
+            $delayHtml = '<span class="text-muted">-</span>';
+            $dueDateObj = !empty($row->due_date) ? \Carbon\Carbon::parse($row->due_date)->startOfDay() : null;
+            $isCompleted = ($balanceQty <= 0) || (strtolower($row->status) === 'completed') || (strtolower($row->status) === 'closed') || ($row->is_self_closed == 1);
+
+            if ($dueDateObj) {
+                if ($isCompleted) {
+                    $compDate = !empty($row->latest_inv_date) ? \Carbon\Carbon::parse($row->latest_inv_date)->startOfDay() : null;
+                    if ($compDate && $compDate->gt($dueDateObj)) {
+                        $diffDays = $compDate->diffInDays($dueDateObj);
+                        $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days Delay</span>';
+                    } else {
+                        $delayHtml = '<span class="text-success fw-bold">On Time</span>';
+                    }
+                } else {
+                    if ($today->gt($dueDateObj)) {
+                        $diffDays = $today->diffInDays($dueDateObj);
+                        $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days Delay</span>';
+                    } else {
+                        $delayHtml = '<span class="text-success fw-bold">On Time</span>';
+                    }
+                }
+            }
+
+            $statusText = $row->status ?: 'Pending';
+            if ($row->is_self_closed) {
+                $statusBadge = '<span class="badge bg-secondary">Self Closed</span>';
+            } elseif ($balanceQty <= 0 || strtolower($row->status) === 'completed' || strtolower($row->status) === 'received') {
+                $statusBadge = '<span class="badge bg-success">' . ucfirst($statusText) . '</span>';
+            } elseif (strtolower($row->status) === 'approved') {
+                $statusBadge = '<span class="badge bg-primary">Approved</span>';
+            } else {
+                $statusBadge = '<span class="badge bg-warning text-dark">' . ucfirst($statusText) . '</span>';
+            }
+
+            $data[] = [
+                'DT_RowIndex' => $index + 1,
+                'po_number' => '<strong>' . htmlspecialchars($row->po_number) . '</strong>',
+                'po_date' => $row->po_date ? \Carbon\Carbon::parse($row->po_date)->format('d-M-Y') : '-',
+                'supplier_name' => $row->supplier_name ?: '-',
+                'art_no' => $row->art_no ?: '-',
+                'order_qty' => number_format($orderQty, 2),
+                'received_qty' => number_format($receivedQty, 2),
+                'balance_qty' => number_format($balanceQty, 2),
+                'due_date' => $row->due_date ? \Carbon\Carbon::parse($row->due_date)->format('d-M-Y') : '-',
+                'delay' => $delayHtml,
+                'status' => $statusBadge,
+                'remarks' => htmlspecialchars($row->remarks ?: '-'),
+            ];
+        }
+
+        return response()->json([
+            'draw' => intval($request->draw ?? 1),
+            'recordsTotal' => count($data),
+            'recordsFiltered' => count($data),
+            'data' => $data,
+            'totals' => [
+                'order_qty' => number_format($totalOrder, 2),
+                'received_qty' => number_format($totalReceived, 2),
+                'balance_qty' => number_format($totalBalance, 2),
+            ]
+        ]);
+    }
 }
+
 

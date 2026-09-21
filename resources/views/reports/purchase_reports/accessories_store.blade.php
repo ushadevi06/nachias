@@ -37,18 +37,29 @@
                         <option value="performance-report">⭐ Supplier Performance</option>
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Brand</label>
+                    <select class="form-select select2" name="brand_id" id="brand_id" data-placeholder="Select Brand">
+                        <option value=""></option>
+                        @if(isset($brands))
+                            @foreach($brands as $brand)
+                                <option value="{{ $brand->id }}" {{ request('brand_id') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">Date Range</label>
                     <input type="text" class="form-control report_date_range" id="accessories_store_date_range" placeholder="DD-MM-YYYY to DD-MM-YYYY" value="{{ (request('from_date') && request('to_date')) ? (request('from_date') == request('to_date') ? request('from_date') : request('from_date') . ' to ' . request('to_date')) : (request('from_date') ?? '') }}">
                     <input type="hidden" class="start_date" name="from_date" value="{{ request('from_date') }}">
                     <input type="hidden" class="end_date" name="to_date" value="{{ request('to_date') }}">
                 </div>
-                <div class="col-md-5">
+                <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">Supplier</label>
                     <select class="form-select select2" name="supplier_id" id="supplier_id" data-placeholder="Select Supplier">
                         <option value=""></option>
                         @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                            <option value="{{ $supplier->id }}" {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -381,6 +392,7 @@ $(document).ready(function() {
         }
         $('.start_date, .end_date').val('');
         $('#supplier_id, select[name="supplier_id"]').val('').trigger('change.select2');
+        $('#brand_id, select[name="brand_id"]').val('').trigger('change.select2');
 
         let currentTabId = $('#report_type_select').val() || $('.tab-pane.active').attr('id');
         let activeTab = $('#' + currentTabId);

@@ -11,15 +11,13 @@
         <table class="datatables-products table table-hover align-middle text-nowrap" id="finalFinishingAverageTable" style="width: 100%;">
             <thead class="table-light text-center align-middle">
                 <tr>
-                    <th class="fw-bold text-dark" style="min-width: 95px;">DATE</th>
-                    <th class="fw-bold text-dark" style="min-width: 90px;">TRIMMING</th>
-                    <th class="fw-bold text-dark" style="min-width: 90px;">CHECKING</th>
-                    <th class="fw-bold text-dark" style="min-width: 90px;">IRONING</th>
-                    <th class="fw-bold text-dark" style="min-width: 95px;">DESPATCH</th>
-                    <th class="fw-bold text-dark" style="min-width: 90px;">DELIVERY</th>
-                    <th class="fw-bold text-dark" style="min-width: 85px;">EFFICIENCY</th>
-                    <th class="fw-bold text-dark" style="min-width: 90px;">TARGET PER DAY</th>
-                    <th class="fw-bold text-dark" style="width: 65px;">COUNT</th>
+                    <th class="fw-bold text-dark" style="width: 14%;">DATE</th>
+                    <th class="fw-bold text-dark" style="width: 14%;">IRONING</th>
+                    <th class="fw-bold text-dark" style="width: 14%;">DESPATCH</th>
+                    <th class="fw-bold text-dark" style="width: 14%;">DELIVERY</th>
+                    <th class="fw-bold text-dark" style="width: 14%;">EFFICIENCY</th>
+                    <th class="fw-bold text-dark" style="width: 16%;">TARGET PER DAY</th>
+                    <th class="fw-bold text-dark" style="width: 14%;">COUNT</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -27,8 +25,6 @@
                 <!-- TOTAL Row -->
                 <tr class="table-light border-top" id="finishingFooterTotalRow">
                     <th class="text-center fw-bold text-dark">TOTAL</th>
-                    <th class="text-center" id="foot_finish_trimming">-</th>
-                    <th class="text-center" id="foot_finish_checking">-</th>
                     <th class="text-center" id="foot_finish_ironing">-</th>
                     <th class="text-center" id="foot_finish_despatch">-</th>
                     <th class="text-center" id="foot_finish_delivery">-</th>
@@ -39,8 +35,6 @@
                 <!-- AVERAGE Row -->
                 <tr class="table-light" id="finishingFooterAvgRow">
                     <th class="text-center fw-bold text-dark">AVERAGE</th>
-                    <th class="text-center" id="avg_finish_trimming">-</th>
-                    <th class="text-center" id="avg_finish_checking">-</th>
                     <th class="text-center" id="avg_finish_ironing">-</th>
                     <th class="text-center" id="avg_finish_despatch">-</th>
                     <th class="text-center" id="avg_finish_delivery">-</th>
@@ -54,6 +48,10 @@
 </div>
 
 <style>
+#finalFinishingAverageTable {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
 #finalFinishingAverageTable thead th {
     font-size: 0.8rem;
     letter-spacing: 0.2px;
@@ -78,6 +76,7 @@ window.initFinalFinishingAverageTable = function() {
     }
 
     window.finalFinishingAverageDt = $('#finalFinishingAverageTable').DataTable({
+        autoWidth: false,
         processing: true,
         serverSide: true,
         paging: true,
@@ -135,15 +134,13 @@ window.initFinalFinishingAverageTable = function() {
             }
         },
         columns: [
-            { data: 'date', className: 'text-center text-nowrap fw-semibold' },
-            { data: 'trimming', className: 'text-center' },
-            { data: 'checking', className: 'text-center' },
-            { data: 'ironing', className: 'text-center' },
-            { data: 'despatch', className: 'text-center' },
-            { data: 'delivery', className: 'text-center' },
-            { data: 'efficiency', className: 'text-center' },
-            { data: 'target_per_day', className: 'text-center' },
-            { data: 'count', className: 'text-center text-muted' }
+            { data: 'date', className: 'text-center text-nowrap fw-semibold', width: '14%' },
+            { data: 'ironing', className: 'text-center', width: '14%' },
+            { data: 'despatch', className: 'text-center', width: '14%' },
+            { data: 'delivery', className: 'text-center', width: '14%' },
+            { data: 'efficiency', className: 'text-center', width: '14%' },
+            { data: 'target_per_day', className: 'text-center', width: '16%' },
+            { data: 'count', className: 'text-center text-muted', width: '14%' }
         ],
         drawCallback: function(settings) {
             var json = settings.json;
@@ -155,8 +152,6 @@ window.initFinalFinishingAverageTable = function() {
                 }
                 if (m.total_row) {
                     var t = m.total_row;
-                    $('#foot_finish_trimming').text(t.trimming);
-                    $('#foot_finish_checking').text(t.checking);
                     $('#foot_finish_ironing').text(t.ironing);
                     $('#foot_finish_despatch').text(t.despatch);
                     $('#foot_finish_delivery').text(t.delivery);
@@ -164,8 +159,6 @@ window.initFinalFinishingAverageTable = function() {
                 }
                 if (m.average_row) {
                     var a = m.average_row;
-                    $('#avg_finish_trimming').text(a.trimming);
-                    $('#avg_finish_checking').text(a.checking);
                     $('#avg_finish_ironing').text(a.ironing);
                     $('#avg_finish_despatch').text(a.despatch);
                     $('#avg_finish_delivery').text(a.delivery);

@@ -365,6 +365,10 @@ $(document).ready(function() {
         $('.tab-pane').removeClass('show active');
         $('#' + targetTabId).addClass('show active');
 
+        if (typeof window.backToBrandwiseReport === 'function') {
+            window.backToBrandwiseReport();
+        }
+
         if (targetTabId === 'brandwise-minstock-report') {
             if (typeof window.loadBrandwiseMinStockTable === 'function') {
                 window.loadBrandwiseMinStockTable();
@@ -392,6 +396,10 @@ $(document).ready(function() {
         const submitBtn = $(this).find('button[type="submit"]');
         const origHtml = submitBtn.html();
         submitBtn.html('<span class="spinner-border spinner-border-sm"></span>').prop('disabled', true);
+
+        if (typeof window.backToBrandwiseReport === 'function') {
+            window.backToBrandwiseReport();
+        }
 
         if (currentTabId === 'brandwise-minstock-report') {
             if (typeof window.loadBrandwiseMinStockTable === 'function') {
@@ -424,6 +432,9 @@ $(document).ready(function() {
 
     $('#btn-reset-filters').on('click', function(e) {
         e.preventDefault();
+        if (typeof window.backToBrandwiseReport === 'function') {
+            window.backToBrandwiseReport();
+        }
         $('#fabric_store_date_range').val('');
         if ($('#fabric_store_date_range')[0] && $('#fabric_store_date_range')[0]._flatpickr) {
             $('#fabric_store_date_range')[0]._flatpickr.clear();
@@ -595,6 +606,11 @@ $(document).ready(function() {
         e.preventDefault();
         let currentTabId = $('#report_type_select').val() || $('.tab-pane.active').attr('id');
         if (currentTabId === 'brandwise-minstock-report') {
+            if ($('#brandwisePoDrilldownContainer').is(':visible')) {
+                triggerFabricExport('.buttons-excel', $(this));
+                return;
+            }
+
             let brandId = $('select[name="brand_id"]').val() || '';
             let fromDate = $('.start_date').val() || '';
             let toDate = $('.end_date').val() || '';
@@ -619,6 +635,10 @@ $(document).ready(function() {
         e.preventDefault();
         let currentTabId = $('#report_type_select').val() || $('.tab-pane.active').attr('id');
         if (currentTabId === 'brandwise-minstock-report') {
+            if ($('#brandwisePoDrilldownContainer').is(':visible')) {
+                triggerFabricExport('.buttons-pdf', $(this));
+                return;
+            }
             printBrandwiseReportWindow();
             return;
         }
@@ -629,6 +649,10 @@ $(document).ready(function() {
         e.preventDefault();
         let currentTabId = $('#report_type_select').val() || $('.tab-pane.active').attr('id');
         if (currentTabId === 'brandwise-minstock-report') {
+            if ($('#brandwisePoDrilldownContainer').is(':visible')) {
+                triggerFabricExport('.buttons-print', $(this));
+                return;
+            }
             printBrandwiseReportWindow();
             return;
         }

@@ -249,15 +249,36 @@ class DebitNoteController extends Controller
                         if (!empty($item['purchase_invoice_item_id'])) {
                             $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'])->sum('qty_rejected');
 
-                            $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id']);
+                            $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'])
+                                ->whereHas('debitNote', function ($q) {
+                                    $q->where('status', '!=', 'Cancelled');
+                                });
                             if ($id) {
                                 $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
                             }
                             $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
 
-                            $availableQty = $rejectedQty - $alreadyDebited;
+                            $availableQty = max(0, $rejectedQty - $alreadyDebited);
                             if ($availableQty > 0 && $qty > $availableQty) {
                                 $itemErrors["items.$index.quantity"] = "Quantity exceeds available rejected quantity ($availableQty).";
+                            }
+                        } elseif (!empty($item['stock_entry_item_id'])) {
+                            $dbStockItem = \App\Models\StockEntryItem::find($item['stock_entry_item_id']);
+                            if ($dbStockItem) {
+                                $rejectedQty = floatval(($dbStockItem->qty_rejected ?? 0) > 0 ? $dbStockItem->qty_rejected : ($dbStockItem->qty_in > 0 ? $dbStockItem->qty_in : $dbStockItem->qty_out));
+                                $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('stock_entry_item_id', $item['stock_entry_item_id'])
+                                    ->whereHas('debitNote', function ($q) {
+                                        $q->where('status', '!=', 'Cancelled');
+                                    });
+                                if ($id) {
+                                    $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
+                                }
+                                $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
+
+                                $availableQty = max(0, $rejectedQty - $alreadyDebited);
+                                if ($availableQty > 0 && $qty > $availableQty) {
+                                    $itemErrors["items.$index.quantity"] = "Quantity exceeds available stock quantity ($availableQty).";
+                                }
                             }
                         }
                     }
@@ -461,6 +482,19 @@ class DebitNoteController extends Controller
             })
             ->orderBy('id', 'desc')->get();
 
+        $purchaseInvoices = $purchaseInvoices->filter(function ($invoice) {
+            foreach ($invoice->items as $item) {
+                $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
+                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)
+                    ->whereHas('debitNote', function ($q) {
+                        $q->where('status', '!=', 'Cancelled');
+                    })->sum('quantity');
+                if ($rejectedQty > $alreadyDebited) {
+                    return true;
+                }
+            }
+            return false;
+        })->values();
         $data = $purchaseInvoices->map(function ($invoice) {
             $supplierName = $invoice->supplier->name ?? '';
             $supplierCode = $invoice->supplier->code ?? '';
@@ -491,7 +525,10 @@ class DebitNoteController extends Controller
 
         $items = collect($stockEntry->stockEntryItems)->map(function ($item) {
             $rejectedQty = floatval(($item->qty_rejected ?? 0) > 0 ? $item->qty_rejected : ($item->qty_in > 0 ? $item->qty_in : $item->qty_out));
-            $alreadyDebited = floatval(\App\Models\DebitNoteItem::where('stock_entry_item_id', $item->id)->sum('quantity'));
+            $alreadyDebited = floatval(\App\Models\DebitNoteItem::where('stock_entry_item_id', $item->id)
+                ->whereHas('debitNote', function ($q) {
+                    $q->where('status', '!=', 'Cancelled');
+                })->sum('quantity'));
             $availableQty = max(0, $rejectedQty - $alreadyDebited);
             $rate = floatval($item->price ?? 0);
             $categoryName = $item->rawMaterial?->storeCategory?->store_category_name ?? '-';
@@ -554,7 +591,10 @@ class DebitNoteController extends Controller
 
         $items = collect($invoice->items)->map(function ($item) {
             $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
-            $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)->sum('quantity');
+            $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)
+                ->whereHas('debitNote', function ($q) {
+                    $q->where('status', '!=', 'Cancelled');
+                })->sum('quantity');
             $availableQty = $rejectedQty - $alreadyDebited;
             
             $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->first();
@@ -606,7 +646,10 @@ class DebitNoteController extends Controller
         $invoices = $invoices->filter(function ($invoice) {
             foreach ($invoice->items as $item) {
                 $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
-                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)->sum('quantity');
+                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)
+                    ->whereHas('debitNote', function ($q) {
+                        $q->where('status', '!=', 'Cancelled');
+                    })->sum('quantity');
                 if ($rejectedQty > $alreadyDebited) {
                     return true;
                 }

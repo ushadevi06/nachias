@@ -35,6 +35,7 @@
                             <option value="production-wip" selected>📊 Production WIP Unit Wise</option>
                             <option value="cutting-section-average">✂️ Cutting Section Average Report</option>
                             <option value="final-finishing-average">✨ Final Finishing Average Report</option>
+                            <option value="unit-line-average">🏭 Unit Line Average Report</option>
                             <option value="casino-cutting-wip">🏭 Casino Cutting WIP Report</option>
                             <option value="stage-wise-wip">🔄 Stage wise WIP Report</option>
                             <option value="production-planning">📋 Production Planning Report</option>
@@ -68,8 +69,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-bold text-muted">Unit</label>
-                        <select class="form-select select2" name="unit_id" id="unit_id_filter"
-                            data-placeholder="Select Unit">
+                        <select class="form-select select2" name="unit_id" id="unit_id_filter" data-placeholder="Select Unit">
                             <option value=""></option>
                             @foreach($units as $unit)
                                 <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
@@ -779,6 +779,11 @@
                     <div class="tab-pane fade" id="final-finishing-average" role="tabpanel">
                         @include('reports.production_report.final_finishing_average')
                     </div>
+
+                    <!-- Unit Line Average Report -->
+                    <div class="tab-pane fade" id="unit-line-average" role="tabpanel">
+                        @include('reports.production_report.unit_line_average')
+                    </div>
                 </div>
             </div>
         </div>
@@ -1124,6 +1129,13 @@
                     showReportLoading(true);
                     if (typeof window.initFinalFinishingAverageTable === 'function') {
                         window.initFinalFinishingAverageTable();
+                    }
+                    return;
+                }
+                if (tabPaneId === 'unit-line-average') {
+                    showReportLoading(true);
+                    if (typeof window.initUnitLineAverageTable === 'function') {
+                        window.initUnitLineAverageTable();
                     }
                     return;
                 }
@@ -2457,6 +2469,14 @@
                     return;
                 }
 
+                if (activeTabId === 'unit-line-average') {
+                    if (typeof window.initUnitLineAverageTable === 'function') {
+                        showReportLoading(true);
+                        window.initUnitLineAverageTable();
+                    }
+                    return;
+                }
+
                 // If currently viewing department detail, refresh detail view with new filters
                 if (activeTabId === 'department-efficiency' && activeDetailStageId && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
@@ -2531,6 +2551,12 @@
                         return;
                     }
                 }
+                if ($('#report_type_select').val() === 'unit-line-average') {
+                    if ($.fn.DataTable.isDataTable('#unitLineAverageTable')) {
+                        $('#unitLineAverageTable').DataTable().button('.buttons-excel').trigger();
+                        return;
+                    }
+                }
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-excel').trigger();
@@ -2581,6 +2607,12 @@
                         return;
                     }
                 }
+                if ($('#report_type_select').val() === 'unit-line-average') {
+                    if ($.fn.DataTable.isDataTable('#unitLineAverageTable')) {
+                        $('#unitLineAverageTable').DataTable().button('.buttons-pdf').trigger();
+                        return;
+                    }
+                }
                 if ($('#report_type_select').val() === 'department-efficiency' && !$('#deptEfficiencyDetailView').hasClass('d-none')) {
                     if (detailTasksDataTable) {
                         detailTasksDataTable.button('.detail-buttons-pdf').trigger();
@@ -2628,6 +2660,12 @@
                 if ($('#report_type_select').val() === 'final-finishing-average') {
                     if ($.fn.DataTable.isDataTable('#finalFinishingAverageTable')) {
                         $('#finalFinishingAverageTable').DataTable().button('.buttons-print').trigger();
+                        return;
+                    }
+                }
+                if ($('#report_type_select').val() === 'unit-line-average') {
+                    if ($.fn.DataTable.isDataTable('#unitLineAverageTable')) {
+                        $('#unitLineAverageTable').DataTable().button('.buttons-print').trigger();
                         return;
                     }
                 }

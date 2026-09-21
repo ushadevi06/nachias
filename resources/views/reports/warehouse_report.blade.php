@@ -287,6 +287,51 @@
 
 @section('scripts')
 <script>
+var commonExportFormat = {
+    body: function (data, row, column, node) {
+        if (node) {
+            var exportAttr = $(node).attr('data-export') || $(node).find('[data-export]').attr('data-export');
+            if (exportAttr !== undefined && exportAttr !== '') {
+                return exportAttr;
+            }
+        }
+        if (typeof data === 'string') {
+            var temp = $('<div>').html(data);
+            var exportAttrInside = temp.find('[data-export]').attr('data-export');
+            if (exportAttrInside !== undefined && exportAttrInside !== '') {
+                return exportAttrInside;
+            }
+            temp.find('.no-export, .d-none, button, i, script').remove();
+
+            var badges = temp.find('.badge, a');
+            if (badges.length > 1) {
+                var items = [];
+                badges.each(function() {
+                    var t = $(this).text().trim();
+                    if (t) items.push(t);
+                });
+                return items.join(', ');
+            }
+
+            return temp.text().trim();
+        }
+        return data;
+    },
+    footer: function (data, row, column, node) {
+        var exportVal = node ? $(node).attr('data-export') : undefined;
+        if (exportVal !== undefined) {
+            return exportVal.indexOf('%') !== -1 ? '\u200B' + exportVal : exportVal;
+        }
+        if (typeof data === 'string') {
+            var temp = $('<div>').html(data);
+            temp.find('.no-export, .d-none, button, i, script').remove();
+            var txt = temp.text().trim();
+            return txt.indexOf('%') !== -1 ? '\u200B' + txt : txt;
+        }
+        return data;
+    }
+};
+
 $.extend(true, $.fn.dataTable.defaults, {
     processing: true,
     buttons: [
@@ -304,29 +349,7 @@ $.extend(true, $.fn.dataTable.defaults, {
             },
             exportOptions: {
                 columns: ':not(.no-export)',
-                format: {
-                    body: function (data, row, column, node) {
-                        if (typeof data === 'string') {
-                            var temp = $('<div>').html(data);
-                            temp.find('.no-export, .d-none, button, i, script').remove();
-                            return temp.text().trim();
-                        }
-                        return data;
-                    },
-                    footer: function (data, row, column, node) {
-                        var exportVal = node ? $(node).attr('data-export') : undefined;
-                        if (exportVal !== undefined) {
-                            return exportVal.indexOf('%') !== -1 ? '\u200B' + exportVal : exportVal;
-                        }
-                        if (typeof data === 'string') {
-                            var temp = $('<div>').html(data);
-                            temp.find('.no-export, .d-none, button, i, script').remove();
-                            var txt = temp.text().trim();
-                            return txt.indexOf('%') !== -1 ? '\u200B' + txt : txt;
-                        }
-                        return data;
-                    }
-                }
+                format: commonExportFormat
             },
             customize: function (xlsx) {
                 var sheet   = xlsx.xl.worksheets['sheet1.xml'];
@@ -382,7 +405,8 @@ $.extend(true, $.fn.dataTable.defaults, {
             orientation: 'landscape',
             pageSize: 'A4',
             exportOptions: {
-                columns: ':not(.no-export)'
+                columns: ':not(.no-export)',
+                format: commonExportFormat
             }
         },
         {
@@ -398,7 +422,8 @@ $.extend(true, $.fn.dataTable.defaults, {
                 return title.replace(/[^\w\s\-_]/gi, '').trim();
             },
             exportOptions: {
-                columns: ':not(.no-export)'
+                columns: ':not(.no-export)',
+                format: commonExportFormat
             }
         }
     ]

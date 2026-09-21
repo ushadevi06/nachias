@@ -7,7 +7,7 @@
                 <th>Party Name</th>
                 <th class="text-center">Place</th>
                 <th class="text-center">Qty</th>
-                <th class="text-center">Invoices</th>
+                <th class="text-center" style="min-width: 280px;">Invoices</th>
                 <th class="text-center">Status</th>
             </tr>
         </thead>

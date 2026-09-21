@@ -118,38 +118,8 @@
 <body>
 @php
   $allItems = $debitNote->items;
-
-
-
-  $rowsPerFullPage = 15;
-  $rowsPerLastPage = 5;
-  
-  $pages = [];
-  $footerPlacedOnValidChunk = false;
-  
-  if ($allItems->count() === 0) {
-      $pages[] = collect();
-      $footerPlacedOnValidChunk = true;
-  } else {
-      $remaining = collect($allItems);
-      while ($remaining->count() > 0) {
-          if ($remaining->count() <= $rowsPerLastPage) {
-              $pages[] = $remaining;
-              $remaining = collect();
-              $footerPlacedOnValidChunk = true;
-          } else {
-              $take = min($rowsPerFullPage, $remaining->count());
-              $pages[] = $remaining->take($take);
-              $remaining = $remaining->slice($take)->values();
-          }
-      }
-  }
-  
-  if (!$footerPlacedOnValidChunk) {
-      $pages[] = collect();
-  }
-  
-  $chunks = collect($pages);
+  $chunkSize = 12;
+  $chunks = $allItems->count() > 0 ? $allItems->chunk($chunkSize) : collect([collect()]);
   $overallIndex = 0;
 @endphp
 
@@ -183,22 +153,29 @@
       </tr>
       <tr style="border-top: 1px solid #000; border-bottom:4px double #000;">
         <td colspan="3" style="padding: 0;">
+          @php
+            $supplier = $debitNote->supplier ?? $debitNote->stockEntry?->grnEntry?->supplier;
+          @endphp
           <table width="100%" cellpadding="6" cellspacing="0" style="border-bottom:4px double #000; line-height:1.4;">
             <tr>
               <td>
-                <strong style="font-size:16px;">{{ $debitNote->supplier->name ?? '' }}</strong><br>
-                <strong>Sales Off / Postal Add:</strong> {{ $debitNote->supplier->address_line_1 ?? }}
-                {{ $debitNote->supplier->address_line_2 ? ', ' . $debitNote->supplier->address_line_2 : '' }}
-                {{ $debitNote->supplier->address_line_3 ? ', ' . $debitNote->supplier->address_line_3 : '' }}
-                {{ $debitNote->supplier->city ? ', ' . $debitNote->supplier->city->city_name : '' }}
-                {{ $debitNote->supplier->state ? ', ' . $debitNote->supplier->state->state_name : '' }}
-                {{ $debitNote->supplier->zip_code ? ' - ' . $debitNote->supplier->zip_code : '' }}.<br>
-                <strong>GST No: {{ $debitNote->supplier->gst_no ?? '-' }}</strong> &nbsp;
-                State: <strong>{{ $debitNote->supplier->state->state_name ?? '-' }}
-                  ({{ $debitNote->supplier->state->state_code ?? '' }})</strong> &nbsp;
-                Tel: <strong>{{ $debitNote->supplier->mobile_no ?? '-' }}</strong><br>
-                Email: <strong>{{ $debitNote->supplier->email ?? '-' }}</strong> | Website:
-                <strong>{{ $debitNote->supplier->website_url ?? '-' }}</strong>
+                @if($supplier)
+                  <strong style="font-size:16px;">{{ $supplier->name }}</strong><br>
+                  <strong>Sales Off / Postal Add:</strong> {{ $supplier->address_line_1 ?? '' }}
+                  {{ $supplier->address_line_2 ? ', ' . $supplier->address_line_2 : '' }}
+                  {{ $supplier->address_line_3 ? ', ' . $supplier->address_line_3 : '' }}
+                  {{ $supplier->city ? ', ' . $supplier->city->city_name : '' }}
+                  {{ $supplier->state ? ', ' . $supplier->state->state_name : '' }}
+                  {{ $supplier->zip_code ? ' - ' . $supplier->zip_code : '' }}.<br>
+                  <strong>GST No: {{ $supplier->gst_no ?? '-' }}</strong> &nbsp;
+                  State: <strong>{{ $supplier->state->state_name ?? '-' }}
+                    ({{ $supplier->state->state_code ?? '' }})</strong> &nbsp;
+                  Tel: <strong>{{ $supplier->mobile_no ?? '-' }}</strong><br>
+                  Email: <strong>{{ $supplier->email ?? '-' }}</strong> | Website:
+                  <strong>{{ $supplier->website_url ?? '-' }}</strong>
+                @else
+                  <strong style="font-size:16px;">Supplier: N/A</strong>
+                @endif
               </td>
             </tr>
           </table>
@@ -212,11 +189,11 @@
                   Reference Invoice: <strong>{{ $debitNote->purchaseInvoice->invoice_no ?? '-' }}</strong><br>
                 @endif
                 Reason: <strong>{{ $debitNote->reason ?? '-' }}</strong>
-            </td>
+              </td>
               <td width="50%" style="padding:6px; line-height:1.4;">
-                Date: <strong>{{ $debitNote->debit_note_date->format('d/m/Y') }}</strong><br>
-                Destination: <strong>{{ $debitNote->supplier->city->city_name ?? '-' }}</strong><br>
-                Place of Supply: <strong>{{ $debitNote->supplier->state->state_name ?? '-' }}</strong>
+                Date: <strong>{{ $debitNote->debit_note_date ? $debitNote->debit_note_date->format('d/m/Y') : '-' }}</strong><br>
+                Destination: <strong>{{ $supplier?->city?->city_name ?? '-' }}</strong><br>
+                Place of Supply: <strong>{{ $supplier?->state?->state_name ?? '-' }}</strong>
               </td>
             </tr>
           </table>
