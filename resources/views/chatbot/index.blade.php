@@ -25,14 +25,13 @@
                                         <i class="ri ri-circle-fill me-1" style="font-size: 8px;"></i>
                                         {{ $isAvailable ? 'Online' : 'Offline' }}
                                     </span>
-                                    <span class="badge bg-label-info fs-tiny fw-normal px-2 py-1" title="Tamil voice notes automatically translated to English">
+                                    <span class="badge bg-label-info fs-tiny fw-normal px-2 py-1"
+                                        title="Tamil voice notes automatically translated to English">
                                         <i class="ri ri-mic-line me-1" style="font-size: 10px;"></i>
                                         Tamil Voice Note
                                     </span>
                                 </h5>
                                 <small class="text-muted">
-                                    Model: <strong class="text-secondary">{{ $model }}</strong>
-                                    <span class="mx-1">•</span> Local Ollama Inference
                                     <span class="mx-1">•</span> Tamil Voice & Workflow Analysis
                                 </small>
                             </div>
@@ -79,7 +78,9 @@
                                 </div>
                                 <div class="chat-text" style="line-height: 1.6; word-break: break-word;">
                                     Hello! I am your <strong>ERP Flow Navigator AI</strong> assistant.<br>
-                                    You can ask questions in <strong>English</strong> or record a <strong>Tamil Voice Note (குரல் பதிவு)</strong> — your Tamil speech will be automatically translated to English and answered by the AI.<br>
+                                    You can ask questions in <strong>English</strong> or record a <strong>Tamil Voice Note
+                                        (குரல் பதிவு)</strong> — your Tamil speech will be automatically translated to
+                                    English and answered by the AI.<br>
                                     <strong>Click a quick question to test:</strong>
                                     <div class="d-flex flex-wrap gap-2 mt-2" id="quickPrompts">
                                         <button type="button" class="btn btn-sm btn-outline-primary quick-prompt-btn"
@@ -135,7 +136,8 @@
                     <!-- Chat Input Footer -->
                     <div class="card-footer bg-white border-top p-3">
                         <!-- Active Tamil Voice Note Recording Bar -->
-                        <div id="voiceRecordingBar" class="d-none border border-danger rounded-3 p-2 px-3 mb-2 bg-label-danger d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div id="voiceRecordingBar"
+                            class="d-none border border-danger rounded-3 p-2 px-3 mb-2 bg-label-danger d-flex align-items-center justify-content-between flex-wrap gap-2">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="voice-recording-pulse"></div>
                                 <span class="fw-bold text-danger voice-rec-time" id="voiceTimer">00:00</span>
@@ -143,15 +145,20 @@
                                 <div class="voice-wave-animation ms-1 d-none d-sm-flex">
                                     <span></span><span></span><span></span><span></span><span></span>
                                 </div>
-                                <span class="text-dark small ms-2 fst-italic" id="liveTranscript" style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                <span class="text-dark small ms-2 fst-italic" id="liveTranscript"
+                                    style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                     Listening in Tamil (தமிழில் பேசவும்)...
                                 </span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" id="cancelVoiceBtn" title="Discard voice note">
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                    id="cancelVoiceBtn" title="Discard voice note">
                                     <i class="ri ri-close-line"></i> <span class="d-none d-sm-inline">Cancel</span>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-danger d-flex align-items-center gap-1 shadow-sm" id="sendVoiceBtn" title="Stop and send Tamil voice note">
+                                <button type="button"
+                                    class="btn btn-sm btn-danger d-flex align-items-center gap-1 shadow-sm"
+                                    id="sendVoiceBtn" title="Stop and send Tamil voice note">
                                     <i class="ri ri-send-plane-fill"></i> <span>Send Note</span>
                                 </button>
                             </div>
@@ -161,8 +168,7 @@
                             <div class="d-flex align-items-end gap-2">
                                 <button type="button" id="voiceRecordBtn"
                                     class="btn btn-outline-primary d-flex align-items-center justify-content-center px-3"
-                                    style="height: 52px;"
-                                    title="Record Tamil Voice Note (தமிழில் குரல் பதிவு)">
+                                    style="height: 52px;" title="Record Tamil Voice Note (தமிழில் குரல் பதிவு)">
                                     <i class="ri ri-mic-line fs-5" id="micIcon"></i>
                                 </button>
                                 <div class="flex-grow-1 position-relative">
@@ -181,7 +187,9 @@
                             <div class="d-flex justify-content-between align-items-center mt-2 px-1">
                                 <small class="text-muted d-flex align-items-center gap-1" style="font-size: 12px;">
                                     <i class="ri ri-information-line"></i>
-                                    <span>Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for newline, or click <i class="ri ri-mic-line text-primary"></i> to record <strong>Tamil Voice Note</strong></span>
+                                    <span>Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for newline,
+                                        or click <i class="ri ri-mic-line text-primary"></i> to record <strong>Tamil Voice
+                                            Note</strong></span>
                                 </small>
                                 <small class="text-muted" id="charCount" style="font-size: 11px;">0 / 2000</small>
                             </div>
@@ -230,17 +238,31 @@
             animation: pulse-red 1.2s infinite;
             display: inline-block;
         }
+
         @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 62, 29, 0.7); }
-            70% { transform: scale(1.15); box-shadow: 0 0 0 10px rgba(255, 62, 29, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 62, 29, 0); }
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 62, 29, 0.7);
+            }
+
+            70% {
+                transform: scale(1.15);
+                box-shadow: 0 0 0 10px rgba(255, 62, 29, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 62, 29, 0);
+            }
         }
+
         .voice-wave-animation {
             display: flex;
             align-items: center;
             gap: 3px;
             height: 18px;
         }
+
         .voice-wave-animation span {
             width: 3px;
             height: 100%;
@@ -248,20 +270,44 @@
             border-radius: 3px;
             animation: wave 0.8s ease-in-out infinite alternate;
         }
-        .voice-wave-animation span:nth-child(2) { animation-delay: 0.15s; height: 60%; }
-        .voice-wave-animation span:nth-child(3) { animation-delay: 0.3s; height: 95%; }
-        .voice-wave-animation span:nth-child(4) { animation-delay: 0.45s; height: 40%; }
-        .voice-wave-animation span:nth-child(5) { animation-delay: 0.6s; height: 80%; }
-        @keyframes wave {
-            0% { transform: scaleY(0.25); }
-            100% { transform: scaleY(1); }
+
+        .voice-wave-animation span:nth-child(2) {
+            animation-delay: 0.15s;
+            height: 60%;
         }
+
+        .voice-wave-animation span:nth-child(3) {
+            animation-delay: 0.3s;
+            height: 95%;
+        }
+
+        .voice-wave-animation span:nth-child(4) {
+            animation-delay: 0.45s;
+            height: 40%;
+        }
+
+        .voice-wave-animation span:nth-child(5) {
+            animation-delay: 0.6s;
+            height: 80%;
+        }
+
+        @keyframes wave {
+            0% {
+                transform: scaleY(0.25);
+            }
+
+            100% {
+                transform: scaleY(1);
+            }
+        }
+
         .voice-audio-box audio {
             height: 38px;
             max-width: 100%;
             border-radius: 20px;
             outline: none;
         }
+
         .voice-pill-original {
             background: rgba(255, 255, 255, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.25);
@@ -269,6 +315,7 @@
             padding: 8px 12px;
             margin-top: 6px;
         }
+
         .voice-pill-translation {
             background: rgba(255, 255, 255, 0.22);
             border: 1px solid rgba(255, 255, 255, 0.35);
@@ -277,6 +324,7 @@
             margin-top: 6px;
             color: #ffffff;
         }
+
         .voice-btn-active {
             background-color: #ff3e1d !important;
             border-color: #ff3e1d !important;
@@ -357,7 +405,7 @@
                     if (isRecordingVoice) {
                         try {
                             recognition.start();
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 };
             }
@@ -409,54 +457,54 @@
                 let audioHtml = '';
                 if (audioUrl) {
                     audioHtml = `
-                        <div class="voice-audio-box my-2">
-                            <audio controls src="${audioUrl}" class="w-100"></audio>
-                        </div>
-                    `;
+                                <div class="voice-audio-box my-2">
+                                    <audio controls src="${audioUrl}" class="w-100"></audio>
+                                </div>
+                            `;
                 }
 
                 let badgeHtml = '';
                 if (isVoice) {
                     badgeHtml = `
-                        <div class="voice-pill-original small mb-2">
-                            <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                <i class="ri ri-mic-fill text-warning"></i> <strong>Recorded Tamil Voice Note:</strong>
-                            </div>
-                            <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
-                        </div>
-                    `;
+                                <div class="voice-pill-original small mb-2">
+                                    <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                        <i class="ri ri-mic-fill text-warning"></i> <strong>Recorded Tamil Voice Note:</strong>
+                                    </div>
+                                    <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
+                                </div>
+                            `;
                 } else if (hasTamilCharacters(text)) {
                     badgeHtml = `
-                        <div class="voice-pill-original small mb-2">
-                            <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                <i class="ri ri-translate-2 text-warning"></i> <strong>Tamil Text Input:</strong>
-                            </div>
-                            <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
-                        </div>
-                    `;
+                                <div class="voice-pill-original small mb-2">
+                                    <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                        <i class="ri ri-translate-2 text-warning"></i> <strong>Tamil Text Input:</strong>
+                                    </div>
+                                    <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
+                                </div>
+                            `;
                 } else {
                     badgeHtml = `
-                        <div class="chat-text" style="line-height: 1.6;">${formatted}</div>
-                    `;
+                                <div class="chat-text" style="line-height: 1.6;">${formatted}</div>
+                            `;
                 }
 
                 const html = `
-                    <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row" id="${msgId}">
-                        <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
-                            <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
-                                <span>You</span>
-                                ${isVoice ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-mic-line"></i> Voice Note</span>' : '<i class="ri ri-user-3-fill text-white ms-1"></i>'}
+                            <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row" id="${msgId}">
+                                <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
+                                    <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
+                                        <span>You</span>
+                                        ${isVoice ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-mic-line"></i> Voice Note</span>' : '<i class="ri ri-user-3-fill text-white ms-1"></i>'}
+                                    </div>
+                                    ${audioHtml}
+                                    ${badgeHtml}
+                                    <!-- Container for Translation pill once response returns -->
+                                    <div class="user-msg-translation mt-2" style="display: none;"></div>
+                                    <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
+                                        ${time}
+                                    </div>
+                                </div>
                             </div>
-                            ${audioHtml}
-                            ${badgeHtml}
-                            <!-- Container for Translation pill once response returns -->
-                            <div class="user-msg-translation mt-2" style="display: none;"></div>
-                            <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
-                                ${time}
-                            </div>
-                        </div>
-                    </div>
-                `;
+                        `;
                 $loadingRow.before(html);
                 scrollToBottom();
                 return msgId;
@@ -478,52 +526,51 @@
                 if (ragSources.length > 0) {
                     const navSource = ragSources.find(s => s.menu_path && s.url);
                     ragSourcesHtml = `
-                        <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1 align-items-center">
-                            <span class="badge bg-label-success fs-tiny py-1 px-2"><i class="ri ri-shield-check-line me-1"></i>RAG Grounded</span>
-                            ${navSource ? `
-                                <a href="${escapeHtml(navSource.url)}" class="badge bg-label-primary fs-tiny py-1 px-2 text-decoration-none d-inline-flex align-items-center gap-1" style="cursor: pointer;">
-                                    <i class="ri ri-compass-3-line"></i> ${escapeHtml(navSource.menu_path)} &nbsp;<span class="text-decoration-underline fw-bold">Open Screen →</span>
-                                </a>
-                            ` : ''}
-                        </div>
-                    `;
+                                <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1 align-items-center">
+                                    ${navSource ? `
+                                        <a href="${escapeHtml(navSource.url)}" class="badge bg-label-primary fs-tiny py-1 px-2 text-decoration-none d-inline-flex align-items-center gap-1" style="cursor: pointer;">
+                                            <i class="ri ri-compass-3-line"></i> ${escapeHtml(navSource.menu_path)} &nbsp;<span class="text-decoration-underline fw-bold">Open Screen →</span>
+                                        </a>
+                                    ` : ''}
+                                </div>
+                            `;
                 }
 
                 let originalToggleHtml = '';
                 if (englishOriginal && isTamil) {
                     originalToggleHtml = `
-                        <div class="mt-3 pt-2 border-top">
-                            <button type="button" class="btn btn-xs btn-outline-secondary toggle-eng-btn py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" style="font-size: 11px;">
-                                <i class="ri ri-global-line"></i> <span class="toggle-eng-text">Show English Original / ஆங்கில வடிவம்</span>
-                            </button>
-                            <div class="english-original-box mt-2 p-2 bg-light rounded text-secondary small d-none" style="line-height: 1.5; word-break: break-word;">
-                                ${formatMessageText(englishOriginal)}
-                            </div>
-                        </div>
-                    `;
+                                <div class="mt-3 pt-2 border-top">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary toggle-eng-btn py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" style="font-size: 11px;">
+                                        <i class="ri ri-global-line"></i> <span class="toggle-eng-text">Show English Original / ஆங்கில வடிவம்</span>
+                                    </button>
+                                    <div class="english-original-box mt-2 p-2 bg-light rounded text-secondary small d-none" style="line-height: 1.5; word-break: break-word;">
+                                        ${formatMessageText(englishOriginal)}
+                                    </div>
+                                </div>
+                            `;
                 }
 
                 const html = `
-                    <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
-                        <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                            <i class="ri ri-robot-2-line text-primary"></i>
-                        </div>
-                        <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
-                            <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
-                                <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
-                                ${badgeHtml}
+                            <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
+                                <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="ri ri-robot-2-line text-primary"></i>
+                                </div>
+                                <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
+                                    <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
+                                        <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
+                                        ${badgeHtml}
+                                    </div>
+                                    <div class="chat-text" style="line-height: 1.6;">
+                                        ${formatted}
+                                    </div>
+                                    ${ragSourcesHtml}
+                                    ${originalToggleHtml}
+                                    <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                        ${time}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="chat-text" style="line-height: 1.6;">
-                                ${formatted}
-                            </div>
-                            ${ragSourcesHtml}
-                            ${originalToggleHtml}
-                            <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                ${time}
-                            </div>
-                        </div>
-                    </div>
-                `;
+                        `;
                 $loadingRow.before(html);
                 scrollToBottom();
             }
@@ -533,23 +580,23 @@
                 const time = getCurrentTime();
                 const formatted = formatMessageText(errorText);
                 const html = `
-                    <div class="d-flex justify-content-start mb-3 chat-bubble-row error-msg-row">
-                        <div class="avatar avatar-sm rounded-circle bg-label-danger me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                            <i class="ri ri-error-warning-line text-danger"></i>
-                        </div>
-                        <div class="chat-bubble bg-label-danger text-danger border border-danger p-3 rounded-3" style="max-width: 80%;">
-                            <div class="fw-semibold small d-flex align-items-center gap-1 mb-1">
-                                <i class="ri ri-alert-line"></i> Service Alert
+                            <div class="d-flex justify-content-start mb-3 chat-bubble-row error-msg-row">
+                                <div class="avatar avatar-sm rounded-circle bg-label-danger me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="ri ri-error-warning-line text-danger"></i>
+                                </div>
+                                <div class="chat-bubble bg-label-danger text-danger border border-danger p-3 rounded-3" style="max-width: 80%;">
+                                    <div class="fw-semibold small d-flex align-items-center gap-1 mb-1">
+                                        <i class="ri ri-alert-line"></i> Service Alert
+                                    </div>
+                                    <div class="chat-text small" style="line-height: 1.5;">
+                                        ${formatted}
+                                    </div>
+                                    <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                        ${time}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="chat-text small" style="line-height: 1.5;">
-                                ${formatted}
-                            </div>
-                            <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                ${time}
-                            </div>
-                        </div>
-                    </div>
-                `;
+                        `;
                 $loadingRow.before(html);
                 scrollToBottom();
             }
@@ -608,7 +655,7 @@
                         if (recognition) {
                             try {
                                 recognition.start();
-                            } catch (e) {}
+                            } catch (e) { }
                         }
 
                         // UI Updates
@@ -643,7 +690,7 @@
                 if (recognition) {
                     try {
                         recognition.stop();
-                    } catch (e) {}
+                    } catch (e) { }
                 }
 
                 if (mediaRecorder && mediaRecorder.state !== 'inactive') {
@@ -732,13 +779,13 @@
                                 const $transContainer = $(`#${msgId}`).find('.user-msg-translation');
                                 const safeTranslation = escapeHtml(translatedMsg);
                                 $transContainer.html(`
-                                    <div class="voice-pill-translation small">
-                                        <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                            <i class="ri ri-translate-2 text-warning"></i> <strong>Translated to English (Input for LLM):</strong>
-                                        </div>
-                                        <div class="text-white fw-semibold" style="line-height: 1.5;">${safeTranslation}</div>
-                                    </div>
-                                `).slideDown(200);
+                                            <div class="voice-pill-translation small">
+                                                <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                                    <i class="ri ri-translate-2 text-warning"></i> <strong>Translated to English (Input for LLM):</strong>
+                                                </div>
+                                                <div class="text-white fw-semibold" style="line-height: 1.5;">${safeTranslation}</div>
+                                            </div>
+                                        `).slideDown(200);
                             }
 
                             // Append AI response (Tamil or English based on user input)
