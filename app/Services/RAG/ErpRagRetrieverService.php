@@ -96,7 +96,9 @@ class ErpRagRetrieverService
             'what', 'is', 'the', 'next', 'step', 'stage', 'after', 'before', 'can', 'you',
             'how', 'to', 'in', 'on', 'at', 'for', 'from', 'with', 'about', 'and', 'or',
             'where', 'i', 'find', 'open', 'show', 'tell', 'me', 'please', 'does', 'do',
-            'which', 'nachias', 'erp', 'system', 'get'
+            'which', 'nachias', 'erp', 'system', 'get', 'who', 'whom', 'whose', 'why',
+            'when', 'are', 'was', 'were', 'am', 'be', 'been', 'being', 'have', 'has',
+            'had', 'a', 'an', 'this', 'that', 'these', 'those'
         ];
 
         $tokens = [];
@@ -227,6 +229,17 @@ class ErpRagRetrieverService
                 $score += ($matchedTokens * 35);
             }
 
+            // If the chunk has no matching tokens and neither title, screen, nor URL matches, its score is 0
+            $hasAnyMatch = ($matchedTokens > 0)
+                || ($screenLower !== '' && str_contains($lowerQuery, $screenLower))
+                || str_contains($titleLower, $lowerQuery)
+                || ($urlLower !== '' && str_contains($lowerQuery, ltrim($urlLower, '/')));
+
+            if (!$hasAnyMatch) {
+                $chunk->rag_score = 0;
+                return $chunk;
+            }
+
             // Intent-specific boosting
             if ($intent === 'navigation') {
                 if ($chunk->source_type === 'menu') {
@@ -288,6 +301,11 @@ class ErpRagRetrieverService
      */
     protected function selectDiverseChunks(Collection $scored, int $limit, string $intent): Collection
     {
+        // Require a meaningful relevance score (>= 50) to filter out accidental substring noise on non-ERP queries
+        $scored = $scored->filter(function ($c) {
+            return ($c->rag_score ?? 0) >= 50;
+        });
+
         if ($scored->isEmpty()) {
             return collect();
         }
