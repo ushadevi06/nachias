@@ -330,7 +330,19 @@
                                 <span>-₹{{ number_format($creditNote->discount, 2) }}</span>
                             </div>
                             @endif
+                            @if($creditNote->discount > 0)
+                            <div class="d-flex justify-content-between mb-3 text-muted small">
+                                <span>Discount ({{ number_format($creditNote->discount_percent, 2) }}%)</span>
+                                <span>-₹{{ number_format(($creditNote->sub_total * $creditNote->discount_percent) / 100, 2) }}</span>
+                            </div>
+                            @endif
 
+                            @if($creditNote->box_discount_amount > 0)
+                            <div class="d-flex justify-content-between mb-3 text-muted small">
+                                <span>Box Discount (₹{{ number_format($creditNote->box_discount_amount, 2) }} x {{ number_format($creditNote->items->sum('quantity'), 2) }})</span>
+                                <span>-₹{{ number_format($creditNote->box_discount_amount * $creditNote->items->sum('quantity'), 2) }}</span>
+                            </div>
+                            @endif
                             @php
                                 $preGstCharges = $creditNote->charges->where('tax_type', 'Pre-GST');
                                 $postGstCharges = $creditNote->charges->where('tax_type', 'Post-GST');

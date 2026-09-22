@@ -41,12 +41,7 @@ class WarehouseReportController extends Controller
             if ($activeTab == 'warehouse-summary') {
                 $selectedWarehouseId = $request->get('warehouse_id', $defaultWarehouseId);
                 
-                $capacities = WarehouseBrandCapacity::where('warehouse_id', $selectedWarehouseId)
-                    ->where('status', 'Active')
-                    ->groupBy('brand_id')
-                    ->select('brand_id', DB::raw('SUM(capacity_pcs) as total_capacity'))
-                    ->pluck('total_capacity', 'brand_id')
-                    ->toArray();
+                $capacities = WarehouseBrandCapacity::where('warehouse_id', $selectedWarehouseId)->where('status', 'Active')->groupBy('brand_id')->select('brand_id', DB::raw('SUM(capacity_pcs) as total_capacity'))->pluck('total_capacity', 'brand_id')->toArray();
 
                 $brandIdsWithStock = StockEntryItem::where(function($q) use ($selectedWarehouseId) {
                         $q->where('warehouse_id', $selectedWarehouseId)
@@ -341,12 +336,7 @@ class WarehouseReportController extends Controller
             $warehouseId = $defaultWh ? $defaultWh->id : null;
         }
 
-        // Fetch style capacities configured for this warehouse and brand
-        $capacities = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
-            ->where('brand_id', $brandId)
-            ->where('status', 'Active')
-            ->pluck('capacity_pcs', 'style_id')
-            ->toArray();
+        $capacities = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)->where('brand_id', $brandId)->where('status', 'Active')->pluck('capacity_pcs', 'style_id')->toArray();
 
         // Fetch distinct styles present in stock for this brand & warehouse
         $stockStyleIds = StockEntryItem::where('brand_id', $brandId)
@@ -601,7 +591,9 @@ class WarehouseReportController extends Controller
             $stockQuery->where(function($q) use ($search) {
                 $q->where('stock_entry_items.art_no', 'like', "%{$search}%")
                   ->orWhere('stock_entry_items.sleeve_type', 'like', "%{$search}%")
-                  ->orWhere('stock_entry_items.size', 'like', "%{$search}%");
+                  ->orWhere('stock_entry_items.size', 'like', "%{$search}%")
+                  ->orWhere('stock_entry_items.price', 'like', "%{$search}%")
+                  ->orWhere('stock_entry_items.qty_in', 'like', "%{$search}%");
             });
         }
 
@@ -622,9 +614,7 @@ class WarehouseReportController extends Controller
                 $stockQuery->orderBy($columnsMap[$orderColIdx], $orderDir);
             }
         } else {
-            $stockQuery->orderBy('stock_entry_items.art_no', 'asc')
-                       ->orderBy('stock_entry_items.sleeve_type', 'asc')
-                       ->orderBy('stock_entry_items.size', 'asc');
+            $stockQuery->orderBy('stock_entry_items.art_no', 'asc')->orderBy('stock_entry_items.sleeve_type', 'asc')->orderBy('stock_entry_items.size', 'asc');
         }
 
         $recordsTotal = DB::query()->fromSub($stockQuery, 'sub')->count();

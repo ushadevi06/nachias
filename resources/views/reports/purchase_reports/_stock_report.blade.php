@@ -251,7 +251,7 @@
     function renderStockLevel2() {
         $('#stockDrilldownBreadcrumbs').attr('style', 'display: flex !important;');
         $('#btnBackToStockReport').attr('onclick', 'renderStockLevel1()');
-        $('#stockBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">${currentBrandName}</span>`);
+        $('#stockBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">${currentBrandName}</span>`);
         
         $('#stockLevel1Container, #stockLevel3Container').hide();
         $('#stockLevel2Container').show();
@@ -270,7 +270,7 @@
 
         $('#stockDrilldownBreadcrumbs').attr('style', 'display: flex !important;');
         $('#btnBackToStockReport').attr('onclick', 'renderStockLevel1()');
-        $('#stockBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">${currentBrandName}</span>`);
+        $('#stockBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">${currentBrandName}</span>`);
 
         $('#stockLevel1Container, #stockLevel3Container').hide();
         $('#stockLevel2Container').show();
@@ -336,7 +336,7 @@
 
         $('#stockDrilldownBreadcrumbs').attr('style', 'display: flex !important;');
         $('#btnBackToStockReport').attr('onclick', 'renderStockLevel2()');
-        $('#stockBreadcrumbText').html(`All Brands &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="renderStockLevel2()">${currentBrandName}</span> &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">${styleName}</span>`);
+        $('#stockBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="renderStockLevel2()">${currentBrandName}</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">${styleName}</span>`);
 
         $('#stockLevel1Container, #stockLevel2Container').hide();
         $('#stockLevel3Container').show();

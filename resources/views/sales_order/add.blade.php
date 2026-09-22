@@ -225,7 +225,7 @@
                                         <label for="global_item_search" class="text-primary fw-bold">SCAN BARCODE</label>
                                     </div>
                                     <button class="btn btn-outline-primary px-4" type="button" id="btn_camera_scan" style="border-width: 2px; border-top-left-radius: 0; border-bottom-left-radius: 0;">
-                                        <i class="ri-camera-line me-1"></i> CAMERA
+                                        <i class="ri ri-camera-line me-1"></i> CAMERA
                                     </button>
                                 </div>
                                 <div id="reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
@@ -244,7 +244,7 @@
                         @error('items')
                             <div class="alert alert-danger py-2 px-3 d-flex align-items-center mb-3"
                                 style="width: 300px;">
-                                <i class="ri-error-warning-line fs-5 me-2"></i>
+                                <i class="ri ri-error-warning-line fs-5 me-2"></i>
                                 <span>{{ $message }}</span>
                             </div>
                         @enderror

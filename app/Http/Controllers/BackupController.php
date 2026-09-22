@@ -46,7 +46,7 @@ class BackupController extends Controller
                 $statusBadge = match ($row->status) {
                     'Success' => '<span class="badge bg-success">Success</span>',
                     'Failed' => '<span class="badge bg-danger">Failed</span>',
-                    'Running' => '<span class="badge bg-info"><i class="ri-loader-4-line animation-spin"></i> Running</span>',
+                    'Running' => '<span class="badge bg-info"><i class="ri ri-loader-4-line animation-spin"></i> Running</span>',
                     default => '<span class="badge bg-warning">Pending</span>',
                 };
 

@@ -216,6 +216,7 @@ class CreditNoteController extends Controller
                 'sub_total' => 'required|numeric',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
                 'discount' => 'nullable|numeric|min:0',
+                'box_discount_amount' => 'nullable|numeric|min:0',
                 'tax_amount' => 'required|numeric',
                 'other_charges' => 'nullable|numeric|min:0',
                 'round_off' => 'nullable|numeric|min:0|max:99.99',
@@ -311,6 +312,7 @@ class CreditNoteController extends Controller
                     'sub_total' => $request->sub_total,
                     'discount_percent' => $request->discount_percent ?? 0,
                     'discount' => $request->discount ?? 0,
+                    'box_discount_amount' => $request->box_discount_amount ?? 0,
                     'tax_amount' => $request->tax_amount ?? 0,
                     'other_charges' => $request->other_charges ?? 0,
                     'round_off' => $request->round_off ?? 0,
@@ -522,6 +524,7 @@ class CreditNoteController extends Controller
             'cgst_percent' => $firstInvoice->cgst_percent,
             'sgst_percent' => $firstInvoice->sgst_percent,
             'discount_percent' => $firstInvoice->sales_discount > 0 ? $firstInvoice->sales_discount : $firstInvoice->discount_percent,
+            'box_discount_amount' => $firstInvoice->box_discount_amount ?? 0,
         ]);
     }
 

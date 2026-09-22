@@ -47,7 +47,7 @@
                             <option value="brand-production">🏷️ Brand Wise Unit Production</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3" id="date_range_col">
                         <label class="form-label small fw-bold text-muted">Date Range</label>
                         <input type="text" class="form-control report_date_range" id="production_date_range"
                             placeholder="DD-MM-YYYY to DD-MM-YYYY"
@@ -74,6 +74,17 @@
                             @foreach($units as $unit)
                                 <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
                                     {{ $unit->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2" id="status_filter_col" style="display: none;">
+                        <label class="form-label small fw-bold text-muted">Status</label>
+                        <select class="form-select select2" name="jc_status" id="status_filter" data-placeholder="Select Status">
+                            <option value=""></option>
+                            @foreach($jcStatuses ?? ['Production In Progress', 'Production Completed', 'Production Hold'] as $st)
+                                <option value="{{ $st }}" {{ request('jc_status') == $st ? 'selected' : '' }}>
+                                    {{ $st }}
                                 </option>
                             @endforeach
                         </select>
@@ -116,6 +127,15 @@
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                                <tfoot class="bg-light fw-bold border-top">
+                                    <tr>
+                                        <th colspan="2" class="text-end text-uppercase">Total:</th>
+                                        <th class="text-center text-primary" id="pwip_total_opening">0</th>
+                                        <th class="text-center text-info" id="pwip_total_inward">0</th>
+                                        <th class="text-center text-warning" id="pwip_total_outward">0</th>
+                                        <th class="text-center text-success" id="pwip_total_current_wip">0</th>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -149,6 +169,19 @@
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                                <tfoot class="bg-light fw-bold border-top">
+                                    <tr>
+                                        <th colspan="8" class="text-end text-uppercase">Total:</th>
+                                        <th class="text-center text-primary" id="casino_total_issue_mts">0</th>
+                                        <th class="text-center text-primary" id="casino_total_est_qty">0</th>
+                                        <th class="text-center text-success" id="casino_total_cut_qty">0</th>
+                                        <th class="text-center text-info" id="casino_total_bundle">0</th>
+                                        <th class="text-center text-warning" id="casino_total_balance_bundle">0</th>
+                                        <th class="text-center text-dark" id="casino_total_full">0</th>
+                                        <th class="text-center text-dark" id="casino_total_half">0</th>
+                                        <th colspan="4"></th>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -157,7 +190,7 @@
                     <div class="tab-pane fade" id="cutting-section-average" role="tabpanel">
                         <!-- Top Title Banner matching Image 1 -->
                         <div class="cutting-report-banner mb-3 p-3 rounded-3 text-center border shadow-sm" style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);">
-                            <h5 class="mb-0 fw-bold text-dark text-uppercase" id="cuttingReportHeaderTitle" style="letter-spacing: 0.8px;">HO CUTTING SECTION AVERAGE REPORT - (2000 PCS PER DAY)</h5>
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase" id="cuttingReportHeaderTitle" style="letter-spacing: 0.8px;">HO CUTTING SECTION AVERAGE REPORT</h5>
                         </div>
 
                         <!-- Main Cutting Table -->
@@ -316,6 +349,15 @@
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                                <tfoot class="bg-light fw-bold border-top">
+                                    <tr>
+                                        <th colspan="4" class="text-end text-uppercase">Total:</th>
+                                        <th class="text-center text-primary" id="perf_total_assigned">0</th>
+                                        <th class="text-center text-success" id="perf_total_completed">0</th>
+                                        <th class="text-center text-danger" id="perf_total_pending">0</th>
+                                        <th class="text-center text-info" id="perf_total_efficiency">0%</th>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -336,6 +378,15 @@
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                                <tfoot class="bg-light fw-bold border-top">
+                                    <tr>
+                                        <th colspan="3" class="text-end text-uppercase">Total:</th>
+                                        <th class="text-center text-primary" id="pwise_total_plan">0</th>
+                                        <th class="text-center text-warning" id="pwise_total_inprocess">0</th>
+                                        <th class="text-center text-success" id="pwise_total_completed">0</th>
+                                        <th class="text-center text-danger" id="pwise_total_hold">0</th>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -355,6 +406,13 @@
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                                <tfoot class="bg-light fw-bold border-top">
+                                    <tr>
+                                        <th colspan="2" class="text-end text-uppercase">Total:</th>
+                                        <th class="text-center text-primary" id="comp_total_qty">0</th>
+                                        <th colspan="3"></th>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -373,6 +431,13 @@
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
+                                <tfoot class="bg-light fw-bold border-top">
+                                    <tr>
+                                        <th colspan="3" class="text-end text-uppercase">Total:</th>
+                                        <th class="text-center text-primary" id="brand_total_qty">0</th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -450,6 +515,17 @@
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
+                                    <tfoot class="bg-light fw-bold border-top">
+                                        <tr>
+                                            <th class="text-end text-uppercase">Total:</th>
+                                            <th class="text-center text-dark" id="dept_foot_target">-</th>
+                                            <th class="text-center text-primary" id="dept_foot_plan">0 Pcs</th>
+                                            <th class="text-center text-success" id="dept_foot_actual">0 Pcs</th>
+                                            <th class="text-center text-danger" id="dept_foot_pending">0 Pcs</th>
+                                            <th class="text-center text-info" id="dept_foot_efficiency">0%</th>
+                                            <th colspan="2"></th>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
@@ -609,6 +685,17 @@
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
+                                    <tfoot class="bg-light fw-bold border-top">
+                                        <tr>
+                                            <th colspan="4" class="text-end text-uppercase">Total:</th>
+                                            <th class="text-center text-dark" id="emp_foot_hours">0 Hrs</th>
+                                            <th class="text-center text-primary" id="emp_foot_target">0 Pcs</th>
+                                            <th class="text-center text-success" id="emp_foot_completed">0 Pcs</th>
+                                            <th class="text-center text-danger" id="emp_foot_pending">0 Pcs</th>
+                                            <th class="text-center text-info" id="emp_foot_efficiency">0%</th>
+                                            <th></th>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
@@ -641,34 +728,29 @@
                             <!-- Summary KPI Chips for Selected Employee -->
                             <div class="row g-3 mb-4" id="empDetailSummaryCards">
                                 <div class="col-6 col-md-2">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
                                         <span class="text-muted small fw-semibold text-uppercase d-block mb-1"
                                             id="empDetailCountLabel">Total Tasks</span>
                                         <h4 class="mb-0 fw-bold text-dark" id="empDetailTotalCount">0</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
                                         <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Hours
                                             Worked</span>
                                         <h4 class="mb-0 fw-bold text-dark" id="empDetailTotalHours">0 Hrs</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
                                         <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Target
                                             Qty</span>
                                         <h4 class="mb-0 fw-bold text-primary" id="empDetailTotalTarget">0 Pcs</h4>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-2">
-                                    <div
-                                        class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
-                                        <span
-                                            class="text-muted small fw-semibold text-uppercase d-block mb-1">Completed</span>
+                                    <div class="card border border-light-subtle shadow-none bg-light p-3 text-center rounded-3">
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Completed</span>
                                         <h4 class="mb-0 fw-bold text-success" id="empDetailTotalCompleted">0 Pcs</h4>
                                     </div>
                                 </div>
@@ -1178,10 +1260,50 @@
                             d.to_date = $('.end_date').val();
                             d.unit_id = $('select[name="unit_id"]').val();
                             d.brand_id = $('select[name="brand_id"]').val();
+                            d.jc_status = $('select[name="jc_status"]').val();
                         }
                     },
                     drawCallback: function (settings) {
                         showReportLoading(false);
+                        if (config.type === 'production-wip') {
+                            const json = settings.json;
+                            if (json && json.totals) {
+                                $('#pwip_total_opening').text(json.totals.opening || '0');
+                                $('#pwip_total_inward').text(json.totals.inward || '0');
+                                $('#pwip_total_outward').text(json.totals.outward || '0');
+                                $('#pwip_total_current_wip').text(json.totals.current_wip || '0');
+                            }
+                        }
+                        if (config.type === 'performance-report') {
+                            const json = settings.json;
+                            if (json && json.totals) {
+                                $('#perf_total_assigned').text(json.totals.assigned_qty || '0');
+                                $('#perf_total_completed').text(json.totals.completed_qty || '0');
+                                $('#perf_total_pending').text(json.totals.pending_qty || '0');
+                                $('#perf_total_efficiency').text(json.totals.efficiency || '0%');
+                            }
+                        }
+                        if (config.type === 'process-wise') {
+                            const json = settings.json;
+                            if (json && json.totals) {
+                                $('#pwise_total_plan').text(json.totals.task_plan || '0');
+                                $('#pwise_total_inprocess').text(json.totals.inprocess || '0');
+                                $('#pwise_total_completed').text(json.totals.completed || '0');
+                                $('#pwise_total_hold').text(json.totals.hold || '0');
+                            }
+                        }
+                        if (config.type === 'completion-report') {
+                            const json = settings.json;
+                            if (json && json.totals) {
+                                $('#comp_total_qty').text(json.totals.quantity || '0');
+                            }
+                        }
+                        if (config.type === 'brand-production') {
+                            const json = settings.json;
+                            if (json && json.totals) {
+                                $('#brand_total_qty').text(json.totals.qty || '0');
+                            }
+                        }
                         if (config.type === 'department-efficiency') {
                             const json = settings.json;
                             if (json && json.meta) {
@@ -1199,6 +1321,12 @@
                                 $('#deptSummaryTarget').text(json.meta.total_target || '-');
                                 $('#deptSummaryPlan').text(json.meta.total_plan || '0 Pcs');
                                 $('#deptSummaryActual').text(json.meta.total_actual || '0 Pcs');
+
+                                $('#dept_foot_target').text(json.meta.total_target || '-');
+                                $('#dept_foot_plan').text(json.meta.total_plan || '0 Pcs');
+                                $('#dept_foot_actual').text(json.meta.total_actual || '0 Pcs');
+                                $('#dept_foot_pending').text(json.meta.total_pending || '0 Pcs');
+                                $('#dept_foot_efficiency').text(json.meta.overall_efficiency || '0%');
                             }
                         }
                         if (config.type === 'employee-efficiency') {
@@ -1219,6 +1347,24 @@
                                 $('#empSummaryHours').text(json.meta.total_hours || '0 Hrs');
                                 $('#empSummaryTarget').text(json.meta.total_target || '0 Pcs');
                                 $('#empSummaryActual').text(json.meta.total_completed || '0 Pcs');
+
+                                $('#emp_foot_hours').text(json.meta.total_hours || '0 Hrs');
+                                $('#emp_foot_target').text(json.meta.total_target || '0 Pcs');
+                                $('#emp_foot_completed').text(json.meta.total_completed || '0 Pcs');
+                                $('#emp_foot_pending').text(json.meta.total_pending || '0 Pcs');
+                                $('#emp_foot_efficiency').text(json.meta.overall_efficiency || '0%');
+                            }
+                        }
+                        if (config.type === 'casino-cutting-wip') {
+                            const json = settings.json;
+                            if (json && json.totals) {
+                                $('#casino_total_issue_mts').text(json.totals.issue_mts || '0');
+                                $('#casino_total_est_qty').text(json.totals.estimate_qty || '0');
+                                $('#casino_total_cut_qty').text(json.totals.cut_qty || '0');
+                                $('#casino_total_bundle').text(json.totals.bundle || '0');
+                                $('#casino_total_balance_bundle').text(json.totals.balance_bundle || '0');
+                                $('#casino_total_full').text(json.totals.full_sleeve || '0');
+                                $('#casino_total_half').text(json.totals.half_sleeve || '0');
                             }
                         }
                         if (config.type === 'cutting-section-average') {
@@ -2414,11 +2560,33 @@
                 }
             });
 
+            function toggleCasinoStatusFilter(reportType) {
+                if (reportType === 'casino-cutting-wip') {
+                    $('#status_filter_col').show();
+                    $('#date_range_col').removeClass('col-md-3').addClass('col-md-2');
+                    if (!$('#status_filter').hasClass('select2-hidden-accessible')) {
+                        $('#status_filter').select2({
+                            placeholder: 'Select Status',
+                            allowClear: true,
+                            width: '100%'
+                        });
+                    } else {
+                        $('#status_filter').next('.select2-container').css('width', '100%');
+                    }
+                } else {
+                    $('#status_filter_col').hide();
+                    $('#date_range_col').removeClass('col-md-2').addClass('col-md-3');
+                    $('#status_filter').val('').trigger('change');
+                }
+            }
+
             // Select Report Type Change Listener
             $('#report_type_select').on('change', function () {
                 const selectedType = $(this).val();
                 const selectedText = $(this).find('option:selected').text();
                 $('#active_report_title').html(selectedText);
+
+                toggleCasinoStatusFilter(selectedType);
 
                 // Reset detail views if switching tabs
                 returnToDeptMainView();
@@ -2436,6 +2604,7 @@
             if (initialText) {
                 $('#active_report_title').html(initialText);
             }
+            toggleCasinoStatusFilter(initialReportType);
             $('.tab-pane').removeClass('show active');
             $('#' + initialReportType).addClass('show active');
             loadActiveTabTable(initialReportType);
@@ -2526,6 +2695,7 @@
                 $('.end_date').val('');
                 $('select[name="brand_id"]').val('').trigger('change');
                 $('select[name="unit_id"]').val('').trigger('change');
+                $('select[name="jc_status"]').val('').trigger('change');
                 returnToDeptMainView();
                 returnToEmpMainView();
                 $('#productionReportForm').trigger('submit');

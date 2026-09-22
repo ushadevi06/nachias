@@ -225,7 +225,7 @@
                                         <label for="global_item_search" class="text-primary fw-bold">SCAN BARCODE</label>
                                     </div>
                                     <button class="btn btn-outline-primary px-4" type="button" id="btn_camera_scan" style="border-width: 2px; border-top-left-radius: 0; border-bottom-left-radius: 0;">
-                                        <i class="ri-camera-line me-1"></i> CAMERA
+                                        <i class="ri ri-camera-line me-1"></i> CAMERA
                                     </button>
                                 </div>
                                 <div id="reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
@@ -1862,7 +1862,7 @@ $(document).ready(function () {
             html5QrCode.stop().then((ignore) => {
                 $('#reader').hide();
                 isCameraOpen = false;
-                $(this).html('<i class="ri-camera-line me-1"></i> CAMERA');
+                $(this).html('<i class="ri ri-camera-line me-1"></i> CAMERA');
                 $('#global_item_search').focus();
             }).catch((err) => {
                 console.error("Failed to stop camera:", err);
@@ -1884,7 +1884,7 @@ $(document).ready(function () {
                     html5QrCode.stop().then((ignore) => {
                         $('#reader').hide();
                         isCameraOpen = false;
-                        $('#btn_camera_scan').html('<i class="ri-camera-line me-1"></i> CAMERA');
+                        $('#btn_camera_scan').html('<i class="ri ri-camera-line me-1"></i> CAMERA');
                         
                         var e = $.Event("keydown");
                         e.which = 13;
@@ -1898,7 +1898,7 @@ $(document).ready(function () {
                 }
             ).then(() => {
                 isCameraOpen = true;
-                $(this).html('<i class="ri-close-line me-1"></i> CLOSE CAMERA');
+                $(this).html('<i class="ri ri-close-line me-1"></i> CLOSE CAMERA');
             }).catch((err) => {
                 console.error("Error starting camera", err);
                 $('#scan_alert').removeClass('alert-success').addClass('alert-danger').show();

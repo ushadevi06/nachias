@@ -468,16 +468,16 @@ $(document).ready(function() {
             window.print();
             return;
         }
-        printWin.document.write('<!DOCTYPE html><html><head><title>Brandwise Minimum Stock Report - ' + brandText + '</title>');
+        printWin.document.write('<!DOCTYPE html><htm' + 'l><he' + 'ad><title>Brandwise Minimum Stock Report - ' + brandText + '</ti' + 'tle>');
         printWin.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
         printWin.document.write('<style>@page { size: landscape; margin: 8mm; } body { font-family: sans-serif; font-size: 9px; padding: 10px; color: #1e293b; } table { width: 100%; border-collapse: collapse; font-size: 8.5px; } th, td { border: 1px solid #999 !important; padding: 3px 4px !important; text-align: center; vertical-align: middle; } th { background-color: #f1f5f9 !important; font-weight: bold; } .bg-fs-header { background-color: #cbd5e1 !important; } .bg-hs-header { background-color: #e2e8f0 !important; } .bg-gross-header { background-color: #94a3b8 !important; color: #fff !important; } .bg-tl-header { background-color: #cbd5e1 !important; } .text-start { text-align: left !important; } .text-end { text-align: right !important; } .badge.bg-danger { background: #dc3545 !important; color: #fff !important; padding: 1px 3px; border-radius: 3px; font-weight: bold; }</style>');
-        printWin.document.write('</head><body>');
+        printWin.document.write('</he' + 'ad><bo' + 'dy>');
         printWin.document.write('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">');
         printWin.document.write('<div><h4 style="margin:0;font-weight:bold;">Brandwise Minimum Stock Report</h4><div style="font-weight:600;color:#0d6efd;">Brand: ' + brandText + '</div></div>');
         printWin.document.write('<div style="font-size:10px;color:#666;">Generated on: ' + (new Date()).toLocaleString() + '</div>');
         printWin.document.write('</div>');
         printWin.document.write(printContents.innerHTML);
-        printWin.document.write('</body></html>');
+        printWin.document.write('</bo' + 'dy></htm' + 'l>');
         printWin.document.close();
         printWin.focus();
         setTimeout(function() {

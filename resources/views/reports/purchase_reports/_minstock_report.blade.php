@@ -29,6 +29,27 @@
             </tr>
         </thead>
         @endif
+        @if($isFabric)
+        <tfoot>
+            <tr class="fw-bold" style="background: #f1f5f9;">
+                <td colspan="8" class="text-end">TOTAL</td>
+                <td id="footer-minstock-min" class="text-center fw-bold">0.00</td>
+                <td id="footer-minstock-current" class="text-center fw-bold">0.00</td>
+                <td id="footer-minstock-shortage" class="text-center fw-bold text-danger">0.00</td>
+                <td></td>
+            </tr>
+        </tfoot>
+        @else
+        <tfoot>
+            <tr class="fw-bold" style="background: #f1f5f9;">
+                <td colspan="2" class="text-end">TOTAL</td>
+                <td id="footer-minstock-acc-min" class="text-center fw-bold">0.00</td>
+                <td id="footer-minstock-acc-current" class="text-center fw-bold">0.00</td>
+                <td id="footer-minstock-acc-shortage" class="text-center fw-bold text-danger">0.00</td>
+                <td></td>
+            </tr>
+        </tfoot>
+        @endif
         <tbody></tbody>
     </table>
 </div>
@@ -86,6 +107,20 @@
                 }
             },
             columns: columns,
+            drawCallback: function(settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    if (isFabric) {
+                        $('#footer-minstock-min').text(json.totals.min_stock || '0.00');
+                        $('#footer-minstock-current').text(json.totals.closing || '0.00');
+                        $('#footer-minstock-shortage').text(json.totals.shortage || '0.00');
+                    } else {
+                        $('#footer-minstock-acc-min').text(json.totals.min_stock || '0.00');
+                        $('#footer-minstock-acc-current').text(json.totals.closing || '0.00');
+                        $('#footer-minstock-acc-shortage').text(json.totals.shortage || '0.00');
+                    }
+                }
+            },
             language: {
                 emptyTable: 'No data available in table'
             }

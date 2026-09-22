@@ -1,5 +1,8 @@
-18-09:
-    CREATE TABLE `operation_stage_targets` (
+ALTER TABLE `operation_stages`
+ADD COLUMN `target` INT NULL
+AFTER `cost`;
+
+CREATE TABLE `operation_stage_targets` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `operation_stage_id` BIGINT UNSIGNED NOT NULL,
     `service_provider_id` BIGINT UNSIGNED NOT NULL,
@@ -14,6 +17,15 @@
 
     KEY `operation_stage_targets_service_provider_id_index`
         (`service_provider_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `style_brand_consumptions` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `style_id` BIGINT UNSIGNED NOT NULL,
+    `brand_id` BIGINT UNSIGNED NOT NULL,
+    `average_consumption` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `core_material_planner_settings` (

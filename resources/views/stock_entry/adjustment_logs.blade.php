@@ -101,21 +101,21 @@
                     {
                         extend: 'collection',
                         className: 'btn btn-label-secondary dropdown-toggle mx-3',
-                        text: '<i class="ri-external-link-line me-sm-1"></i> <span class="d-none d-sm-inline-block">Export</span>',
+                        text: '<i class="ri ri-external-link-line me-sm-1"></i> <span class="d-none d-sm-inline-block">Export</span>',
                         buttons: [
                             {
                                 extend: 'print',
-                                text: '<i class="ri-printer-line me-1"></i>Print',
+                                text: '<i class="ri ri-printer-line me-1"></i>Print',
                                 className: 'dropdown-item'
                             },
                             {
                                 extend: 'csv',
-                                text: '<i class="ri-file-text-line me-1"></i>Csv',
+                                text: '<i class="ri ri-file-text-line me-1"></i>Csv',
                                 className: 'dropdown-item'
                             },
                             {
                                 extend: 'excel',
-                                text: '<i class="ri-file-excel-line me-1"></i>Excel',
+                                text: '<i class="ri ri-file-excel-line me-1"></i>Excel',
                                 className: 'dropdown-item'
                             }
                         ]

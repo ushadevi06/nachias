@@ -47,7 +47,7 @@
                         <div class="col-md-5 text-md-end mt-3 mt-md-0">
                              <div class="d-flex flex-wrap justify-content-md-end gap-2 align-items-center">
                                 <span class="badge bg-label-info rounded-pill px-3 py-2 fw-bold">
-                                    <i class="ri-checkbox-circle-line me-1"></i> Received: {{ (float)$totalReceived }} / {{ (float)$totalAssigned }} PCS
+                                    <i class="ri ri-checkbox-circle-line me-1"></i> Received: {{ (float)$totalReceived }} / {{ (float)$totalAssigned }} PCS
                                 </span>
                                 @if($task->due_date)
                                 <span class="badge bg-label-danger rounded-pill px-3 py-2 fw-bold">

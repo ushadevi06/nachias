@@ -11,6 +11,15 @@
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot>
+            <tr class="fw-bold" style="background: #f1f5f9;">
+                <td colspan="2" class="text-end">TOTAL</td>
+                <td id="footer-perf-po-count" class="text-center">0</td>
+                <td id="footer-perf-po-val" class="text-end text-primary">₹ 0.00</td>
+                <td id="footer-perf-dn-count" class="text-center">0</td>
+                <td id="footer-perf-return-rate" class="text-center text-danger">0.00%</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -49,6 +58,15 @@
                 { data: 'dn_count', className: 'text-center' },
                 { data: 'return_rate', className: 'text-center', orderable: false, searchable: false }
             ],
+            drawCallback: function(settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    $('#footer-perf-po-count').text(json.totals.po_count || '0');
+                    $('#footer-perf-po-val').text(json.totals.total_po_value || '₹ 0.00');
+                    $('#footer-perf-dn-count').text(json.totals.dn_count || '0');
+                    $('#footer-perf-return-rate').text(json.totals.return_rate || '0.00%');
+                }
+            },
             language: {
                 emptyTable: 'No supplier performance data found.'
             }

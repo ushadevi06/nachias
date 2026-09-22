@@ -31,6 +31,7 @@ class CreditNote extends Model
         'sub_total',
         'discount_percent',
         'discount',
+        'box_discount_amount',
         'tax_amount',
         'other_charges',
         'round_off',

@@ -359,10 +359,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function formatReportExportCell(data) {
     if (typeof data === 'string') {
         var temp = $('<div>').html(data);
-        var hasCheck = temp.find('.ri-check-line, .ri-checkbox-circle-line').length > 0 || data.indexOf('ri-check-line') !== -1 || data.indexOf('ri-checkbox-circle-line') !== -1;
-        var hasClose = temp.find('.ri-close-line, .ri-close-circle-line').length > 0 || data.indexOf('ri-close-line') !== -1 || data.indexOf('ri-close-circle-line') !== -1;
+        var hasCheck = temp.find('.ri ri-check-line, .ri ri-checkbox-circle-line').length > 0 || data.indexOf('ri ri-check-line') !== -1 || data.indexOf('ri ri-checkbox-circle-line') !== -1;
+        var hasClose = temp.find('.ri ri-close-line, .ri ri-close-circle-line').length > 0 || data.indexOf('ri ri-close-line') !== -1 || data.indexOf('ri ri-close-circle-line') !== -1;
 
-        temp.find('.no-export, .d-none, button, i, script').remove();
+        temp.find('.no-export, .d-none, .ri, button, i, script').remove();
         var text = temp.text().trim();
         if (!text) {
             if (hasCheck) return '✔';
@@ -894,7 +894,7 @@ $(document).ready(function() {
             pageLength: 10,
             lengthMenu: [10, 25, 50, 100],
             language: {
-                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</div>'
+                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</div>'
             },
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
         });

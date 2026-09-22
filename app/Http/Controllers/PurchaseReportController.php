@@ -733,49 +733,7 @@ class PurchaseReportController extends Controller
                     });
                 }
 
-                $totalRecords = (clone $baseQuery)->count();
-
-                $query = clone $baseQuery;
-                if (!empty($search)) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('po_number', 'like', "%{$search}%")
-                            ->orWhere('remarks', 'like', "%{$search}%")
-                            ->orWhereHas('supplier', function ($sq) use ($search) {
-                                $sq->where('name', 'like', "%{$search}%");
-                            });
-                    });
-                }
-                $filteredRecords = (clone $query)->count();
-
-                $filteredPoIds = (clone $query)->pluck('id');
-                $sumOrdered = 0;
-                $sumReceived = 0;
-                if ($filteredPoIds->isNotEmpty()) {
-                    $itemQuery = DB::table('purchase_order_items')->whereIn('purchase_order_id', $filteredPoIds)->whereNull('deleted_at');
-                    if ($request->brand_id) {
-                        $itemQuery->where('brand_id', $request->brand_id);
-                    }
-                    $sumOrdered = (float) $itemQuery->sum('quantity');
-
-                    $invItemQuery = DB::table('purchase_invoice_items')
-                        ->join('purchase_order_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id')
-                        ->whereIn('purchase_order_items.purchase_order_id', $filteredPoIds)
-                        ->whereNull('purchase_invoice_items.deleted_at')
-                        ->whereNull('purchase_order_items.deleted_at');
-                    if ($request->brand_id) {
-                        $invItemQuery->where('purchase_order_items.brand_id', $request->brand_id);
-                    }
-                    $sumReceived = (float) $invItemQuery->sum('purchase_invoice_items.qty_received');
-                }
-                $sumPending = max(0, $sumOrdered - $sumReceived);
-
-                $totals = [
-                    'total_ordered' => number_format($sumOrdered, 2),
-                    'total_received' => number_format($sumReceived, 2),
-                    'total_pending' => number_format($sumPending, 2),
-                ];
-
-                $query->with([
+                $purchaseOrders = $baseQuery->with([
                     'supplier',
                     'items' => function($q) use ($request) {
                         if ($request->brand_id) {
@@ -785,23 +743,17 @@ class PurchaseReportController extends Controller
                     'items.rawMaterial',
                     'items.purchaseInvoiceItems.purchaseInvoice',
                     'purchaseInvoices'
-                ])->orderBy('id', 'desc');
+                ])->orderBy('id', 'desc')->get();
 
-                if ($length != -1) {
-                    $query->offset($start)->limit($length);
-                }
-
-                $purchaseOrders = $query->get();
-                $count = $start + 1;
-
+                $rows = [];
                 foreach ($purchaseOrders as $po) {
                     $totalOrderedPo = (float) $po->items->sum('quantity');
                     $totalReceivedPo = 0;
                     $itemsData = [];
                     $itemSno = 1;
                     $latestReceiptDate = null;
+                    $materialNames = [];
 
-                    // Collect latest receipt/invoice date from purchase invoices
                     if ($po->purchaseInvoices && $po->purchaseInvoices->isNotEmpty()) {
                         foreach ($po->purchaseInvoices as $inv) {
                             $iDate = $inv->invoice_date ?: $inv->created_at;
@@ -820,6 +772,9 @@ class PurchaseReportController extends Controller
                         $itemBal = max(0, $itemOrd - $itemRec);
                         $totalReceivedPo += $itemRec;
 
+                        $matName = optional($item->rawMaterial)->name ?: 'N/A';
+                        $materialNames[] = $matName;
+
                         foreach ($item->purchaseInvoiceItems as $pItem) {
                             $iDate = ($pItem->purchaseInvoice ? $pItem->purchaseInvoice->invoice_date : null) ?: $pItem->created_at;
                             if ($iDate) {
@@ -832,7 +787,7 @@ class PurchaseReportController extends Controller
 
                         $itemsData[] = [
                             'sno' => $itemSno++,
-                            'material_name' => optional($item->rawMaterial)->name ?: 'N/A',
+                            'material_name' => $matName,
                             'ordered' => number_format($itemOrd, 2),
                             'received' => number_format($itemRec, 2),
                             'balance' => number_format($itemBal, 2),
@@ -841,50 +796,136 @@ class PurchaseReportController extends Controller
                     $totalPendingPo = max(0, $totalOrderedPo - $totalReceivedPo);
 
                     $delayHtml = '-';
+                    $delayText = '';
                     if ($po->due_date) {
                         $dueDate = \Carbon\Carbon::parse($po->due_date)->startOfDay();
 
                         if ($totalPendingPo <= 0 || strtolower($po->status) == 'closed' || $po->is_self_closed) {
-                            // Completed orders: Compare actual receipt date with Expected Delivery date
                             if ($latestReceiptDate) {
                                 if ($latestReceiptDate->gt($dueDate)) {
                                     $diffDays = $latestReceiptDate->diffInDays($dueDate);
-                                    $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days Delay</span>';
+                                    $delayHtml = '<span class="badge bg-danger rounded-pill">' . $diffDays . ' Days Delay</span>';
+                                    $delayText = $diffDays . ' Days Delay';
                                 } else {
-                                    $delayHtml = '<span class="text-success fw-bold">On Time</span>';
+                                    $delayHtml = '<span class="badge bg-success rounded-pill">On Time</span>';
+                                    $delayText = 'On Time';
                                 }
                             } else {
-                                $delayHtml = '<span class="text-success fw-bold">On Time</span>';
+                                $delayHtml = '<span class="badge bg-success rounded-pill">On Time</span>';
+                                $delayText = 'On Time';
                             }
                         } else {
-                            // Pending orders: Compare today with Expected Delivery date
-                            $today = now()->startOfDay();
+                            $today = \Carbon\Carbon::now()->startOfDay();
                             if ($today->gt($dueDate)) {
                                 $diffDays = $today->diffInDays($dueDate);
-                                $delayHtml = '<span class="text-danger fw-bold">' . $diffDays . ' Days Delay</span>';
+                                $delayHtml = '<span class="badge bg-danger rounded-pill">' . $diffDays . ' Days Overdue</span>';
+                                $delayText = $diffDays . ' Days Overdue';
                             } else {
-                                $delayHtml = '<span class="text-success fw-bold">On Time</span>';
+                                $daysLeft = $today->diffInDays($dueDate, false);
+                                $delayHtml = '<span class="badge bg-info rounded-pill">' . abs($daysLeft) . ' Days Left</span>';
+                                $delayText = abs($daysLeft) . ' Days Left';
                             }
                         }
                     }
 
-                    $data[] = [
-                        'DT_RowIndex' => $count++,
-                        'po_number' => '<strong>' . htmlspecialchars($po->po_number) . '</strong>',
-                        'po_number_raw' => $po->po_number,
-                        'po_date' => $po->po_date ? $po->po_date->format('d-M-Y') : '-',
-                        'supplier_name' => optional($po->supplier)->name ?? '-',
+                    $poDateFormatted = $po->po_date ? \Carbon\Carbon::parse($po->po_date)->format('d-M-Y') : '-';
+                    $orderDateFormatted = $po->reference_date ? \Carbon\Carbon::parse($po->reference_date)->format('d-M-Y') : $poDateFormatted;
+                    $expectedDeliveryFormatted = $po->due_date ? \Carbon\Carbon::parse($po->due_date)->format('d-M-Y') : '-';
+                    $supplierName = optional($po->supplier)->name ?: 'N/A';
+                    $remarksText = $po->remarks ?: '-';
+
+                    $rows[] = [
+                        'po_number' => $po->po_number,
+                        'po_date' => $poDateFormatted,
+                        'supplier' => $supplierName,
+                        'supplier_name' => $supplierName,
                         'total_ordered' => number_format($totalOrderedPo, 2),
                         'total_received' => number_format($totalReceivedPo, 2),
                         'total_pending' => number_format($totalPendingPo, 2),
-                        'order_date' => $po->reference_date ? $po->reference_date->format('d-M-Y') : ($po->po_date ? $po->po_date->format('d-M-Y') : '-'),
-                        'expected_delivery' => $po->due_date ? $po->due_date->format('d-M-Y') : '-',
+                        'order_date' => $orderDateFormatted,
+                        'expected_delivery' => $expectedDeliveryFormatted,
                         'delay' => $delayHtml,
-                        'remarks' => htmlspecialchars($po->remarks ?: '-'),
+                        'remarks' => htmlspecialchars($remarksText),
                         'items' => $itemsData,
+                        '_raw_ordered' => $totalOrderedPo,
+                        '_raw_received' => $totalReceivedPo,
+                        '_raw_pending' => $totalPendingPo,
+                        '_search_text' => strtolower(implode(' ', [
+                            $po->po_number,
+                            $poDateFormatted,
+                            $po->po_date ? date('d-m-Y', strtotime($po->po_date)) : '',
+                            $supplierName,
+                            $totalOrderedPo,
+                            number_format($totalOrderedPo, 2),
+                            $totalReceivedPo,
+                            number_format($totalReceivedPo, 2),
+                            $totalPendingPo,
+                            number_format($totalPendingPo, 2),
+                            $orderDateFormatted,
+                            $expectedDeliveryFormatted,
+                            $delayText,
+                            $remarksText,
+                            implode(' ', $materialNames)
+                        ]))
                     ];
                 }
-                break;
+
+                $totalRecords = count($rows);
+
+                if (!empty($search)) {
+                    $lowerSearch = strtolower(trim($search));
+                    $cleanSearch = str_replace([',', ' ', '%'], '', $lowerSearch);
+
+                    $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch, $cleanSearch) {
+                        $st = $r['_search_text'] ?? '';
+                        if (strpos($st, $lowerSearch) !== false) {
+                            return true;
+                        }
+                        if ($cleanSearch !== '') {
+                            $stClean = str_replace([',', ' ', '%'], '', $st);
+                            if (strpos($stClean, $cleanSearch) !== false) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }));
+                } else {
+                    $filteredRows = $rows;
+                }
+
+                $filteredRecords = count($filteredRows);
+
+                // Calculate totals for filtered rows
+                $sumOrdered = array_sum(array_column($filteredRows, '_raw_ordered'));
+                $sumReceived = array_sum(array_column($filteredRows, '_raw_received'));
+                $sumPending = array_sum(array_column($filteredRows, '_raw_pending'));
+
+                $totals = [
+                    'total_ordered' => number_format($sumOrdered, 2),
+                    'total_received' => number_format($sumReceived, 2),
+                    'total_pending' => number_format($sumPending, 2),
+                ];
+
+                if ($length != -1) {
+                    $pageRows = array_slice($filteredRows, $start, $length);
+                } else {
+                    $pageRows = $filteredRows;
+                }
+
+                // Add DT_RowIndex for display
+                $count = $start + 1;
+                foreach ($pageRows as &$pRow) {
+                    $pRow['DT_RowIndex'] = $count++;
+                }
+                unset($pRow);
+
+                return response()->json([
+                    'draw' => intval($draw),
+                    'recordsTotal' => $totalRecords,
+                    'recordsFiltered' => $filteredRecords,
+                    'data' => $pageRows,
+                    'totals' => $totals,
+                ]);
 
             case 'stock-report':
                 $stockData = $this->getStockData($storeCategoryId, $request, true);
@@ -900,14 +941,22 @@ class PurchaseReportController extends Controller
                             strpos(strtolower((string)($item['item_name'] ?? '')), $search) !== false ||
                             strpos(strtolower((string)($item['width'] ?? '')), $search) !== false ||
 
+                            strpos((string)($item['plain'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['plain'] ?? 0), 2), $search) !== false ||
+                            strpos((string)($item['print'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['print'] ?? 0), 2), $search) !== false ||
+                            strpos((string)($item['checked'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['checked'] ?? 0), 2), $search) !== false ||
 
+                            strpos((string)($item['opening'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['opening'] ?? 0), 2), $search) !== false ||
+                            strpos((string)($item['inward'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['inward'] ?? 0), 2), $search) !== false ||
+                            strpos((string)($item['outward'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['outward'] ?? 0), 2), $search) !== false ||
+                            strpos((string)($item['closing'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['closing'] ?? 0), 2), $search) !== false ||
+                            strpos((string)($item['closing_cost'] ?? ''), $search) !== false ||
                             strpos(number_format((float)($item['closing_cost'] ?? 0), 2), $search) !== false;
                     });
                 }
@@ -968,13 +1017,24 @@ class PurchaseReportController extends Controller
                 $totalRecords = count($ageingData);
 
                 if (!empty($search)) {
-                    $ageingData = array_filter($ageingData, function($item) use ($search) {
-                        return (strpos(strtolower($item['brand'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['item_name'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['style'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['color'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['fabric_type'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['width'] ?? ''), strtolower($search)) !== false);
+                    $searchLower = strtolower(trim($search));
+                    $ageingData = array_filter($ageingData, function($item) use ($searchLower) {
+                        return (strpos(strtolower($item['brand'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['item_name'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['style'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['color'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['fabric_type'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['width'] ?? ''), $searchLower) !== false)
+                            || (strpos((string)($item['0_30'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['0_30'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['31_60'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['31_60'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['61_90'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['61_90'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['91_plus'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['91_plus'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['total'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['total'] ?? 0), 2), $searchLower) !== false);
                     });
                 }
 
@@ -1028,10 +1088,21 @@ class PurchaseReportController extends Controller
                 $totalRecords = count($consumptionData);
 
                 if (!empty($search)) {
-                    $consumptionData = array_filter($consumptionData, function($item) use ($search) {
-                        return (strpos(strtolower($item['job_card_no'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['brand'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['status'] ?? ''), strtolower($search)) !== false);
+                    $searchLower = strtolower(trim($search));
+                    $consumptionData = array_filter($consumptionData, function($item) use ($searchLower) {
+                        $dtStr = $item['date'] ? date('d-M-Y', strtotime($item['date'])) : '';
+                        return (strpos(strtolower($item['job_card_no'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['brand'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['status'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($dtStr), $searchLower) !== false)
+                            || (strpos((string)($item['total_fabric'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['total_fabric'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['wastage'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['wastage'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['total_garments'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['total_garments'] ?? 0)), $searchLower) !== false)
+                            || (strpos((string)($item['average'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['average'] ?? 0), 2), $searchLower) !== false);
                     });
                 }
 
@@ -1069,18 +1140,41 @@ class PurchaseReportController extends Controller
                 $totalRecords = count($minStockData);
 
                 if (!empty($search)) {
-                    $minStockData = array_filter($minStockData, function($item) use ($search) {
-                        return (strpos(strtolower($item['art_no'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['brand'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['item_name'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['style'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['color'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['fabric_type'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['width'] ?? ''), strtolower($search)) !== false);
+                    $searchLower = strtolower(trim($search));
+                    $minStockData = array_filter($minStockData, function($item) use ($searchLower) {
+                        $stText = '';
+                        if ($item['closing'] <= 0) {
+                            $stText = 'out of stock';
+                        } elseif ($item['closing'] <= $item['min_stock']) {
+                            $stText = 'low stock';
+                        } else {
+                            $stText = 'excess stock';
+                        }
+
+                        return (strpos(strtolower($item['art_no'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['brand'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['item_name'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['style'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['color'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['fabric_type'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['width'] ?? ''), $searchLower) !== false)
+                            || (strpos($stText, $searchLower) !== false)
+                            || (strpos((string)($item['min_stock'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['min_stock'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['closing'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['closing'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['shortage'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['shortage'] ?? 0), 2), $searchLower) !== false);
                     });
                 }
 
                 $filteredRecords = count($minStockData);
+
+                $totals = [
+                    'min_stock' => number_format(collect($minStockData)->sum('min_stock'), 2),
+                    'closing' => number_format(collect($minStockData)->sum('closing'), 2),
+                    'shortage' => number_format(collect($minStockData)->sum('shortage'), 2),
+                ];
 
                 if ($length != -1) {
                     $minStockData = array_slice($minStockData, $start, $length);
@@ -1129,12 +1223,21 @@ class PurchaseReportController extends Controller
                 $totalRecords = count($returnGoodsData);
 
                 if (!empty($search)) {
-                    $returnGoodsData = array_filter($returnGoodsData, function($item) use ($search) {
+                    $searchLower = strtolower(trim($search));
+                    $returnGoodsData = array_filter($returnGoodsData, function($item) use ($searchLower) {
                         $itemArr = (array) $item;
-                        return (strpos(strtolower($itemArr['return_no'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($itemArr['supplier_name'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($itemArr['item_name'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($itemArr['reason'] ?? ''), strtolower($search)) !== false);
+                        $retDt = $itemArr['return_date'] ? date('d-M-Y', strtotime($itemArr['return_date'])) : '';
+                        return (strpos(strtolower($itemArr['return_no'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($itemArr['supplier_name'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($itemArr['item_name'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($itemArr['reason'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($retDt), $searchLower) !== false)
+                            || (strpos((string)($itemArr['quantity'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($itemArr['quantity'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($itemArr['rate'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($itemArr['rate'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($itemArr['dn_grand_total'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($itemArr['dn_grand_total'] ?? 0), 2), $searchLower) !== false);
                     });
                 }
 
@@ -1288,12 +1391,31 @@ class PurchaseReportController extends Controller
                 $totalRecords = count($performanceData);
 
                 if (!empty($search)) {
-                    $performanceData = array_filter($performanceData, function($item) use ($search) {
-                        return (strpos(strtolower($item['supplier_name'] ?? ''), strtolower($search)) !== false);
+                    $searchLower = strtolower(trim($search));
+                    $performanceData = array_filter($performanceData, function($item) use ($searchLower) {
+                        return (strpos(strtolower($item['supplier_name'] ?? ''), $searchLower) !== false)
+                            || (strpos((string)($item['po_count'] ?? ''), $searchLower) !== false)
+                            || (strpos((string)($item['total_po_value'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['total_po_value'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['dn_count'] ?? ''), $searchLower) !== false)
+                            || (strpos((string)($item['return_rate'] ?? ''), $searchLower) !== false)
+                            || (strpos(($item['return_rate'] ?? '') . '%', $searchLower) !== false);
                     });
                 }
 
                 $filteredRecords = count($performanceData);
+
+                $totPoCount = collect($performanceData)->sum('po_count');
+                $totPoValue = collect($performanceData)->sum('total_po_value');
+                $totDnCount = collect($performanceData)->sum('dn_count');
+                $overallReturnRate = ($totPoCount > 0) ? round(($totDnCount / $totPoCount) * 100, 2) : 0;
+
+                $totals = [
+                    'po_count' => number_format($totPoCount),
+                    'total_po_value' => '₹ ' . number_format($totPoValue, 2),
+                    'dn_count' => number_format($totDnCount),
+                    'return_rate' => number_format($overallReturnRate, 2) . '%',
+                ];
 
                 if ($length != -1) {
                     $performanceData = array_slice($performanceData, $start, $length);
@@ -1326,9 +1448,22 @@ class PurchaseReportController extends Controller
                 $totalRecords = count($casinoData);
 
                 if (!empty($search)) {
-                    $casinoData = array_filter($casinoData, function($item) use ($search) {
-                        return (strpos(strtolower($item['brand_name'] ?? ''), strtolower($search)) !== false)
-                            || (strpos(strtolower($item['width'] ?? ''), strtolower($search)) !== false);
+                    $searchLower = strtolower(trim($search));
+                    $casinoData = array_filter($casinoData, function($item) use ($searchLower) {
+                        return (strpos(strtolower($item['brand_name'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower($item['width'] ?? ''), $searchLower) !== false)
+                            || (strpos((string)($item['plain'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['plain'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['white'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['white'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['print'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['print'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['checked'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['checked'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['striped'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['striped'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['total'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['total'] ?? 0), 2), $searchLower) !== false);
                     });
                 }
 
@@ -1372,6 +1507,7 @@ class PurchaseReportController extends Controller
                     $brandwiseData = array_filter($brandwiseData, function($item) use ($searchLower) {
                         // Search art_no
                         if (strpos(strtolower($item['art_no'] ?? ''), $searchLower) !== false) return true;
+                        if (strpos(strtolower($item['brand_name'] ?? ''), $searchLower) !== false) return true;
                         // Search inside WIP rows c_no & remarks
                         foreach ($item['matrix']['wips'] ?? [] as $wip) {
                             if (strpos(strtolower($wip['unit'] ?? ''), $searchLower) !== false) return true;
@@ -1399,12 +1535,29 @@ class PurchaseReportController extends Controller
                 $totalRecords = count($costData);
 
                 if (!empty($search)) {
-                    $costData = array_filter($costData, function($item) use ($search) {
-                        return (strpos(strtolower($item['item_name'] ?? ''), strtolower($search)) !== false);
+                    $searchLower = strtolower(trim($search));
+                    $costData = array_filter($costData, function($item) use ($searchLower) {
+                        return (strpos(strtolower($item['item_name'] ?? ''), $searchLower) !== false)
+                            || (strpos((string)($item['total_qty'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['total_qty'] ?? 0)), $searchLower) !== false)
+                            || (strpos((string)($item['total_amount'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['total_amount'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['average_cost'] ?? ''), $searchLower) !== false)
+                            || (strpos(number_format((float)($item['average_cost'] ?? 0), 2), $searchLower) !== false);
                     });
                 }
 
                 $filteredRecords = count($costData);
+
+                $totQty = collect($costData)->sum('total_qty');
+                $totAmount = collect($costData)->sum('total_amount');
+                $overallAvgCost = ($totQty > 0) ? round($totAmount / $totQty, 2) : 0;
+
+                $totals = [
+                    'total_qty' => number_format($totQty, 2),
+                    'total_amount' => '₹ ' . number_format($totAmount, 2),
+                    'average_cost' => '₹ ' . number_format($overallAvgCost, 2),
+                ];
 
                 if ($length != -1) {
                     $costData = array_slice($costData, $start, $length);

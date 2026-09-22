@@ -21,7 +21,7 @@
             <div id="serviceColumnFilterBox" class="p-2 mb-2 rounded-2 border bg-light d-none">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-1 border-bottom">
                     <span class="small fw-bold text-dark text-uppercase" style="font-size: 0.78rem;">
-                        <i class="ri-checkbox-multiple-line me-1 text-primary"></i> Show / Hide Services:
+                        <i class="ri ri-checkbox-multiple-line me-1 text-primary"></i> Show / Hide Services:
                     </span>
                     <div class="d-flex align-items-center gap-1">
                         <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 rounded-pill" id="btnSelectAllServices" style="font-size: 0.72rem;">

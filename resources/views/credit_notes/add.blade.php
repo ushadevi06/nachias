@@ -1,5 +1,19 @@
 @extends('layouts.common')
 @section('title', (isset($creditNote) ? 'Edit' : 'Add') . ' Credit Note - ' . env('WEBSITE_NAME'))
+@section('styles')
+<style>
+    .ui-autocomplete {
+        max-height: 350px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 9999 !important;
+    }
+    .ui-menu-item .search-item-balance {
+        margin-top: 6px !important;
+        display: inline-block;
+    }
+</style>
+@endsection
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
@@ -446,6 +460,14 @@
                                         <input type="hidden" name="discount" id="discount" value="{{ old('discount', $creditNote->discount ?? 0) }}">
                                     </div>
                                 </div>
+                
+                                <div class="d-flex justify-content-between mb-3 mt-3">
+                                    <label class="fw-bold text-muted">Box Discount (per pc):</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="number" name="box_discount_amount" id="box_discount_amount" class="form-control form-control-sm text-end" style="width: 80px;" value="{{ old('box_discount_amount', isset($creditNote) ? number_format($creditNote->box_discount_amount, 2, '.', '') : '0.00') }}" step="0.01" min="0">
+                                        <span class="ms-2">₹<span id="box_discount_text">0.00</span></span>
+                                    </div>
+                                </div>
 
                                 <div id="cgst_row" class="{{ old('is_other_state', ($creditNote->other_state ?? false) ? 'yes' : 'no') == 'yes' ? 'd-none' : '' }}">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -547,7 +569,7 @@
 
 <script>
 $(document).ready(function() {
-    $(document).on('keypress keydown', '#charge_amount, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function (e) {
+    $(document).on('keypress keydown', '#charge_amount, #discount_percent, #box_discount_amount, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function (e) {
         if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
             e.preventDefault();
             return false;
@@ -714,7 +736,10 @@ $(document).ready(function() {
                     $('#cgst_percent').val(response.cgst_percent);
                     $('#sgst_percent').val(response.sgst_percent);
                     $('#discount_percent').val(response.discount_percent || 0);
-                    
+                    if (response.box_discount_amount !== undefined) {
+                        $('#box_discount_amount').val(response.box_discount_amount || 0);
+                    }
+
                     calculateTotal();
                 }
             }
@@ -724,6 +749,16 @@ $(document).ready(function() {
     // Helper to add item to table
     window.addInvoiceItem = function(item, initialQty = 1, isAddedToInventory = true) {
         // Check if item is already in the table
+        if (parseFloat(item.balance_qty) <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Balance Quantity',
+                text: 'This item has no balance quantity available for return.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            return;
+        }
         let existingRow = $(`.item-row[data-item-id="${item.id}"]`);
         if (existingRow.length > 0) {
             let qtyInput = existingRow.find('.qty');
@@ -867,6 +902,7 @@ $(document).ready(function() {
             });
 
             var formatted = matches.map(function (item) {
+                var isDisabled = parseFloat(item.balance_qty) <= 0;
                 var label = (item.item_name || '');
                 if (item.invoice_no) label += ' [Inv: ' + item.invoice_no + ']';
                 if (item.art_no && item.art_no !== '-') label += ' | Art: ' + item.art_no;
@@ -876,7 +912,8 @@ $(document).ready(function() {
                 return {
                     label: label,
                     value: item.product_barcode || item.item_code || '',
-                    itemData: item
+                    itemData: item,
+                    disabled: isDisabled
                 };
             });
             formatted = formatted.slice(0, 20);
@@ -899,6 +936,11 @@ $(document).ready(function() {
                 return false;
             }
 
+            if (ui.item && (ui.item.disabled || (ui.item.itemData && parseFloat(ui.item.itemData.balance_qty) <= 0))) {
+                event.preventDefault();
+                return false;
+            }
+
             addInvoiceItem(ui.item.itemData, 1);
             setTimeout(() => { $(this).val(''); }, 10);
             return false;
@@ -917,12 +959,23 @@ $(document).ready(function() {
         var sizeInfo = it.size ? `Size: ${it.size}` : '';
         
         var infoParts = [codeInfo, artInfo, barcodeInfo, sizeInfo].filter(Boolean).join(' | ');
+        
+        var isDisabled = item.disabled || parseFloat(it.balance_qty) <= 0;
+        var badgeStyle = isDisabled ? "background-color: #6c757d; color: #fff;" : "";
+        var wrapperStyle = isDisabled ? "opacity: 0.45; cursor: not-allowed; pointer-events: none;" : "";
 
-        return $("<li>")
-            .append(`<div class="ui-menu-item-wrapper">
-                <span class="search-item-title">${item.label}</span>
-                <span class="search-item-balance">Bal Qty: ${parseFloat(it.balance_qty).toFixed(2)}</span>
-                <div class="search-item-info">
+        var $li = $("<li>");
+        if (isDisabled) {
+            $li.addClass("ui-state-disabled");
+        }
+
+        return $li
+            .append(`<div class="ui-menu-item-wrapper ${isDisabled ? 'ui-state-disabled' : ''}" style="${wrapperStyle}">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <span class="search-item-title me-2">${item.label}</span>
+                    <span class="search-item-balance badge ${isDisabled ? 'bg-secondary' : 'bg-success-subtle text-success border border-success-subtle'}" style="margin-top: 6px; flex-shrink: 0; font-size: 11px; padding: 4px 8px; ${badgeStyle}">Bal Qty: ${parseFloat(it.balance_qty).toFixed(2)}</span>
+                </div>
+                <div class="search-item-info mt-1">
                     ${infoParts ? infoParts + ' | ' : ''}Rate: ₹${parseFloat(it.rate || it.mrp || 0).toFixed(2)}
                 </div>
             </div>`)
@@ -952,6 +1005,17 @@ $(document).ready(function() {
             });
 
             if (matchedItem) {
+                if (parseFloat(matchedItem.balance_qty) <= 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Balance Quantity',
+                        text: 'This item has no balance quantity available for return.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    $(this).val('');
+                    return;
+                }
                 addInvoiceItem(matchedItem, 1);
                 Swal.fire({
                     toast: true,
@@ -1028,19 +1092,30 @@ $(document).ready(function() {
 
     function calculateTotal() {
         let subTotal = 0;
+        let totalQty = 0;
         $('.item-row').each(function() {
             let qty = parseFloat($(this).find('.qty').val()) || 0;
             if (qty > 0) {
+                totalQty += qty;
                 subTotal += parseFloat($(this).find('.line_total').val()) || 0;
             }
         });
 
         // Calculate Discount
         let discountPercent = parseFloat($('#discount_percent').val()) || 0;
-        let discountAmount = (subTotal * discountPercent) / 100;
+        let salesDiscountValue = (subTotal * discountPercent) / 100;
+
+        let boxDiscountAmount = parseFloat($('#box_discount_amount').val()) || 0;
+        let totalBoxDiscount = totalQty * boxDiscountAmount;
+
+        let discountAmount = salesDiscountValue + totalBoxDiscount;
+
+        $('#sales_discount_text').text(salesDiscountValue.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#box_discount_text').text(totalBoxDiscount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         $('#discount').val(discountAmount.toFixed(2));
         $('#discount_text').text(discountAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-
+        
+        
         // Calculate Pre-GST and Post-GST charges
         let preGstCharges = 0;
         let postGstCharges = 0;
@@ -1119,7 +1194,7 @@ $(document).ready(function() {
         $('#grand_total').val(grandTotal.toFixed(2));
     }
 
-    $(document).on('input change', '#discount_percent, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .round-off-type-radio', calculateTotal);
+    $(document).on('input change', '#discount_percent, #box_discount_amount, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .round-off-type-radio', calculateTotal);
 
     function refreshChargeDropdownState() {
         let selectedChargeIds = [];

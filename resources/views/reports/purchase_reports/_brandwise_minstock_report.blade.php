@@ -538,7 +538,7 @@
         window.drilldownBrandwisePo = function(artNo) {
             $('#brandwiseMainContainer').hide();
             $('#brandwisePoBreadcrumbs').attr('style', 'display: flex !important;');
-            $('#brandwisePoBreadcrumbText').html(`Brandwise Minimum Stock &nbsp; <i class="ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">Purchase Orders for ${artNo}</span>`);
+            $('#brandwisePoBreadcrumbText').html(`Brandwise Minimum Stock &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary fw-bold">Purchase Orders for ${artNo}</span>`);
             $('#brandwisePoCardTitle').text(`Purchase Orders for ${artNo}`);
             $('#brandwisePoDrilldownContainer').show();
 

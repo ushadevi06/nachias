@@ -76,6 +76,7 @@
 
     .info-box .right-col {
       width: 42%;
+      border-right: 1px solid #000;
     }
 
     .title-row {
@@ -512,7 +513,29 @@
         <table style="width: 100%; border-collapse: collapse;">
           @php
               $taxableValue = $creditNote->sub_total - $creditNote->discount;
+              $salesDiscountPercent = (float)($creditNote->discount_percent ?? 0);
+              $salesDiscountAmount = 0;
+              $boxDiscountTotal = 0;
+              $hasSpecificDiscounts = false;
+              
+              if ($salesDiscountPercent > 0 || (isset($creditNote->box_discount_amount) && $creditNote->box_discount_amount > 0)) {
+                  $salesDiscountAmount = ($creditNote->sub_total * $salesDiscountPercent) / 100;
+                  $boxDiscountTotal = (float)($creditNote->discount ?? 0) - $salesDiscountAmount;
+                  $hasSpecificDiscounts = true;
+              }
           @endphp
+          @if($creditNote->discount > 0)
+              @if(!$hasSpecificDiscounts)
+                  <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Discount</td></tr>
+              @else
+                  @if($salesDiscountAmount > 0)
+                      <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Discount ({{ number_format($salesDiscountPercent, 2) }}%)</td></tr>
+                  @endif
+                  @if($boxDiscountTotal > 0)
+                      <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Box Discount</td></tr>
+                  @endif
+              @endif
+          @endif
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-size:13px;">Taxable Value</td>
           </tr>
@@ -542,6 +565,18 @@
       <!-- Right Column (Values) -->
       <td style="width: 14%; padding: 0; vertical-align: top;">
         <table style="width: 100%; border-collapse: collapse;">
+        @if($creditNote->discount > 0)
+          @if(!$hasSpecificDiscounts)
+            <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->discount, 2) }}</td></tr>
+          @else
+            @if($salesDiscountAmount > 0)
+             <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($salesDiscountAmount, 2) }}</td></tr>
+            @endif
+            @if($boxDiscountTotal > 0)
+              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($boxDiscountTotal, 2) }}</td></tr>
+            @endif
+          @endif
+        @endif
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($taxableValue, 2) }}</td>
           </tr>

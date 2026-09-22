@@ -2,23 +2,23 @@
     <div class="card-header bg-transparent d-flex flex-wrap align-items-center justify-content-between py-3 border-bottom">
         <div>
             <h5 class="fw-bold mb-0 text-dark">
-                <i class="ri-bar-chart-box-line text-primary me-2"></i>Sales, Returns & Net Sales Summary
+                <i class="ri ri-bar-chart-box-line text-primary me-2"></i>Sales, Returns & Net Sales Summary
             </h5>
         </div>
         
         <!-- Interactive Period Selector Pills -->
         <div class="btn-group mt-2 mt-sm-0" role="group" aria-label="Sales Period Filter">
             <button type="button" class="btn btn-sm btn-outline-primary active sales-period-btn" data-target="period-all">
-                <i class="ri-layout-grid-line me-1"></i> ALL CARDS
+                <i class="ri ri-layout-grid-line me-1"></i> ALL CARDS
             </button>
             <button type="button" class="btn btn-sm btn-outline-success sales-period-btn" data-target="period-today">
-                <i class="ri-sun-line me-1"></i> TODAY
+                <i class="ri ri-sun-line me-1"></i> TODAY
             </button>
             <button type="button" class="btn btn-sm btn-outline-info sales-period-btn" data-target="period-monthly">
-                <i class="ri-calendar-line me-1"></i> MONTHLY
+                <i class="ri ri-calendar-line me-1"></i> MONTHLY
             </button>
             <button type="button" class="btn btn-sm btn-outline-warning sales-period-btn" data-target="period-yearly">
-                <i class="ri-calendar-2-line me-1"></i> YEARLY
+                <i class="ri ri-calendar-2-line me-1"></i> YEARLY
             </button>
         </div>
     </div>
@@ -31,7 +31,7 @@
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <span class="badge bg-success text-white px-3 py-2 fs-6 fw-bold">
-                                <i class="ri-sun-line me-1"></i> TODAY SALES
+                                <i class="ri ri-sun-line me-1"></i> TODAY SALES
                             </span>
                             <span class="text-muted small fw-bold">{{ date('d M Y') }}</span>
                         </div>
@@ -73,7 +73,7 @@
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <span class="badge bg-primary text-white px-3 py-2 fs-6 fw-bold">
-                                <i class="ri-calendar-line me-1"></i> MONTHLY SALES
+                                <i class="ri ri-calendar-line me-1"></i> MONTHLY SALES
                             </span>
                             <span class="text-muted small fw-bold">{{ date('M Y') }}</span>
                         </div>
@@ -115,7 +115,7 @@
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-bold">
-                                <i class="ri-calendar-2-line me-1"></i> YEARLY SALES
+                                <i class="ri ri-calendar-2-line me-1"></i> YEARLY SALES
                             </span>
                             <span class="text-muted small fw-bold">{{ date('Y') }}</span>
                         </div>

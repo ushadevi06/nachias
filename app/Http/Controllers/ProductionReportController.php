@@ -50,7 +50,9 @@ class ProductionReportController extends Controller
             })
             ->groupBy('operation_stage_id');
 
-        return view('reports/production_report', compact('units', 'cuttingEmployees', 'cuttingPlants', 'operationStages', 'brands', 'allStageServices'));
+        $jcStatuses = DB::table('job_card_entries')->whereNotNull('status')->where('status', '!=', '')->distinct()->pluck('status')->filter()->values();
+
+        return view('reports/production_report', compact('units', 'cuttingEmployees', 'cuttingPlants', 'operationStages', 'brands', 'allStageServices', 'jcStatuses'));
     }
 
     public function getCuttingEmployees()
@@ -162,7 +164,18 @@ class ProductionReportController extends Controller
                                     'inward' => '<span class="text-success">' . number_format($periodInward) . '</span>',
                                     'outward' => '<span class="text-primary">' . number_format($periodOutward) . '</span>',
                                     'current_wip' => '<span class="fw-bold">' . number_format($currentWip) . '</span>',
-                                    '_search_text' => strtolower(($jc->job_card_no ?? '') . ' ' . $processName)
+                                    '_search_text' => strtolower(implode(' ', [
+                                        $jc->job_card_no ?? '',
+                                        $processName,
+                                        $openingWip,
+                                        number_format($openingWip),
+                                        $periodInward,
+                                        number_format($periodInward),
+                                        $periodOutward,
+                                        number_format($periodOutward),
+                                        $currentWip,
+                                        number_format($currentWip)
+                                    ]))
                                 ];
                             }
                             continue;
@@ -211,7 +224,22 @@ class ProductionReportController extends Controller
                                     'inward' => '<span class="text-success">' . number_format($periodInward) . '</span>',
                                     'outward' => '<span class="text-primary">' . number_format($periodOutward) . '</span>',
                                     'current_wip' => '<span class="fw-bold">' . number_format($currentWip) . '</span>',
-                                    '_search_text' => strtolower(($jc->job_card_no ?? '') . ' ' . ($stage->operation_stage_name ?? ''))
+                                    '_raw_opening' => $openingWip,
+                                    '_raw_inward' => $periodInward,
+                                    '_raw_outward' => $periodOutward,
+                                    '_raw_current_wip' => $currentWip,
+                                    '_search_text' => strtolower(implode(' ', [
+                                        $jc->job_card_no ?? '',
+                                        $stage->operation_stage_name ?? '',
+                                        $openingWip,
+                                        number_format($openingWip),
+                                        $periodInward,
+                                        number_format($periodInward),
+                                        $periodOutward,
+                                        number_format($periodOutward),
+                                        $currentWip,
+                                        number_format($currentWip)
+                                    ]))
                                 ];
                             }
 
@@ -232,11 +260,28 @@ class ProductionReportController extends Controller
                     $recordsFiltered = count($filteredRows);
                     $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
+                    $totOpening = 0;
+                    $totInward = 0;
+                    $totOutward = 0;
+                    $totCurrentWip = 0;
+                    foreach ($filteredRows as $fr) {
+                        $totOpening += floatval($fr['_raw_opening'] ?? 0);
+                        $totInward += floatval($fr['_raw_inward'] ?? 0);
+                        $totOutward += floatval($fr['_raw_outward'] ?? 0);
+                        $totCurrentWip += floatval($fr['_raw_current_wip'] ?? 0);
+                    }
+
                     return response()->json([
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $recordsFiltered,
-                        'data' => $pageData
+                        'data' => $pageData,
+                        'totals' => [
+                            'opening' => number_format($totOpening),
+                            'inward' => number_format($totInward),
+                            'outward' => number_format($totOutward),
+                            'current_wip' => number_format($totCurrentWip),
+                        ]
                     ]);
 
                 case 'performance-report':
@@ -259,27 +304,10 @@ class ProductionReportController extends Controller
                             $q->where('service_provider_id', $unitId);
                         });
                     }
-                    if ($search !== '') {
-                        $perfQuery->where(function ($q) use ($search) {
-                            $q->whereHas('employee', function ($eq) use ($search) {
-                                $eq->where('name', 'like', "%{$search}%");
-                            })->orWhereHas('service', function ($sq) use ($search) {
-                                $sq->where('service_name', 'like', "%{$search}%");
-                            })->orWhereHas('task', function ($tq) use ($search) {
-                                $tq->where('job_card_no', 'like', "%{$search}%");
-                            });
-                        });
-                    }
+                    $assignments = $perfQuery->orderBy('id', 'desc')->get();
+                    $rows = [];
 
-                    $totalRecords = $perfQuery->count();
-                    if ($isExport) {
-                        $items = $perfQuery->orderBy('id', 'desc')->get();
-                    } else {
-                        $items = $perfQuery->orderBy('id', 'desc')->offset($start)->limit($length)->get();
-                    }
-
-                    $data = [];
-                    foreach ($items as $assign) {
+                    foreach ($assignments as $assign) {
                         $assigned = (float) $assign->issue_qty;
                         $completed = (float) $assign->completed_qty;
                         $pending = max(0, $assigned - ($completed + (float) $assign->wastage_qty));
@@ -300,23 +328,67 @@ class ProductionReportController extends Controller
                         elseif ($efficiency >= 70)
                             $badgeClass = 'bg-label-warning';
 
-                        $data[] = [
-                            'job_card_no' => '<strong>' . htmlspecialchars($assign->task->job_card_no ?? ($assign->task->jobCard->job_card_no ?? 'N/A')) . '</strong>',
-                            'service' => htmlspecialchars($assign->service->service_name ?? 'N/A'),
-                            'employee' => htmlspecialchars($assign->employee->name ?? 'N/A'),
+                        $jcNo = $assign->task->job_card_no ?? ($assign->task->jobCard->job_card_no ?? 'N/A');
+                        $servName = $assign->service->service_name ?? 'N/A';
+                        $empName = $assign->employee->name ?? 'N/A';
+
+                        $rows[] = [
+                            'job_card_no' => '<strong>' . htmlspecialchars($jcNo) . '</strong>',
+                            'service' => htmlspecialchars($servName),
+                            'employee' => htmlspecialchars($empName),
                             'stage' => htmlspecialchars($stageName),
                             'assigned_qty' => number_format($assigned),
                             'completed_qty' => '<span class="text-success">' . number_format($completed) . '</span>',
                             'pending_qty' => '<span class="text-danger">' . number_format($pending) . '</span>',
-                            'efficiency' => '<span class="badge ' . $badgeClass . ' rounded-pill">' . $efficiency . '%</span>'
+                            'efficiency' => '<span class="badge ' . $badgeClass . ' rounded-pill">' . $efficiency . '%</span>',
+                            '_raw_assigned' => $assigned,
+                            '_raw_completed' => $completed,
+                            '_raw_pending' => $pending,
+                            '_search_text' => strtolower(implode(' ', [
+                                $jcNo,
+                                $servName,
+                                $empName,
+                                $stageName,
+                                $assigned,
+                                number_format($assigned),
+                                $completed,
+                                number_format($completed),
+                                $pending,
+                                number_format($pending),
+                                $efficiency,
+                                $efficiency . '%'
+                            ]))
                         ];
                     }
+
+                    $totalRecords = count($rows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $rows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
+
+                    $totAssigned = array_sum(array_column($filteredRows, '_raw_assigned'));
+                    $totCompleted = array_sum(array_column($filteredRows, '_raw_completed'));
+                    $totPending = array_sum(array_column($filteredRows, '_raw_pending'));
+                    $overallEfficiency = ($totAssigned > 0) ? round(($totCompleted / $totAssigned) * 100, 1) : 0;
 
                     return response()->json([
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
-                        'recordsFiltered' => $totalRecords,
-                        'data' => $data
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'totals' => [
+                            'assigned_qty' => number_format($totAssigned),
+                            'completed_qty' => number_format($totCompleted),
+                            'pending_qty' => number_format($totPending),
+                            'efficiency' => $overallEfficiency . '%'
+                        ]
                     ]);
 
                 case 'process-wise':
@@ -354,15 +426,36 @@ class ProductionReportController extends Controller
                         $jcNo = $first->task->job_card_no ?? ($first->task->jobCard->job_card_no ?? 'N/A');
                         $servName = $first->service->service_name ?? 'N/A';
 
+                        $planQty = (float) $group->sum('issue_qty');
+                        $inprocQty = (float) $group->sum('inprogress_qty');
+                        $compQty = (float) $group->sum('completed_qty');
+                        $holdQty = (float) (($first->task && $first->task->status == 'Hold') ? $group->sum('issue_qty') : 0);
+
                         $rows[] = [
                             'job_card_no' => '<strong>' . htmlspecialchars($jcNo) . '</strong>',
                             'service_name' => $servName,
                             'process_name' => $stageName,
-                            'task_plan' => '<span class="text-primary">' . number_format($group->sum('issue_qty')) . '</span>',
-                            'inprocess' => '<span class="text-warning">' . number_format($group->sum('inprogress_qty')) . '</span>',
-                            'completed' => '<span class="text-success">' . number_format($group->sum('completed_qty')) . '</span>',
-                            'hold' => '<span class="text-danger">' . number_format(($first->task && $first->task->status == 'Hold') ? $group->sum('issue_qty') : 0) . '</span>',
-                            '_search_text' => strtolower($jcNo . ' ' . $servName . ' ' . $stageName)
+                            'task_plan' => '<span class="text-primary">' . number_format($planQty) . '</span>',
+                            'inprocess' => '<span class="text-warning">' . number_format($inprocQty) . '</span>',
+                            'completed' => '<span class="text-success">' . number_format($compQty) . '</span>',
+                            'hold' => '<span class="text-danger">' . number_format($holdQty) . '</span>',
+                            '_raw_plan' => $planQty,
+                            '_raw_inprocess' => $inprocQty,
+                            '_raw_completed' => $compQty,
+                            '_raw_hold' => $holdQty,
+                            '_search_text' => strtolower(implode(' ', [
+                                $jcNo,
+                                $servName,
+                                $stageName,
+                                $planQty,
+                                number_format($planQty),
+                                $inprocQty,
+                                number_format($inprocQty),
+                                $compQty,
+                                number_format($compQty),
+                                $holdQty,
+                                number_format($holdQty)
+                            ]))
                         ];
                     }
 
@@ -378,11 +471,22 @@ class ProductionReportController extends Controller
                     $recordsFiltered = count($filteredRows);
                     $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
+                    $totPlan = array_sum(array_column($filteredRows, '_raw_plan'));
+                    $totInprocess = array_sum(array_column($filteredRows, '_raw_inprocess'));
+                    $totCompleted = array_sum(array_column($filteredRows, '_raw_completed'));
+                    $totHold = array_sum(array_column($filteredRows, '_raw_hold'));
+
                     return response()->json([
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $recordsFiltered,
-                        'data' => $pageData
+                        'data' => $pageData,
+                        'totals' => [
+                            'task_plan' => number_format($totPlan),
+                            'inprocess' => number_format($totInprocess),
+                            'completed' => number_format($totCompleted),
+                            'hold' => number_format($totHold)
+                        ]
                     ]);
 
                 case 'completion-report':
@@ -396,23 +500,10 @@ class ProductionReportController extends Controller
                     if ($toDate) {
                         $compQuery->where('job_card_date', '<=', $toDate);
                     }
-                    if ($search !== '') {
-                        $compQuery->where(function ($q) use ($search) {
-                            $q->where('job_card_no', 'like', "%{$search}%")
-                                ->orWhereHas('serviceProvider', function ($sq) use ($search) {
-                                    $sq->where('name', 'like', "%{$search}%");
-                                });
-                        });
-                    }
 
-                    $totalRecords = $compQuery->count();
-                    if ($isExport) {
-                        $jobCards = $compQuery->orderBy('id', 'desc')->get();
-                    } else {
-                        $jobCards = $compQuery->orderBy('id', 'desc')->offset($start)->limit($length)->get();
-                    }
+                    $jobCards = $compQuery->orderBy('id', 'desc')->get();
+                    $rows = [];
 
-                    $data = [];
                     foreach ($jobCards as $jc) {
                         $totalReceived = DB::table('production_receipt_items')
                             ->join('production_receipts', 'production_receipt_items.production_receipt_id', '=', 'production_receipts.id')
@@ -456,21 +547,54 @@ class ProductionReportController extends Controller
                             $statusClass = "info";
                         }
 
-                        $data[] = [
-                            'job_card_no' => '<strong>' . htmlspecialchars($jc->job_card_no ?? '') . '</strong>',
-                            'unit' => htmlspecialchars($jc->serviceProvider->name ?? 'N/A'),
-                            'quantity' => number_format($jc->grand_total_qty ?? 0),
-                            'target_date' => $jc->delivery_date ? date('d-M-Y', strtotime($jc->delivery_date)) : 'N/A',
-                            'completed_date' => ($isCompleted && $lastReceiptDate) ? date('d-M-Y', strtotime($lastReceiptDate)) : '-',
-                            'days_taken' => '<span class="badge bg-label-' . $statusClass . ' rounded-pill">' . $statusLabel . '</span>'
+                        $jcNo = $jc->job_card_no ?? '';
+                        $uName = $jc->serviceProvider->name ?? 'N/A';
+                        $qtyVal = (float) ($jc->grand_total_qty ?? 0);
+                        $targetDt = $jc->delivery_date ? date('d-M-Y', strtotime($jc->delivery_date)) : 'N/A';
+                        $compDt = ($isCompleted && $lastReceiptDate) ? date('d-M-Y', strtotime($lastReceiptDate)) : '-';
+
+                        $rows[] = [
+                            'job_card_no' => '<strong>' . htmlspecialchars($jcNo) . '</strong>',
+                            'unit' => htmlspecialchars($uName),
+                            'quantity' => number_format($qtyVal),
+                            'target_date' => $targetDt,
+                            'completed_date' => $compDt,
+                            'days_taken' => '<span class="badge bg-label-' . $statusClass . ' rounded-pill">' . $statusLabel . '</span>',
+                            '_raw_qty' => $qtyVal,
+                            '_search_text' => strtolower(implode(' ', [
+                                $jcNo,
+                                $uName,
+                                $qtyVal,
+                                number_format($qtyVal),
+                                $targetDt,
+                                $compDt,
+                                $statusLabel
+                            ]))
                         ];
                     }
+
+                    $totalRecords = count($rows);
+                    if ($search !== '') {
+                        $lowerSearch = strtolower($search);
+                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
+                            return strpos($r['_search_text'], $lowerSearch) !== false;
+                        }));
+                    } else {
+                        $filteredRows = $rows;
+                    }
+                    $recordsFiltered = count($filteredRows);
+                    $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
+
+                    $totQty = array_sum(array_column($filteredRows, '_raw_qty'));
 
                     return response()->json([
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
-                        'recordsFiltered' => $totalRecords,
-                        'data' => $data
+                        'recordsFiltered' => $recordsFiltered,
+                        'data' => $pageData,
+                        'totals' => [
+                            'quantity' => number_format($totQty)
+                        ]
                     ]);
 
                 case 'brand-production':
@@ -527,26 +651,44 @@ class ProductionReportController extends Controller
                         $unitName = $jc->serviceProvider->name ?? 'N/A';
 
                         if ($jc && $jc->total_qty_fs > 0) {
-                            $qtyFs = $group->where('productionReceipt.jobCard.total_qty_fs', '>', 0)->sum('qty_to_receive');
+                            $qtyFs = (float) $group->where('productionReceipt.jobCard.total_qty_fs', '>', 0)->sum('qty_to_receive');
                             $rows[] = [
                                 'brand' => '<strong>' . htmlspecialchars($brandName) . '</strong>',
                                 'style' => htmlspecialchars($styleName),
                                 'sleeve' => 'Full Sleeve',
                                 'qty' => number_format($qtyFs),
                                 'unit' => htmlspecialchars($unitName),
-                                '_search_text' => strtolower($brandName . ' ' . $styleName . ' Full Sleeve ' . $unitName)
+                                '_raw_qty' => $qtyFs,
+                                '_search_text' => strtolower(implode(' ', [
+                                    $brandName,
+                                    $styleName,
+                                    'Full Sleeve',
+                                    'FS',
+                                    $unitName,
+                                    $qtyFs,
+                                    number_format($qtyFs)
+                                ]))
                             ];
                         }
 
                         if ($jc && $jc->total_qty_hs > 0) {
-                            $qtyHs = $group->where('productionReceipt.jobCard.total_qty_hs', '>', 0)->sum('qty_to_receive');
+                            $qtyHs = (float) $group->where('productionReceipt.jobCard.total_qty_hs', '>', 0)->sum('qty_to_receive');
                             $rows[] = [
                                 'brand' => '<strong>' . htmlspecialchars($brandName) . '</strong>',
                                 'style' => htmlspecialchars($styleName),
                                 'sleeve' => 'Half Sleeve',
                                 'qty' => number_format($qtyHs),
                                 'unit' => htmlspecialchars($unitName),
-                                '_search_text' => strtolower($brandName . ' ' . $styleName . ' Half Sleeve ' . $unitName)
+                                '_raw_qty' => $qtyHs,
+                                '_search_text' => strtolower(implode(' ', [
+                                    $brandName,
+                                    $styleName,
+                                    'Half Sleeve',
+                                    'HS',
+                                    $unitName,
+                                    $qtyHs,
+                                    number_format($qtyHs)
+                                ]))
                             ];
                         }
                     }
@@ -563,11 +705,16 @@ class ProductionReportController extends Controller
                     $recordsFiltered = count($filteredRows);
                     $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
+                    $totProduced = array_sum(array_column($filteredRows, '_raw_qty'));
+
                     return response()->json([
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $recordsFiltered,
-                        'data' => $pageData
+                        'data' => $pageData,
+                        'totals' => [
+                            'qty' => number_format($totProduced)
+                        ]
                     ]);
 
                 case 'incentive-report':
@@ -716,16 +863,16 @@ class ProductionReportController extends Controller
 
                         $tasksCount = $tasks->count();
                         if ($tasksCount === 0) {
-                            $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '"><i class="ri-file-list-line me-1"></i> No Tasks</button>';
+                            $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '"><i class="ri ri-file-list-line me-1"></i> No Tasks</button>';
                         } else {
                             if ($delayedCount > 0) {
-                                $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '" title="Click to view ' . $delayedCount . ' delayed tasks"><i class="ri-alarm-warning-line me-1"></i> ' . $delayedCount . ' Delayed / View (' . $tasksCount . ')</button>';
+                                $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '" title="Click to view ' . $delayedCount . ' delayed tasks"><i class="ri ri-alarm-warning-line me-1"></i> ' . $delayedCount . ' Delayed / View (' . $tasksCount . ')</button>';
                             } else {
-                                $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '" title="Click to view tasks & delay status"><i class="ri-eye-line me-1"></i> View Tasks (' . $tasksCount . ')</button>';
+                                $delayDetailsHtml = '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 view-dept-tasks" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '" title="Click to view tasks & delay status"><i class="ri ri-eye-line me-1"></i> View Tasks (' . $tasksCount . ')</button>';
                             }
                         }
 
-                        $deptHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-dept-tasks text-decoration-none" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '">' . htmlspecialchars($stage->operation_stage_name) . ' <i class="ri-external-link-line small opacity-75 ms-1"></i></a>';
+                        $deptHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-dept-tasks text-decoration-none" data-stage-id="' . $stage->id . '" data-stage-name="' . htmlspecialchars($stage->operation_stage_name) . '">' . htmlspecialchars($stage->operation_stage_name) . ' <i class="ri ri-external-link-line small opacity-75 ms-1"></i></a>';
 
                         $stagePending = max(0, $stagePlan - $stageActual);
 
@@ -739,7 +886,20 @@ class ProductionReportController extends Controller
                             'efficiency' => '<span class="badge ' . $effBadgeClass . ' rounded-pill px-3 py-1 fs-6">' . $stageEfficiency . '%</span>',
                             'working_hours' => '<span class="fw-semibold">8</span>',
                             'delay_details' => $delayDetailsHtml,
-                            '_search_text' => strtolower($stage->operation_stage_name . ' ' . $stageEfficiency . '%')
+                            '_search_text' => strtolower(implode(' ', [
+                                $stage->operation_stage_name,
+                                $targetVal ?? '',
+                                ($targetVal !== null ? number_format($targetVal) : ''),
+                                $stagePlan,
+                                number_format($stagePlan),
+                                $stageActual,
+                                number_format($stageActual),
+                                $stagePending,
+                                number_format($stagePending),
+                                $stageEfficiency,
+                                $stageEfficiency . '%',
+                                '8'
+                            ]))
                         ];
                     }
 
@@ -770,6 +930,13 @@ class ProductionReportController extends Controller
                             'total_pending' => number_format($totalPending) . ' Pcs',
                             'overall_efficiency' => $overallEfficiency . '%',
                             'efficiency_val' => $overallEfficiency
+                        ],
+                        'totals' => [
+                            'target' => ($totalTarget > 0) ? number_format($totalTarget) . ' Pcs' : '-',
+                            'plan' => number_format($totalPlan) . ' Pcs',
+                            'actual' => number_format($totalActual) . ' Pcs',
+                            'pending' => number_format($totalPending) . ' Pcs',
+                            'efficiency' => $overallEfficiency . '%'
                         ]
                     ]);
 
@@ -905,7 +1072,21 @@ class ProductionReportController extends Controller
                             'delay_reason' => $delayReason,
                             'delay_badge' => $delayBadge,
                             'view_url' => url('task_management/view_details/' . $task->id),
-                            '_search_text' => strtolower($taskNo . ' ' . $jcNo . ' ' . $unitName . ' ' . $issueDateFormatted . ' ' . $dueDateFormatted . ' ' . ($task->status ?: 'Planned') . ' ' . $delayReason)
+                            '_search_text' => strtolower(implode(' ', [
+                                $taskNo,
+                                $jcNo,
+                                $unitName,
+                                $issueDateFormatted,
+                                $dueDateFormatted,
+                                ($task->status ?: 'Planned'),
+                                $delayReason,
+                                $taskPlan,
+                                number_format($taskPlan),
+                                $taskActual,
+                                number_format($taskActual),
+                                $efficiency,
+                                $efficiency . '%'
+                            ]))
                         ];
                     }
 
@@ -962,6 +1143,12 @@ class ProductionReportController extends Controller
                     if ($unitId) {
                         $cuttingQuery->where('service_provider_id', $unitId);
                     }
+                    if ($brandId) {
+                        $cuttingQuery->where('brand_id', $brandId);
+                    }
+                    if ($request->filled('jc_status')) {
+                        $cuttingQuery->where('status', $request->jc_status);
+                    }
                     if ($fromDate) {
                         $cuttingQuery->where('job_card_date', '>=', $fromDate);
                     }
@@ -994,6 +1181,12 @@ class ProductionReportController extends Controller
                             }
                         }
                     }
+
+                    $styleBrandConsumptions = DB::table('style_brand_consumptions')
+                        ->get()
+                        ->groupBy(function ($item) {
+                            return $item->style_id . '_' . $item->brand_id;
+                        });
 
                     foreach ($jobCards as $jc) {
                         $jcNo = $jc->job_card_no ?? 'N/A';
@@ -1033,12 +1226,29 @@ class ProductionReportController extends Controller
                         $patternDisplay = !empty($patternNames) ? implode(', ', $patternNames) : '-';
                         $fabricDisplay = ($jc->fabricType && $jc->fabricType->fabric_type) ? htmlspecialchars($jc->fabricType->fabric_type) : '-';
                         $issueMts = floatval($jc->issueItems->sum('qty_issue'));
+                        $jcBrandId = $jc->brand_id;
                         $styleAvgCons = 0;
                         if (!empty($resolvedStyles)) {
-                            foreach ($resolvedStyles as $st) {
-                                if (floatval($st->average_consumption ?? 0) > 0) {
-                                    $styleAvgCons = floatval($st->average_consumption);
-                                    break;
+                            // 1. Check brand-specific consumption first from style_brand_consumptions
+                            if ($jcBrandId) {
+                                foreach ($resolvedStyles as $st) {
+                                    $brandKey = $st->id . '_' . $jcBrandId;
+                                    if (isset($styleBrandConsumptions[$brandKey])) {
+                                        $bConsVal = floatval($styleBrandConsumptions[$brandKey]->first()->average_consumption ?? 0);
+                                        if ($bConsVal > 0) {
+                                            $styleAvgCons = $bConsVal;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            // 2. Fallback to style default average_consumption if brand-specific consumption not configured
+                            if ($styleAvgCons <= 0) {
+                                foreach ($resolvedStyles as $st) {
+                                    if (floatval($st->average_consumption ?? 0) > 0) {
+                                        $styleAvgCons = floatval($st->average_consumption);
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -1081,13 +1291,13 @@ class ProductionReportController extends Controller
                         $isJcCompleted = stripos($rawStatus, 'complete') !== false;
                         if ($isJcCompleted) {
                             $priorityText = 'Completed';
-                            $priorityBadge = '<span class="text-success fw-bold"><i class="ri-check-line me-1"></i>Completed</span>';
+                            $priorityBadge = '<span class="text-success fw-bold"><i class="ri ri-check-line me-1"></i>Completed</span>';
                         } elseif ($jc->delivery_date) {
                             $today = Carbon::now()->startOfDay();
                             $delDate = Carbon::parse($jc->delivery_date)->startOfDay();
                             if ($today->gt($delDate)) {
                                 $priorityText = 'Critical';
-                                $priorityBadge = '<span class="badge bg-label-danger rounded-pill px-2 py-1"><i class="ri-record-circle-fill text-danger me-1"></i>Critical</span>';
+                                $priorityBadge = '<span class="badge bg-label-danger rounded-pill px-2 py-1"><i class="ri ri-record-circle-fill text-danger me-1"></i>Critical</span>';
                             } elseif ($today->diffInDays($delDate, false) <= 2) {
                                 $priorityText = 'High';
                                 $priorityBadge = '<span class="badge bg-label-warning rounded-pill px-2 py-1">High</span>';
@@ -1116,7 +1326,37 @@ class ProductionReportController extends Controller
                             'status' => $statusBadge,
                             'priority' => $priorityBadge,
                             'remarks' => htmlspecialchars($remarksText),
-                            '_search_text' => strtolower($jcNo . ' ' . $brandName . ' ' . $seasonName . ' ' . $patternDisplay . ' ' . $unitAssigned . ' ' . $rawStatus . ' ' . $priorityText . ' ' . $remarksText)
+                            '_raw_issue_mts' => $issueMts,
+                            '_raw_est_qty' => $estQty,
+                            '_raw_cut_qty' => $cutQty,
+                            '_search_text' => strtolower(implode(' ', [
+                                $jcNo,
+                                $issueDateStr,
+                                $deliveryDateStr,
+                                $ageDays,
+                                $brandName,
+                                $seasonName,
+                                $patternDisplay,
+                                $fabricDisplay,
+                                $issueMts,
+                                number_format($issueMts),
+                                $estQty,
+                                number_format($estQty),
+                                $cutQty,
+                                number_format($cutQty),
+                                $bundledQty,
+                                number_format($bundledQty),
+                                $balanceBundle,
+                                number_format($balanceBundle),
+                                $fullQty,
+                                number_format($fullQty),
+                                $halfQty,
+                                number_format($halfQty),
+                                $unitAssigned,
+                                $rawStatus,
+                                $priorityText,
+                                $remarksText
+                            ]))
                         ];
                     }
 
@@ -1138,11 +1378,38 @@ class ProductionReportController extends Controller
                         $pageData = array_slice($filteredRows, $start, $length);
                     }
 
+                    $totIssueMts = 0;
+                    $totEstQty = 0;
+                    $totCutQty = 0;
+                    $totBundle = 0;
+                    $totBalanceBundle = 0;
+                    $totFull = 0;
+                    $totHalf = 0;
+
+                    foreach ($filteredRows as $fr) {
+                        $totIssueMts += floatval($fr['_raw_issue_mts'] ?? 0);
+                        $totEstQty += floatval($fr['_raw_est_qty'] ?? 0);
+                        $totCutQty += floatval($fr['_raw_cut_qty'] ?? 0);
+                        $totBundle += floatval($fr['_raw_bundle'] ?? 0);
+                        $totBalanceBundle += floatval($fr['_raw_balance_bundle'] ?? 0);
+                        $totFull += floatval($fr['_raw_full'] ?? 0);
+                        $totHalf += floatval($fr['_raw_half'] ?? 0);
+                    }
+
                     return response()->json([
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $recordsFiltered,
-                        'data' => $pageData
+                        'data' => $pageData,
+                        'totals' => [
+                            'issue_mts' => number_format($totIssueMts),
+                            'estimate_qty' => number_format($totEstQty),
+                            'cut_qty' => number_format($totCutQty),
+                            'bundle' => number_format($totBundle),
+                            'balance_bundle' => number_format($totBalanceBundle),
+                            'full_sleeve' => number_format($totFull),
+                            'half_sleeve' => number_format($totHalf),
+                        ]
                     ]);
 
                 case 'employee-efficiency':
@@ -1246,9 +1513,9 @@ class ProductionReportController extends Controller
 
                         $empCode = $emp->emp_id ?: 'EMP' . $emp->id;
 
-                        $empNameHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-emp-tasks text-decoration-none" data-emp-id="' . $emp->id . '" data-emp-name="' . htmlspecialchars($emp->name) . '" data-emp-code="' . htmlspecialchars($empCode) . '" data-designation="' . htmlspecialchars($designation) . '" title="Click to view task-wise breakdown">' . htmlspecialchars($emp->name) . ' <i class="ri-external-link-line small opacity-75 ms-1"></i></a>';
+                        $empNameHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-emp-tasks text-decoration-none" data-emp-id="' . $emp->id . '" data-emp-name="' . htmlspecialchars($emp->name) . '" data-emp-code="' . htmlspecialchars($empCode) . '" data-designation="' . htmlspecialchars($designation) . '" title="Click to view task-wise breakdown">' . htmlspecialchars($emp->name) . ' <i class="ri ri-external-link-line small opacity-75 ms-1"></i></a>';
 
-                        $targetQtyHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-emp-jobs text-decoration-none" data-emp-id="' . $emp->id . '" data-emp-name="' . htmlspecialchars($emp->name) . '" data-emp-code="' . htmlspecialchars($empCode) . '" data-designation="' . htmlspecialchars($designation) . '" title="Click to view job card summary">' . number_format($targetQty) . ' Pcs <i class="ri-file-list-line small opacity-75 ms-1"></i></a>';
+                        $targetQtyHtml = '<a href="javascript:void(0)" class="fw-bold text-primary view-emp-jobs text-decoration-none" data-emp-id="' . $emp->id . '" data-emp-name="' . htmlspecialchars($emp->name) . '" data-emp-code="' . htmlspecialchars($empCode) . '" data-designation="' . htmlspecialchars($designation) . '" title="Click to view job card summary">' . number_format($targetQty) . ' Pcs <i class="ri ri-file-list-line small opacity-75 ms-1"></i></a>';
 
                         $rows[] = [
                             'emp_id_raw' => $empCode,
@@ -1262,7 +1529,23 @@ class ProductionReportController extends Controller
                             'pending' => '<span class="text-danger fw-semibold">' . number_format($pendingQty) . ' Pcs</span>',
                             'efficiency' => '<span class="badge ' . $effBadge . ' rounded-pill px-3 py-1 fs-6">' . $efficiency . '%</span>',
                             'remark' => htmlspecialchars($remarksStr),
-                            '_search_text' => strtolower($empCode . ' ' . $emp->name . ' ' . $designation . ' ' . $tasksStr . ' ' . $remarksStr . ' ' . $efficiency . '%')
+                            '_search_text' => strtolower(implode(' ', [
+                                $empCode,
+                                $emp->name,
+                                $designation,
+                                $tasksStr,
+                                $remarksStr,
+                                $totalHours,
+                                (fmod($totalHours, 1) !== 0.0 ? number_format($totalHours, 1) : number_format($totalHours, 0)),
+                                $targetQty,
+                                number_format($targetQty),
+                                $completedQty,
+                                number_format($completedQty),
+                                $pendingQty,
+                                number_format($pendingQty),
+                                $efficiency,
+                                $efficiency . '%'
+                            ]))
                         ];
                     }
 
@@ -1279,6 +1562,7 @@ class ProductionReportController extends Controller
                     $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
                     $overallEfficiency = ($summaryTotalTarget > 0) ? round(($summaryTotalCompleted / $summaryTotalTarget) * 100, 1) : 0;
+                    $summaryTotalPending = max(0, $summaryTotalTarget - $summaryTotalCompleted);
 
                     return response()->json([
                         'draw' => $draw,
@@ -1290,8 +1574,16 @@ class ProductionReportController extends Controller
                             'total_hours' => (fmod($summaryTotalHours, 1) !== 0.0 ? number_format($summaryTotalHours, 1) : number_format($summaryTotalHours, 0)) . ' Hrs',
                             'total_target' => number_format($summaryTotalTarget) . ' Pcs',
                             'total_completed' => number_format($summaryTotalCompleted) . ' Pcs',
+                            'total_pending' => number_format($summaryTotalPending) . ' Pcs',
                             'overall_efficiency' => $overallEfficiency . '%',
                             'efficiency_val' => $overallEfficiency
+                        ],
+                        'totals' => [
+                            'hours' => (fmod($summaryTotalHours, 1) !== 0.0 ? number_format($summaryTotalHours, 1) : number_format($summaryTotalHours, 0)),
+                            'target' => number_format($summaryTotalTarget) . ' Pcs',
+                            'completed' => number_format($summaryTotalCompleted) . ' Pcs',
+                            'pending' => number_format($summaryTotalPending) . ' Pcs',
+                            'efficiency' => $overallEfficiency . '%'
                         ]
                     ]);
 
@@ -1392,7 +1684,24 @@ class ProductionReportController extends Controller
                             'efficiency' => '<span class="badge ' . $effBadge . ' rounded-pill">' . $tEfficiency . '%</span>',
                             'status' => '<span class="badge bg-label-' . $statusBadge . ' rounded-pill">' . htmlspecialchars($statusVal) . '</span>',
                             'remarks' => htmlspecialchars($remark),
-                            '_search_text' => strtolower($taskNo . ' ' . $jcNo . ' ' . $serviceName . ' ' . $stageName . ' ' . $statusVal . ' ' . $remark)
+                            '_search_text' => strtolower(implode(' ', [
+                                $taskNo,
+                                $jcNo,
+                                $serviceName,
+                                $stageName,
+                                $statusVal,
+                                $remark,
+                                $tHours,
+                                (fmod($tHours, 1) !== 0.0 ? number_format($tHours, 1) : number_format($tHours, 0)),
+                                $tTarget,
+                                number_format($tTarget),
+                                $tCompleted,
+                                number_format($tCompleted),
+                                $tPending,
+                                number_format($tPending),
+                                $tEfficiency,
+                                $tEfficiency . '%'
+                            ]))
                         ];
                     }
 
@@ -1543,7 +1852,21 @@ class ProductionReportController extends Controller
                             'efficiency' => '<span class="badge ' . $effBadge . ' rounded-pill">' . $eff . '%</span>',
                             'status' => '<span class="badge bg-label-' . $statusBadge . ' rounded-pill">' . htmlspecialchars($statusVal) . '</span>',
                             'remarks' => htmlspecialchars($remarks ?: '-'),
-                            '_search_text' => strtolower($jcNo . ' ' . $unit . ' ' . $tasksList . ' ' . $statusVal . ' ' . $remarks)
+                            '_search_text' => strtolower(implode(' ', [
+                                $jcNo,
+                                $unit,
+                                $tasksList,
+                                $statusVal,
+                                $remarks,
+                                $target,
+                                number_format($target),
+                                $completed,
+                                number_format($completed),
+                                $pending,
+                                number_format($pending),
+                                $eff,
+                                $eff . '%'
+                            ]))
                         ];
                     }
 
@@ -1600,14 +1923,7 @@ class ProductionReportController extends Controller
                     $reportData = $this->getCuttingSectionAverageData($request);
                     $rows = $reportData['rows'];
                     $totalRecords = count($rows);
-                    if ($search !== '') {
-                        $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
-                            return strpos($r['_search_text'], $lowerSearch) !== false;
-                        }));
-                    } else {
-                        $filteredRows = $rows;
-                    }
+                    $filteredRows = $this->filterReportRows($rows, $search);
                     $recordsFiltered = count($filteredRows);
                     $pageData = $isExport ? $filteredRows : array_slice($filteredRows, $start, $length);
 
@@ -1626,14 +1942,7 @@ class ProductionReportController extends Controller
                     $reportData = $this->getFinalFinishingAverageData($request);
                     $rows = $reportData['rows'];
                     $totalRecords = count($rows);
-                    if ($search !== '') {
-                        $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
-                            return strpos($r['_search_text'], $lowerSearch) !== false;
-                        }));
-                    } else {
-                        $filteredRows = $rows;
-                    }
+                    $filteredRows = $this->filterReportRows($rows, $search);
                     $recordsFiltered = count($filteredRows);
                     $pageData = $isExport ? $filteredRows : ($length > 0 ? array_slice($filteredRows, $start, $length) : $filteredRows);
 
@@ -1649,14 +1958,7 @@ class ProductionReportController extends Controller
                     $reportData = $this->getUnitLineAverageData($request);
                     $rows = $reportData['rows'];
                     $totalRecords = count($rows);
-                    if ($search !== '') {
-                        $lowerSearch = strtolower($search);
-                        $filteredRows = array_values(array_filter($rows, function ($r) use ($lowerSearch) {
-                            return strpos($r['_search_text'], $lowerSearch) !== false;
-                        }));
-                    } else {
-                        $filteredRows = $rows;
-                    }
+                    $filteredRows = $this->filterReportRows($rows, $search);
                     $recordsFiltered = count($filteredRows);
                     $pageData = $isExport ? $filteredRows : ($length > 0 ? array_slice($filteredRows, $start, $length) : $filteredRows);
 
@@ -1667,6 +1969,9 @@ class ProductionReportController extends Controller
                         'data' => $pageData,
                         'meta' => $reportData['meta']
                     ]);
+
+                case 'unit-line-drilldown':
+                    return $this->getUnitLineDrilldownData($request);
 
                 case 'production-planning':
                     return $this->getProductionPlanningData($request);
@@ -1703,8 +2008,32 @@ class ProductionReportController extends Controller
             }
         }
 
-        $defaultDailyTarget = 2000;
-        $otDailyTarget = 2250;
+        $cuttingStage = OperationStage::where('operation_stage_name', 'like', '%CUT%')->first();
+        $stageId = $cuttingStage ? $cuttingStage->id : 1;
+
+        if ($unitId) {
+            $targetRecord = \App\Models\OperationStageTarget::where('operation_stage_id', $stageId)->where('service_provider_id', $unitId)->first();
+
+            if ($targetRecord && $targetRecord->target_qty > 0) {
+                $defaultDailyTarget = (float) $targetRecord->target_qty;
+            } elseif ($cuttingStage && $cuttingStage->target > 0) {
+                $defaultDailyTarget = (float) $cuttingStage->target;
+            } else {
+                $defaultDailyTarget = 2000;
+            }
+        } else {
+            $sumTargets = (float) \App\Models\OperationStageTarget::where('operation_stage_id', $stageId)->sum('target_qty');
+
+            if ($sumTargets > 0) {
+                $defaultDailyTarget = $sumTargets;
+            } elseif ($cuttingStage && $cuttingStage->target > 0) {
+                $defaultDailyTarget = (float) $cuttingStage->target;
+            } else {
+                $defaultDailyTarget = 2000;
+            }
+        }
+
+        $otDailyTarget = (int) round($defaultDailyTarget + ($defaultDailyTarget / 8));
 
         if (!$fromDate || !$toDate) {
             $latestDate = Task::where(function ($q) {
@@ -1956,16 +2285,22 @@ class ProductionReportController extends Controller
             $row['cutting_bundleing_qty'] = $formatNum($bundleingQty);
             $row['fusing_qty'] = $formatNum($fusingQty);
             $row['logo_qty'] = $formatNum($logoQty);
+            if ($bundleingQty > 0) { $searchTextParts[] = (string) $bundleingQty . ' ' . number_format($bundleingQty); }
+            if ($fusingQty > 0) { $searchTextParts[] = (string) $fusingQty . ' ' . number_format($fusingQty); }
+            if ($logoQty > 0) { $searchTextParts[] = (string) $logoQty . ' ' . number_format($logoQty); }
+            $searchTextParts[] = (string) $masterTotal . ' ' . number_format($masterTotal);
+            $searchTextParts[] = (string) $issueTotal . ' ' . number_format($issueTotal);
+            $searchTextParts[] = (string) $targetPerDay . ' ' . number_format($targetPerDay);
+            $searchTextParts[] = (string) $efficiencyVal . '%';
 
             foreach ($cuttingPlants as $plant) {
                 $pv = $plantQuantities[$plant->id];
                 $row['plant_' . $plant->id] = $formatNum($pv);
                 if ($pv > 0)
-                    $searchTextParts[] = (string) $pv . ' ' . ($plant->code ?: $plant->name);
+                    $searchTextParts[] = (string) $pv . ' ' . number_format($pv) . ' ' . ($plant->code ?: $plant->name);
             }
             $row['issue_total'] = '<strong class="text-dark">' . $formatNum($issueTotal) . '</strong>';
             $row['issue_total_clean'] = $formatNum($issueTotal);
-            $searchTextParts[] = (string) $issueTotal;
 
             $row['efficiency'] = '<span class="' . $effClass . '">' . ($efficiencyVal > 0 ? $efficiencyVal . '%' : '-') . '</span>';
             $row['efficiency_clean'] = $efficiencyVal > 0 ? $efficiencyVal . '%' : '-';
@@ -2146,9 +2481,7 @@ class ProductionReportController extends Controller
 
         $otDailyTarget = (int) round($defaultDailyTarget + ($defaultDailyTarget / 8));
 
-        $assignQuery = TaskAssignEmployee::whereBetween('issue_date', [$calcFromDate, $calcToDate])
-            ->whereNull('deleted_at')
-            ->with(['service', 'task.jobCard.serviceProvider']);
+        $assignQuery = TaskAssignEmployee::whereBetween('issue_date', [$calcFromDate, $calcToDate])->whereNull('deleted_at')->with(['service', 'task.jobCard.serviceProvider']);
 
         if ($unitId) {
             $assignQuery->whereHas('task.jobCard', function ($jq) use ($unitId) {
@@ -2269,7 +2602,24 @@ class ProductionReportController extends Controller
                 'efficiency_val' => $effPercent,
                 'target_per_day' => number_format($targetPerDay, 0),
                 'count' => $displayCount !== '' ? $displayCount : '-',
-                '_search_text' => strtolower($dFormatted . ' ' . $trimmingQty . ' ' . $checkingQty . ' ' . $ironingQty . ' ' . $despatchQty . ' ' . $deliveryQty)
+                '_search_text' => strtolower(implode(' ', [
+                    $dFormatted,
+                    $trimmingQty,
+                    number_format($trimmingQty, 0),
+                    $checkingQty,
+                    number_format($checkingQty, 0),
+                    $ironingQty,
+                    number_format($ironingQty, 0),
+                    $despatchQty,
+                    number_format($despatchQty, 0),
+                    $deliveryQty,
+                    number_format($deliveryQty, 0),
+                    $effPercent,
+                    $effPercent . '%',
+                    $targetPerDay,
+                    number_format($targetPerDay, 0),
+                    $displayCount
+                ]))
             ];
         }
 
@@ -2548,6 +2898,7 @@ class ProductionReportController extends Controller
 
             $rows[] = [
                 'date' => $dFormatted,
+                'raw_date' => $dateStr,
                 'n_patti' => $colQuantities['n_patti'] > 0 ? number_format($colQuantities['n_patti'], 0) : '-',
                 'back_shoulder' => $colQuantities['back_shoulder'] > 0 ? number_format($colQuantities['back_shoulder'], 0) : '-',
                 'sleeve' => $colQuantities['sleeve'] > 0 ? number_format($colQuantities['sleeve'], 0) : '-',
@@ -2562,7 +2913,11 @@ class ProductionReportController extends Controller
                 'efficiency' => $effPercent . '%',
                 'efficiency_val' => $effPercent,
                 'ot' => $otText,
-                '_search_text' => strtolower($dFormatted . ' ' . implode(' ', $colQuantities) . ' ' . $deliveryQty . ' ' . $otText)
+                '_search_text' => strtolower(implode(' ', array_merge(
+                    [$dFormatted, $deliveryQty, number_format($deliveryQty, 0), $effPercent, $effPercent . '%', $otText],
+                    array_values($colQuantities),
+                    array_map(fn($v) => number_format($v, 0), array_values($colQuantities))
+                )))
             ];
         }
 
@@ -2636,6 +2991,181 @@ class ProductionReportController extends Controller
             'avgRow' => $avgRow,
             'meta' => $meta
         ];
+    }
+
+    public function getUnitLineDrilldownData(Request $request)
+    {
+        $dateStr = $this->parseReportDate($request->date);
+        if (!$dateStr) {
+            $dateStr = $request->date;
+        }
+        $op = strtolower(trim($request->op ?? ''));
+        $unitId = $request->unit_id;
+        $brandId = $request->brand_id;
+
+        $unitObj = $unitId ? ServiceProvider::find($unitId) : null;
+        $unitName = $unitObj ? $unitObj->name : 'All Units';
+        $displayDate = $dateStr ? Carbon::parse($dateStr)->format('d-m-Y') : '';
+
+        // If op is ho_deliver
+        if ($op === 'ho_deliver') {
+            $query = DB::table('production_receipts')
+                ->join('production_receipt_items', 'production_receipts.id', '=', 'production_receipt_items.production_receipt_id')
+                ->join('job_card_entries', 'production_receipts.job_card_id', '=', 'job_card_entries.id')
+                ->leftJoin('service_providers', 'job_card_entries.service_provider_id', '=', 'service_providers.id')
+                ->leftJoin('users', 'production_receipts.employee_id', '=', 'users.id')
+                ->where('production_receipts.receipt_date', $dateStr)
+                ->select([
+                    'production_receipts.receipt_no',
+                    'production_receipts.receipt_date',
+                    'job_card_entries.job_card_no',
+                    'production_receipt_items.completed_qty',
+                    'users.name as employee_name',
+                    'service_providers.name as unit_name'
+                ]);
+
+            if ($unitId) {
+                $query->where('job_card_entries.service_provider_id', $unitId);
+            }
+            if ($brandId) {
+                $query->where('job_card_entries.brand_id', $brandId);
+            }
+
+            $items = $query->get();
+            $totalQty = $items->sum('completed_qty');
+
+            $rows = [];
+            foreach ($items as $idx => $it) {
+                $rows[] = [
+                    'sno' => $idx + 1,
+                    'job_card_no' => $it->job_card_no ?: '-',
+                    'task_no' => $it->receipt_no ?: '-',
+                    'service_code' => 'H.O DELIVER',
+                    'service_name' => 'HEAD OFFICE RECEIPT',
+                    'employee_name' => $it->employee_name ?: '-',
+                    'issue_qty' => number_format((float)$it->completed_qty, 0),
+                    'completed_qty' => number_format((float)$it->completed_qty, 0),
+                    'status' => 'DELIVERED'
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'title' => 'H.O DELIVER Breakdown',
+                'date' => $displayDate,
+                'unit_name' => $unitName,
+                'op' => 'H.O DELIVER',
+                'summary' => [
+                    'total_qty' => number_format($totalQty, 0),
+                    'total_tasks' => count($rows),
+                    'total_employees' => $items->pluck('employee_name')->unique()->filter(fn($n) => $n && $n !== '-')->count()
+                ],
+                'rows' => $rows
+            ]);
+        }
+
+        // For line operations from task_assign_employees
+        $query = TaskAssignEmployee::whereDate('issue_date', $dateStr)
+            ->whereNull('deleted_at')
+            ->with(['service', 'employee', 'assignee', 'task.jobCard.serviceProvider']);
+
+        if ($unitId) {
+            $query->whereHas('task.jobCard', function ($jq) use ($unitId) {
+                $jq->where('service_provider_id', $unitId);
+            });
+        }
+        if ($brandId) {
+            $query->whereHas('task.jobCard', function ($jq) use ($brandId) {
+                $jq->where('brand_id', $brandId);
+            });
+        }
+
+        $allAssigns = $query->get();
+
+        $matchingAssigns = $allAssigns->filter(function ($as) use ($op) {
+            $sName = strtoupper($as->service ? $as->service->service_name : '');
+            $sCode = strtoupper($as->service ? $as->service->service_code : '');
+
+            switch ($op) {
+                case 'n_patti':
+                    return str_contains($sName, 'N.PATTI') || str_contains($sCode, 'N.PATTI') || str_contains($sName, 'BUTTON PATTI');
+                case 'back_shoulder':
+                    return str_contains($sName, 'BACK & SHOULDER') || str_contains($sCode, 'BACK & SHOULDER') || (str_contains($sName, 'SHOULDER') && !str_contains($sName, 'SLEEVE'));
+                case 'sleeve':
+                    return (str_contains($sName, 'SLEEVE') || str_contains($sCode, 'SLEEVE')) && !str_contains($sName, 'SIDE ATTACH');
+                case 'collar':
+                    return str_contains($sName, 'COLLAR') || str_contains($sCode, 'COLLAR');
+                case 'cuff':
+                    return str_contains($sName, 'CUFF') || str_contains($sCode, 'CUFF');
+                case 'assemble':
+                    return str_contains($sName, 'ASSAMBLE') || str_contains($sName, 'ASSEMBLE') || str_contains($sName, 'FRONT ATTACH') || str_contains($sName, 'SIDE ATTACH');
+                case 'kaja':
+                    return str_contains($sName, 'KAJA') || str_contains($sCode, 'KAJA');
+                case 'button':
+                    return str_contains($sName, 'BUTTON') || str_contains($sCode, 'BUTTON');
+                case 'trimming':
+                    return str_contains($sName, 'TRIM') || str_contains($sCode, 'TRIM');
+                case 'checking':
+                    return str_contains($sName, 'CHECK') || str_contains($sCode, 'CHECK');
+                default:
+                    return true;
+            }
+        });
+
+        $opTitles = [
+            'n_patti' => 'N.PATTI',
+            'back_shoulder' => 'BACK SHOULDER',
+            'sleeve' => 'SLEEVE',
+            'collar' => 'COLLAR',
+            'cuff' => 'CUFF',
+            'assemble' => 'ASSEMBLE',
+            'kaja' => 'KAJA',
+            'button' => 'BUTTON',
+            'trimming' => 'TRIMMING',
+            'checking' => 'CHECKING',
+        ];
+        $opTitle = $opTitles[$op] ?? strtoupper(str_replace('_', ' ', $op));
+
+        $rows = [];
+        $totalCompleted = 0;
+        $idx = 0;
+        foreach ($matchingAssigns as $as) {
+            $idx++;
+            $effQty = (float)($as->completed_qty > 0 ? $as->completed_qty : $as->issue_qty);
+            $totalCompleted += $effQty;
+
+            $empName = $as->employee ? $as->employee->name : ($as->assignee ? $as->assignee->name : '-');
+
+            $rows[] = [
+                'sno' => $idx,
+                'job_card_no' => $as->task && $as->task->jobCard ? $as->task->jobCard->job_card_no : '-',
+                'task_no' => $as->task ? $as->task->task_no : '-',
+                'service_code' => $as->service ? ($as->service->service_code ?: '-') : '-',
+                'service_name' => $as->service ? $as->service->service_name : '-',
+                'employee_name' => $empName,
+                'issue_qty' => number_format((float)$as->issue_qty, 0),
+                'completed_qty' => number_format((float)$effQty, 0),
+                'status' => $as->task ? strtoupper($as->task->status ?? 'ACTIVE') : 'ACTIVE'
+            ];
+        }
+
+        $uniqueEmployees = $matchingAssigns->map(function ($as) {
+            return $as->employee ? $as->employee->name : ($as->assignee ? $as->assignee->name : null);
+        })->filter()->unique()->count();
+
+        return response()->json([
+            'success' => true,
+            'title' => $opTitle . ' Breakdown',
+            'date' => $displayDate,
+            'unit_name' => $unitName,
+            'op' => $opTitle,
+            'summary' => [
+                'total_qty' => number_format($totalCompleted, 0),
+                'total_tasks' => count($rows),
+                'total_employees' => $uniqueEmployees
+            ],
+            'rows' => $rows
+        ]);
     }
 
     public function exportCuttingSectionAverageExcel(Request $request)
@@ -2782,12 +3312,18 @@ class ProductionReportController extends Controller
             $jcQuery->where(function ($q) use ($search) {
                 $q->where('job_card_no', 'like', "%{$search}%")
                   ->orWhere('reference_no', 'like', "%{$search}%")
+                  ->orWhere('grand_total_qty', 'like', "%{$search}%")
+                  ->orWhere('total_qty_fs', 'like', "%{$search}%")
+                  ->orWhere('total_qty_hs', 'like', "%{$search}%")
+                  ->orWhere('job_card_date', 'like', "%{$search}%")
+                  ->orWhere('delivery_date', 'like', "%{$search}%")
                   ->orWhereHas('brand', function ($bq) use ($search) {
                       $bq->where('brand_name', 'like', "%{$search}%")
                          ->orWhere('code', 'like', "%{$search}%");
                   })
                   ->orWhereHas('fabricDetails', function ($fq) use ($search) {
-                      $fq->where('art_no', 'like', "%{$search}%");
+                      $fq->where('art_no', 'like', "%{$search}%")
+                         ->orWhere('mtr', 'like', "%{$search}%");
                   });
             });
         }
@@ -3003,7 +3539,25 @@ class ProductionReportController extends Controller
                 'cutting_sent_date' => $cuttingSentDate,
                 'days_taken' => $daysTaken,
                 'store_stock' => $stStock > 0 ? number_format($stStock, 0) : '-',
-                '_search_text' => strtolower($cutNo . ' ' . $styleDisplay . ' ' . $brandCode . ' ' . $dateStr)
+                '_search_text' => strtolower(implode(' ', [
+                    $cutNo,
+                    $styleDisplay,
+                    $brandCode,
+                    $dateStr,
+                    $totalMtrs,
+                    number_format($totalMtrs, 1),
+                    $fsQty,
+                    number_format($fsQty),
+                    $hsQty,
+                    number_format($hsQty),
+                    $totalCuttingQty,
+                    number_format($totalCuttingQty),
+                    $deliveryDate,
+                    $daysInWip,
+                    $cuttingSentDate,
+                    $daysTaken,
+                    $stStock
+                ]))
             ]);
 
             $rows[] = $row;
@@ -3164,15 +3718,28 @@ class ProductionReportController extends Controller
                 'completed_qty' => number_format($finishQty, 0),
                 'pending_qty' => number_format($pendingQty, 0),
                 'remarks' => htmlspecialchars($a->remarks ?: '-'),
-                '_search_text' => strtolower($empName . ' ' . $workName . ' ' . $cutNo . ' ' . ($a->remarks ?: ''))
+                '_search_text' => strtolower(implode(' ', [
+                    $empName,
+                    $workName,
+                    $cutNo,
+                    ($a->remarks ?: ''),
+                    $hrs,
+                    number_format($hrs, 1),
+                    $planQty,
+                    number_format($planQty, 0),
+                    $issueQty,
+                    number_format($issueQty, 0),
+                    $finishQty,
+                    number_format($finishQty, 0),
+                    $pendingQty,
+                    number_format($pendingQty, 0)
+                ]))
             ];
         }
 
         $recordsTotal = count($rows);
         if (!empty($search)) {
-            $rows = array_values(array_filter($rows, function ($r) use ($search) {
-                return strpos($r['_search_text'] ?? '', strtolower($search)) !== false;
-            }));
+            $rows = $this->filterReportRows($rows, $search);
             // Re-number s_no
             foreach ($rows as $idx => &$rowRef) {
                 $rowRef['s_no'] = $idx + 1;
@@ -3204,5 +3771,29 @@ class ProductionReportController extends Controller
                 'to_date' => date('d-m-Y', strtotime($toDate)),
             ]
         ]);
+    }
+
+    private function filterReportRows(array $rows, string $search): array
+    {
+        if (trim($search) === '') {
+            return $rows;
+        }
+
+        $lowerSearch = strtolower(trim($search));
+        $cleanSearch = str_replace([',', ' ', '%'], '', $lowerSearch);
+
+        return array_values(array_filter($rows, function ($r) use ($lowerSearch, $cleanSearch) {
+            $st = $r['_search_text'] ?? '';
+            if (strpos($st, $lowerSearch) !== false) {
+                return true;
+            }
+            if ($cleanSearch !== '') {
+                $stClean = str_replace([',', ' ', '%'], '', $st);
+                if (strpos($stClean, $cleanSearch) !== false) {
+                    return true;
+                }
+            }
+            return false;
+        }));
     }
 }

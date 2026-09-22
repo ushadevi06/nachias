@@ -10,6 +10,14 @@
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot>
+            <tr class="fw-bold" style="background: #f1f5f9;">
+                <td colspan="2" class="text-end">TOTAL</td>
+                <td id="footer-cost-qty" class="text-center">0.00</td>
+                <td id="footer-cost-amount" class="text-end text-primary">₹ 0.00</td>
+                <td id="footer-cost-avg" class="text-end text-success fw-bold">₹ 0.00</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
@@ -48,6 +56,14 @@
                 { data: 'total_amount', className: 'text-end' },
                 { data: 'average_cost', className: 'text-end text-primary fw-bold' }
             ],
+            drawCallback: function(settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    $('#footer-cost-qty').text(json.totals.total_qty || '0.00');
+                    $('#footer-cost-amount').text(json.totals.total_amount || '₹ 0.00');
+                    $('#footer-cost-avg').text(json.totals.average_cost || '₹ 0.00');
+                }
+            },
             language: {
                 emptyTable: 'No data available in table'
             }
