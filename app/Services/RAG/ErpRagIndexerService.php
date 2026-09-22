@@ -11,19 +11,22 @@ class ErpRagIndexerService
     protected CodeRouteMenuExtractor $menuExtractor;
     protected DocxDocumentationExtractor $docxExtractor;
     protected SqlSchemaExtractor $sqlExtractor;
+    protected FormDataLineageExtractor $fieldLineageExtractor;
 
     public function __construct(
         CodeRouteMenuExtractor $menuExtractor,
         DocxDocumentationExtractor $docxExtractor,
-        SqlSchemaExtractor $sqlExtractor
+        SqlSchemaExtractor $sqlExtractor,
+        FormDataLineageExtractor $fieldLineageExtractor
     ) {
         $this->menuExtractor = $menuExtractor;
         $this->docxExtractor = $docxExtractor;
         $this->sqlExtractor = $sqlExtractor;
+        $this->fieldLineageExtractor = $fieldLineageExtractor;
     }
 
     /**
-     * Run full indexing of all 3 RAG sources.
+     * Run full indexing of all RAG sources.
      *
      * @param bool $fresh Whether to truncate the knowledge base first
      * @return array Summary of indexing results
@@ -44,6 +47,7 @@ class ErpRagIndexerService
             'menus_and_routes' => 0,
             'documentation' => 0,
             'sql_tables' => 0,
+            'field_data_sources' => 0,
             'total_indexed' => 0,
         ];
 
@@ -62,7 +66,12 @@ class ErpRagIndexerService
         $this->batchInsert($sqlChunks);
         $stats['sql_tables'] = count($sqlChunks);
 
-        $stats['total_indexed'] = $stats['menus_and_routes'] + $stats['documentation'] + $stats['sql_tables'];
+        // 4. Index Form Field & Select Box Data Lineages
+        $fieldChunks = $this->fieldLineageExtractor->extract();
+        $this->batchInsert($fieldChunks);
+        $stats['field_data_sources'] = count($fieldChunks);
+
+        $stats['total_indexed'] = $stats['menus_and_routes'] + $stats['documentation'] + $stats['sql_tables'] + $stats['field_data_sources'];
 
         Log::info('ERP RAG indexing completed successfully', $stats);
 

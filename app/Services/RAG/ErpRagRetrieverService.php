@@ -61,6 +61,14 @@ class ErpRagRetrieverService
     {
         $q = strtolower($query);
 
+        // 1. Form field and select box data lineage intent (MUST be checked first!)
+        if (
+            preg_match('/\b(where does.*data come from|data comes from where|where.*comes from|comes from where|come from where|options show|where do.*options.*come|where.*options.*come from|dropdown.*where|select box.*where|where.*select box.*get|where to add.*options|source of.*dropdown|source of.*select|data source|options come from|data source of)\b/i', $q) ||
+            ((str_contains($q, 'select box') || str_contains($q, 'dropdown') || str_contains($q, 'select') || str_contains($q, 'options')) && (str_contains($q, 'where') || str_contains($q, 'from') || str_contains($q, 'source')))
+        ) {
+            return 'field_data_source';
+        }
+
         if (preg_match('/\b(table|database|schema|column|columns|datatype|primary key|foreign key|stored in|store in|sql)\b/i', $q)) {
             return 'schema';
         }
@@ -163,6 +171,19 @@ class ErpRagRetrieverService
             }
         }
 
+        // 4. Form field data source search
+        if ($intent === 'field_data_source' && !empty($tokens)) {
+            $fieldQuery = ErpRagKnowledgeChunk::where('source_type', 'field_data_source');
+            $fieldQuery->where(function ($q) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $q->orWhere('title', 'LIKE', "%{$token}%")
+                      ->orWhere('keywords', 'LIKE', "%{$token}%")
+                      ->orWhere('screen', 'LIKE', "%{$token}%");
+                }
+            });
+            $candidates = $candidates->merge($fieldQuery->limit(25)->get());
+        }
+
         return $candidates->unique('id');
     }
 
@@ -241,7 +262,31 @@ class ErpRagRetrieverService
             }
 
             // Intent-specific boosting
-            if ($intent === 'navigation') {
+            if ($intent === 'field_data_source') {
+                if ($chunk->source_type === 'field_data_source') {
+                    $score += 350; // Overwhelming priority for field data source chunks!
+
+                    // Check exact match on field label and field name from chunk meta
+                    $meta = is_array($chunk->meta) ? $chunk->meta : (json_decode($chunk->meta ?? '{}', true) ?: []);
+                    $fieldLabel = strtolower($meta['field_label'] ?? '');
+                    $fieldName = strtolower($meta['field_name'] ?? '');
+
+                    if ($fieldLabel !== '' && str_contains($lowerQuery, $fieldLabel)) {
+                        $score += 250; // Huge bonus for exact field label match (e.g. "order type", "style", "customer")
+                    }
+                    if ($fieldName !== '' && str_contains($lowerQuery, $fieldName)) {
+                        $score += 200;
+                    }
+
+                    foreach ($tokens as $tok) {
+                        if (str_contains($titleLower, $tok)) {
+                            $score += 90;
+                        }
+                    }
+                } elseif ($chunk->source_type === 'menu') {
+                    $score += 80;
+                }
+            } elseif ($intent === 'navigation') {
                 if ($chunk->source_type === 'menu') {
                     $score += 180; // Top priority for navigation queries!
                 } elseif ($chunk->source_type === 'route') {
@@ -313,6 +358,44 @@ class ErpRagRetrieverService
         $selected = collect();
         $seenTitles = [];
         $seenUrls = [];
+
+        // If field_data_source intent, ensure the top field_data_source chunk is included first, followed by source Master Menu chunk!
+        if ($intent === 'field_data_source') {
+            $topFieldChunk = $scored->firstWhere('source_type', 'field_data_source');
+            if ($topFieldChunk) {
+                $selected->push($topFieldChunk);
+                $seenTitles[$topFieldChunk->title] = true;
+                if ($topFieldChunk->url) {
+                    $seenUrls[$topFieldChunk->url] = true;
+                }
+
+                // If chunk has a source_url or source_page in meta, find that Master Menu chunk!
+                $meta = is_array($topFieldChunk->meta) ? $topFieldChunk->meta : (json_decode($topFieldChunk->meta ?? '{}', true) ?: []);
+                $sourceUrl = $meta['source_url'] ?? null;
+                $sourcePage = strtolower($meta['source_page'] ?? '');
+
+                $matchingMenu = $scored->first(function ($c) use ($sourceUrl, $sourcePage) {
+                    if ($c->source_type !== 'menu') return false;
+                    if ($sourceUrl && $c->url === $sourceUrl) return true;
+                    if ($sourcePage && strtolower($c->screen ?? '') === $sourcePage) return true;
+                    return false;
+                });
+
+                if (!$matchingMenu && $sourceUrl) {
+                    $matchingMenu = ErpRagKnowledgeChunk::where('source_type', 'menu')
+                        ->where('url', $sourceUrl)
+                        ->first();
+                }
+
+                if ($matchingMenu && !isset($seenTitles[$matchingMenu->title])) {
+                    $selected->push($matchingMenu);
+                    $seenTitles[$matchingMenu->title] = true;
+                    if ($matchingMenu->url) {
+                        $seenUrls[$matchingMenu->url] = true;
+                    }
+                }
+            }
+        }
 
         // If schema intent, ensure the highest-scoring sql_schema chunk is included first
         if ($intent === 'schema') {

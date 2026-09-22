@@ -16,9 +16,19 @@ class CodeRouteMenuExtractor
         $topbarPath = resource_path('views/layouts/topbar.blade.php');
         $chunks = [];
 
+        // Collect registered route URIs to dynamically resolve /add endpoints across all ERP screens
+        $registeredRouteUris = [];
+        try {
+            foreach (Route::getRoutes() as $route) {
+                $registeredRouteUris['/' . ltrim($route->uri(), '/')] = true;
+            }
+        } catch (\Throwable $e) {
+            // Fallback if routes fail to load
+        }
+
         if (file_exists($topbarPath)) {
             $content = file_get_contents($topbarPath);
-            $menuChunks = $this->parseTopbarMenu($content);
+            $menuChunks = $this->parseTopbarMenu($content, $registeredRouteUris);
             $chunks = array_merge($chunks, $menuChunks);
         }
 
@@ -29,9 +39,56 @@ class CodeRouteMenuExtractor
     }
 
     /**
+     * Resolve the Add / Create route for a given menu screen path.
+     */
+    public function resolveAddUrl(string $path, array $registeredRouteUris = []): ?string
+    {
+        $clean = '/' . ltrim($path, '/');
+
+        // Explicit known overrides
+        $explicit = [
+            '/stock_consumables_returns' => '/add_stock_consumables_return',
+            '/monthly_payroll' => '/add_monthly_payroll',
+            '/leave' => '/add_leave',
+            '/payroll_reports' => '/add_payroll_report',
+            '/ticket_management' => '/ticket_management/add',
+        ];
+
+        if (isset($explicit[$clean])) {
+            return $explicit[$clean];
+        }
+
+        // Standard candidates
+        $candidates = [
+            $clean . '/add',
+            $clean . '/add/{id?}',
+            $clean . '/add/{id}',
+            $clean . '/create',
+            '/add' . $clean,
+            '/add_' . ltrim($clean, '/'),
+        ];
+
+        // Singular candidate (e.g. /warehouses -> /warehouse/add)
+        if (str_ends_with($clean, 's')) {
+            $singular = rtrim($clean, 's');
+            $candidates[] = $singular . '/add';
+            $candidates[] = $singular . '/add/{id?}';
+            $candidates[] = '/add_' . ltrim($singular, '/');
+        }
+
+        foreach ($candidates as $cand) {
+            if (isset($registeredRouteUris[$cand])) {
+                return str_replace(['/{id?}', '/{id}'], '', $cand);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Parse topbar.blade.php menu items with accurate hierarchical breadcrumbs and deduplication.
      */
-    protected function parseTopbarMenu(string $html): array
+    protected function parseTopbarMenu(string $html, array $registeredRouteUris = []): array
     {
         $chunks = [];
         $lines = explode("\n", $html);
@@ -40,10 +97,14 @@ class CodeRouteMenuExtractor
         $currentSub = null;
 
         $topMenuNames = [
-            'Master', 'Logistics Master', 'Tailoring Specification', 'Production Master',
-            'Warehouse Master', 'Parties', 'Item Setup', 'Employees', 'Purchase', 'Store',
-            'Production', 'Sales', 'Emp. Payroll & Attendance', 'System Utility',
-            'Reports', 'Purchase Reports'
+            'Master', 'Employees', 'Purchase', 'Store',
+            'Production', 'Sales', 'Billing', 'Manage Payments',
+            'Emp. Payroll & Attendance', 'System Utility', 'Reports'
+        ];
+
+        $subGroupNames = [
+            'Logistics Master', 'Tailoring Specification', 'Production Master',
+            'Warehouse Master', 'Parties', 'Item Setup', 'Purchase Reports'
         ];
 
         $seenUrls = [];
@@ -52,12 +113,14 @@ class CodeRouteMenuExtractor
         for ($i = 0; $i < $totalLines; $i++) {
             $line = $lines[$i];
 
-            // 1. Detect comment headers (e.g. <!-- Employees -->, <!-- Master -->)
-            if (preg_match('/<!--\s*([A-Za-z0-9\s&.,\/-]+)\s*-->/', $line, $cm)) {
+            // 1. Detect comment headers (e.g. <!-- Employees -->, <!-- Master -->, {{-- Production --}})
+            if (preg_match('/(?:<!--|{{\s*--)\s*([A-Za-z0-9\s&.,\/-]+)\s*(?:-->|--\s*}})/', $line, $cm)) {
                 $comment = trim($cm[1]);
                 if (in_array($comment, $topMenuNames, true)) {
                     $currentTop = $comment;
                     $currentSub = null;
+                } elseif (in_array($comment, $subGroupNames, true)) {
+                    $currentSub = $comment;
                 }
             }
 
@@ -127,10 +190,15 @@ class CodeRouteMenuExtractor
 
                 $module = $this->determineModule($top, $label, $path);
 
+                // Dynamically resolve addUrl for this screen
+                $addUrl = $this->resolveAddUrl($path, $registeredRouteUris);
+
                 // Build rich search keywords including aliases, synonyms, and Add action terms
                 $slug = str_replace(['-', '_', '/'], ' ', $path);
+                $cleanLabel = trim(preg_replace('/\s*\([^)]*\)/', '', $label));
                 $keywords = [
                     $label,
+                    $cleanLabel,
                     str_replace(['(', ')'], '', $label),
                     $slug,
                     $path,
@@ -144,45 +212,73 @@ class CodeRouteMenuExtractor
                 ];
 
                 // Screen-specific synonyms & CRUD Add mappings
-                $addUrl = null;
+                if ($addUrl) {
+                    $keywords[] = "add {$label}";
+                    $keywords[] = "new {$label}";
+                    $keywords[] = "create {$label}";
+                    $keywords[] = "how to add {$label}";
+                    $keywords[] = "how to create {$label}";
+                    $keywords[] = "add new {$label}";
+                    $keywords[] = $addUrl;
+
+                    if ($cleanLabel !== $label) {
+                        $keywords[] = "add {$cleanLabel}";
+                        $keywords[] = "new {$cleanLabel}";
+                        $keywords[] = "create {$cleanLabel}";
+                        $keywords[] = "how to add {$cleanLabel}";
+                    }
+
+                    // Singular variations (e.g. "Credit Notes" -> "add credit note", "Purchase Orders" -> "add purchase order")
+                    if (str_ends_with(strtolower($cleanLabel), 's')) {
+                        $singular = rtrim($cleanLabel, 'sS');
+                        $keywords[] = "add {$singular}";
+                        $keywords[] = "new {$singular}";
+                        $keywords[] = "create {$singular}";
+                        $keywords[] = "how to add {$singular}";
+                        $keywords[] = "how to add a {$singular}";
+                        $keywords[] = "how to create {$singular}";
+                        $keywords[] = "how to create a {$singular}";
+                        $keywords[] = "add new {$singular}";
+                        $keywords[] = strtolower($singular);
+                    }
+                }
+
+                // Custom extra aliases for common screens
                 if ($path === '/employees') {
-                    $addUrl = '/employees/add';
                     $keywords = array_merge($keywords, [
-                        'add employee', 'new employee', 'create employee', 'add new employee',
                         'employee registration', 'employee creation', 'staff add', '/employees/add'
                     ]);
-                } elseif ($path === '/roles') {
-                    $addUrl = '/roles/add';
-                    $keywords = array_merge($keywords, ['add role', 'new role', 'create role', '/roles/add']);
                 } elseif ($path === '/core-material-settings') {
-                    $addUrl = '/core-material-settings/add';
                     $keywords = array_merge($keywords, ['core material settings', 'core planner', 'core material planner settings']);
                 } elseif ($path === '/logs') {
                     $keywords = array_merge($keywords, ['audit logs', 'system logs', 'activity log', 'user logs']);
                 } elseif ($path === '/job_card_entries') {
-                    $addUrl = '/job_card_entries/add';
-                    $keywords = array_merge($keywords, ['add job card', 'new job card', 'create job card', 'jc']);
+                    $keywords = array_merge($keywords, ['jc', 'add jc', 'new jc', 'create jc']);
                 } elseif ($path === '/purchase_orders') {
-                    $addUrl = '/purchase_orders/add';
-                    $keywords = array_merge($keywords, ['create po', 'add purchase order', 'new po', 'new purchase order']);
+                    $keywords = array_merge($keywords, ['create po', 'add po', 'new po']);
                 } elseif ($path === '/sales_orders') {
-                    $addUrl = '/sales_orders/add';
-                    $keywords = array_merge($keywords, ['create so', 'add sales order', 'new so', 'new sales order']);
+                    $keywords = array_merge($keywords, ['create so', 'add so', 'new so']);
                 }
 
                 $keywordStr = strtolower(implode(', ', array_unique(array_filter($keywords))));
 
+                $navSteps = "In the top navigation bar, click **{$top}** main menu"
+                          . ($currentSub && $currentSub !== $label ? " -> **{$currentSub}**" : "")
+                          . " -> navigate to **{$label}** (Official Menu Path: `{$fullBreadcrumb}` | URL: `{$path}`)";
+
                 $content = "### Navigation Target: {$label}\n"
                          . "- **Module**: {$module}\n"
+                         . "- **Main Menu**: {$top}\n"
+                         . ($currentSub && $currentSub !== $label ? "- **Sub Menu**: {$currentSub}\n" : "")
                          . "- **Official Menu Path**: {$fullBreadcrumb}\n"
                          . "- **Direct URL**: `{$path}`\n"
-                         . "- **Description**: Official Nachias ERP screen for `{$label}` located in `{$fullBreadcrumb}`.\n"
-                         . "- **How to access**: In the top navigation bar, click **{$top}**"
-                         . ($currentSub && $currentSub !== $label ? " → **{$currentSub}**" : "")
-                         . " → **{$label}**, or open `{$path}` directly.";
+                         . "- **Detailed Menu Navigation Path**: {$navSteps}.\n"
+                         . "- **Description**: Official Nachias ERP screen for `{$label}` located under `{$fullBreadcrumb}`.";
 
                 if ($addUrl) {
-                    $content .= "\n- **To Add New Record**: On the `{$label}` page, click the **Add** button in the top right, or navigate directly to `{$addUrl}`.";
+                    $content .= "\n- **To Add New Record**: In the top navigation bar, click **{$top}** main menu"
+                             . ($currentSub && $currentSub !== $label ? " -> **{$currentSub}**" : "")
+                             . " -> navigate to **{$label}** (`{$fullBreadcrumb}` | URL: `{$path}`), then click the **Add** button located at the top right of the page, or navigate directly to `{$addUrl}`.";
                 }
 
                 $chunks[] = [
@@ -205,7 +301,6 @@ class CodeRouteMenuExtractor
                 ];
             }
         }
-
         // Add main Dashboard and AI Assistant
         $chunks[] = [
             'source_type' => 'menu',
