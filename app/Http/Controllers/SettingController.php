@@ -34,7 +34,7 @@ class SettingController extends Controller
             'company_name' => 'required|string|min:3|max:100',
             'email' => 'required|string|max:128', 
             'logo' => 'nullable|image|mimes:jpeg,jpg,png,gif,svg|max:1024',
-            'ip_address' => 'required|url',    
+            'ip_address' => 'required|string|max:255',    
             'phone_number' => 'required|string|max:15|regex:/^[0-9+\-\s()]+$/',
             'toll_free_no' => 'nullable|string|max:500',
             'state_id' => 'required|exists:states,id',

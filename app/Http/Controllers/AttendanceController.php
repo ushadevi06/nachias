@@ -9,6 +9,21 @@ class AttendanceController extends Controller
 {
     public function getLogs($date, $device, $toDate = null)
     {
+        $setting = \App\Models\Setting::first();
+        $rawUrl = $setting ? trim($setting->ip_address ?? '') : '';
+
+        if (!empty($rawUrl)) {
+            $apiUrl = $rawUrl;
+            if (!preg_match('/^https?:\/\//i', $apiUrl)) {
+                $apiUrl = 'http://' . $apiUrl;
+            }
+            if (stripos($apiUrl, '.asmx') === false) {
+                $apiUrl = rtrim($apiUrl, '/') . '/iclock/webAPIservice.asmx';
+            }
+        } else {
+            $apiUrl = 'http://106.51.22.181:85/iclock/webAPIservice.asmx';
+        }
+
         $from = date('Y-m-d 00:00:00', strtotime($date));
         $to   = date('Y-m-d 23:59:59', strtotime($toDate ?: $date));
         $xml = '<?xml version="1.0" encoding="utf-8"?>
@@ -37,10 +52,9 @@ class AttendanceController extends Controller
             'SOAPAction' => '"http://tempuri.org/GetTransactionsLog"',
         ])
         ->withBody($xml, 'text/xml;')
-        ->post(
-            'http://106.51.22.181:85/iclock/webAPIservice.asmx'
-        );
+        ->post($apiUrl);
         \Log::info('eBio Response', [
+            'url' => $apiUrl,
             'status' => $response->status(),
             'successful' => $response->successful(),
             'body' => $response->body(),

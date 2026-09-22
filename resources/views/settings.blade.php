@@ -54,8 +54,8 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('ip_address') is-invalid @enderror" id="ip_address" placeholder="https://example.com" name="ip_address" value="{{ old('ip_address', $setting->ip_address ?? '') }}">
-                                    <label for="ip_address">Attendance IP Address / URL (e.g. https://...)*</label>
+                                    <input type="text" class="form-control @error('ip_address') is-invalid @enderror" id="ip_address" placeholder="Enter Attendance IP Address / URL" name="ip_address" value="{{ old('ip_address', $setting->ip_address ?? '') }}">
+                                    <label for="ip_address">Attendance IP Address / URL *</label>
                                     @error('ip_address')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

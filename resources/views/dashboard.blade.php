@@ -430,40 +430,20 @@
                                             Outstanding & Aging Report</h6>
                                         <span class="badge bg-light-danger text-danger">Payables Bucket</span>
                                     </div>
-                                    <div class="card-body p-0">
-                                        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
-                                            <table class="table table-hover align-middle mb-0">
-                                                <thead class="bg-light sticky-top">
+                                    <div class="card-body p-3">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0 w-100" id="creditorsAgingTable">
+                                                <thead class="bg-light">
                                                     <tr>
                                                         <th class="small">Supplier</th>
-                                                        <th class="small">Total Payable (₹)</th>
-                                                        <th class="small text-success">0-30 Days</th>
-                                                        <th class="small">31-60 Days</th>
-                                                        <th class="small text-warning">61-90 Days</th>
-                                                        <th class="small text-danger">Above 90 Days</th>
+                                                        <th class="small text-end">Total Payable (₹)</th>
+                                                        <th class="small text-end text-success">0-30 Days</th>
+                                                        <th class="small text-end">31-60 Days</th>
+                                                        <th class="small text-end text-warning">61-90 Days</th>
+                                                        <th class="small text-end text-danger">Above 90 Days</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody class="small">
-                                                    @if($creditors_aging->count() > 0)
-                                                        @foreach ($creditors_aging as $row)
-                                                            <tr>
-                                                                <td><strong>{{ $row->supplier_name }}</strong></td>
-                                                                <td>{{ formatIndianCurrency($row->total_due) }}</td>
-                                                                <td class="text-success">{{ formatIndianCurrency($row->bucket_30) }}
-                                                                </td>
-                                                                <td>{{ formatIndianCurrency($row->bucket_60) }}</td>
-                                                                <td class="text-warning">{{ formatIndianCurrency($row->bucket_90) }}
-                                                                </td>
-                                                                <td class="text-danger fw-bold">
-                                                                    {{ formatIndianCurrency($row->bucket_above_90) }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    @else
-                                                        <tr>
-                                                            <td colspan="6" class="text-center text-muted py-3">No pending creditors
-                                                                found.</td>
-                                                        </tr>
-                                                    @endif
                                                 </tbody>
                                             </table>
                                         </div>
@@ -474,38 +454,79 @@
                             <!-- Itemwise Stock Value Breakdown -->
                             <div class="col-lg-4">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-white py-3">
-                                        <h6 class="mb-0 fw-bold"><i class="ri ri-pie-chart-line me-2"></i>Item-wise Stock Value
-                                        </h6>
+                                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 fw-bold"><i class="ri ri-pie-chart-line me-2 text-primary"></i>Item-wise Stock Value</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <ul class="list-group list-group-flush mb-3">
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center py-2 border-0">
-                                                <div><i class="ri ri-checkbox-blank-circle-fill text-primary me-2"></i>Fabric
-                                                </div>
-                                                <span class="fw-bold">₹{{ formatIndianCurrency($fabric_value) }}</span>
-                                            </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center py-2 border-0">
-                                                <div><i class="ri ri-checkbox-blank-circle-fill text-info me-2"></i>Accessories
-                                                </div>
-                                                <span class="fw-bold">₹{{ formatIndianCurrency($accessories_value) }}</span>
-                                            </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center py-2 border-0">
-                                                <div><i class="ri ri-checkbox-blank-circle-fill text-warning me-2"></i>WIP</div>
-                                                <span class="fw-bold">₹{{ formatIndianCurrency($wip_value) }}</span>
-                                            </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center py-2 border-0">
-                                                <div><i class="ri ri-checkbox-blank-circle-fill text-success me-2"></i>Finished
-                                                    Goods</div>
-                                                <span class="fw-bold">₹{{ formatIndianCurrency($finished_goods_value) }}</span>
-                                            </li>
-                                        </ul>
-                                        <div style="height: 190px;">
+                                    <div class="card-body d-flex flex-column justify-content-between p-3">
+                                        @php
+                                            $total_stock_val = ($fabric_value ?? 0) + ($accessories_value ?? 0) + ($wip_value ?? 0) + ($finished_goods_value ?? 0);
+                                            $pct_fabric = $total_stock_val > 0 ? round(($fabric_value / $total_stock_val) * 100, 1) : 0;
+                                            $pct_acc = $total_stock_val > 0 ? round(($accessories_value / $total_stock_val) * 100, 1) : 0;
+                                            $pct_wip = $total_stock_val > 0 ? round(($wip_value / $total_stock_val) * 100, 1) : 0;
+                                            $pct_fg = $total_stock_val > 0 ? round(($finished_goods_value / $total_stock_val) * 100, 1) : 0;
+                                        @endphp
+
+                                        <!-- Total Stock Valuation Mini Banner -->
+                                        <div class="p-3 mb-2 rounded bg-light d-flex justify-content-between align-items-center border">
+                                            <div>
+                                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Stock Value</small>
+                                                <h5 class="mb-0 fw-bold text-dark mt-1">₹{{ formatIndianCurrency($total_stock_val) }}</h5>
+                                            </div>
+                                            <div class="rounded-circle p-2 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                                <i class="ri ri-store-3-line text-primary fs-5"></i>
+                                            </div>
+                                        </div>
+
+                                        <!-- Donut Chart -->
+                                        <div class="position-relative my-2 d-flex justify-content-center align-items-center" style="height: 200px;">
                                             <canvas id="stockDistributionChart"></canvas>
+                                        </div>
+
+                                        <!-- Category Breakdown with % Badges -->
+                                        <div class="list-group list-group-flush mt-2">
+                                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2" style="display:inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: #1e3a8a;"></span>
+                                                    <span class="small fw-semibold text-dark">Fabric</span>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="small fw-bold text-dark me-2">₹{{ formatIndianCurrency($fabric_value) }}</span>
+                                                    <span class="badge bg-label-primary font-monospace py-0 px-1" style="font-size: 0.72rem;">{{ $pct_fabric }}%</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2" style="display:inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: #06b6d4;"></span>
+                                                    <span class="small fw-semibold text-dark">Accessories</span>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="small fw-bold text-dark me-2">₹{{ formatIndianCurrency($accessories_value) }}</span>
+                                                    <span class="badge bg-label-info font-monospace py-0 px-1" style="font-size: 0.72rem;">{{ $pct_acc }}%</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2" style="display:inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: #f59e0b;"></span>
+                                                    <span class="small fw-semibold text-dark">WIP</span>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="small fw-bold text-dark me-2">₹{{ formatIndianCurrency($wip_value) }}</span>
+                                                    <span class="badge bg-label-warning font-monospace py-0 px-1" style="font-size: 0.72rem;">{{ $pct_wip }}%</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center py-2">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2" style="display:inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: #10b981;"></span>
+                                                    <span class="small fw-semibold text-dark">Finished Goods</span>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="small fw-bold text-dark me-2">₹{{ formatIndianCurrency($finished_goods_value) }}</span>
+                                                    <span class="badge bg-label-success font-monospace py-0 px-1" style="font-size: 0.72rem;">{{ $pct_fg }}%</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1286,11 +1307,9 @@
                                                 <i class="ri ri-store-2-line me-1"></i>Fabric Inventory
                                             </a>
                                             <i class="ri ri-arrow-right-s-line text-muted"></i>
-                                            <a href="#" id="fabricBcBrand" class="text-primary fw-semibold text-decoration-none"
-                                                style="display:none;"></a>
+                                            <a href="#" id="fabricBcBrand" class="text-primary fw-semibold text-decoration-none" style="display:none;"></a>
                                             <span id="fabricBcBrandPlain" class="text-muted" style="display:none;"></span>
-                                            <span id="fabricBcStyleSep" class="text-muted" style="display:none;"><i
-                                                    class="ri ri-arrow-right-s-line"></i></span>
+                                            <span id="fabricBcStyleSep" class="text-muted" style="display:none;"><i class="ri ri-arrow-right-s-line"></i></span>
                                             <span id="fabricBcStyle" class="text-dark fw-semibold" style="display:none;"></span>
                                         </nav>
                                     </div>
@@ -1794,6 +1813,17 @@
                                         <tbody class="small">
                                             <!-- Populated via DataTables AJAX -->
                                         </tbody>
+                                        <tfoot class="bg-light fw-bold">
+                                            <tr>
+                                                <td colspan="2" class="text-end">TOTAL:</td>
+                                                <td class="text-end text-primary" id="supFootPurchaseValue">₹0.00</td>
+                                                <td class="text-center text-dark" id="supFootOrders">0</td>
+                                                <td class="text-center text-dark" id="supFootOnTime">0%</td>
+                                                <td class="text-center text-dark" id="supFootAvgDelay">0 Days</td>
+                                                <td class="text-center text-danger" id="supFootReturns">0</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
                             </div>
@@ -1817,6 +1847,8 @@
                                         </thead>
                                         <tbody id="supplierDrilldownTbody" class="small">
                                         </tbody>
+                                        <tfoot class="bg-light fw-bold" id="supplierDrilldownTfoot">
+                                        </tfoot>
                                     </table>
                                 </div>
                             </div>
@@ -2465,7 +2497,9 @@
                     dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
                     language: {
                         search: "",
-                        searchPlaceholder: "Search Art No / Item / Brand..."
+                        searchPlaceholder: "Search All Columns (Art No, Item, Brand, Stock, WIP, FG, Pipeline, Daily, Days, PO...)",
+                        processing: ' ',
+                        lengthMenu: "Show _MENU_ entries"
                     },
                     drawCallback: function (settings) {
                         var json = settings.json;
@@ -2522,11 +2556,51 @@
                             }
                         });
                     },
-                    dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>t<"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                    dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
                     language: {
                         search: "",
-                        searchPlaceholder: "Search Supplier Name...",
-                        processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
+                        searchPlaceholder: "Search Supplier, Value, Orders, On-Time, Delay, Returns...",
+                        processing: ' '
+                    },
+                    drawCallback: function (settings) {
+                        var json = settings.json;
+                        if (json && json.totals) {
+                            $('#supFootPurchaseValue').text(json.totals.purchase_value);
+                            $('#supFootOrders').text(json.totals.orders);
+                            $('#supFootOnTime').text(json.totals.on_time_pct);
+                            $('#supFootAvgDelay').text(json.totals.avg_delay);
+                            $('#supFootReturns').text(json.totals.returns);
+                        }
+                    }
+                });
+            }
+
+            // 7. Creditors Outstanding & Aging DataTable (Server-Side AJAX)
+            if ($('#creditorsAgingTable').length) {
+                $('#creditorsAgingTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    autoWidth: false,
+                    ajax: {
+                        url: "{{ url('/dashboard/creditors-aging') }}",
+                        type: "GET"
+                    },
+                    columns: [
+                        { data: 'supplier_name', name: 'supplier_name' },
+                        { data: 'total_due', name: 'total_due', className: 'text-end fw-semibold' },
+                        { data: 'bucket_30', name: 'bucket_30', className: 'text-end' },
+                        { data: 'bucket_60', name: 'bucket_60', className: 'text-end' },
+                        { data: 'bucket_90', name: 'bucket_90', className: 'text-end' },
+                        { data: 'bucket_above_90', name: 'bucket_above_90', className: 'text-end' }
+                    ],
+                    dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                    language: {
+                        search: "",
+                        searchPlaceholder: "Search Supplier...",
+                        processing: ' ',
+                        lengthMenu: "Show _MENU_ entries"
                     }
                 });
             }
@@ -2537,7 +2611,7 @@
                 document.getElementById('supplierPerformanceContainer').style.display = 'block';
             };
 
-            // Reusable Supplier Orders Drilldown Function
+            // Reusable Supplier Orders Drilldown Function (DataTables Server-Side AJAX)
             window.triggerSupplierOrdersDrilldown = function (supplierId, supplierName) {
                 document.getElementById('supplierPerformanceContainer').style.display = 'none';
                 document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'flex', 'important');
@@ -2545,50 +2619,71 @@
                 document.getElementById('supplierDrilldownTitle').innerHTML = '<i class="ri-file-list-3-line me-2 text-primary"></i>' + supplierName + ' - Purchase Orders';
                 document.getElementById('supplierDrilldownContainer').style.display = 'block';
 
+                if ($.fn.DataTable.isDataTable('#supplierDrilldownTable')) {
+                    $('#supplierDrilldownTable').DataTable().destroy();
+                    $('#supplierDrilldownTable tbody').empty();
+                }
+
                 $('#supplierDrilldownThead').html(`
-                <tr>
-                    <th style="width: 45px;">#</th>
-                    <th>PO NO</th>
-                    <th>PO DATE</th>
-                    <th>DUE DATE</th>
-                    <th class="text-end">TOTAL QTY</th>
-                    <th class="text-end">TOTAL AMOUNT</th>
-                    <th class="text-center">DELIVERY STATUS</th>
-                </tr>
-            `);
+                    <tr>
+                        <th style="width: 45px;">#</th>
+                        <th>PO NO</th>
+                        <th>PO DATE</th>
+                        <th>DUE DATE</th>
+                        <th class="text-end">TOTAL QTY</th>
+                        <th class="text-end">TOTAL AMOUNT</th>
+                        <th class="text-center">DELIVERY STATUS</th>
+                    </tr>
+                `);
 
-                $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>');
+                $('#supplierDrilldownTfoot').html(`
+                    <tr>
+                        <td colspan="4" class="text-end">TOTAL:</td>
+                        <td class="text-end text-dark" id="drillFootQty">0.00</td>
+                        <td class="text-end text-primary" id="drillFootAmount">₹0.00</td>
+                        <td></td>
+                    </tr>
+                `);
 
-                $.ajax({
-                    url: "{{ url('/dashboard/supplier-orders-drilldown') }}",
-                    type: "GET",
-                    data: { supplier_id: supplierId },
-                    success: function (res) {
-                        let html = '';
-                        if (res.orders && res.orders.length > 0) {
-                            $.each(res.orders, function (idx, o) {
-                                html += `<tr>
-                                <td>${idx + 1}</td>
-                                <td class="fw-bold text-primary">${o.po_number}</td>
-                                <td>${o.po_date}</td>
-                                <td>${o.due_date}</td>
-                                <td class="text-end fw-bold">${o.total_qty}</td>
-                                <td class="text-end fw-bold text-dark">${o.total_amount}</td>
-                                <td class="text-center">${o.delivery_status}</td>
-                            </tr>`;
-                            });
-                        } else {
-                            html = `<tr><td colspan="7" class="text-center text-muted py-4">No Purchase Orders found for ${supplierName}.</td></tr>`;
+                $('#supplierDrilldownTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    autoWidth: false,
+                    ajax: {
+                        url: "{{ url('/dashboard/supplier-orders-drilldown') }}",
+                        type: "GET",
+                        data: function (d) {
+                            d.supplier_id = supplierId;
                         }
-                        $('#supplierDrilldownTbody').html(html);
                     },
-                    error: function () {
-                        $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center text-danger py-3">Error loading purchase orders.</td></tr>');
+                    columns: [
+                        { data: 'DT_RowIndex', orderable: false, searchable: false, width: '45px', defaultContent: '' },
+                        { data: 'po_number', name: 'po_number', defaultContent: '' },
+                        { data: 'po_date', name: 'po_date', defaultContent: '' },
+                        { data: 'due_date', name: 'due_date', defaultContent: '' },
+                        { data: 'total_qty', name: 'total_qty', className: 'text-end', defaultContent: '0.00' },
+                        { data: 'total_amount', name: 'total_amount', className: 'text-end', defaultContent: '₹0.00' },
+                        { data: 'delivery_status', name: 'delivery_status', className: 'text-center', defaultContent: '' }
+                    ],
+                    dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                    language: {
+                        search: "",
+                        searchPlaceholder: "Search Purchase Orders...",
+                        processing: ' ',
+                        lengthMenu: "Show _MENU_ entries"
+                    },
+                    drawCallback: function (settings) {
+                        var json = settings.json;
+                        if (json && json.totals) {
+                            $('#drillFootQty').text(json.totals.total_qty);
+                            $('#drillFootAmount').text(json.totals.total_amount);
+                        }
                     }
                 });
             };
 
-            // Reusable Supplier Debit Notes Drilldown Function
             window.triggerSupplierDebitNotesDrilldown = function (supplierId, supplierName) {
                 document.getElementById('supplierPerformanceContainer').style.display = 'none';
                 document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'flex', 'important');
@@ -2596,45 +2691,65 @@
                 document.getElementById('supplierDrilldownTitle').innerHTML = '<i class="ri-file-shield-2-line me-2 text-danger"></i>' + supplierName + ' - Debit Notes (Returns)';
                 document.getElementById('supplierDrilldownContainer').style.display = 'block';
 
+                if ($.fn.DataTable.isDataTable('#supplierDrilldownTable')) {
+                    $('#supplierDrilldownTable').DataTable().destroy();
+                    $('#supplierDrilldownTable tbody').empty();
+                }
+
                 $('#supplierDrilldownThead').html(`
-                <tr>
-                    <th style="width: 45px;">#</th>
-                    <th>DEBIT NOTE NO</th>
-                    <th>DATE</th>
-                    <th>REF INVOICE</th>
-                    <th class="text-end">GRAND TOTAL</th>
-                    <th class="text-center">STATUS</th>
-                    <th>REMARKS</th>
-                </tr>
-            `);
+                    <tr>
+                        <th style="width: 45px;">#</th>
+                        <th>DEBIT NOTE NO</th>
+                        <th>DATE</th>
+                        <th>REF INVOICE</th>
+                        <th class="text-end">GRAND TOTAL</th>
+                        <th class="text-center">STATUS</th>
+                        <th>REMARKS</th>
+                    </tr>
+                `);
 
-                $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-danger" role="status"></div></td></tr>');
+                $('#supplierDrilldownTfoot').html(`
+                    <tr>
+                        <td colspan="4" class="text-end">TOTAL:</td>
+                        <td class="text-end text-danger" id="drillFootGrandTotal">₹0.00</td>
+                        <td colspan="2"></td>
+                    </tr>
+                `);
 
-                $.ajax({
-                    url: "{{ url('/dashboard/supplier-debit-notes-drilldown') }}",
-                    type: "GET",
-                    data: { supplier_id: supplierId },
-                    success: function (res) {
-                        let html = '';
-                        if (res.debit_notes && res.debit_notes.length > 0) {
-                            $.each(res.debit_notes, function (idx, dn) {
-                                html += `<tr>
-                                <td>${idx + 1}</td>
-                                <td class="fw-bold text-danger">${dn.debit_note_no}</td>
-                                <td>${dn.debit_note_date}</td>
-                                <td>${dn.invoice_no}</td>
-                                <td class="text-end fw-bold text-danger">${dn.grand_total}</td>
-                                <td class="text-center">${dn.status}</td>
-                                <td>${dn.remarks}</td>
-                            </tr>`;
-                            });
-                        } else {
-                            html = `<tr><td colspan="7" class="text-center text-muted py-4">No Debit Notes found for ${supplierName}.</td></tr>`;
+                $('#supplierDrilldownTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    autoWidth: false,
+                    ajax: {
+                        url: "{{ url('/dashboard/supplier-debit-notes-drilldown') }}",
+                        type: "GET",
+                        data: function (d) {
+                            d.supplier_id = supplierId;
                         }
-                        $('#supplierDrilldownTbody').html(html);
                     },
-                    error: function () {
-                        $('#supplierDrilldownTbody').html('<tr><td colspan="7" class="text-center text-danger py-3">Error loading debit notes.</td></tr>');
+                    columns: [
+                        { data: 'DT_RowIndex', orderable: false, searchable: false, width: '45px', defaultContent: '' },
+                        { data: 'debit_note_no', name: 'debit_note_no', defaultContent: '' },
+                        { data: 'debit_note_date', name: 'debit_note_date', defaultContent: '' },
+                        { data: 'invoice_no', name: 'invoice_no', defaultContent: '' },
+                        { data: 'grand_total', name: 'grand_total', className: 'text-end', defaultContent: '₹0.00' },
+                        { data: 'status', name: 'status', className: 'text-center', defaultContent: '' },
+                        { data: 'remarks', name: 'remarks', defaultContent: '' }
+                    ],
+                    dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                    language: {
+                        search: "",
+                        searchPlaceholder: "Search Debit Notes...",
+                        processing: ' ',
+                        lengthMenu: "Show _MENU_ entries"
+                    },
+                    drawCallback: function (settings) {
+                        var json = settings.json;
+                        if (json && json.totals) {
+                            $('#drillFootGrandTotal').text(json.totals.grand_total);
+                        }
                     }
                 });
             };
@@ -3205,7 +3320,15 @@
                 processing: true,
                 serverSide: true,
                 pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
                 autoWidth: false,
+                dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                language: {
+                    search: "",
+                    searchPlaceholder: "Search All Columns (Brand, Stock, Value, Days, Status...)",
+                    processing: ' ',
+                    lengthMenu: "Show _MENU_ entries"
+                },
                 ajax: {
                     url: "{{ url('/dashboard/fabric-drilldown') }}",
                     type: "GET",
@@ -3335,7 +3458,15 @@
                 processing: true,
                 serverSide: true,
                 pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
                 autoWidth: false,
+                dom: '<"row align-items-center mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                language: {
+                    search: "",
+                    searchPlaceholder: "Search All Columns (Brand, Stock, Value, Days, Status...)",
+                    processing: ' ',
+                    lengthMenu: "Show _MENU_ entries"
+                },
                 ajax: {
                     url: "{{ url('/dashboard/accessories-drilldown') }}",
                     type: "GET",
@@ -3638,41 +3769,82 @@
             }
 
             // =========================================================================
-            // Cutting Job Cards Modal Filter & Real-time Search
+            // Cutting Job Cards Modal AJAX DataTable & Filter
             // =========================================================================
+            let cuttingActiveFilter = 'all';
+            let cuttingDataTable = null;
+
+            function initCuttingJobCardsDataTable() {
+                if ($.fn.DataTable.isDataTable('#cuttingJobCardsTable')) {
+                    $('#cuttingJobCardsTable').DataTable().destroy();
+                    $('#cuttingJobCardsTable tbody').empty();
+                }
+
+                cuttingDataTable = $('#cuttingJobCardsTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    autoWidth: false,
+                    dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"position-relative"rt><"row align-items-center mt-3"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"p>>',
+                    ajax: {
+                        url: "{{ url('/dashboard/cutting-job-cards') }}",
+                        type: "GET",
+                        data: function (d) {
+                            d.filter = cuttingActiveFilter;
+                        },
+                        dataSrc: function (json) {
+                            if (json.counts) {
+                                $('#cuttingFilterAllBtn').text('All (' + (json.counts.all || 0) + ')');
+                                $('#cuttingFilterActiveBtn').text('Active (' + (json.counts.active || 0) + ')');
+                                $('#cuttingFilterCompletedBtn').text('Completed (' + (json.counts.completed || 0) + ')');
+                            }
+                            return json.data || [];
+                        }
+                    },
+                    columns: [
+                        { data: 'DT_RowIndex', className: 'text-center text-muted fw-semibold', orderable: false, width: '50px' },
+                        { data: 'job_card_no', className: 'fw-bold' },
+                        { data: 'brand' },
+                        { data: 'style' },
+                        { data: 'unit' },
+                        { data: 'delivery_date' },
+                        { data: 'order_qty', className: 'text-end' },
+                        { data: 'pieces_cut', className: 'text-end' },
+                        { data: 'status', className: 'text-center' },
+                        { data: 'action', className: 'text-center', orderable: false }
+                    ]
+                });
+
+                // Hide default search input wrapper since custom input exists
+                $('#cuttingJobCardsTable_filter').hide();
+            }
+
+            $('#cuttingJobCardsModal').on('shown.bs.modal', function () {
+                if (!cuttingDataTable) {
+                    initCuttingJobCardsDataTable();
+                } else {
+                    cuttingDataTable.columns.adjust().draw();
+                }
+            });
+
             $('#cuttingJcFilterGroup button').on('click', function () {
                 $('#cuttingJcFilterGroup button').removeClass('active');
                 $(this).addClass('active');
-                applyCuttingJcFilter();
+                cuttingActiveFilter = $(this).data('filter') || 'all';
+                if (!cuttingDataTable) {
+                    initCuttingJobCardsDataTable();
+                } else {
+                    cuttingDataTable.ajax.reload();
+                }
             });
 
             $('#cuttingJcSearchInput').on('keyup input', function () {
-                applyCuttingJcFilter();
+                if (!cuttingDataTable) {
+                    initCuttingJobCardsDataTable();
+                }
+                cuttingDataTable.search(this.value).draw();
             });
-
-            function applyCuttingJcFilter() {
-                var activeFilter = $('#cuttingJcFilterGroup button.active').data('filter') || 'all';
-                var searchVal = ($('#cuttingJcSearchInput').val() || '').toLowerCase().trim();
-                var visibleCount = 0;
-
-                $('#cuttingJcTableBody tr.cutting-jc-row').each(function () {
-                    var $row = $(this);
-                    var status = $row.data('status');
-                    var text = $row.text().toLowerCase();
-
-                    var matchesFilter = (activeFilter === 'all') || (activeFilter === status);
-                    var matchesSearch = (searchVal === '') || (text.indexOf(searchVal) !== -1);
-
-                    if (matchesFilter && matchesSearch) {
-                        $row.show();
-                        visibleCount++;
-                    } else {
-                        $row.hide();
-                    }
-                });
-
-                $('#cuttingJcCountDisplay').text(visibleCount);
-            }
         });
     </script>
 
@@ -3702,13 +3874,13 @@
                     <!-- Filter buttons and search -->
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div class="btn-group btn-group-sm" role="group" id="cuttingJcFilterGroup">
-                            <button type="button" class="btn btn-outline-primary active" data-filter="all">
+                            <button type="button" class="btn btn-outline-primary active" data-filter="all" id="cuttingFilterAllBtn">
                                 All ({{ $cutting_total_job_cards ?? 0 }})
                             </button>
-                            <button type="button" class="btn btn-outline-primary" data-filter="active">
+                            <button type="button" class="btn btn-outline-primary" data-filter="active" id="cuttingFilterActiveBtn">
                                 Active ({{ $cutting_active_job_cards ?? 0 }})
                             </button>
-                            <button type="button" class="btn btn-outline-primary" data-filter="completed">
+                            <button type="button" class="btn btn-outline-primary" data-filter="completed" id="cuttingFilterCompletedBtn">
                                 Completed ({{ $cutting_completed_job_cards ?? 0 }})
                             </button>
                         </div>
@@ -3723,8 +3895,8 @@
                     </div>
 
                     <!-- Job Cards Table -->
-                    <div class="table-responsive border rounded" style="max-height: 480px; overflow-y: auto;">
-                        <table class="table table-hover align-middle mb-0" id="cuttingJobCardsTable">
+                    <div class="table-responsive border rounded p-2">
+                        <table class="table table-hover align-middle mb-0 w-100" id="cuttingJobCardsTable">
                             <thead class="bg-light sticky-top">
                                 <tr>
                                     <th class="small text-center" style="width: 50px;">#</th>
@@ -3740,61 +3912,12 @@
                                 </tr>
                             </thead>
                             <tbody class="small" id="cuttingJcTableBody">
-                                @if(isset($cutting_job_cards_list) && count($cutting_job_cards_list) > 0)
-                                    @foreach($cutting_job_cards_list as $index => $jc)
-                                        @php
-                                            $isCompleted = stripos($jc['status'], 'Complete') !== false;
-                                            $statusFilter = $isCompleted ? 'completed' : 'active';
-                                        @endphp
-                                        <tr class="cutting-jc-row" data-status="{{ $statusFilter }}">
-                                            <td class="text-center text-muted fw-semibold">{{ $index + 1 }}</td>
-                                            <td>
-                                                <a href="{{ $jc['url'] }}" class="fw-bold text-primary text-decoration-none"
-                                                    title="View Job Card">
-                                                    {{ $jc['job_card_no'] }}
-                                                </a>
-                                            </td>
-                                            <td><strong>{{ $jc['brand'] }}</strong></td>
-                                            <td>{{ $jc['style'] }}</td>
-                                            <td><span class="badge bg-light text-dark border">{{ $jc['unit'] }}</span></td>
-                                            <td>{{ $jc['delivery_date'] }}</td>
-                                            <td class="text-end fw-semibold">{{ number_format($jc['order_qty']) }} Pcs</td>
-                                            <td class="text-end fw-bold text-success">{{ number_format($jc['pieces_cut']) }} Pcs
-                                            </td>
-                                            <td class="text-center">
-                                                @if($isCompleted)
-                                                    <span class="badge bg-success">Completed</span>
-                                                @elseif(stripos($jc['status'], 'Hold') !== false)
-                                                    <span class="badge bg-warning text-dark">Hold</span>
-                                                @else
-                                                    <span class="badge bg-primary">In Progress</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                <a href="{{ $jc['url'] }}" class="btn btn-xs btn-outline-primary py-1 px-2"
-                                                    title="View Job Card Details">
-                                                    <i class="ri ri-eye-line"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                @else
-                                    <tr>
-                                        <td colspan="10" class="text-center text-muted py-4">No cutting job cards recorded.</td>
-                                    </tr>
-                                @endif
                             </tbody>
                         </table>
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2 px-4">
-                    <div class="d-flex justify-content-between align-items-center w-100">
-                        <span class="text-muted x-small">
-                            Showing <strong id="cuttingJcCountDisplay">{{ count($cutting_job_cards_list ?? []) }}</strong>
-                            Job Cards
-                        </span>
-                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

@@ -107,8 +107,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/dashboard/supplier-performance', [HomeController::class, 'getSupplierPerformanceAjax']);
     Route::get('/dashboard/supplier-orders-drilldown', [HomeController::class, 'getSupplierOrdersDrilldown']);
     Route::get('/dashboard/supplier-debit-notes-drilldown', [HomeController::class, 'getSupplierDebitNotesDrilldown']);
+    Route::get('/dashboard/creditors-aging', [HomeController::class, 'getCreditorsAgingAjax']);
     Route::get('/dashboard/fabric-drilldown', [HomeController::class, 'fabricInventoryDrilldown']);
     Route::get('/dashboard/accessories-drilldown', [HomeController::class, 'accessoriesInventoryDrilldown']);
+    Route::get('/dashboard/cutting-job-cards', [HomeController::class, 'getCuttingJobCardsAjax']);
     Route::get('/core-material-settings', [CoreMaterialPlannerSettingController::class, 'index']);
     Route::match(['get', 'post'], '/core-material-settings/add/{id?}', [CoreMaterialPlannerSettingController::class, 'add']);
     Route::get('/core-material-settings/delete/{id}', [CoreMaterialPlannerSettingController::class, 'delete']);

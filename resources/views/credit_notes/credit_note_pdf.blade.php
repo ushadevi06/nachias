@@ -76,7 +76,7 @@
 
     .info-box .right-col {
       width: 42%;
-      border-right: 1px solid #000;
+      border-right: 1px solid #000; 
     }
 
     .title-row {
@@ -355,6 +355,13 @@
               @endif
             </td>
           </tr>
+          @if($showSalesAgent && $creditNote->salesAgent)
+          <tr>
+            <td>Sales Exec</td>
+            <td>:</td>
+            <td>{{ $creditNote->salesAgent->name }}</td>
+          </tr>
+          @endif
         </table>
       </td>
     </tr>
@@ -365,14 +372,21 @@
     <thead>
       <tr>
         <th style="width: 5%;">S.No</th>
-        <th style="width: 35%;">Description</th>
+        <th style="width: {{ 35 + (!$showMrp ? 8 : 0) + (!$showPrice ? 8 : 0) + (!$showAmount ? 10 : 0) }}%;">Description</th>
         <th style="width: 8%;">Size</th>
         <th style="width: 10%;">Art</th>
         <th style="width: 10%;">HSN/SAC</th>
         <th style="width: 6%;">UOM</th>
         <th style="width: 8%;">Quantity</th>
+        @if($showMrp)
+        <th style="width: 8%;">MRP</th>
+        @endif
+        @if($showPrice)
         <th style="width: 8%;">Unit Price</th>
+        @endif
+        @if($showAmount)
         <th style="width: 10%;">Amount</th>
+        @endif
       </tr>
     </thead>
     <tbody>
@@ -428,7 +442,6 @@
                   $sleeveFull = ' ' . trim($invoiceItem->sleeve_type) . ' Sleeve';
                 }
             }
-
             if ($itemName != '-' && $itemName != '') {
               $itemName = trim($itemName . $sleeveFull);
             } else {
@@ -453,36 +466,52 @@
             <td>{{ $hsnSac }}</td>
             <td>{{ $uomCode }}</td>
             <td class="right">{{ number_format($item->quantity, 2) }}</td>
+            @if($showMrp)
+            <td class="right">{{ number_format($item->mrp ?? $item->rate, 2) }}</td>
+            @endif
+            @if($showPrice)
             <td class="right">{{ number_format($item->rate, 2) }}</td>
+            @endif
+            @if($showAmount)
             <td class="right">{{ number_format($item->amount, 2) }}</td>
+            @endif
         </tr>
       @endforeach
 
             @if($loop->last)
       <!-- Empty rows to push footer down -->
+      @php
+          $totalCols = 7 + ($showMrp ? 1 : 0) + ($showPrice ? 1 : 0) + ($showAmount ? 1 : 0);
+      @endphp
       @for($i = count($chunk); $i < 10; $i++)
         <tr>
             <td style="height:25px;"></td>
+            @for($c = 1; $c < $totalCols; $c++)
             <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            @endfor
         </tr>
       @endfor
-      <tr style="border-bottom:1px solid #000;">
-        <td style="text-align:center; border-right:1px solid #000;"></td>
-        <td style="text-align:center; border-right:1px solid #000;"></td>
-        <td style="text-align:center; border-right:1px solid #000;"></td>
-        <td style="text-align:center; border-right:1px solid #000;"></td>
-        <td style="text-align:center; border-right:1px solid #000;"></td>
-        <td style="text-align:center; border-right:1px solid #000;"></td>
-        <td class="center" style="border-right:1px solid #000; border-top:1px solid #000;">{{ number_format($totalQty, 2) }}</td>
-        <td class="center" style="border-right:1px solid #000;">Gross</td>
-        <td class="right" style="border-top:1px solid #000;">{{ number_format($creditNote->sub_total, 2) }}</td>
+      <tr style="border-bottom:1px solid #000; ">
+        @if($showMrp || $showPrice)
+          <td style="text-align:center; border-right:1px solid #000;"></td>
+          <td style="text-align:center; border-right:1px solid #000;"></td>
+          <td style="text-align:center; border-right:1px solid #000;"></td>
+          <td style="text-align:center; border-right:1px solid #000;"></td>
+          <td style="text-align:center; border-right:1px solid #000;"></td>
+          <td style="text-align:center; border-right:1px solid #000;"></td>
+          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($totalQty, 2) }}</td>
+          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;" @if($showMrp && $showPrice) colspan="2" @endif>Gross</td>
+          @if($showAmount)
+          <td class="right" style="border-top:1px solid #000; border-right:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($creditNote->sub_total, 2) }}</td>
+          @endif
+        @elseif($showAmount)
+          <td colspan="6" style="text-align:right; border-right:1px solid #000; border-top:1px solid #000; padding-right:8px; font-weight:bold; font-size:12px;">Gross</td>
+          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($totalQty, 2) }}</td>
+          <td class="right" style="border-top:1px solid #000; border-right:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($creditNote->sub_total, 2) }}</td>
+        @else
+          <td colspan="6" style="border-right:1px solid #000; border-top:1px solid #000;"></td>
+          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($totalQty, 2) }}</td>
+        @endif
       </tr>
       @endif
     </tbody>
@@ -512,6 +541,19 @@
       <td style="width: 21%; padding: 0; vertical-align: top; border-right: 1px solid #000;">
         <table style="width: 100%; border-collapse: collapse;">
           @php
+              $allCharges = $creditNote->charges ?? collect();
+              $preGstTotal = $allCharges->filter(function($c) {
+                  return str_contains(strtolower($c->tax_type ?? ''), 'pre');
+              })->sum('charge_amount');
+
+              $postGstTotal = $allCharges->filter(function($c) {
+                  return str_contains(strtolower($c->tax_type ?? ''), 'post');
+              })->sum('charge_amount');
+
+              if ($allCharges->isEmpty() && isset($creditNote->other_charges) && $creditNote->other_charges > 0) {
+                  $postGstTotal = (float)$creditNote->other_charges;
+              }
+
               $taxableValue = $creditNote->sub_total - $creditNote->discount;
               $salesDiscountPercent = (float)($creditNote->discount_percent ?? 0);
               $salesDiscountAmount = 0;
@@ -524,7 +566,7 @@
                   $hasSpecificDiscounts = true;
               }
           @endphp
-          @if($creditNote->discount > 0)
+          @if($showDiscount && $creditNote->discount > 0)
               @if(!$hasSpecificDiscounts)
                   <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Discount</td></tr>
               @else
@@ -536,85 +578,108 @@
                   @endif
               @endif
           @endif
+          @if($showSubTotal)
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-size:13px;">Taxable Value</td>
           </tr>
-          @if($creditNote->other_state)
-            <tr>
-              <td style="padding: 4px 5px; text-align: right; font-size:13px;">IGST @ {{ $creditNote->igst_percent }}%</td>
-            </tr>
-          @else
-            <tr>
-              <td style="padding: 4px 5px; text-align: right; font-size:13px;">CGST @ {{ $creditNote->cgst_percent }}%</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 5px; text-align: right; font-size:13px;">SGST @ {{ $creditNote->sgst_percent }}%</td>
-            </tr>
+          @endif
+          @if($preGstTotal > 0)
+              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Pre-GST Charges</td></tr>
+          @endif
+          @if($showTax)
+            @if($creditNote->other_state)
+              <tr>
+                <td style="padding: 4px 5px; text-align: right; font-size:13px;">IGST @ {{ $creditNote->igst_percent }}%</td>
+              </tr>
+            @else
+              <tr>
+                <td style="padding: 4px 5px; text-align: right; font-size:13px;">CGST @ {{ $creditNote->cgst_percent }}%</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 5px; text-align: right; font-size:13px;">SGST @ {{ $creditNote->sgst_percent }}%</td>
+              </tr>
+            @endif
+          @endif
+          @if($postGstTotal > 0)
+              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Post-GST Charges</td></tr>
           @endif
           @if($creditNote->round_off != 0)
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-size:13px;">Round Off</td>
           </tr>
           @endif
+          @if($showGrandTotal)
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-weight:bold; font-size:12px;">Total</td>
           </tr>
+          @endif
         </table>
       </td>
 
       <!-- Right Column (Values) -->
-      <td style="width: 14%; padding: 0; vertical-align: top;">
+      <td style="width: 14%; padding: 0; vertical-align: top; border-right: 1px solid #000;">
         <table style="width: 100%; border-collapse: collapse;">
-        @if($creditNote->discount > 0)
-          @if(!$hasSpecificDiscounts)
-            <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->discount, 2) }}</td></tr>
-          @else
-            @if($salesDiscountAmount > 0)
-             <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($salesDiscountAmount, 2) }}</td></tr>
-            @endif
-            @if($boxDiscountTotal > 0)
-              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($boxDiscountTotal, 2) }}</td></tr>
-            @endif
+          @if($showDiscount && $creditNote->discount > 0)
+              @if(!$hasSpecificDiscounts)
+                  <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->discount, 2) }}</td></tr>
+              @else
+                  @if($salesDiscountAmount > 0)
+                      <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($salesDiscountAmount, 2) }}</td></tr>
+                  @endif
+                  @if($boxDiscountTotal > 0)
+                      <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($boxDiscountTotal, 2) }}</td></tr>
+                  @endif
+              @endif
           @endif
-        @endif
+          @if($showSubTotal)
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($taxableValue, 2) }}</td>
           </tr>
-          @if($creditNote->other_state)
-            <tr>
-              <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->igst, 2) }}</td>
-            </tr>
-          @else
-            <tr>
-              <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->cgst, 2) }}</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->sgst, 2) }}</td>
-            </tr>
+          @endif
+          @if($preGstTotal > 0)
+              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($preGstTotal, 2) }}</td></tr>
+          @endif
+          @if($showTax)
+            @if($creditNote->other_state)
+              <tr>
+                <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->igst, 2) }}</td>
+              </tr>
+            @else
+              <tr>
+                <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->cgst, 2) }}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($creditNote->sgst, 2) }}</td>
+              </tr>
+            @endif
+          @endif
+          @if($postGstTotal > 0)
+              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ number_format($postGstTotal, 2) }}</td></tr>
           @endif
           @if($creditNote->round_off != 0)
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-size:13px;">{{ $creditNote->round_off_type == 'Less' ? '-' : '+' }}{{ number_format($creditNote->round_off, 2) }}</td>
           </tr>
           @endif
+          @if($showGrandTotal)
           <tr>
             <td style="padding: 4px 5px; text-align: right; font-weight:bold; font-size:12px;">{{ number_format($creditNote->grand_total, 2) }}</td>
           </tr>
+          @endif
         </table>
       </td>
     </tr>
   </table>
   @endif
-</div> <!-- End page wrapper -->
 
 @if($loop->last)
-<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom: 1px solid #000;">
+<table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #000; border-bottom: 1px solid #000;">
   <tr>
-      <td width="65%" style="padding: 10px; vertical-align:top; font-size:13px;">
+      <td width="65%" style="padding: 10px; vertical-align:top; font-size:13px; border-right: 1px solid #000;">
         Remarks : <br>
         {{ $creditNote->remarks }}
       </td>
-      <td width="35%" style="text-align:center; vertical-align:middle; padding:5px;">
+      <td width="35%" style="text-align:center; vertical-align:middle; padding:5px; border-right: 1px solid #000;">
         <div class="signature-box">
           <div style="font-size:10px;">For {{ $setting->company_name }}</div>
           <div class="signature-line"></div>
@@ -623,14 +688,15 @@
       </td>
   </tr>
 </table>
+</div> <!-- End page wrapper -->
 @else
+</div> <!-- End page wrapper -->
   <div style="text-align: right; padding: 10px; font-weight: bold; font-size: 13px;">
       Continue to Page No. {{ $chunkIndex + 2 }}
   </div>
   <div style="page-break-after: always;"></div>
 @endif
 @endforeach
-
   @if(isset($is_print) && $is_print)
     <script>
         window.onload = function() {

@@ -305,7 +305,7 @@ class HomeController extends Controller
             ->get();
 
         /* Creditors Outstanding & Aging Report */
-        $creditors_aging = DB::table('purchase_invoices')
+        $creditors_aging_query = DB::table('purchase_invoices')
             ->join('suppliers', 'purchase_invoices.supplier_id', '=', 'suppliers.id')
             ->leftJoinSub(
                 DB::table('payments')
@@ -322,13 +322,19 @@ class HomeController extends Controller
             ->whereNull('suppliers.deleted_at')
             ->whereRaw('(purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) > 0')
             ->select(
+                'suppliers.id as supplier_id',
                 'suppliers.name as supplier_name',
                 DB::raw('SUM(purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) as total_due'),
                 DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) <= 30 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_30'),
                 DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 31 AND 60 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_60'),
                 DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 61 AND 90 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_90'),
                 DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) > 90 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_above_90')
-            )->groupBy('suppliers.id', 'suppliers.name')->get();
+            )->groupBy('suppliers.id', 'suppliers.name')
+            ->orderBy('suppliers.id', 'asc');
+
+        $all_creditors_list = $creditors_aging_query->get();
+        $creditors_total_count = $all_creditors_list->count();
+        $creditors_aging = $all_creditors_list->slice(0, 10)->values();
 
         $collection_performance = $total_sales_value > 0 ? round((($total_sales_value - $total_debtors) / $total_sales_value) * 100) : 0;
 
@@ -652,6 +658,7 @@ class HomeController extends Controller
             'total_creditors',
             'debtors_aging',
             'creditors_aging',
+            'creditors_total_count',
             'collection_performance',
             'fabric_value',
             'accessories_value',
@@ -801,7 +808,7 @@ class HomeController extends Controller
                     'pieces_cut' => floatval($jc->issueItems->sum('produced_qty')),
                     'delivery_date' => $jc->delivery_date ? date('d-M-Y', strtotime($jc->delivery_date)) : '-',
                     'status' => $jc->status ?: 'In Progress',
-                    'url' => url('job_card_entry/view/' . $jc->id),
+                    'url' => url('job_card_entries/view/' . $jc->id),
                 ];
             });
 
@@ -834,6 +841,26 @@ class HomeController extends Controller
             'efficiency' => $efficiency,
             'job_cards_list' => $jobCardsList,
         ];
+    }
+
+    private function formatIndianNumber($num, $dec = 2)
+    {
+        $num = floatval($num);
+        $isNeg = $num < 0;
+        $num = abs($num);
+        $formatted = number_format($num, $dec, '.', '');
+        $parts = explode('.', $formatted);
+        $intPart = $parts[0];
+        $decPart = isset($parts[1]) ? '.' . $parts[1] : '';
+
+        $len = strlen($intPart);
+        if ($len > 3) {
+            $last3 = substr($intPart, -3);
+            $rest = substr($intPart, 0, -3);
+            $rest = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest);
+            $intPart = $rest . ',' . $last3;
+        }
+        return ($isNeg ? '-' : '') . $intPart . $decPart;
     }
 
     /**
@@ -957,15 +984,37 @@ class HomeController extends Controller
                 $item['fabric_width'] = $row->fabric_width;
             }
 
-            // Apply search filtering
+            // Apply universal search filtering across all columns
             if ($search !== '') {
-                $match = false;
-                if (str_contains(strtolower($item['label']), $search))
-                    $match = true;
-                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search))
-                    $match = true;
-                if (!$match)
+                $statusText = $item['shortage'] > 0 ? 'Shortage Reorder' : ($item['excess'] > 0 ? 'Excess' : 'Optimal Balanced');
+                $rowText = implode(' ', [
+                    $item['label'],
+                    $item['fabric_width'] ?? '',
+                    $item['stock'],
+                    number_format($item['stock'], 2),
+                    $this->formatIndianNumber($item['stock']),
+                    $item['stock_value'],
+                    number_format($item['stock_value'], 2),
+                    $this->formatIndianNumber($item['stock_value']),
+                    $item['days_in_warehouse'] . ' days',
+                    $item['min_stock'] > 0 ? $item['min_stock'] : '',
+                    $item['min_stock'] > 0 ? number_format($item['min_stock'], 2) : '',
+                    $item['min_stock'] > 0 ? $this->formatIndianNumber($item['min_stock']) : '',
+                    $item['shortage'] > 0 ? $item['shortage'] : '',
+                    $item['shortage'] > 0 ? number_format($item['shortage'], 2) : '',
+                    $item['shortage'] > 0 ? $this->formatIndianNumber($item['shortage']) : '',
+                    $item['excess'] > 0 ? $item['excess'] : '',
+                    $item['excess'] > 0 ? number_format($item['excess'], 2) : '',
+                    $item['excess'] > 0 ? $this->formatIndianNumber($item['excess']) : '',
+                    $statusText
+                ]);
+
+                $cleanRow = str_replace(['₹', ',', '%', '(', ')', '"', "'"], ' ', $rowText);
+                $cleanSearch = trim(preg_replace('/\s+/', ' ', str_replace(['₹', ',', '%', '(', ')', '"', "'"], ' ', $search)));
+
+                if (stripos($rowText, $search) === false && stripos($cleanRow, $cleanSearch) === false) {
                     continue;
+                }
             }
 
             $totalStock += $item['stock'];
@@ -1019,7 +1068,7 @@ class HomeController extends Controller
      */
     public function accessoriesInventoryDrilldown(Request $request)
     {
-        $level = $request->input('level', 'brand'); // 'brand' | 'artno'
+        $level = $request->input('level', 'brand'); 
         $brandId = $request->input('brand_id');
 
         $search = $request->input('search');
@@ -1036,10 +1085,7 @@ class HomeController extends Controller
             return response()->json(['error' => 'brand_id required'], 422);
         }
 
-        $base = DB::table('stock_entry_items as sei')
-            ->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
-            ->where('sei.store_category_id', 2)
-            ->whereNull('sei.deleted_at');
+        $base = DB::table('stock_entry_items as sei')->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')->where('sei.store_category_id', 2)->whereNull('sei.deleted_at');
 
         if ($level === 'brand') {
             $base->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
@@ -1116,15 +1162,37 @@ class HomeController extends Controller
                 $item['fabric_width'] = $row->fabric_width;
             }
 
-            // Apply search filtering
+            // Apply universal search filtering across all columns
             if ($search !== '') {
-                $match = false;
-                if (str_contains(strtolower($item['label']), $search))
-                    $match = true;
-                if ($level === 'artno' && str_contains(strtolower($item['fabric_width'] ?? ''), $search))
-                    $match = true;
-                if (!$match)
+                $statusText = $item['shortage'] > 0 ? 'Shortage Reorder' : ($item['excess'] > 0 ? 'Excess' : 'Optimal Balanced');
+                $rowText = implode(' ', [
+                    $item['label'],
+                    $item['fabric_width'] ?? '',
+                    $item['stock'],
+                    number_format($item['stock'], 2),
+                    $this->formatIndianNumber($item['stock']),
+                    $item['stock_value'],
+                    number_format($item['stock_value'], 2),
+                    $this->formatIndianNumber($item['stock_value']),
+                    $item['days_in_warehouse'] . ' days',
+                    $item['min_stock'] > 0 ? $item['min_stock'] : '',
+                    $item['min_stock'] > 0 ? number_format($item['min_stock'], 2) : '',
+                    $item['min_stock'] > 0 ? $this->formatIndianNumber($item['min_stock']) : '',
+                    $item['shortage'] > 0 ? $item['shortage'] : '',
+                    $item['shortage'] > 0 ? number_format($item['shortage'], 2) : '',
+                    $item['shortage'] > 0 ? $this->formatIndianNumber($item['shortage']) : '',
+                    $item['excess'] > 0 ? $item['excess'] : '',
+                    $item['excess'] > 0 ? number_format($item['excess'], 2) : '',
+                    $item['excess'] > 0 ? $this->formatIndianNumber($item['excess']) : '',
+                    $statusText
+                ]);
+
+                $cleanRow = str_replace(['₹', ',', '%', '(', ')', '"', "'"], ' ', $rowText);
+                $cleanSearch = trim(preg_replace('/\s+/', ' ', str_replace(['₹', ',', '%', '(', ')', '"', "'"], ' ', $search)));
+
+                if (stripos($rowText, $search) === false && stripos($cleanRow, $cleanSearch) === false) {
                     continue;
+                }
             }
 
             $totalStock += $item['stock'];
@@ -1136,7 +1204,6 @@ class HomeController extends Controller
             $data[] = $item;
         }
 
-        // DataTables / Manual Pagination
         $total = count($data);
         if ($request->has('start')) {
             $start = max(0, intval($request->input('start', 0)));
@@ -1174,17 +1241,10 @@ class HomeController extends Controller
 
     private function computeOperationsKpiCard()
     {
-        // 1. Pending Orders
-        $pendingQuery = DB::table('sales_orders')
-            ->where('status', 'Pending')
-            ->whereNull('deleted_at');
+        $pendingQuery = DB::table('sales_orders')->where('status', 'Pending')->whereNull('deleted_at');
 
         $totalPending = (clone $pendingQuery)->count();
-        $dueToday = (clone $pendingQuery)
-            ->whereNotNull('delivery_date')
-            ->where('delivery_date', '!=', '0000-00-00')
-            ->whereDate('delivery_date', '<=', date('Y-m-d'))
-            ->count();
+        $dueToday = (clone $pendingQuery)->whereNotNull('delivery_date')->where('delivery_date', '!=', '0000-00-00')->whereDate('delivery_date', '<=', date('Y-m-d'))->count();
 
         $pendingStatus = 'green';
         if ($totalPending > 20 || $dueToday > 10) {
@@ -1193,24 +1253,12 @@ class HomeController extends Controller
             $pendingStatus = 'yellow';
         }
 
-        // 2. Average Lead Time (Rolling Past 30 Days)
-        $leadTimeQuery = DB::table('sales_invoices')
-            ->join('sales_orders', 'sales_invoices.so_id', '=', 'sales_orders.id')
-            ->whereNull('sales_invoices.deleted_at')
-            ->whereNull('sales_orders.deleted_at')
-            ->whereNotNull('sales_invoices.inv_date')
-            ->whereNotNull('sales_orders.so_date')
-            ->where('sales_invoices.inv_date', '>=', 'sales_orders.so_date');
+        $leadTimeQuery = DB::table('sales_invoices')->join('sales_orders', 'sales_invoices.so_id', '=', 'sales_orders.id')->whereNull('sales_invoices.deleted_at')->whereNull('sales_orders.deleted_at')->whereNotNull('sales_invoices.inv_date')->whereNotNull('sales_orders.so_date')->where('sales_invoices.inv_date', '>=', 'sales_orders.so_date');
 
-        $leadTimeDays = (clone $leadTimeQuery)
-            ->where('sales_invoices.inv_date', '>=', Carbon::now()->subDays(30))
-            ->selectRaw('AVG(DATEDIFF(sales_invoices.inv_date, sales_orders.so_date)) as avg_days')
-            ->value('avg_days');
+        $leadTimeDays = (clone $leadTimeQuery)->where('sales_invoices.inv_date', '>=', Carbon::now()->subDays(30))->selectRaw('AVG(DATEDIFF(sales_invoices.inv_date, sales_orders.so_date)) as avg_days')->value('avg_days');
 
         if ($leadTimeDays === null) {
-            $leadTimeDays = $leadTimeQuery
-                ->selectRaw('AVG(DATEDIFF(sales_invoices.inv_date, sales_orders.so_date)) as avg_days')
-                ->value('avg_days');
+            $leadTimeDays = $leadTimeQuery->selectRaw('AVG(DATEDIFF(sales_invoices.inv_date, sales_orders.so_date)) as avg_days')->value('avg_days');
         }
 
         $leadTimeDays = $leadTimeDays !== null ? round(floatval($leadTimeDays), 1) : 0.0;
@@ -1221,7 +1269,6 @@ class HomeController extends Controller
             $leadStatus = 'yellow';
         }
 
-        // 3. Warehouse Utilisation (Overall Finished Goods)
         $whCapQuery = DB::table('warehouse_brand_capacities')->where('status', 'Active');
         $activeWhIds = (clone $whCapQuery)->distinct()->pluck('warehouse_id')->toArray();
         $totalCapacity = floatval($whCapQuery->sum('capacity_pcs') ?? 0);
@@ -1262,9 +1309,7 @@ class HomeController extends Controller
             })
             ->count();
 
-        $accuracyPct = $totalDispatches > 0
-            ? round((($totalDispatches - $dispatchErrors) / $totalDispatches) * 100, 2)
-            : 100.0;
+        $accuracyPct = $totalDispatches > 0 ? round((($totalDispatches - $dispatchErrors) / $totalDispatches) * 100, 2) : 100.0;
 
         $accuracyStatus = 'green';
         if ($accuracyPct < 95.0) {
@@ -1470,28 +1515,82 @@ class HomeController extends Controller
     public function getFabricUtilisationAjax(Request $request)
     {
         $allData = $this->computeFabricUtilisationSummary();
-        $search = '';
-        if ($request->has('search')) {
-            $s = $request->get('search');
-            if (is_array($s) && isset($s['value'])) {
-                $search = trim($s['value']);
-            } else if (is_string($s)) {
-                $search = trim($s);
-            }
-        }
+        $search = trim(strval($request->input('search.value', $request->get('search', ''))));
 
         $summary = $allData['summary'];
 
         if (!empty($search)) {
-            $summary = array_values(array_filter($summary, function ($item) use ($search) {
-                return (stripos($item['brand_name'] ?? '', $search) !== false)
-                    || (stripos($item['style'] ?? '', $search) !== false)
-                    || (stripos($item['service_provider'] ?? '', $search) !== false);
+            $cleanSearch = trim(preg_replace('/\s+/', ' ', str_ireplace(['jcs', 'pcs', '%', 'm', ','], ' ', $search)));
+
+            $summary = array_values(array_filter($summary, function ($item) use ($search, $cleanSearch) {
+                $jcs = $item['job_cards_count'] ?? 0;
+                $cutting = $item['cutting_qty'] ?? 0;
+                $issued = floatval($item['fabric_issued'] ?? 0);
+                $consumed = floatval($item['fabric_consumed'] ?? 0);
+                $wastage = floatval($item['wastage'] ?? 0);
+                $util = floatval($item['utilisation'] ?? 0);
+
+                $rowText = implode(' ', [
+                    $item['brand_name'] ?? '',
+                    $item['style'] ?? '',
+                    $item['service_provider'] ?? '',
+                    $jcs,
+                    $jcs . ' JCs',
+                    $jcs . ' jcs',
+                    $cutting,
+                    number_format($cutting) . ' Pcs',
+                    number_format($cutting),
+                    $issued,
+                    number_format($issued, 2),
+                    $consumed,
+                    number_format($consumed, 2),
+                    $wastage,
+                    number_format($wastage, 2),
+                    $util,
+                    $util . '%',
+                    round($util) . '%'
+                ]);
+
+                $cleanRow = preg_replace('/\s+/', ' ', str_ireplace(['jcs', 'pcs', '%', 'm', ','], ' ', $rowText));
+
+                return stripos($rowText, $search) !== false 
+                    || (!empty($cleanSearch) && stripos($cleanRow, $cleanSearch) !== false);
             }));
         }
 
         $recordsTotal = count($allData['summary']);
         $recordsFiltered = count($summary);
+
+        // Sorting
+        $order = $request->get('order');
+        if (is_array($order) && !empty($order)) {
+            $colIdx = intval($order[0]['column'] ?? 0);
+            $dir = strtolower($order[0]['dir'] ?? 'asc');
+            $colMap = [
+                1 => 'brand_name',
+                2 => 'style',
+                3 => 'service_provider',
+                4 => 'job_cards_count',
+                5 => 'cutting_qty',
+                6 => 'fabric_issued',
+                7 => 'fabric_consumed',
+                8 => 'wastage',
+                9 => 'utilisation',
+            ];
+            if (isset($colMap[$colIdx])) {
+                $sortKey = $colMap[$colIdx];
+                usort($summary, function ($a, $b) use ($sortKey, $dir) {
+                    $valA = $a[$sortKey] ?? 0;
+                    $valB = $b[$sortKey] ?? 0;
+                    if (is_numeric($valA) && is_numeric($valB)) {
+                        $cmp = $valA <=> $valB;
+                    } else {
+                        $cmp = strcasecmp(strval($valA), strval($valB));
+                    }
+                    return $dir === 'desc' ? -$cmp : $cmp;
+                });
+            }
+        }
 
         $start = max(0, intval($request->get('start', 0)));
         $length = intval($request->get('length', 10));
@@ -1552,7 +1651,6 @@ class HomeController extends Controller
         }
 
         if ((empty($style) || empty($serviceProvider)) && strpos($brandName, ' - ') !== false) {
-            // Might be formatted like "Brand - Style (ServiceProvider)"
             if (preg_match('/^(.*?)\s*-\s*(.*?)\s*\((.*?)\)$/', $brandName, $matches)) {
                 $brandName = trim($matches[1]);
                 $style = trim($matches[2]);
@@ -1560,20 +1658,11 @@ class HomeController extends Controller
             }
         }
 
-        $search = '';
-        if ($request->has('search')) {
-            $s = $request->get('search');
-            if (is_array($s) && isset($s['value'])) {
-                $search = trim(strtolower($s['value']));
-            } else if (is_string($s)) {
-                $search = trim(strtolower($s));
-            }
-        }
+        $search = trim(strval($request->input('search.value', $request->get('search', ''))));
 
         $allData = $this->computeFabricUtilisationSummary();
         $summary = $allData['summary'];
 
-        // Find matching group in summary
         $matchingJobCards = [];
         foreach ($summary as $item) {
             $matchBrand = false;
@@ -1593,7 +1682,6 @@ class HomeController extends Controller
             }
         }
 
-        // Fallback match if not found by exact match
         if (empty($matchingJobCards) && (!empty($brandName) || !empty($style) || !empty($serviceProvider))) {
             foreach ($summary as $item) {
                 $bMatch = empty($brandName) || stripos($item['brand_name'], $brandName) !== false;
@@ -1607,20 +1695,49 @@ class HomeController extends Controller
 
         $recordsTotal = count($matchingJobCards);
 
-        // Apply search filtering
         if (!empty($search)) {
-            $matchingJobCards = array_values(array_filter($matchingJobCards, function ($jc) use ($search) {
-                return (stripos($jc['job_card_no'] ?? '', $search) !== false)
-                    || (stripos($jc['service_provider'] ?? '', $search) !== false)
-                    || (stripos($jc['style'] ?? '', $search) !== false)
-                    || (stripos($jc['remarks'] ?? '', $search) !== false)
-                    || (stripos($jc['status'] ?? '', $search) !== false);
+            $cleanSearch = trim(preg_replace('/\s+/', ' ', str_ireplace(['days', 'day', 'pcs', '%', 'm', ','], ' ', $search)));
+
+            $matchingJobCards = array_values(array_filter($matchingJobCards, function ($jc) use ($search, $cleanSearch) {
+                $cutting = $jc['cutting_qty'] ?? 0;
+                $issued = floatval($jc['fabric_issued'] ?? 0);
+                $consumed = floatval($jc['fabric_consumed'] ?? 0);
+                $wastage = floatval($jc['wastage'] ?? 0);
+                $util = floatval($jc['utilisation'] ?? 0);
+                $noDays = $jc['no_of_days'] ?? '';
+
+                $rowText = implode(' ', [
+                    $jc['job_card_no'] ?? '',
+                    $jc['issue_date'] ?? ($jc['date'] ?? ''),
+                    $jc['delivery_date'] ?? '',
+                    $noDays,
+                    $jc['service_provider'] ?? '',
+                    $jc['style'] ?? '',
+                    $cutting,
+                    number_format($cutting) . ' Pcs',
+                    number_format($cutting),
+                    $issued,
+                    number_format($issued, 2),
+                    $consumed,
+                    number_format($consumed, 2),
+                    $wastage,
+                    number_format($wastage, 2),
+                    $util,
+                    $util . '%',
+                    round($util) . '%',
+                    $jc['remarks'] ?? '',
+                    $jc['status'] ?? ''
+                ]);
+
+                $cleanRow = preg_replace('/\s+/', ' ', str_ireplace(['days', 'day', 'pcs', '%', 'm', ','], ' ', $rowText));
+
+                return stripos($rowText, $search) !== false 
+                    || (!empty($cleanSearch) && stripos($cleanRow, $cleanSearch) !== false);
             }));
         }
 
         $recordsFiltered = count($matchingJobCards);
 
-        // Sorting if requested by DataTables
         $order = $request->get('order');
         if (is_array($order) && !empty($order)) {
             $colIdx = intval($order[0]['column'] ?? 0);
@@ -1655,14 +1772,12 @@ class HomeController extends Controller
             }
         }
 
-        // Totals for all matching job cards
         $totCutting = collect($matchingJobCards)->sum('cutting_qty');
         $totIssued = collect($matchingJobCards)->sum('fabric_issued');
         $totConsumed = collect($matchingJobCards)->sum('fabric_consumed');
         $totWastage = collect($matchingJobCards)->sum('wastage');
         $totUtil = $totIssued > 0 ? round(($totConsumed / $totIssued) * 100, 1) : 0;
 
-        // Pagination
         $start = max(0, intval($request->get('start', 0)));
         $length = intval($request->get('length', 10));
         if ($length < 0) {
@@ -1711,7 +1826,8 @@ class HomeController extends Controller
         if ($length <= 0)
             $length = 10;
 
-        $artQuery = DB::table('stock_entry_items as sei')
+        // 1. Base Stock Subquery
+        $stockSub = DB::table('stock_entry_items as sei')
             ->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
             ->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
             ->where('sei.store_category_id', 1)
@@ -1727,42 +1843,109 @@ class HomeController extends Controller
             ->groupBy('sei.art_no')
             ->havingRaw('stock > 0');
 
+        // 2. Base WIP Subquery
+        $wipSub = DB::table('job_card_fabric_details as jcfd')->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')->whereNull('jcfd.deleted_at')->where('jce.status', '!=', 'cancelled')->where('jce.status', '!=', 'Completed')->select('jcfd.art_no', DB::raw('SUM(jcfd.total_qty) as wip_qty'))->groupBy('jcfd.art_no');
+
+        // 3. Settings Subquery
+        $settingsSub = DB::table('core_material_planner_settings')
+            ->whereNull('deleted_at')
+            ->where(function ($q) {
+                $q->whereNull('status')->orWhere('status', 'Active');
+            })
+            ->select('art_no', 'daily_consumption', 'supplier_lead_time', 'safety_stock');
+
+        // 4. Combined Full Query
+        $fullQuery = DB::query()->fromSub($stockSub, 'stk')
+            ->leftJoinSub($wipSub, 'wip', 'stk.art_no', '=', 'wip.art_no')
+            ->leftJoinSub($settingsSub, 'cfg', 'stk.art_no', '=', 'cfg.art_no')
+            ->select(
+                'stk.art_no',
+                'stk.item_name',
+                'stk.brand_name',
+                'stk.stock',
+                DB::raw('COALESCE(wip.wip_qty, 0) as wip'),
+                DB::raw('stk.stock + COALESCE(wip.wip_qty, 0) as pipeline'),
+                DB::raw('COALESCE(cfg.daily_consumption, 0) as daily_consumption'),
+                DB::raw('COALESCE(cfg.supplier_lead_time, 0) as supplier_lead_time'),
+                DB::raw('COALESCE(cfg.safety_stock, 0) as safety_stock')
+            );
+
+        $totalRecords = DB::query()->fromSub($stockSub, 'stk_total')->count();
+
+        // Universal Search across ALL columns
         if (!empty($search)) {
-            $artQuery->where(function ($q) use ($search) {
-                $q->where('sei.art_no', 'like', "%{$search}%")
-                    ->orWhere('rm.name', 'like', "%{$search}%")
-                    ->orWhere('b.brand_name', 'like', "%{$search}%");
+            $noComma = trim(preg_replace('/[₹,%\s()"\']|pcs|days?|meters?|mtrs?|[m]/i', '', $search));
+            $trimmedDec = rtrim(rtrim($noComma, '0'), '.');
+            $intVal = is_numeric($noComma) ? strval(intval($noComma)) : '';
+
+            $fullQuery->where(function ($q) use ($search, $noComma, $trimmedDec, $intVal) {
+                // Text columns
+                $q->where('stk.art_no', 'like', "%{$search}%")
+                    ->orWhere('stk.item_name', 'like', "%{$search}%")
+                    ->orWhere('stk.brand_name', 'like', "%{$search}%");
+
+                // Numeric columns
+                if ($noComma !== '') {
+                    $q->orWhere('stk.stock', 'like', "%{$noComma}%")
+                        ->orWhere(DB::raw('COALESCE(wip.wip_qty, 0)'), 'like', "%{$noComma}%")
+                        ->orWhere(DB::raw('stk.stock + COALESCE(wip.wip_qty, 0)'), 'like', "%{$noComma}%")
+                        ->orWhere(DB::raw('COALESCE(cfg.daily_consumption, 0)'), 'like', "%{$noComma}%")
+                        ->orWhere(DB::raw('COALESCE(cfg.supplier_lead_time, 0)'), 'like', "%{$noComma}%")
+                        ->orWhere(DB::raw('COALESCE(cfg.safety_stock, 0)'), 'like', "%{$noComma}%");
+
+                    if ($trimmedDec !== '' && $trimmedDec !== $noComma) {
+                        $q->orWhere('stk.stock', 'like', "%{$trimmedDec}%")
+                            ->orWhere(DB::raw('COALESCE(wip.wip_qty, 0)'), 'like', "%{$trimmedDec}%")
+                            ->orWhere(DB::raw('stk.stock + COALESCE(wip.wip_qty, 0)'), 'like', "%{$trimmedDec}%")
+                            ->orWhere(DB::raw('COALESCE(cfg.daily_consumption, 0)'), 'like', "%{$trimmedDec}%")
+                            ->orWhere(DB::raw('COALESCE(cfg.safety_stock, 0)'), 'like', "%{$trimmedDec}%");
+                    }
+
+                    if ($intVal !== '' && $intVal !== $noComma && $intVal !== $trimmedDec) {
+                        $q->orWhere('stk.stock', 'like', "%{$intVal}%")
+                            ->orWhere(DB::raw('COALESCE(wip.wip_qty, 0)'), 'like', "%{$intVal}%")
+                            ->orWhere(DB::raw('stk.stock + COALESCE(wip.wip_qty, 0)'), 'like', "%{$intVal}%");
+                    }
+                }
+
+                // Status / PO
+                if (stripos($search, 'order') !== false || stripos($search, 'now') !== false) {
+                    $q->orWhereRaw('(stk.stock + COALESCE(wip.wip_qty, 0) - ((COALESCE(cfg.daily_consumption, 0) * COALESCE(cfg.supplier_lead_time, 0)) + COALESCE(cfg.safety_stock, 0))) <= 0 AND COALESCE(cfg.daily_consumption, 0) > 0');
+                }
             });
         }
 
-        // Get total count of art numbers
-        $totalRecords = DB::query()->fromSub($artQuery, 'sub')->count();
+        $filteredRecords = $fullQuery->count();
 
-        // Fetch ONLY the target art numbers for this page
-        $pageArtRows = $artQuery->orderByDesc('stock')
-            ->offset($start)
-            ->limit($length)
-            ->get();
+        // Sorting Support
+        $orderColumnIdx = $request->input('order.0.column');
+        $orderDir = strtolower($request->input('order.0.dir', 'desc'));
+        $colMap = [
+            1 => 'stk.art_no',
+            2 => 'stk.item_name',
+            3 => 'stk.brand_name',
+            4 => 'stk.stock',
+            5 => 'wip',
+            7 => 'pipeline',
+            8 => 'daily_consumption',
+            10 => 'supplier_lead_time',
+            11 => 'safety_stock',
+        ];
 
+        if (isset($colMap[$orderColumnIdx])) {
+            $fullQuery->orderBy($colMap[$orderColumnIdx], $orderDir);
+        } else {
+            $fullQuery->orderByDesc('stk.stock');
+        }
+
+        // Fetch paginated slice
+        $pageArtRows = $fullQuery->offset($start)->limit($length)->get();
         $pageArtList = $pageArtRows->pluck('art_no')->toArray();
 
-        $wipQuery = [];
         $fgDirect = [];
         $fgViaJc = [];
 
         if (!empty($pageArtList)) {
-            // Fast WIP lookup for only current page items
-            $wipQuery = DB::table('job_card_fabric_details as jcfd')
-                ->join('job_card_entries as jce', 'jcfd.job_card_entry_id', '=', 'jce.id')
-                ->whereIn('jcfd.art_no', $pageArtList)
-                ->whereNull('jcfd.deleted_at')
-                ->where('jce.status', '!=', 'cancelled')
-                ->where('jce.status', '!=', 'Completed')
-                ->select('jcfd.art_no', DB::raw('SUM(jcfd.total_qty) as wip_qty'))
-                ->groupBy('jcfd.art_no')
-                ->get()
-                ->keyBy('art_no');
-
             // Fast FG direct lookup for only current page items
             $fgDirect = DB::table('stock_entry_items')
                 ->whereNull('store_category_id')
@@ -1787,32 +1970,20 @@ class HomeController extends Controller
                 ->groupBy('jcfd.art_no')
                 ->get()
                 ->keyBy('art_no');
-
-            // Master Settings Lookup for current page items
-            $settingsQuery = DB::table('core_material_planner_settings')
-                ->whereIn('art_no', $pageArtList)
-                ->whereNull('deleted_at')
-                ->where(function ($q) {
-                    $q->whereNull('status')->orWhere('status', 'Active');
-                })
-                ->get()
-                ->keyBy('art_no');
         }
 
         $pageData = [];
         foreach ($pageArtRows as $idx => $item) {
             $stock = max(0, floatval($item->stock));
-            $wip = max(0, floatval($wipQuery[$item->art_no]->wip_qty ?? 0));
+            $wip = max(0, floatval($item->wip));
             $fg1 = max(0, floatval($fgDirect[$item->art_no]->fg_qty ?? 0));
             $fg2 = max(0, floatval($fgViaJc[$item->art_no]->fg_qty ?? 0));
             $fg = max($fg1, $fg2);
             $pipeline = $stock + $wip;
 
-            // Master Settings lookup
-            $setting = $settingsQuery[$item->art_no] ?? null;
-            $dailyConsumption = floatval($setting->daily_consumption ?? 0);
-            $supplierLeadTime = intval($setting->supplier_lead_time ?? 0);
-            $safetyStock = floatval($setting->safety_stock ?? 0);
+            $dailyConsumption = floatval($item->daily_consumption ?? 0);
+            $supplierLeadTime = intval($item->supplier_lead_time ?? 0);
+            $safetyStock = floatval($item->safety_stock ?? 0);
 
             // Calculations
             $daysLeftStr = '—';
@@ -1858,7 +2029,7 @@ class HomeController extends Controller
         return response()->json([
             'draw' => intval($request->get('draw', 1)),
             'recordsTotal' => $totalRecords,
-            'recordsFiltered' => $totalRecords,
+            'recordsFiltered' => $filteredRecords,
             'data' => $pageData,
             'totals' => [
                 'total_stock' => number_format($grandTotals['total_stock'], 2),
@@ -1887,12 +2058,7 @@ class HomeController extends Controller
             )
             ->get();
 
-        $debitNotes = DB::table('debit_notes')
-            ->whereNull('deleted_at')
-            ->select('supplier_id', DB::raw('COUNT(*) as dn_count'), DB::raw('SUM(grand_total) as dn_total'))
-            ->groupBy('supplier_id')
-            ->get()
-            ->keyBy('supplier_id');
+        $debitNotes = DB::table('debit_notes')->whereNull('deleted_at')->select('supplier_id', DB::raw('COUNT(*) as dn_count'), DB::raw('SUM(grand_total) as dn_total'))->groupBy('supplier_id')->get()->keyBy('supplier_id');
 
         $grouped = $supplierPOs->groupBy('supplier_id');
         $supplierPerformance = [];
@@ -2012,10 +2178,26 @@ class HomeController extends Controller
             $length = 10;
 
         if (!empty($search)) {
-            $items = array_values(array_filter($items, function ($item) use ($search) {
-                return stripos($item['supplier_name'] ?? '', $search) !== false;
+            $cleanSearch = trim(preg_replace('/\s+/', ' ', str_replace(['₹', ',', '%', '(', ')'], ' ', $search)));
+
+            $items = array_values(array_filter($items, function ($s) use ($search, $cleanSearch) {
+                $rowText = implode(' ', [
+                    $s['supplier_name'],
+                    $s['purchase_value'],
+                    number_format($s['purchase_value'], 2),
+                    $s['orders_count'],
+                    $s['on_time_pct'] . '%',
+                    $s['avg_delay'] . ' days',
+                    $s['returns_count'] . ' (₹' . number_format($s['returns_total']) . ')',
+                    $s['returns_total']
+                ]);
+                $cleanRow = str_replace(['₹', ',', '%', '(', ')'], ' ', $rowText);
+
+                return stripos($rowText, $search) !== false 
+                    || stripos($cleanRow, $cleanSearch) !== false;
             }));
         }
+
 
         // $totalRecords = count($items);
         $filteredRecords = count($items);
@@ -2103,12 +2285,26 @@ class HomeController extends Controller
             ];
         }
 
+        $totalPurchaseValue = array_sum(array_column($items, 'purchase_value'));
+        $totalOrders = array_sum(array_column($items, 'orders_count'));
+        $totalReturnsCount = array_sum(array_column($items, 'returns_count'));
+        $totalReturnsAmount = array_sum(array_column($items, 'returns_total'));
+        $avgOnTime = count($items) > 0 ? round(array_sum(array_column($items, 'on_time_pct')) / count($items), 1) : 0;
+        $avgDelay = count($items) > 0 ? round(array_sum(array_column($items, 'avg_delay')) / count($items), 1) : 0;
+
         return response()->json([
             'draw' => intval($request->get('draw', 1)),
             'recordsTotal' => $unfilteredRecords,
             'recordsFiltered' => $filteredRecords,
             'data' => $pageData,
-            'kpis' => $perfData['kpis']
+            'kpis' => $perfData['kpis'],
+            'totals' => [
+                'purchase_value' => '₹' . number_format($totalPurchaseValue, 2),
+                'orders' => number_format($totalOrders),
+                'on_time_pct' => $avgOnTime . '%',
+                'avg_delay' => $avgDelay . ' Days',
+                'returns' => $totalReturnsCount > 0 ? $totalReturnsCount . ' (₹' . number_format($totalReturnsAmount) . ')' : '0'
+            ]
         ]);
     }
 
@@ -2117,7 +2313,25 @@ class HomeController extends Controller
         $supplierId = $request->supplier_id;
         $supplier = DB::table('suppliers')->where('id', $supplierId)->first();
         if (!$supplier) {
-            return response()->json(['supplier_name' => 'Supplier', 'orders' => []]);
+            return response()->json([
+                'draw' => (int) $request->input('draw', 1),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'supplier_name' => 'Supplier',
+                'totals' => ['total_qty' => '0.00', 'total_amount' => '₹0.00']
+            ]);
+        }
+
+        $draw = (int) $request->input('draw', 1);
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        if ($length <= 0) $length = 10;
+
+        $searchValue = '';
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $searchValue = is_array($search) ? ($search['value'] ?? '') : (string) $search;
         }
 
         $orders = DB::table('purchase_orders as po')
@@ -2148,6 +2362,8 @@ class HomeController extends Controller
             )
             ->orderBy('po.po_date', 'desc')
             ->get();
+
+        $recordsTotal = $orders->count();
 
         $formattedOrders = [];
         foreach ($orders as $o) {
@@ -2187,9 +2403,54 @@ class HomeController extends Controller
             ];
         }
 
+        $allCollection = collect($formattedOrders);
+
+        if (!empty($searchValue)) {
+            $term = strtolower(trim($searchValue));
+            $allCollection = $allCollection->filter(function ($item) use ($term) {
+                return stripos($item['po_number'], $term) !== false
+                    || stripos($item['po_date'], $term) !== false
+                    || stripos($item['due_date'], $term) !== false
+                    || stripos($item['total_qty'], $term) !== false
+                    || stripos($item['total_amount'], $term) !== false
+                    || stripos(strip_tags($item['delivery_status']), $term) !== false;
+            })->values();
+        }
+
+        $recordsFiltered = $allCollection->count();
+
+        $sumQty = $allCollection->sum(function ($item) {
+            return floatval(str_replace(',', '', $item['total_qty']));
+        });
+        $sumAmount = $allCollection->sum(function ($item) {
+            return floatval(str_replace([',', '₹'], '', $item['total_amount']));
+        });
+
+        $paged = $allCollection->slice($start, $length)->values();
+        $data = [];
+        foreach ($paged as $idx => $r) {
+            $data[] = [
+                'DT_RowIndex' => $start + $idx + 1,
+                'po_number' => '<span class="fw-bold text-primary">' . e($r['po_number']) . '</span>',
+                'po_date' => $r['po_date'],
+                'due_date' => $r['due_date'],
+                'total_qty' => '<span class="fw-bold">' . $r['total_qty'] . '</span>',
+                'total_amount' => '<span class="fw-bold text-dark">' . $r['total_amount'] . '</span>',
+                'delivery_status' => $r['delivery_status']
+            ];
+        }
+
         return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
             'supplier_name' => $supplier->name,
-            'orders' => $formattedOrders
+            'orders' => $formattedOrders,
+            'totals' => [
+                'total_qty' => number_format($sumQty, 2),
+                'total_amount' => '₹' . number_format($sumAmount, 2)
+            ]
         ]);
     }
 
@@ -2198,7 +2459,25 @@ class HomeController extends Controller
         $supplierId = $request->supplier_id;
         $supplier = DB::table('suppliers')->where('id', $supplierId)->first();
         if (!$supplier) {
-            return response()->json(['supplier_name' => 'Supplier', 'debit_notes' => []]);
+            return response()->json([
+                'draw' => (int) $request->input('draw', 1),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'supplier_name' => 'Supplier',
+                'totals' => ['grand_total' => '₹0.00']
+            ]);
+        }
+
+        $draw = (int) $request->input('draw', 1);
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        if ($length <= 0) $length = 10;
+
+        $searchValue = '';
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $searchValue = is_array($search) ? ($search['value'] ?? '') : (string) $search;
         }
 
         $debitNotes = DB::table('debit_notes as dn')
@@ -2217,6 +2496,8 @@ class HomeController extends Controller
             ->orderBy('dn.debit_note_date', 'desc')
             ->get();
 
+        $recordsTotal = $debitNotes->count();
+
         $formattedNotes = [];
         foreach ($debitNotes as $dn) {
             $formattedNotes[] = [
@@ -2229,9 +2510,50 @@ class HomeController extends Controller
             ];
         }
 
+        $allCollection = collect($formattedNotes);
+
+        if (!empty($searchValue)) {
+            $term = strtolower(trim($searchValue));
+            $allCollection = $allCollection->filter(function ($item) use ($term) {
+                return stripos($item['debit_note_no'], $term) !== false
+                    || stripos($item['debit_note_date'], $term) !== false
+                    || stripos($item['invoice_no'], $term) !== false
+                    || stripos($item['grand_total'], $term) !== false
+                    || stripos(strip_tags($item['status']), $term) !== false
+                    || stripos($item['remarks'], $term) !== false;
+            })->values();
+        }
+
+        $recordsFiltered = $allCollection->count();
+
+        $sumGrandTotal = $allCollection->sum(function ($item) {
+            return floatval(str_replace([',', '₹'], '', $item['grand_total']));
+        });
+
+        $paged = $allCollection->slice($start, $length)->values();
+        $data = [];
+        foreach ($paged as $idx => $r) {
+            $data[] = [
+                'DT_RowIndex' => $start + $idx + 1,
+                'debit_note_no' => '<span class="fw-bold text-danger">' . e($r['debit_note_no']) . '</span>',
+                'debit_note_date' => $r['debit_note_date'],
+                'invoice_no' => $r['invoice_no'],
+                'grand_total' => '<span class="fw-bold text-danger">' . $r['grand_total'] . '</span>',
+                'status' => $r['status'],
+                'remarks' => $r['remarks']
+            ];
+        }
+
         return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
             'supplier_name' => $supplier->name,
-            'debit_notes' => $formattedNotes
+            'debit_notes' => $formattedNotes,
+            'totals' => [
+                'grand_total' => '₹' . number_format($sumGrandTotal, 2)
+            ]
         ]);
     }
 
@@ -2300,5 +2622,225 @@ class HomeController extends Controller
         }
 
         return response()->json($servicesData);
+    }
+
+    /**
+     * AJAX endpoint for Creditors Outstanding & Aging Report DataTables Server-Side Pagination
+     */
+    public function getCreditorsAgingAjax(Request $request)
+    {
+        $draw = (int) $request->input('draw', 1);
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', $request->input('per_page', 10));
+        if ($length <= 0) $length = 10;
+
+        if ($request->has('page') && !$request->has('start')) {
+            $page = max(1, (int) $request->input('page', 1));
+            $start = ($page - 1) * $length;
+        }
+
+        $searchValue = '';
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $searchValue = is_array($search) ? ($search['value'] ?? '') : (string) $search;
+        }
+
+        $baseQuery = DB::table('purchase_invoices')
+            ->join('suppliers', 'purchase_invoices.supplier_id', '=', 'suppliers.id')
+            ->leftJoinSub(
+                DB::table('payments')
+                    ->whereNull('deleted_at')
+                    ->where('payment_type', 'Supplier Payment')
+                    ->select('reference_id', DB::raw('SUM(amount) as paid_amount'))
+                    ->groupBy('reference_id'),
+                'p',
+                'p.reference_id',
+                '=',
+                'purchase_invoices.id'
+            )
+            ->whereNull('purchase_invoices.deleted_at')
+            ->whereNull('suppliers.deleted_at')
+            ->whereRaw('(purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) > 0')
+            ->select(
+                'suppliers.id as supplier_id',
+                'suppliers.name as supplier_name',
+                DB::raw('SUM(purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) as total_due'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) <= 30 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_30'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 31 AND 60 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_60'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 61 AND 90 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_90'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) > 90 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_above_90')
+            )
+            ->groupBy('suppliers.id', 'suppliers.name')
+            ->orderBy('suppliers.id', 'asc');
+
+        $allRecords = $baseQuery->get();
+        $recordsTotal = $allRecords->count();
+
+        if (!empty($searchValue)) {
+            $term = strtolower(trim($searchValue));
+            $allRecords = $allRecords->filter(function ($item) use ($term) {
+                return stripos($item->supplier_name, $term) !== false
+                    || stripos((string) $item->total_due, $term) !== false;
+            })->values();
+        }
+
+        $recordsFiltered = $allRecords->count();
+
+        $orderColIdx = $request->input('order.0.column');
+        $orderDir = strtolower($request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $colMap = [
+            0 => 'supplier_name',
+            1 => 'total_due',
+            2 => 'bucket_30',
+            3 => 'bucket_60',
+            4 => 'bucket_90',
+            5 => 'bucket_above_90'
+        ];
+
+        if ($orderColIdx !== null && isset($colMap[$orderColIdx])) {
+            $colName = $colMap[$orderColIdx];
+            if ($orderDir === 'desc') {
+                $allRecords = $allRecords->sortByDesc($colName)->values();
+            } else {
+                $allRecords = $allRecords->sortBy($colName)->values();
+            }
+        }
+
+        $pagedData = $allRecords->slice($start, $length)->values();
+
+        $data = [];
+        foreach ($pagedData as $row) {
+            $data[] = [
+                'supplier_id' => $row->supplier_id,
+                'supplier_name' => '<strong>' . e($row->supplier_name) . '</strong>',
+                'total_due' => formatIndianCurrency($row->total_due),
+                'bucket_30' => '<span class="text-success">' . formatIndianCurrency($row->bucket_30) . '</span>',
+                'bucket_60' => formatIndianCurrency($row->bucket_60),
+                'bucket_90' => '<span class="text-warning">' . formatIndianCurrency($row->bucket_90) . '</span>',
+                'bucket_above_90' => '<span class="text-danger fw-bold">' . formatIndianCurrency($row->bucket_above_90) . '</span>',
+            ];
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    public function getCuttingJobCardsAjax(Request $request)
+    {
+        $cuttingStage = \App\Models\OperationStage::where('operation_stage_name', 'like', '%CUTTING%')->first();
+        $cuttingStageId = $cuttingStage ? $cuttingStage->id : 1;
+
+        $cuttingScheduleJcIds = ProcessSchedule::where('operation_stage_id', $cuttingStageId)->pluck('job_card_entry_id')->unique();
+
+        $baseQuery = JobCardEntry::with(['brand', 'item.style', 'serviceProvider', 'issueItems'])
+            ->whereIn('id', $cuttingScheduleJcIds)
+            ->whereNull('deleted_at');
+
+        $totalAll = (clone $baseQuery)->count();
+        $totalActive = (clone $baseQuery)->whereNotIn('status', ['Production Completed', 'Closed'])->count();
+        $totalCompleted = (clone $baseQuery)->where('status', 'Production Completed')->count();
+
+        $filter = strtolower(trim($request->get('filter', 'all')));
+        if ($filter === 'active') {
+            $baseQuery->whereNotIn('status', ['Production Completed', 'Closed']);
+        } elseif ($filter === 'completed') {
+            $baseQuery->where('status', 'Production Completed');
+        }
+
+        $recordsTotal = (clone $baseQuery)->count();
+
+        // Search
+        $search = trim(strval($request->input('search.value', $request->get('search', ''))));
+        if (!empty($search)) {
+            $cleanSearch = trim(preg_replace('/\s+/', ' ', str_ireplace(['pcs', 'pc', ','], ' ', $search)));
+            $baseQuery->where(function ($q) use ($search, $cleanSearch) {
+                $q->where('job_card_no', 'like', "%{$search}%")
+                  ->orWhere('status', 'like', "%{$search}%")
+                  ->orWhere('grand_total_qty', 'like', "%{$search}%")
+                  ->orWhereDate('delivery_date', 'like', "%{$search}%")
+                  ->orWhereHas('brand', function ($b) use ($search) {
+                      $b->where('brand_name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('item.style', function ($s) use ($search) {
+                      $s->where('style_name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('serviceProvider', function ($sp) use ($search) {
+                      $sp->where('name', 'like', "%{$search}%");
+                  });
+
+                if (!empty($cleanSearch) && is_numeric($cleanSearch)) {
+                    $q->orWhere('grand_total_qty', floatval($cleanSearch));
+                }
+            });
+        }
+
+        $recordsFiltered = (clone $baseQuery)->count();
+
+        // Ordering
+        $order = $request->get('order');
+        if (is_array($order) && !empty($order)) {
+            $colIdx = intval($order[0]['column'] ?? 0);
+            $dir = strtolower($order[0]['dir'] ?? 'desc');
+            $colMap = [
+                1 => 'job_card_no',
+                5 => 'delivery_date',
+                6 => 'grand_total_qty',
+                8 => 'status',
+            ];
+            if (isset($colMap[$colIdx])) {
+                $baseQuery->orderBy($colMap[$colIdx], $dir);
+            } else {
+                $baseQuery->orderByDesc('id');
+            }
+        } else {
+            $baseQuery->orderByDesc('id');
+        }
+
+        $start = max(0, intval($request->get('start', 0)));
+        $length = intval($request->get('length', 10));
+        if ($length <= 0) $length = 10;
+
+        $jobCards = $baseQuery->offset($start)->limit($length)->get();
+
+        $data = [];
+        foreach ($jobCards as $idx => $jc) {
+            $isCompleted = stripos($jc->status, 'Complete') !== false;
+            $piecesCut = floatval($jc->issueItems->sum('produced_qty'));
+            $orderQty = floatval($jc->grand_total_qty);
+
+            $statusBadge = $isCompleted
+                ? '<span class="badge bg-soft-success text-success fw-semibold"><i class="ri ri-checkbox-circle-line me-1"></i>Completed</span>'
+                : '<span class="badge bg-soft-warning text-warning fw-semibold"><i class="ri ri-time-line me-1"></i>' . e($jc->status ?: 'In Progress') . '</span>';
+
+            $data[] = [
+                'DT_RowIndex' => $start + $idx + 1,
+                'job_card_no' => '<a href="' . url('job_card_entries/view/' . $jc->id) . '" class="fw-bold text-primary text-decoration-none" title="View Job Card">' . e($jc->job_card_no) . '</a>',
+                'brand' => '<strong>' . e($jc->brand->brand_name ?? 'N/A') . '</strong>',
+                'style' => e($jc->item->style->style_name ?? '-'),
+                'unit' => '<span class="badge bg-light text-dark border">' . e($jc->serviceProvider->name ?? 'In-House') . '</span>',
+                'delivery_date' => $jc->delivery_date ? date('d-M-Y', strtotime($jc->delivery_date)) : '-',
+                'order_qty' => '<span class="fw-bold text-dark">' . number_format($orderQty) . ' Pcs</span>',
+                'pieces_cut' => '<span class="fw-bold ' . ($piecesCut > 0 ? 'text-success' : 'text-muted') . '">' . number_format($piecesCut) . ' Pcs</span>',
+                'status' => $statusBadge,
+                'action' => '<a href="' . url('job_card_entries/view/' . $jc->id) . '" class="btn btn-xs btn-outline-primary py-1 px-2"><i class="ri ri-eye-line me-1"></i>View</a>',
+            ];
+        }
+
+        return response()->json([
+            'draw' => intval($request->get('draw', 1)),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+            'counts' => [
+                'all' => $totalAll,
+                'active' => $totalActive,
+                'completed' => $totalCompleted
+            ]
+        ]);
     }
 }
