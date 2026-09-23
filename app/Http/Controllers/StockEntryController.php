@@ -908,7 +908,7 @@ class StockEntryController extends Controller
             fputcsv($file, $headers);
             fputcsv($file, [
                 date('d-m-Y'),
-                'CASINO FORMAL',
+                'CASINO BRAVO',
                 'KALAVASAL',
                 'CB-PRT-FS',
                 'CB0906-1',
@@ -924,6 +924,25 @@ class StockEntryController extends Controller
                 'BC309060',
                 'PCS',
                 'Sample finished goods import'
+            ]);
+            fputcsv($file, [
+                date('d-m-Y'),
+                'CASINO BRAVO',
+                'KALAVASAL',
+                'CB-PRT-FS',
+                'CB0906-1',
+                '38',
+                'BLUE',
+                'PRINT',
+                'FULL',
+                'Return Goods Store',
+                '10',
+                '0',
+                '499.00',
+                'R1',
+                'BC309060',
+                'PCS',
+                'External Customer Sales Return Stock'
             ]);
             fclose($file);
         };

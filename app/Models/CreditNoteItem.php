@@ -13,8 +13,17 @@ class CreditNoteItem extends Model
     protected $fillable = [
         'credit_note_id',
         'sales_invoice_item_id',
+        'stock_entry_item_id',
+        'item_id',
+        'brand_category_id',
+        'size',
+        'art_no',
+        'color_id',
+        'sku',
         'quantity',
+        'sleeve_type',
         'mrp',
+        'uom_id',
         'rate',
         'amount',
         'add_to_inventory',
@@ -28,6 +37,16 @@ class CreditNoteItem extends Model
     public function salesInvoiceItem()
     {
         return $this->belongsTo(SalesInvoiceItem::class);
+    }
+
+    public function stockEntryItem()
+    {
+        return $this->belongsTo(StockEntryItem::class);
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(Color::class);
     }
 
     public function item()

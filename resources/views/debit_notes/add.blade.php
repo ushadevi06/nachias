@@ -904,6 +904,7 @@
                             });
                         }
                         calculateTotals();
+                        updateSelectAllState();
                     }
                 });
             } else {
@@ -912,6 +913,7 @@
                 $('#supplier_col').hide();
                 $('#items_tbody').html('<tr><td colspan="8" class="text-center">No items added yet.</td></tr>');
                 calculateTotals();
+                updateSelectAllState();
             }
         });
     
@@ -994,6 +996,7 @@
 
         $(document).on('change', '.item-checkbox, input[name="round_off_type"]', function () {
             calculateTotals();
+            updateSelectAllState();
         });
         
         $(document).on('input', '#round_off', function () {
@@ -1270,6 +1273,7 @@
             }
         });
         toggleTaxDivs();
+        updateSelectAllState();
     });
 </script>
 

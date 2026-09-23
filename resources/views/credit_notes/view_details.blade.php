@@ -179,43 +179,52 @@
                                     @foreach($creditNote->items as $index => $item)
                                         @php
                                             $invoiceItem = $item->salesInvoiceItem;
-                                            $invoiceNo = $invoiceItem && $invoiceItem->salesInvoice ? $invoiceItem->salesInvoice->inv_no : '-';
+                                            $stockItem = $item->stockEntryItem ?? ($invoiceItem ? $invoiceItem->stockEntryItem : null);
+                                            $invoiceNo = $invoiceItem && $invoiceItem->salesInvoice ? $invoiceItem->salesInvoice->inv_no : ($item->stock_entry_item_id ? 'Return Store' : '-');
 
                                             $itemName = '-';
-                                            if ($invoiceItem) {
-                                                if ($invoiceItem->stockEntryItem && $invoiceItem->stockEntryItem->finished_item_code) {
-                                                    $itemName = $invoiceItem->stockEntryItem->finished_item_code;
-                                                } elseif ($invoiceItem->item) {
-                                                    $itemName = $invoiceItem->item->name;
+                                            if ($stockItem && $stockItem->finished_item_code) {
+                                                $itemName = $stockItem->finished_item_code;
+                                            } elseif ($invoiceItem && $invoiceItem->item) {
+                                                $itemName = $invoiceItem->item->name;
+                                            } elseif ($item->item) {
+                                                $itemName = $item->item->name;
+                                            } elseif ($stockItem && $stockItem->item) {
+                                                $itemName = $stockItem->item->name;
+                                            }
+
+                                            $productBarcode = $item->sku ?: ($invoiceItem ? $invoiceItem->sku : ($stockItem ? $stockItem->sku : ''));
+                                            $displayArtNo = $item->art_no ?: ($invoiceItem ? ($stockItem ? ($stockItem->art_no ?: $invoiceItem->art_no) : ($invoiceItem->art_no ?: '-')) : ($stockItem ? ($stockItem->art_no ?: '-') : '-'));
+
+                                            $colorName = '-';
+                                            if ($invoiceItem && !empty($invoiceItem->api_color)) {
+                                                $colorName = $invoiceItem->api_color;
+                                            } else {
+                                                if ($displayArtNo !== '-' && strpos($displayArtNo, '-') !== false) {
+                                                    $parts = explode('-', (string)$displayArtNo);
+                                                    $colorName = trim(end($parts));
+                                                } else {
+                                                    $colorName = 'A';
                                                 }
                                             }
 
-                                            $productBarcode = $invoiceItem ? $invoiceItem->sku : '';
-                                            $colorName = $invoiceItem ? ($invoiceItem->api_color ?: ($invoiceItem->color ? $invoiceItem->color->color_name : '-')) : '-';
-
-                                            $displayArtNo = '-';
-                                            if ($invoiceItem) {
-                                                $displayArtNo = $invoiceItem->stockEntryItem ? ($invoiceItem->stockEntryItem->art_no ?: $invoiceItem->art_no) : ($invoiceItem->art_no ?: '-');
-                                            }
-
                                             $uomCode = 'PCS';
-                                            if ($invoiceItem) {
-                                                if ($invoiceItem->stockEntryItem) {
-                                                    $soItem = \App\Models\SalesOrderItem::where('stock_entry_item_id', $invoiceItem->stock_entry_item_id)->first();
+                                            if ($item->uom) {
+                                                $uomCode = $item->uom->uom_code ?: $item->uom->uom_name ?: 'PCS';
+                                            } elseif ($invoiceItem) {
+                                                if ($stockItem) {
+                                                    $soItem = \App\Models\SalesOrderItem::where('stock_entry_item_id', $stockItem->id)->first();
                                                     if ($soItem && $soItem->uom_id) {
                                                         $uomCode = $soItem->uom_id;
                                                     }
                                                 } elseif ($invoiceItem->uom_id) {
                                                     $uomCode = $invoiceItem->uom_id;
                                                 } elseif ($invoiceItem->uom) {
-                                                    $uomCode = $invoiceItem->uom->uom_code;
+                                                    $uomCode = $invoiceItem->uom->uom_code ?: 'PCS';
                                                 }
                                             }
 
-                                            $sizeName = '-';
-                                            if ($invoiceItem) {
-                                                $sizeName = $invoiceItem->sizeRatio ? $invoiceItem->sizeRatio->size : ($invoiceItem->size ?: '-');
-                                            }
+                                            $sizeName = $item->size ?: ($invoiceItem ? ($invoiceItem->sizeRatio ? $invoiceItem->sizeRatio->size : ($invoiceItem->size ?: '-')) : ($stockItem ? ($stockItem->size ?: '-') : '-'));
 
                                             $invQty = $invoiceItem ? $invoiceItem->quantity : 0;
 
@@ -231,7 +240,7 @@
                                                     ->sum('credit_note_items.quantity');
                                             }
 
-                                            $balQty = max(0, $invQty - $alreadyReturned);
+                                            $balQty = $invoiceItem ? max(0, $invQty - $alreadyReturned) : ($stockItem ? max(0, $stockItem->qty_in - $stockItem->qty_out) : '-');
                                             $mrp = $item->mrp ?? ($invoiceItem->mrp ?? 0);
                                             $rate = $item->rate ?? ($invoiceItem->rate ?? 0);
                                             $amount = $item->amount ?? ($item->quantity * $rate);
@@ -274,18 +283,18 @@
             </div>
 
             <!-- Summary Section -->
-            <div class="row g-4 justify-content-between">
-                <div class="col-lg-6">
+            <div class="row g-4 justify-content-between align-items-start">
+                <div class="col-lg-5 col-md-6">
                     @if($creditNote->remarks || $creditNote->reference_doc)
-                    <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; background-color: #fcfcfc;">
-                        <div class="card-body p-4">
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px; background-color: #fcfcfc;">
+                        <div class="card-body p-3">
                             @if($creditNote->remarks)
-                                <h6 class="text-uppercase small fw-bold text-muted mb-3 border-bottom pb-2">Internal Remarks</h6>
-                                <p class="mb-3 text-dark small" style="white-space: pre-line; line-height: 1.6;">{{ $creditNote->remarks }}</p>
+                                <h6 class="text-uppercase small fw-bold text-muted mb-2 border-bottom pb-2">Internal Remarks</h6>
+                                <p class="mb-0 text-dark small" style="white-space: pre-line; line-height: 1.5;">{{ $creditNote->remarks }}</p>
                             @endif
 
                             @if($creditNote->reference_doc)
-                                <h6 class="text-uppercase small fw-bold text-muted mb-3 {{ $creditNote->remarks ? 'mt-4 border-top pt-3' : '' }} border-bottom pb-2">Reference Document</h6>
+                                <h6 class="text-uppercase small fw-bold text-muted mb-2 {{ $creditNote->remarks ? 'mt-3 border-top pt-2' : '' }} border-bottom pb-2">Reference Document</h6>
                                 @php
                                     $attachment = $creditNote->reference_doc;
                                     $extension = pathinfo($attachment, PATHINFO_EXTENSION);
@@ -293,13 +302,13 @@
                                     $url = url('uploads/credit_notes/' . $attachment);
                                 @endphp
 
-                                <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 80px; height: 80px;" title="{{ $attachment }}">
                                     @if($isImage)
                                         <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Reference">
                                     @else
                                         <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
-                                            <i class="ri ri-file-text-line fs-2"></i>
-                                            <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                            <i class="ri ri-file-text-line fs-3"></i>
+                                            <span class="badge bg-primary text-white mt-1" style="font-size: 9px;">{{ strtoupper($extension) }}</span>
                                         </a>
                                     @endif
                                 </div>
@@ -308,7 +317,7 @@
                     </div>
                     @endif
                 </div>
-                <div class="col-lg-5">
+                <div class="col-lg-5 col-md-6">
                     <div class="card border-0 shadow-sm" style="border-radius: 12px;">
                         <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0; border-bottom: 1px solid #f0f0f0;">
                             <h5 class="mb-0 fw-bold text-dark">Billing Summary</h5>
@@ -324,23 +333,29 @@
                                 <span class="fw-bold">₹{{ number_format($creditNote->sub_total, 2) }}</span>
                             </div>
 
-                            @if($creditNote->discount > 0)
+                            @php
+                                $salesDiscountAmt = ($creditNote->sub_total * ($creditNote->discount_percent ?? 0)) / 100;
+                                $boxDiscountAmt = ($creditNote->box_discount_amount ?? 0) * $creditNote->items->sum('quantity');
+                            @endphp
+
+                            @if($creditNote->discount_percent > 0)
                             <div class="d-flex justify-content-between mb-3 text-muted small">
                                 <span>Discount ({{ number_format($creditNote->discount_percent, 2) }}%)</span>
-                                <span>-₹{{ number_format($creditNote->discount, 2) }}</span>
-                            </div>
-                            @endif
-                            @if($creditNote->discount > 0)
-                            <div class="d-flex justify-content-between mb-3 text-muted small">
-                                <span>Discount ({{ number_format($creditNote->discount_percent, 2) }}%)</span>
-                                <span>-₹{{ number_format(($creditNote->sub_total * $creditNote->discount_percent) / 100, 2) }}</span>
+                                <span>-₹{{ number_format($salesDiscountAmt, 2) }}</span>
                             </div>
                             @endif
 
                             @if($creditNote->box_discount_amount > 0)
                             <div class="d-flex justify-content-between mb-3 text-muted small">
                                 <span>Box Discount (₹{{ number_format($creditNote->box_discount_amount, 2) }} x {{ number_format($creditNote->items->sum('quantity'), 2) }})</span>
-                                <span>-₹{{ number_format($creditNote->box_discount_amount * $creditNote->items->sum('quantity'), 2) }}</span>
+                                <span>-₹{{ number_format($boxDiscountAmt, 2) }}</span>
+                            </div>
+                            @endif
+
+                            @if($creditNote->discount > 0)
+                            <div class="d-flex justify-content-between mb-3 fw-semibold text-danger small border-top pt-2">
+                                <span>Total Discount</span>
+                                <span>-₹{{ number_format($creditNote->discount, 2) }}</span>
                             </div>
                             @endif
                             @php
@@ -356,6 +371,14 @@
                                 </div>
                                 @endforeach
                             @endif
+
+                            @php
+                                $netBeforeTax = max(0, (float)$creditNote->sub_total - (float)($creditNote->discount ?? 0) + (float)($preGstCharges->sum('charge_amount') ?? 0));
+                            @endphp
+                            <div class="d-flex justify-content-between mb-3 fw-bold text-dark border-top pt-2">
+                                <span>Net Amount (Before Tax)</span>
+                                <span>₹{{ number_format($netBeforeTax, 2) }}</span>
+                            </div>
 
                             @if($creditNote->other_state)
                                 <div class="d-flex justify-content-between mb-3 text-muted small">

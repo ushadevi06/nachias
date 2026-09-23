@@ -46,14 +46,14 @@
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
                                 <div class="fw-bold text-dark">
                                     {{ $invoice->supplier->name ?? 'N/A' }}
-                                    @if($invoice->supplier && $invoice->supplier->supplier_code)
-                                        <span class="text-primary small">({{ $invoice->supplier->supplier_code }})</span>
+                                    @if($invoice->supplier && $invoice->supplier->code)
+                                        <span class="text-primary small">({{ $invoice->supplier->code }})</span>
                                     @endif
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Purchase Order No</div>
-                                <div class="fw-bold text-dark">{{ $invoice->po_reference ?? '-' }}</div>
+                                <div class="fw-bold text-dark">{{ $invoice->po_number_display }}</div>
                             </div>
                             <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Commission Agent</div>
@@ -122,6 +122,7 @@
                                 <thead class="bg-light">
                                     <tr>
                                         <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="60">S.No</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold">PO Number</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Store Category</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Supplier Design Name</th>
@@ -150,6 +151,9 @@
                                             @endphp
                                             <tr>
                                                 <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
+                                                <td>
+                                                    <span class="fw-bold text-primary">{{ $item->purchaseOrderItem->purchaseOrder->po_number ?? $invoice->purchaseOrder->po_number ?? '-' }}</span>
+                                                </td>
                                                 <td>{{ $item->purchaseOrderItem->storeCategory->category_name ?? $item->rawMaterial->storeCategory->category_name ?? '-' }}</td>
                                                 <td>
                                                     <div class="fw-bold text-dark">{{ $item->rawMaterial->name ?? 'N/A' }}</div>
@@ -185,13 +189,13 @@
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="13" class="text-center py-5 text-muted">No items found</td>
+                                            <td colspan="15" class="text-center py-5 text-muted">No items found</td>
                                         </tr>
                                     @endif
                                 </tbody>
                                 <tfoot class="bg-light fw-bold border-top">
                                     <tr>
-                                        <td colspan="13" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
+                                        <td colspan="14" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
                                         <td class="text-end pe-4 py-3">₹{{ number_format($invoice->sub_total, 2) }}</td>
                                     </tr>
                                 </tfoot>
@@ -359,6 +363,13 @@
                                     <span class="fw-bold text-dark">₹{{ number_format($invoice->sub_total, 2) }}</span>
                                 </div>
 
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted small fw-bold">Discount
+                                        ({{ number_format($invoice->discount_percent, 2) }}%)</span>
+                                    <span
+                                        class="fw-bold text-danger">-₹{{ number_format($invoice->discount_amount, 2) }}</span>
+                                </div>
+
                                 @php
                                     $brokerageAmount = $invoice->charges ? $invoice->charges->filter(fn($c) => strtoupper(trim($c->charge_name)) === 'BROKERAGE')->sum('charge_amount') : 0;
                                     $poCommissionAmount = max(0, $invoice->commission_amount - $brokerageAmount);
@@ -379,13 +390,6 @@
                                 <div class="d-flex justify-content-between mb-3">
                                     <span class="text-muted small fw-bold">Total Commission</span>
                                     <span class="fw-bold text-danger">-₹{{ number_format($invoice->commission_amount, 2) }}</span>
-                                </div>
-
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span class="text-muted small fw-bold">Discount
-                                        ({{ number_format($invoice->discount_percent, 2) }}%)</span>
-                                    <span
-                                        class="fw-bold text-danger">-₹{{ number_format($invoice->discount_amount, 2) }}</span>
                                 </div>
 
                                 <div class="d-flex justify-content-between mb-3">

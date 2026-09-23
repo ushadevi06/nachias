@@ -102,4 +102,27 @@ class PurchaseInvoice extends Model
     {
         return $this->hasMany(GrnEntry::class);
     }
+
+    public function getPoNumberDisplayAttribute()
+    {
+        if (!empty($this->po_reference)) {
+            return $this->po_reference;
+        }
+
+        if ($this->purchaseOrder && !empty($this->purchaseOrder->po_number)) {
+            return $this->purchaseOrder->po_number;
+        }
+
+        if ($this->relationLoaded('items') || $this->items()->exists()) {
+            $poNumbers = $this->items->map(function ($item) {
+                return $item->purchaseOrderItem?->purchaseOrder?->po_number;
+            })->filter()->unique()->values()->all();
+
+            if (!empty($poNumbers)) {
+                return implode(', ', $poNumbers);
+            }
+        }
+
+        return '-';
+    }
 }

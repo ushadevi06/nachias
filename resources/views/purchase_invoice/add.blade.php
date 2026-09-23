@@ -57,39 +57,49 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    @php
+                                        $selectedPoIdsArr = [];
+                                        if (old('purchase_order_id')) {
+                                            $selectedPoIdsArr = array_map('strval', (array) old('purchase_order_id'));
+                                        } elseif (isset($invoice)) {
+                                            if (!empty($invoice->purchase_order_id)) {
+                                                $selectedPoIdsArr[] = (string)$invoice->purchase_order_id;
+                                            }
+                                            if ($invoice->relationLoaded('items') || $invoice->items()->exists()) {
+                                                foreach ($invoice->items as $item) {
+                                                    if ($item->purchaseOrderItem && $item->purchaseOrderItem->purchase_order_id) {
+                                                        $selectedPoIdsArr[] = (string)$item->purchaseOrderItem->purchase_order_id;
+                                                    }
+                                                }
+                                            }
+                                            if (!empty($invoice->po_reference)) {
+                                                $refs = array_map('trim', explode(',', $invoice->po_reference));
+                                                if (isset($purchaseOrders)) {
+                                                    foreach ($purchaseOrders as $po) {
+                                                        if (in_array($po->po_number, $refs)) {
+                                                            $selectedPoIdsArr[] = (string)$po->id;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        $selectedPoIdsArr = array_values(array_unique($selectedPoIdsArr));
+                                    @endphp
                                     <select name="purchase_order_id[]" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" multiple="multiple" {{ isset($invoice) ? 'disabled' : '' }}>
-                                        @if(isset($invoice) && isset($purchaseOrders))
-                                            @php
-                                                $selectedPos = old('purchase_order_id', (isset($invoice) && is_string($invoice->po_reference)) ? explode(', ', $invoice->po_reference) : []);
-                                            @endphp
+                                        @if(isset($purchaseOrders) && $purchaseOrders->count() > 0)
                                             @foreach($purchaseOrders as $po)
-                                                <option value="{{ $po->id }}" {{ in_array($po->id, (array)$selectedPos) || str_contains($invoice->po_reference ?? '', $po->po_number) ? 'selected' : '' }}>{{ $po->po_number }}
-                                                </option>
+                                                <option value="{{ $po->id }}" {{ in_array((string)$po->id, $selectedPoIdsArr) ? 'selected' : '' }}>{{ $po->po_number }}</option>
                                             @endforeach
                                         @endif
                                     </select>
                                     @if(isset($invoice))
-                                        @php
-                                            $selectedPos = (isset($invoice) && is_string($invoice->po_reference)) ? explode(', ', $invoice->po_reference) : [];
-                                        @endphp
-                                        @foreach($purchaseOrders as $po)
-                                            @if(str_contains($invoice->po_reference ?? '', $po->po_number) || (isset($invoice->purchase_order_id) && $invoice->purchase_order_id == $po->id))
-                                                <input type="hidden" name="purchase_order_id[]" value="{{ $po->id }}">
-                                            @endif
+                                        @foreach($selectedPoIdsArr as $poId)
+                                            <input type="hidden" name="purchase_order_id[]" value="{{ $poId }}">
                                         @endforeach
                                     @endif
                                     <label for="purchase_order">Purchase Order No <span class="text-danger">*</span></label>
                                 </div>
                                 @error('purchase_order_id')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter Purchase Order No" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}" readonly>
-                                    <label for="po_reference">Purchase Order No</label>
-                                </div>
-                                @error('po_reference')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -730,6 +740,23 @@
                                         <input type="hidden" name="sub_total" id="sub_total_input" value="{{ $subTotal }}">
                                     </div>
                                     <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                                        <span>Discount:</span>
+                                        <div class="d-flex flex-column align-items-end gap-1">
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" min="0" {{ isset($invoice) ? 'readonly' : '' }}>
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                                <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
+                                                <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
+                                            </div>
+                                            @error('discount_percent')
+                                                <div class="text-danger mt-1">{{ $message }}</div>
+                                            @enderror
+                                            <div id="discount-error" class="text-danger small d-none"></div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
                                         <span>PO Commission (<strong id="commission_percent_display">{{ number_format(old('commission', $invoice->commission ?? 0), 2) }}</strong>%):</span>
                                         <div class="d-flex gap-2 align-items-center">
                                             <input type="hidden" name="commission" id="commission_input" value="{{ old('commission', $invoice->commission ?? 0) }}">
@@ -752,23 +779,6 @@
                                     @error('commission')
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
-                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
-                                        <span>Discount:</span>
-                                        <div class="d-flex flex-column align-items-end gap-1">
-                                            <div class="d-flex gap-2 align-items-center">
-                                                <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" min="0" {{ isset($invoice) ? 'readonly' : '' }}>
-                                                    <span class="input-group-text">%</span>
-                                                </div>
-                                                <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
-                                                <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
-                                            </div>
-                                            @error('discount_percent')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-                                            <div id="discount-error" class="text-danger small d-none"></div>
-                                        </div>
-                                    </div>
                                     <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Pre-GST Charges:</span>
                                         <strong id="pre_gst_total_display">{{ number_format($preGstTotal, 2) }}</strong>
@@ -1121,6 +1131,7 @@
                                             <input type="hidden" name="items[${index}][fabric_width]" value="${item.fabric_width}">
                                             <input type="hidden" name="items[${index}][fabric_type_name]" value="${item.fabric_type_name || '-'}">
                                             <input type="hidden" name="items[${index}][po_number]" value="${item.po_number}">
+                                            <input type="hidden" name="items[${index}][art_no]" value="${item.art_no || '-'}">
                                         </td>
                                          <td>${item.po_number}</td>
                                         <td>${item.store_category_name}</td>

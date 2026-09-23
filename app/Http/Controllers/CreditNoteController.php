@@ -190,7 +190,23 @@ class CreditNoteController extends Controller
         
         $creditNote = null;
         if ($id) {
-            $creditNote = CreditNote::with('items.item', 'items.uom', 'items.brandCategory', 'charges')->findOrFail($id);
+            $creditNote = CreditNote::with([
+                'items.item',
+                'items.uom',
+                'items.brandCategory',
+                'items.color',
+                'items.stockEntryItem.brand',
+                'items.stockEntryItem.style',
+                'items.stockEntryItem.item',
+                'items.stockEntryItem.color',
+                'items.stockEntryItem.uom',
+                'items.salesInvoiceItem.salesInvoice',
+                'items.salesInvoiceItem.stockEntryItem',
+                'items.salesInvoiceItem.item',
+                'items.salesInvoiceItem.color',
+                'items.salesInvoiceItem.uom',
+                'charges',
+            ])->findOrFail($id);
         }
         if ($request->isMethod('POST')) {
             if ($creditNote && ($creditNote->status === 'Approved' || $creditNote->einvoice_status === 'generated')) {
@@ -205,7 +221,7 @@ class CreditNoteController extends Controller
             $request->validate([
                 'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'note_date' => 'required|date_format:d-m-Y',
-                'sales_invoice_ids' => 'required|array|min:1',
+                'sales_invoice_ids' => 'nullable|array',
                 'sales_invoice_ids.*' => 'exists:sales_invoices,id',
                 'customer_id' => 'required|exists:customers,id',
                 'reason' => 'required|string',
@@ -242,22 +258,25 @@ class CreditNoteController extends Controller
                 if (($item['quantity'] ?? 0) > 0) {
                     $hasSelected = true;
                     
-                    $alreadyReturned = DB::table('credit_note_items')
-                        ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
-                        ->where('credit_note_items.sales_invoice_item_id', $item['sales_invoice_item_id'])
-                        ->whereNull('credit_notes.deleted_at')
-                        ->whereNull('credit_note_items.deleted_at')
-                        ->whereIn('credit_notes.status', ['Draft', 'Approved'])
-                        ->when($id, function ($q) use ($id) {
-                            return $q->where('credit_notes.id', '!=', $id);
-                        })
-                        ->sum('credit_note_items.quantity');
-                        
-                    $invoiceItem = SalesInvoiceItem::findOrFail($item['sales_invoice_item_id']);
-                    $balanceQty = max(0, $invoiceItem->quantity - $alreadyReturned);
-                    
-                    if ($item['quantity'] > $balanceQty) {
-                        return back()->withInput()->withErrors(['error' => 'Return quantity for item ' . ($invoiceItem->item ? $invoiceItem->item->name : '') . ' cannot exceed the remaining balance quantity of ' . $balanceQty]);
+                    if (!empty($item['sales_invoice_item_id'])) {
+                        $alreadyReturned = DB::table('credit_note_items')
+                            ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
+                            ->where('credit_note_items.sales_invoice_item_id', $item['sales_invoice_item_id'])
+                            ->whereNull('credit_notes.deleted_at')
+                            ->whereNull('credit_note_items.deleted_at')
+                            ->whereIn('credit_notes.status', ['Draft', 'Approved'])
+                            ->when($id, function ($q) use ($id) {
+                                return $q->where('credit_notes.id', '!=', $id);
+                            })
+                            ->sum('credit_note_items.quantity');
+                            
+                        $invoiceItem = SalesInvoiceItem::find($item['sales_invoice_item_id']);
+                        if ($invoiceItem) {
+                            $balanceQty = max(0, $invoiceItem->quantity - $alreadyReturned);
+                            if ($item['quantity'] > $balanceQty) {
+                                return back()->withInput()->withErrors(['error' => 'Return quantity for item ' . ($invoiceItem->item ? $invoiceItem->item->name : '') . ' cannot exceed the remaining balance quantity of ' . $balanceQty]);
+                            }
+                        }
                     }
                 }
             }
@@ -295,7 +314,7 @@ class CreditNoteController extends Controller
                 $creditNoteData = [
                     'note_no' => $request->note_no,
                     'note_date' => $noteDate ?? \Carbon\Carbon::now()->format('Y-m-d'),
-                    'sales_invoice_ids' => $request->sales_invoice_ids,
+                    'sales_invoice_ids' => $request->sales_invoice_ids ?? [],
                     'customer_id' => $request->customer_id,
                     'reason' => $request->reason,
                     'fault' => $request->fault,
@@ -341,9 +360,18 @@ class CreditNoteController extends Controller
                     if (($item['quantity'] ?? 0) > 0) {
                         CreditNoteItem::create([
                             'credit_note_id' => $creditNote->id,
-                            'sales_invoice_item_id' => $item['sales_invoice_item_id'],
+                            'sales_invoice_item_id' => !empty($item['sales_invoice_item_id']) ? $item['sales_invoice_item_id'] : null,
+                            'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
+                            'item_id' => $item['item_id'] ?? null,
+                            'brand_category_id' => $item['brand_category_id'] ?? null,
+                            'size' => $item['size'] ?? null,
+                            'art_no' => $item['art_no'] ?? null,
+                            'color_id' => $item['color_id'] ?? null,
+                            'sku' => $item['sku'] ?? null,
+                            'sleeve_type' => $item['sleeve_type'] ?? null,
                             'quantity' => $item['quantity'],
                             'mrp' => $item['mrp'] ?? 0,
+                            'uom_id' => $item['uom_id'] ?? null,
                             'rate' => $item['rate'] ?? 0,
                             'amount' => $item['amount'] ?? 0,
                             'add_to_inventory' => isset($item['add_to_inventory']) ? 1 : 0,
@@ -415,10 +443,7 @@ class CreditNoteController extends Controller
             $fySuffix = substr($fyYear, -2);
             $prefix = 'RCN' . $fySuffix . '-';
 
-            $lastNote = CreditNote::withTrashed()
-                ->where('note_no', 'like', $prefix . '%')
-                ->orderBy('id', 'desc')
-                ->first();
+            $lastNote = CreditNote::withTrashed()->where('note_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
 
             if ($lastNote && preg_match('/' . $prefix . '(\d+)/', $lastNote->note_no, $matches)) {
                 $number = intval($matches[1]) + 1;
@@ -437,9 +462,7 @@ class CreditNoteController extends Controller
         $invoiceIds = explode(',', $ids);
         $currentCreditNoteId = $request->query('credit_note_id');
 
-        $invoices = SalesInvoice::with(['customer', 'items.item', 'items.uom', 'items.color', 'items.sizeRatio', 'items.stockEntryItem'])
-            ->whereIn('id', $invoiceIds)
-            ->get();
+        $invoices = SalesInvoice::with(['customer', 'items.item', 'items.uom', 'items.color', 'items.sizeRatio', 'items.stockEntryItem'])->whereIn('id', $invoiceIds)->get();
 
         if ($invoices->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'No invoices found.']);
@@ -469,10 +492,7 @@ class CreditNoteController extends Controller
         // 2. Bulk query for Sales Order UOM
         $soItemsUom = [];
         if (!empty($stockEntryItemIds)) {
-            $soItemsUom = \App\Models\SalesOrderItem::whereIn('stock_entry_item_id', $stockEntryItemIds)
-                ->whereNotNull('uom_id')
-                ->pluck('uom_id', 'stock_entry_item_id')
-                ->toArray();
+            $soItemsUom = \App\Models\SalesOrderItem::whereIn('stock_entry_item_id', $stockEntryItemIds)->whereNotNull('uom_id')->pluck('uom_id', 'stock_entry_item_id')->toArray();
         }
 
         foreach ($invoices as $invoice) {
@@ -483,6 +503,19 @@ class CreditNoteController extends Controller
                 $uomCode = 'PCS';
                 if ($item->stock_entry_item_id && isset($soItemsUom[$item->stock_entry_item_id])) {
                     $uomCode = $soItemsUom[$item->stock_entry_item_id];
+                }
+
+                $artNo = $item->art_no ?: ($item->stockEntryItem ? $item->stockEntryItem->art_no : '');
+                $colorName = $item->api_color ?: null;
+                if (empty($colorName) && !empty($artNo) && strpos($artNo, '-') !== false) {
+                    $parts = explode('-', (string)$artNo);
+                    $lastPart = trim(end($parts));
+                    if ($lastPart !== '') {
+                        $colorName = $lastPart;
+                    }
+                }
+                if (empty($colorName)) {
+                    $colorName = 'A';
                 }
 
                 $items[] = [
@@ -496,8 +529,8 @@ class CreditNoteController extends Controller
                     'brand_category_id' => $item->brand_id,
                     'brand_category_name' => $item->brandCategory ? $item->brandCategory->name : '-',
                     'color_id' => $item->color_id,
-                    'color_name' => !empty($item->api_color) ? $item->api_color : ($item->color ? $item->color->color_name : '-'),
-                    'art_no' => $item->art_no ?? '-',
+                    'color_name' => $colorName,
+                    'art_no' => $artNo ?: '-',
                     'size' => $item->size,
                     'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
                     'uom_id'              => $uomCode,  
@@ -580,6 +613,15 @@ class CreditNoteController extends Controller
             'items.salesInvoiceItem.color',
             'items.salesInvoiceItem.uom',
             'items.salesInvoiceItem.sizeRatio',
+            'items.stockEntryItem.brand',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.item',
+            'items.stockEntryItem.color',
+            'items.stockEntryItem.uom',
+            'items.color',
+            'items.uom',
+            'items.item',
+            'items.brandCategory',
         ])->findOrFail($id);
 
         $salesInvoices = [];
@@ -627,6 +669,15 @@ class CreditNoteController extends Controller
             'items.salesInvoiceItem.sizeRatio',
             'items.salesInvoiceItem.stockEntryItem',
             'items.salesInvoiceItem.brandCategory',
+            'items.stockEntryItem.brand',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.item',
+            'items.stockEntryItem.color',
+            'items.stockEntryItem.uom',
+            'items.color',
+            'items.uom',
+            'items.item',
+            'items.brandCategory',
         ])->findOrFail($id);
         
         $salesInvoices = [];
@@ -662,6 +713,15 @@ class CreditNoteController extends Controller
             'items.salesInvoiceItem.sizeRatio',
             'items.salesInvoiceItem.stockEntryItem',
             'items.salesInvoiceItem.brandCategory',
+            'items.stockEntryItem.brand',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.item',
+            'items.stockEntryItem.color',
+            'items.stockEntryItem.uom',
+            'items.color',
+            'items.uom',
+            'items.item',
+            'items.brandCategory',
         ])->findOrFail($id);
         
         $salesInvoices = [];
@@ -758,14 +818,70 @@ class CreditNoteController extends Controller
             return;
         }
 
+        $isDamage = (strtoupper(trim((string)$creditNote->reason)) === 'DAMAGE');
+
         if ($newStatus === 'Approved' && !$creditNote->is_stock_updated) {
             foreach ($creditNote->items as $item) {
                 if ($item->add_to_inventory) {
-                    $salesInvoiceItem = \App\Models\SalesInvoiceItem::find($item->sales_invoice_item_id);
-                    if ($salesInvoiceItem && $salesInvoiceItem->stock_entry_item_id) {
-                        $oldQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
-                        \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->decrement('qty_out', $item->quantity);
-                        $newQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
+                    if ($item->sales_invoice_item_id) {
+                        $salesInvoiceItem = \App\Models\SalesInvoiceItem::find($item->sales_invoice_item_id);
+                        if ($salesInvoiceItem && $salesInvoiceItem->stock_entry_item_id) {
+                            if ($isDamage) {
+                                $origStockItem = \App\Models\StockEntryItem::find($salesInvoiceItem->stock_entry_item_id);
+                                if ($origStockItem) {
+                                    \App\Models\StockEntryItem::create([
+                                        'stock_entry_id' => $origStockItem->stock_entry_id,
+                                        'stock_type' => 'finished_goods',
+                                        'item_id' => $origStockItem->item_id,
+                                        'art_no' => $origStockItem->art_no,
+                                        'finished_item_code' => $origStockItem->finished_item_code,
+                                        'size' => $origStockItem->size,
+                                        'color_id' => $origStockItem->color_id,
+                                        'style_id' => $origStockItem->style_id,
+                                        'brand_id' => $origStockItem->brand_id,
+                                        'sleeve_type' => $origStockItem->sleeve_type,
+                                        'store_location_id' => $origStockItem->store_location_id,
+                                        'store_type_id' => 6, // DAMAGE GOODS STORE
+                                        'warehouse_id' => $origStockItem->warehouse_id,
+                                        'uom_id' => $origStockItem->uom_id,
+                                        'qty_in' => $item->quantity,
+                                        'qty_out' => 0,
+                                        'price' => $item->rate ?? $origStockItem->price,
+                                        'sku' => $origStockItem->sku,
+                                    ]);
+                                }
+                            } else {
+                                \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->decrement('qty_out', $item->quantity);
+                            }
+                        }
+                    } elseif ($item->stock_entry_item_id) {
+                        // Direct Return: transfer from RETURN GOODS STORE (14) to FINISHED GOODS (3) or DAMAGE STORE (6)
+                        $origStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
+                        if ($origStockItem) {
+                            $origStockItem->increment('qty_out', $item->quantity);
+                            $targetStoreTypeId = $isDamage ? 6 : 3;
+
+                            \App\Models\StockEntryItem::create([
+                                'stock_entry_id' => $origStockItem->stock_entry_id,
+                                'stock_type' => 'finished_goods',
+                                'item_id' => $origStockItem->item_id,
+                                'art_no' => $origStockItem->art_no,
+                                'finished_item_code' => $origStockItem->finished_item_code,
+                                'size' => $origStockItem->size,
+                                'color_id' => $origStockItem->color_id,
+                                'style_id' => $origStockItem->style_id,
+                                'brand_id' => $origStockItem->brand_id,
+                                'sleeve_type' => $origStockItem->sleeve_type,
+                                'store_location_id' => $origStockItem->store_location_id,
+                                'store_type_id' => $targetStoreTypeId,
+                                'warehouse_id' => $origStockItem->warehouse_id,
+                                'uom_id' => $origStockItem->uom_id,
+                                'qty_in' => $item->quantity,
+                                'qty_out' => 0,
+                                'price' => $item->rate ?? $origStockItem->price,
+                                'sku' => $origStockItem->sku,
+                            ]);
+                        }
                     }
                 }
             }
@@ -774,17 +890,96 @@ class CreditNoteController extends Controller
         } elseif ($oldStatus === 'Approved' && $newStatus !== 'Approved' && $creditNote->is_stock_updated) {
             foreach ($creditNote->items as $item) {
                 if ($item->add_to_inventory) {
-                    $salesInvoiceItem = \App\Models\SalesInvoiceItem::find($item->sales_invoice_item_id);
-                    if ($salesInvoiceItem && $salesInvoiceItem->stock_entry_item_id) {
-                        $oldQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
-                        \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->increment('qty_out', $item->quantity);
-                        $newQtyOut = \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->value('qty_out');
-                        \Log::info("CreditNote {$creditNote->id} Un-Approved - Stock incremented for StockEntryItem ID: {$salesInvoiceItem->stock_entry_item_id}. Old qty_out: {$oldQtyOut}, Increment: {$item->quantity}, New qty_out: {$newQtyOut}");
+                    if ($item->sales_invoice_item_id) {
+                        $salesInvoiceItem = \App\Models\SalesInvoiceItem::find($item->sales_invoice_item_id);
+                        if ($salesInvoiceItem && $salesInvoiceItem->stock_entry_item_id) {
+                            if (!$isDamage) {
+                                \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->increment('qty_out', $item->quantity);
+                            }
+                        }
+                    } elseif ($item->stock_entry_item_id) {
+                        $origStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
+                        if ($origStockItem) {
+                            $origStockItem->decrement('qty_out', $item->quantity);
+                            $targetStoreTypeId = $isDamage ? 6 : 3;
+
+                            \App\Models\StockEntryItem::where('stock_entry_id', $origStockItem->stock_entry_id)->where('store_type_id', $targetStoreTypeId)->where('art_no', $origStockItem->art_no)->where('size', $origStockItem->size)->where('qty_in', $item->quantity)->where('qty_out', 0)->latest('id')->first()?->delete();
+                        }
                     }
                 }
             }
             $creditNote->is_stock_updated = 0;
             $creditNote->save();
         }
+    }
+
+    public function searchDirectItems(Request $request)
+    {
+        $term = trim($request->term ?? '');
+        if (empty($term)) {
+            return response()->json([]);
+        }
+
+        $returnStoreId = \App\Models\StoreType::where('store_type_name', 'RETURN GOODS STORE')->value('id') ?? 14;
+
+        $items = \App\Models\StockEntryItem::with(['color', 'uom', 'brand', 'item', 'storeType', 'stockEntry'])
+            ->where('stock_type', 'finished_goods')
+            ->where('store_type_id', $returnStoreId)
+            ->whereRaw('(qty_in - qty_out) > 0')
+            ->where(function($q) use ($term) {
+                $q->where('sku', 'like', "%{$term}%")
+                  ->orWhere('art_no', 'like', "%{$term}%")
+                  ->orWhere('finished_item_code', 'like', "%{$term}%");
+            })
+            ->limit(20)
+            ->get();
+
+        $results = [];
+        foreach ($items as $item) {
+            $netQty = max(0, (float)($item->qty_in - $item->qty_out));
+
+            $artNo = $item->art_no ?? '';
+            $colorName = 'A';
+            if (!empty($artNo) && strpos($artNo, '-') !== false) {
+                $parts = explode('-', (string)$artNo);
+                $lastPart = trim(end($parts));
+                if ($lastPart !== '') {
+                    $colorName = $lastPart;
+                }
+            }
+
+            $itemPrice = \App\Http\Controllers\SalesInvoiceController::getActiveItemPrice($item->finished_item_code, $item->art_no, $item->size);
+
+            $mrp = $itemPrice ? (float)$itemPrice->selling_price : (float)($item->price ?? 0);
+            $rate = $itemPrice ? (float)$itemPrice->unit_price : (float)($item->price ?? 0);
+
+            $results[] = [
+                'id' => null,
+                'stock_entry_item_id' => $item->id,
+                'invoice_id' => null,
+                'invoice_no' => 'Return Store',
+                'item_id' => $item->item_id,
+                'item_name' => $item->finished_item_code ?: ($item->item ? $item->item->name : $item->art_no),
+                'item_code' => $item->finished_item_code ?: $item->art_no,
+                'product_barcode' => $item->sku ?? '-',
+                'brand_category_id' => $item->brand_id,
+                'brand_category_name' => $item->brand ? $item->brand->brand_name : '-',
+                'color_id' => $item->color_id,
+                'color_name' => $colorName,
+                'art_no' => $item->art_no ?? '-',
+                'uom_id' => $item->uom_id ?: (\App\Models\Uom::where('uom_code', 'PCS')->orWhere('uom_name', 'PCS')->value('id') ?? 1),
+                'uom_code' => $item->uom ? ($item->uom->uom_code ?: $item->uom->uom_name ?: 'PCS') : 'PCS',
+                'size' => $item->size,
+                'size_name' => $item->size,
+                'sleeve_type' => $item->sleeve_type,
+                'invoice_qty' => '-',
+                'returned_qty' => '-',
+                'balance_qty' => $netQty,
+                'mrp' => $mrp,
+                'rate' => $rate,
+            ];
+        }
+
+        return response()->json($results);
     }
 }

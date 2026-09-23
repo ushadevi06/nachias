@@ -111,6 +111,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/dashboard/fabric-drilldown', [HomeController::class, 'fabricInventoryDrilldown']);
     Route::get('/dashboard/accessories-drilldown', [HomeController::class, 'accessoriesInventoryDrilldown']);
     Route::get('/dashboard/cutting-job-cards', [HomeController::class, 'getCuttingJobCardsAjax']);
+    Route::get('/dashboard/production-cost', [HomeController::class, 'getProductionCostAjax']);
     Route::get('/core-material-settings', [CoreMaterialPlannerSettingController::class, 'index']);
     Route::match(['get', 'post'], '/core-material-settings/add/{id?}', [CoreMaterialPlannerSettingController::class, 'add']);
     Route::get('/core-material-settings/delete/{id}', [CoreMaterialPlannerSettingController::class, 'delete']);
@@ -598,6 +599,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('credit_notes/delete/{id}', [CreditNoteController::class, 'destroy']);
     Route::get('credit_notes/get-invoice-details/{id}', [CreditNoteController::class, 'getInvoiceDetails']);
     Route::get('credit_notes/get-customer-invoices/{id}', [CreditNoteController::class, 'getCustomerInvoices']);
+    Route::get('credit_notes/search-direct-items', [CreditNoteController::class, 'searchDirectItems']);
     Route::post('credit_notes/status/{id}', [CreditNoteController::class, 'updateStatus']);
     Route::get('credit_notes/print/{id}', [CreditNoteController::class, 'print']);
     Route::get('credit_notes/download/{id}', [CreditNoteController::class, 'download']);

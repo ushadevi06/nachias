@@ -637,12 +637,36 @@ class PurchaseInvoiceController extends Controller
                 return back()->withInput()->withErrors(['error' => 'Failed to save invoice: ' . $e->getMessage()]);
             }
         }
+        $supplierId = $invoice ? $invoice->supplier_id : old('supplier_id');
+
+        $selectedPoIds = collect();
+        if ($invoice) {
+            if ($invoice->purchase_order_id) {
+                $selectedPoIds->push($invoice->purchase_order_id);
+            }
+            if ($invoice->relationLoaded('items') || $invoice->items()->exists()) {
+                foreach ($invoice->items as $item) {
+                    if ($item->purchaseOrderItem && $item->purchaseOrderItem->purchase_order_id) {
+                        $selectedPoIds->push($item->purchaseOrderItem->purchase_order_id);
+                    }
+                }
+            }
+            if (!empty($invoice->po_reference)) {
+                $poNums = array_map('trim', explode(',', $invoice->po_reference));
+                $poIdsFromRef = PurchaseOrder::whereIn('po_number', $poNums)->pluck('id')->toArray();
+                $selectedPoIds = $selectedPoIds->merge($poIdsFromRef);
+            }
+        }
+        if (old('purchase_order_id')) {
+            $selectedPoIds = $selectedPoIds->merge((array)old('purchase_order_id'));
+        }
+        $selectedPoIdsArr = $selectedPoIds->filter()->unique()->values()->toArray();
 
         $purchaseOrders = collect();
-        if ($invoice) {
+        if ($supplierId) {
             $purchaseOrders = PurchaseOrder::with('supplier')
-                ->where('supplier_id', $invoice->supplier_id)
-                ->where(function ($query) use ($invoice) {
+                ->where('supplier_id', $supplierId)
+                ->where(function ($query) use ($selectedPoIdsArr) {
                     $query->where(function ($sub) {
                         $sub->where('purchase_orders.status', 'Approved')
                             ->where('purchase_orders.is_self_closed', 0)
@@ -667,20 +691,52 @@ class PurchaseInvoiceController extends Controller
                             );
                     });
 
-                    if ($invoice && $invoice->po_reference) {
-                        $poNumbers = explode(', ', $invoice->po_reference);
-                        $query->orWhereIn('purchase_orders.po_number', $poNumbers);
-                    } elseif ($invoice && $invoice->purchase_order_id) {
-                        $query->orWhere('purchase_orders.id', $invoice->purchase_order_id);
+                    if (!empty($selectedPoIdsArr)) {
+                        $query->orWhereIn('purchase_orders.id', $selectedPoIdsArr);
                     }
                 })
-                ->orderBy('purchase_orders.id', 'asc')
+                ->orderBy('purchase_orders.id', 'desc')
                 ->get();
         }
-        $brands = Brand::active()->orderBy('brand_name')->get();
-        $fabricSizes = FabricSize::active()->orderBy('width')->get();
-        $fabricTypes = FabricType::active()->orderBy('fabric_type')->get();
-        $suppliers = Supplier::where('status', 'Active')->get();
+        $brands = Brand::active()->orderBy('id', 'desc')->get();
+        $fabricSizes = FabricSize::active()->orderBy('id', 'desc')->get();
+        $fabricTypes = FabricType::active()->orderBy('id', 'desc')->get();
+        $suppliers = Supplier::where('status', 'Active')
+            ->where(function ($query) use ($invoice) {
+                $query->whereHas('purchaseOrders', function ($q) {
+                    $q->where('purchase_orders.status', 'Approved')
+                        ->where('purchase_orders.is_self_closed', 0)
+                        ->whereIn(
+                            'purchase_orders.id',
+                            function ($sub) {
+                                $sub->select('purchase_order_items.purchase_order_id')
+                                    ->from('purchase_order_items')
+                                    ->leftJoin(
+                                        'purchase_invoice_items',
+                                        'purchase_invoice_items.purchase_order_item_id',
+                                        '=',
+                                        'purchase_order_items.id'
+                                    )
+                                    ->groupBy(
+                                        'purchase_order_items.id',
+                                        'purchase_order_items.quantity',
+                                        'purchase_order_items.purchase_order_id'
+                                    )
+                                    ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced, 0)), 3) < ROUND(purchase_order_items.quantity, 3)');
+                            }
+                        );
+                });
+
+                if ($invoice && $invoice->supplier_id) {
+                    $query->orWhere('suppliers.id', $invoice->supplier_id);
+                }
+
+                if (old('supplier_id')) {
+                    $query->orWhere('suppliers.id', old('supplier_id'));
+                }
+            })
+            ->orderBy('name', 'asc')
+            ->get();
         $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
         $nextInvoiceNumber = '';
 
@@ -694,6 +750,7 @@ class PurchaseInvoiceController extends Controller
         }
         $invoice = PurchaseInvoice::with([
             'supplier',
+            'purchaseOrder',
             'items.rawMaterial',
             'items.uom',
             'items.brand',
@@ -701,6 +758,7 @@ class PurchaseInvoiceController extends Controller
             'items.purchaseOrderItem.brand',
             'items.purchaseOrderItem.fabricWidth',
             'items.purchaseOrderItem.storeCategory',
+            'items.purchaseOrderItem.purchaseOrder',
             'charges',
             'purchaseCommissionAgent'
         ])->findOrFail($id);

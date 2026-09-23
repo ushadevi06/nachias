@@ -534,26 +534,59 @@
                                             </td>
                                         </tr>
                                         
-                                        @if($purchaseOrder->other_state)
-                                        <tr>
-                                            <td class="text-left" style="padding: 4px;">IGST ({{ $purchaseOrder->igst_percent }}%):</td>
-                                            <td class="text-right" style="padding: 4px;">
-                                                {{ number_format($purchaseOrder->tax_amount, 2) }}
-                                            </td>
-                                        </tr>
+                                        @php
+                                            $isAccessories = $purchaseOrder->storeType && strtolower($purchaseOrder->storeType->store_type_name) == 'accessories';
+                                        @endphp
+                                        @if($isAccessories)
+                                            @if($purchaseOrder->other_state)
+                                            <tr>
+                                                <td class="text-left" style="padding: 4px;">IGST:</td>
+                                                <td class="text-right" style="padding: 4px;">
+                                                    {{ number_format($purchaseOrder->tax_amount, 2) }}
+                                                </td>
+                                            </tr>
+                                            @else
+                                            <tr>
+                                                <td class="text-left" style="padding: 4px;">Add CGST:</td>
+                                                <td class="text-right" style="padding: 4px;">
+                                                    {{ number_format($purchaseOrder->items->sum('cgst_amount'), 2) }}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-left" style="padding: 4px;">Add SGST:</td>
+                                                <td class="text-right" style="padding: 4px;">
+                                                    {{ number_format($purchaseOrder->items->sum('sgst_amount'), 2) }}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-left" style="padding: 4px;">Total GST Amount:</td>
+                                                <td class="text-right" style="padding: 4px;">
+                                                    {{ number_format($purchaseOrder->tax_amount, 2) }}
+                                                </td>
+                                            </tr>
+                                            @endif
                                         @else
-                                        <tr>
-                                            <td class="text-left" style="padding: 4px;">CGST ({{ $purchaseOrder->cgst_percent }}%):</td>
-                                            <td class="text-right" style="padding: 4px;">
-                                                {{ number_format($purchaseOrder->tax_amount / 2, 2) }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-left" style="padding: 4px;">SGST ({{ $purchaseOrder->sgst_percent }}%):</td>
-                                            <td class="text-right" style="padding: 4px;">
-                                                {{ number_format($purchaseOrder->tax_amount / 2, 2) }}
-                                            </td>
-                                        </tr>
+                                            @if($purchaseOrder->other_state)
+                                            <tr>
+                                                <td class="text-left" style="padding: 4px;">IGST ({{ $purchaseOrder->igst_percent }}%):</td>
+                                                <td class="text-right" style="padding: 4px;">
+                                                    {{ number_format($purchaseOrder->tax_amount, 2) }}
+                                                </td>
+                                            </tr>
+                                            @else
+                                            <tr>
+                                                <td class="text-left" style="padding: 4px;">CGST ({{ $purchaseOrder->cgst_percent }}%):</td>
+                                                <td class="text-right" style="padding: 4px;">
+                                                    {{ number_format($purchaseOrder->tax_amount / 2, 2) }}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-left" style="padding: 4px;">SGST ({{ $purchaseOrder->sgst_percent }}%):</td>
+                                                <td class="text-right" style="padding: 4px;">
+                                                    {{ number_format($purchaseOrder->tax_amount / 2, 2) }}
+                                                </td>
+                                            </tr>
+                                            @endif
                                         @endif
                                         <tr>
                                             <td class="text-left" style="padding: 4px;">Round Off

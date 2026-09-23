@@ -340,7 +340,7 @@
               @if(!empty($salesInvoices) && count($salesInvoices) > 0)
                   {{ implode(', ', $salesInvoices->pluck('inv_no')->toArray()) }}
               @else
-                  {{ $creditNote->salesInvoice->inv_no ?? '-' }}
+                  {{ $creditNote->salesInvoice?->inv_no ?? '-' }}
               @endif
             </td>
           </tr>
@@ -348,10 +348,12 @@
             <td>Doc Date</td>
             <td>:</td>
             <td>
-              @if(!empty($salesInvoices) && count($salesInvoices) > 0)
-                {{ $salesInvoices->first()->inv_date ? \Carbon\Carbon::parse($salesInvoices->first()->inv_date)->format('d/m/Y') : '-' }}
+              @if(!empty($salesInvoices) && count($salesInvoices) > 0 && $salesInvoices->first()?->inv_date)
+                {{ \Carbon\Carbon::parse($salesInvoices->first()->inv_date)->format('d/m/Y') }}
+              @elseif($creditNote->salesInvoice?->inv_date)
+                {{ \Carbon\Carbon::parse($creditNote->salesInvoice->inv_date)->format('d/m/Y') }}
               @else
-                {{ $creditNote->salesInvoice->inv_date ? \Carbon\Carbon::parse($creditNote->salesInvoice->inv_date)->format('d/m/Y') : '-' }}
+                -
               @endif
             </td>
           </tr>
@@ -396,6 +398,7 @@
       @foreach($chunk as $index => $item)
         @php
             $invoiceItem = $item->salesInvoiceItem;
+            $stockItem = $item->stockEntryItem ?? ($invoiceItem ? $invoiceItem->stockEntryItem : null);
 
             $itemName = '-';
             $hsnSac = '';
@@ -429,17 +432,27 @@
                       $itemName = $invoiceItem->item->name;
                     }
                 }
+            } elseif ($stockItem) {
+                $brandName = $stockItem->brand ? $stockItem->brand->brand_name : '';
+                $styleName = $stockItem->style ? $stockItem->style->style_name : '';
+                $itemName = trim(trim($brandName) . ' ' . trim($styleName));
+                if (!$itemName) {
+                    $itemName = $stockItem->finished_item_code ?: ($stockItem->item ? $stockItem->item->name : '-');
+                }
+            } elseif ($item->item) {
+                $itemName = $item->item->name;
             }
 
+            $sleeveType = $item->sleeve_type ?: ($invoiceItem ? $invoiceItem->sleeve_type : ($stockItem ? $stockItem->sleeve_type : ''));
             $sleeveFull = '';
-            if ($invoiceItem && $invoiceItem->sleeve_type) {
-                $st = strtolower(trim($invoiceItem->sleeve_type));
+            if ($sleeveType) {
+                $st = strtolower(trim($sleeveType));
                 if ($st == 'full' || $st == 'f/s' || $st == 'fs') {
                   $sleeveFull = ' Full Sleeve';
                 } elseif ($st == 'half' || $st == 'h/s' || $st == 'hs') {
                   $sleeveFull = ' Half Sleeve';
                 } else {
-                  $sleeveFull = ' ' . trim($invoiceItem->sleeve_type) . ' Sleeve';
+                  $sleeveFull = ' ' . trim($sleeveType) . ' Sleeve';
                 }
             }
             if ($itemName != '-' && $itemName != '') {
@@ -448,13 +461,10 @@
               $itemName = trim($sleeveFull) ?: '-';
             }
 
-            $artNo = $invoiceItem ? ($invoiceItem->art_no ?? '-') : '-';
-            $uomCode = $invoiceItem && $invoiceItem->uom ? $invoiceItem->uom->uom_code : 'PCS';
+            $artNo = $item->art_no ?: ($invoiceItem ? ($invoiceItem->art_no ?? '-') : ($stockItem ? ($stockItem->art_no ?? '-') : '-'));
+            $uomCode = $item->uom ? ($item->uom->uom_code ?: $item->uom->uom_name ?: 'PCS') : ($invoiceItem && $invoiceItem->uom ? $invoiceItem->uom->uom_code : 'PCS');
             
-            $sizeName = '-';
-            if ($invoiceItem) {
-              $sizeName = $invoiceItem->sizeRatio ? $invoiceItem->sizeRatio->size : ($invoiceItem->size ?? '-');
-            }
+            $sizeName = $item->size ?: ($invoiceItem ? ($invoiceItem->sizeRatio ? $invoiceItem->sizeRatio->size : ($invoiceItem->size ?? '-')) : ($stockItem ? ($stockItem->size ?? '-') : '-'));
             
             $totalQty += $item->quantity;
         @endphp

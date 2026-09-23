@@ -198,16 +198,23 @@
                                                     @enderror
                                                 </td>
                                                 <td>
+                                                    @php
+                                                        $selectedCatId = $item['store_category_id'] ?? null;
+                                                        $categoryMaterials = $selectedCatId ? \App\Models\RawMaterial::where('store_category_id', $selectedCatId)->where('status', 'Active')->get() : collect();
+                                                        if (isset($item['raw_material_id']) && $item['raw_material_id']) {
+                                                            $selectedMat = \App\Models\RawMaterial::find($item['raw_material_id']);
+                                                            if ($selectedMat && !$categoryMaterials->contains('id', $selectedMat->id)) {
+                                                                $categoryMaterials->push($selectedMat);
+                                                            }
+                                                        }
+                                                    @endphp
                                                     <select class="select2 form-select material @error('items.' . $index . '.raw_material_id') is-invalid @enderror" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Raw Material">
-                                                        @if(isset($item['raw_material_id']) && $item['raw_material_id'])
-                                                            @php
-                                                                $selectedMaterial = \App\Models\RawMaterial::find($item['raw_material_id']);
-                                                            @endphp
-                                                            @if($selectedMaterial)
-                                                                <option value="{{ $selectedMaterial->id }}" data-uom-id="{{ $selectedMaterial->uom_id }}" selected>{{ $selectedMaterial->name }} ({{ $selectedMaterial->code }})
-                                                                </option>
-                                                            @endif
-                                                        @endif
+                                                        <option value="">Select Raw Material</option>
+                                                        @foreach($categoryMaterials as $mat)
+                                                            <option value="{{ $mat->id }}" data-uom-id="{{ $mat->uom_id }}" {{ (isset($item['raw_material_id']) && $item['raw_material_id'] == $mat->id) ? 'selected' : '' }}>
+                                                                {{ $mat->name }} ({{ $mat->code }})
+                                                            </option>
+                                                        @endforeach
                                                     </select>
                                                     @error('items.' . $index . '.raw_material_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -376,9 +383,20 @@
                                                     @enderror
                                                 </td>
                                                 <td>
+                                                    @php
+                                                        $selectedCatId = $item->store_category_id ?? null;
+                                                        $categoryMaterials = $selectedCatId ? \App\Models\RawMaterial::where('store_category_id', $selectedCatId)->where('status', 'Active')->get() : collect();
+                                                        if ($item->rawMaterial && !$categoryMaterials->contains('id', $item->raw_material_id)) {
+                                                            $categoryMaterials->push($item->rawMaterial);
+                                                        }
+                                                    @endphp
                                                     <select class="select2 form-select material @error('items.' . $index . '.raw_material_id') is-invalid @enderror" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Raw Material">
-                                                        <option value="{{ $item->raw_material_id }}" data-uom-id="{{ $item->rawMaterial->uom_id }}">{{ $item->rawMaterial->name }} ({{ $item->rawMaterial->code }})
-                                                        </option>
+                                                        <option value="">Select Raw Material</option>
+                                                        @foreach($categoryMaterials as $mat)
+                                                            <option value="{{ $mat->id }}" data-uom-id="{{ $mat->uom_id }}" {{ $item->raw_material_id == $mat->id ? 'selected' : '' }}>
+                                                                {{ $mat->name }} ({{ $mat->code }})
+                                                            </option>
+                                                        @endforeach
                                                     </select>
                                                     @error('items.' . $index . '.raw_material_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -397,12 +415,13 @@
                                                     @enderror
                                                 </td>
                                                 <td class="td-fabric-width">
-                                                    <select class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror" name="items[{{ $index }}][fabric_width_id]" data-placeholder="Select Width">
+                                                    <select class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror" name="items[{{ $index }}][fabric_width_id]" {{ $index > 0 ? 'disabled' : '' }} data-placeholder="Select Width">
                                                         <option value="">Select Width</option>
                                                         @foreach($fabricSizes as $fabricSize)
                                                             <option value="{{ $fabricSize->id }}" {{ ($item->fabric_width_id ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                         @endforeach
                                                     </select>
+                                                    <input type="hidden" name="items[{{ $index }}][fabric_width_id]" class="fabric_width_hidden" value="{{ $item->fabric_width_id ?? '' }}" {{ $index == 0 ? 'disabled' : '' }}>
                                                     <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.fabric_width_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -461,7 +480,7 @@
                                                     @enderror
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
-                                                    <input type="number" class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item->cgst_percent }}" readonly>
+                                                    <input type="number" class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item->cgst_percent }}">
                                                     @error('items.' . $index . '.cgst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -470,7 +489,7 @@
                                                     <input type="number" class="form-control cgst_amount text-end" name="items[{{ $index }}][cgst_amount]" step="0.01" min="0" value="{{ $item->cgst_amount }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-sgst d-none">
-                                                    <input type="number" class="form-control sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item->sgst_percent }}" readonly>
+                                                    <input type="number" class="form-control sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item->sgst_percent }}">
                                                     @error('items.' . $index . '.sgst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -479,7 +498,7 @@
                                                     <input type="number" class="form-control sgst_amount text-end" name="items[{{ $index }}][sgst_amount]" step="0.01" min="0" value="{{ $item->sgst_amount }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-igst d-none">
-                                                    <input type="number" class="form-control igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item->igst_percent }}" readonly>
+                                                    <input type="number" class="form-control igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item->igst_percent }}">
                                                     @error('items.' . $index . '.igst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -571,6 +590,7 @@
                                                         <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                                                     @endforeach
                                                 </select>
+                                                <input type="hidden" name="items[0][fabric_width_id]" class="fabric_width_hidden" value="" disabled>
                                                 <span class="hyphen d-none">-</span>
                                             </td>
                                             <td class="td-fabric-type">
@@ -609,19 +629,19 @@
                                                 <input type="number" class="form-control rate" name="items[0][rate]" step="any" min="0" placeholder="Enter Rate">
                                             </td>
                                             <td class="td-gst td-cgst d-none">
-                                                <input type="number" class="form-control cgst_percent text-end" name="items[0][cgst_percent]" step="0.01" min="0" value="" readonly>
+                                                <input type="number" class="form-control cgst_percent text-end" name="items[0][cgst_percent]" step="0.01" min="0" value="">
                                             </td>
                                             <td class="td-gst td-cgst d-none">
                                                 <input type="number" class="form-control cgst_amount text-end" name="items[0][cgst_amount]" step="0.01" min="0" value="" readonly>
                                             </td>
                                             <td class="td-gst td-sgst d-none">
-                                                <input type="number" class="form-control sgst_percent text-end" name="items[0][sgst_percent]" step="0.01" min="0" value="" readonly>
+                                                <input type="number" class="form-control sgst_percent text-end" name="items[0][sgst_percent]" step="0.01" min="0" value="">
                                             </td>
                                             <td class="td-gst td-sgst d-none">
                                                 <input type="number" class="form-control sgst_amount text-end" name="items[0][sgst_amount]" step="0.01" min="0" value="" readonly>
                                             </td>
                                             <td class="td-gst td-igst d-none">
-                                                <input type="number" class="form-control igst_percent text-end" name="items[0][igst_percent]" step="0.01" min="0" value="" readonly>
+                                                <input type="number" class="form-control igst_percent text-end" name="items[0][igst_percent]" step="0.01" min="0" value="">
                                             </td>
                                             <td class="td-gst td-igst d-none">
                                                 <input type="number" class="form-control igst_amount text-end" name="items[0][igst_amount]" step="0.01" min="0" value="" readonly>
@@ -807,7 +827,7 @@
                                             </div>
                                         </div>
                                         <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') }}">
-                                        <div class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
+                                        <div class="igst-field tax-percent-input {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="igst_percent" class="fw-medium">IGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
@@ -827,7 +847,7 @@
                                                 <input type="text" class="form-control-plaintext text-end w-50" id="summary_igst_amount" readonly>
                                             </div>
                                         </div>
-                                        <div class="cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
+                                        <div class="cgst-field tax-percent-input {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="cgst_percent" class="fw-medium">CGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
@@ -847,7 +867,7 @@
                                                 <input type="text" class="form-control-plaintext text-end w-50" id="summary_cgst_amount" readonly>
                                             </div>
                                         </div>
-                                        <div class="sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
+                                        <div class="sgst-field tax-percent-input {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="sgst_percent" class="fw-medium">SGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
@@ -908,10 +928,7 @@
 </div>
 <style>
    .cgst_amount[readonly],
-.cgst_percent,
 .sgst_amount[readonly],
-.sgst_percent,
-.igst_percent,
 .igst_amount[readonly] {
     background-color: #efefef !important;
     opacity: 1;
@@ -971,12 +988,13 @@
                         <span class="hyphen d-none">-</span>
                     </td>
                     <td class="td-fabric-width">
-                        <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" data-placeholder="Select Width">
+                        <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" disabled data-placeholder="Select Width">
                             <option value="">Select Width</option>
                             @foreach($fabricSizes as $fabricSize)
                                 <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                             @endforeach
                         </select>
+                        <input type="hidden" name="items[${itemIndex}][fabric_width_id]" class="fabric_width_hidden" value="">
                         <span class="hyphen d-none">-</span>
                     </td>
                     <td class="td-fabric-type">
@@ -1015,19 +1033,19 @@
                         <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="any" min="0" placeholder="Enter Rate">
                     </td>
                     <td class="td-gst td-cgst d-none">
-                        <input type="number" class="form-control cgst_percent text-end" name="items[${itemIndex}][cgst_percent]" step="0.01" min="0" value="${supplierCgst}" readonly>
+                        <input type="number" class="form-control cgst_percent text-end" name="items[${itemIndex}][cgst_percent]" step="0.01" min="0" value="${supplierCgst}">
                     </td>
                     <td class="td-gst td-cgst d-none">
                         <input type="number" class="form-control cgst_amount text-end" name="items[${itemIndex}][cgst_amount]" step="0.01" min="0" value="" readonly>
                     </td>
                     <td class="td-gst td-sgst d-none">
-                        <input type="number" class="form-control sgst_percent text-end" name="items[${itemIndex}][sgst_percent]" step="0.01" min="0" value="${supplierSgst}" readonly>
+                        <input type="number" class="form-control sgst_percent text-end" name="items[${itemIndex}][sgst_percent]" step="0.01" min="0" value="${supplierSgst}">
                     </td>
                     <td class="td-gst td-sgst d-none">
                         <input type="number" class="form-control sgst_amount text-end" name="items[${itemIndex}][sgst_amount]" step="0.01" min="0" value="" readonly>
                     </td>
                     <td class="td-gst td-igst d-none">
-                        <input type="number" class="form-control igst_percent text-end" name="items[${itemIndex}][igst_percent]" step="0.01" min="0" value="${supplierIgst}" readonly>
+                        <input type="number" class="form-control igst_percent text-end" name="items[${itemIndex}][igst_percent]" step="0.01" min="0" value="${supplierIgst}">
                     </td>
                     <td class="td-gst td-igst d-none">
                         <input type="number" class="form-control igst_amount text-end" name="items[${itemIndex}][igst_amount]" step="0.01" min="0" value="" readonly>
@@ -1051,6 +1069,7 @@
                 </tr>`;
                 
                 let firstRowBrandVal = $('#item-rows tbody tr:first').find('.brand').val() || $('#item-rows tbody tr:first').find('.brand_hidden').val();
+                let firstRowWidthVal = $('#item-rows tbody tr:first').find('.fabric_width').val() || $('#item-rows tbody tr:first').find('.fabric_width_hidden').val();
 
                 $('#item-rows tbody').append(rowHtml);
 
@@ -1061,6 +1080,13 @@
                 }
                 lastRow.find('.brand').prop('disabled', true);
                 lastRow.find('.brand_hidden').prop('disabled', false);
+
+                if (firstRowWidthVal) {
+                    lastRow.find('.fabric_width').val(firstRowWidthVal);
+                    lastRow.find('.fabric_width_hidden').val(firstRowWidthVal);
+                }
+                lastRow.find('.fabric_width').prop('disabled', true);
+                lastRow.find('.fabric_width_hidden').prop('disabled', false);
 
                 initSelect2Fields();
                 
@@ -1185,23 +1211,46 @@
                 });
             });
 
+            $(document).on('change', '#item-rows tbody tr:first .fabric_width', function () {
+                let widthVal = $(this).val();
+                $('#item-rows tbody tr:first .fabric_width_hidden').val(widthVal);
+                $('#item-rows tbody tr:not(:first)').each(function () {
+                    let rowWidth = $(this).find('.fabric_width');
+                    rowWidth.val(widthVal).trigger('change.select2');
+                    $(this).find('.fabric_width_hidden').val(widthVal);
+                });
+            });
+
             function updateBrandRowStates() {
                 let rows = $('#item-rows tbody tr');
                 if (!rows.length) return;
 
                 let firstBrandVal = rows.first().find('.brand').val() || rows.first().find('.brand_hidden').val();
+                let firstWidthVal = rows.first().find('.fabric_width').val() || rows.first().find('.fabric_width_hidden').val();
 
                 rows.each(function (index) {
                     let brandSelect = $(this).find('.brand');
                     let brandHidden = $(this).find('.brand_hidden');
+                    let widthSelect = $(this).find('.fabric_width');
+                    let widthHidden = $(this).find('.fabric_width_hidden');
 
                     if (index === 0) {
                         brandSelect.prop('disabled', false);
                         brandHidden.prop('disabled', true);
+                        widthSelect.prop('disabled', false);
+                        widthHidden.prop('disabled', true);
+
                         if (brandSelect.hasClass('select2-hidden-accessible')) {
                             brandSelect.select2('destroy');
                             brandSelect.select2({
                                 dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
+                                width: '100%'
+                            });
+                        }
+                        if (widthSelect.hasClass('select2-hidden-accessible')) {
+                            widthSelect.select2('destroy');
+                            widthSelect.select2({
+                                dropdownParent: widthSelect.closest('.card-body').length ? widthSelect.closest('.card-body') : $('body'),
                                 width: '100%'
                             });
                         }
@@ -1212,10 +1261,25 @@
                         }
                         brandSelect.prop('disabled', true);
                         brandHidden.prop('disabled', false);
+
+                        if (firstWidthVal) {
+                            widthSelect.val(firstWidthVal).trigger('change.select2');
+                            widthHidden.val(firstWidthVal);
+                        }
+                        widthSelect.prop('disabled', true);
+                        widthHidden.prop('disabled', false);
+
                         if (brandSelect.hasClass('select2-hidden-accessible')) {
                             brandSelect.select2('destroy');
                             brandSelect.select2({
                                 dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
+                                width: '100%'
+                            });
+                        }
+                        if (widthSelect.hasClass('select2-hidden-accessible')) {
+                            widthSelect.select2('destroy');
+                            widthSelect.select2({
+                                dropdownParent: widthSelect.closest('.card-body').length ? widthSelect.closest('.card-body') : $('body'),
                                 width: '100%'
                             });
                         }
@@ -1319,6 +1383,14 @@
                 calculateTotals();
             });
 
+            function round2(val) {
+                return Math.round((Number(val) + Number.EPSILON) * 100) / 100;
+            }
+
+            function format2(val) {
+                return round2(val).toFixed(2);
+            }
+
             function calculateTotals() {
                 let subTotal = 0;
                 let totalQty = 0;
@@ -1330,63 +1402,63 @@
                 let orderCgst = parseFloat($('#cgst_percent').val()) || 0;
                 let orderSgst = parseFloat($('#sgst_percent').val()) || 0;
                 let itemsTaxTotal = 0;
+                let totalRowCgst = 0;
+                let totalRowSgst = 0;
+                let totalRowIgst = 0;
 
                 $('.item-row').each(function () {
                     let qty = parseFloat($(this).find('.quantity').val()) || 0;
                     let rate = parseFloat($(this).find('.rate').val()) || 0;
-                    let amount;
-
-                    // if (isAccessories) {
-                    //     amount = parseFloat($(this).find('.amount').val()) || 0;
-                    // } else {
-                    //     amount = qty * rate;
-                    //     $(this).find('.amount').val(amount > 0 ? amount.toFixed(2) : '');
-                    // }
+                    let amount = (qty > 0 && rate > 0) ? round2(qty * rate) : (parseFloat($(this).find('.amount').val()) || 0);
                     
-                    amount = qty * rate;
-                    $(this).find('.amount').val(amount > 0 ? amount.toFixed(2) : '');
+                    if (qty > 0 && rate > 0) {
+                        $(this).find('.amount').val(format2(amount));
+                    }
                     
                     if (isAccessories) {
                         if (otherState === 'yes') {
                             let itemIgstStr = $(this).find('.igst_percent').val();
-                            let itemIgstPercent = itemIgstStr !== '' ? parseFloat(itemIgstStr) : orderIgst;
-                            if (itemIgstStr === '') {
+                            if (itemIgstStr === '' && orderIgst > 0) {
                                 $(this).find('.igst_percent').val(orderIgst);
                             }
-                            let igstAmount = (amount * itemIgstPercent) / 100;
-                            $(this).find('.igst_amount').val(igstAmount.toFixed(2));
+                            let itemIgstPercent = parseFloat($(this).find('.igst_percent').val()) || 0;
+                            let igstAmount = round2((amount * itemIgstPercent) / 100);
+                            $(this).find('.igst_amount').val(format2(igstAmount));
                             itemsTaxTotal += igstAmount;
+                            totalRowIgst += igstAmount;
                         } else {
                             let itemCgstStr = $(this).find('.cgst_percent').val();
                             let itemSgstStr = $(this).find('.sgst_percent').val();
-                            let itemCgstPercent = itemCgstStr !== '' ? parseFloat(itemCgstStr) : orderCgst;
-                            let itemSgstPercent = itemSgstStr !== '' ? parseFloat(itemSgstStr) : orderSgst;
-                            if (itemCgstStr === '') {
+                            if (itemCgstStr === '' && orderCgst > 0) {
                                 $(this).find('.cgst_percent').val(orderCgst);
                             }
-                            if (itemSgstStr === '') {
+                            if (itemSgstStr === '' && orderSgst > 0) {
                                 $(this).find('.sgst_percent').val(orderSgst);
                             }
-                            let cgstAmount = (amount * itemCgstPercent) / 100;
-                            let sgstAmount = (amount * itemSgstPercent) / 100;
-                            $(this).find('.cgst_amount').val(cgstAmount.toFixed(2));
-                            $(this).find('.sgst_amount').val(sgstAmount.toFixed(2));
-                            itemsTaxTotal += cgstAmount + sgstAmount;
+                            let itemCgstPercent = parseFloat($(this).find('.cgst_percent').val()) || 0;
+                            let itemSgstPercent = parseFloat($(this).find('.sgst_percent').val()) || 0;
+                            let cgstAmount = round2((amount * itemCgstPercent) / 100);
+                            let sgstAmount = round2((amount * itemSgstPercent) / 100);
+                            $(this).find('.cgst_amount').val(format2(cgstAmount));
+                            $(this).find('.sgst_amount').val(format2(sgstAmount));
+                            itemsTaxTotal += round2(cgstAmount + sgstAmount);
+                            totalRowCgst += cgstAmount;
+                            totalRowSgst += sgstAmount;
                         }
                     }
                     
-                    subTotal += amount;
+                    subTotal = round2(subTotal + amount);
                     totalQty += qty;
                 });
 
-                $('#total_qty').val(totalQty.toFixed(2));
-                $('#sub_total').val(subTotal.toFixed(2));
+                $('#total_qty').val(format2(totalQty));
+                $('#sub_total').val(format2(subTotal));
 
                 let commissionPercent = parseFloat($('input[name="commission"]').val()) || 0;
                 let commissionAmount = 0;
                 if (commissionPercent > 0) {
-                    commissionAmount = (subTotal * commissionPercent) / 100;
-                    $('#commission_amount_display').text(commissionAmount.toFixed(2));
+                    commissionAmount = round2((subTotal * commissionPercent) / 100);
+                    $('#commission_amount_display').text(format2(commissionAmount));
                     $('#commission_row').removeClass('d-none');
                 } else {
                     $('#commission_row').addClass('d-none');
@@ -1394,30 +1466,30 @@
                 }
 
                 let discountPercent = parseFloat($('#discount_percent').val()) || 0;
-                let discountAmount = (subTotal * discountPercent) / 100;
-                $('#discount_amount').val(discountAmount.toFixed(2));
+                let discountAmount = round2((subTotal * discountPercent) / 100);
+                $('#discount_amount').val(format2(discountAmount));
 
-                let taxableAmount = subTotal - discountAmount - commissionAmount;
+                let taxableAmount = round2(subTotal - discountAmount - commissionAmount);
                 let displayTaxableAmount = taxableAmount >= 0 ? taxableAmount : 0;
 
-                $('#taxable_amount').val(displayTaxableAmount.toFixed(2));
+                $('#taxable_amount').val(format2(displayTaxableAmount));
 
                 // Show warning if net amount is negative
                 if (taxableAmount < 0 && subTotal > 0 && (discountAmount > 0 || commissionAmount > 0)) {
                     let reasons = [];
                     if (discountAmount > 0 && commissionAmount > 0) {
-                        reasons.push('Discount (₹' + discountAmount.toFixed(2) + ')');
-                        reasons.push('Commission (₹' + commissionAmount.toFixed(2) + ')');
+                        reasons.push('Discount (₹' + format2(discountAmount) + ')');
+                        reasons.push('Commission (₹' + format2(commissionAmount) + ')');
                     } else if (discountAmount > 0) {
-                        reasons.push('Discount (₹' + discountAmount.toFixed(2) + ')');
+                        reasons.push('Discount (₹' + format2(discountAmount) + ')');
                     } else if (commissionAmount > 0) {
-                        reasons.push('Commission (₹' + commissionAmount.toFixed(2) + ')');
+                        reasons.push('Commission (₹' + format2(commissionAmount) + ')');
                     }
                     let warningText = '';
                     if (taxableAmount < 0) {
-                        warningText = 'Net Amount is negative (₹' + taxableAmount.toFixed(2) + '). ' + reasons.join(' + ') + ' exceeds Sub Total (₹' + subTotal.toFixed(2) + '). Showing 0.00.';
+                        warningText = 'Net Amount is negative (₹' + format2(taxableAmount) + '). ' + reasons.join(' + ') + ' exceeds Sub Total (₹' + format2(subTotal) + '). Showing 0.00.';
                     } else {
-                        warningText = 'Net Amount is 0.00. ' + reasons.join(' + ') + ' equals Sub Total (₹' + subTotal.toFixed(2) + '). Tax and Grand Total will be 0.00.';
+                        warningText = 'Net Amount is 0.00. ' + reasons.join(' + ') + ' equals Sub Total (₹' + format2(subTotal) + '). Tax and Grand Total will be 0.00.';
                     }
                     $('#negative_net_warning_text').text(warningText);
                     $('#negative_net_warning').removeClass('d-none');
@@ -1435,41 +1507,52 @@
                 let igstAmountDisplay = 0;
                 
                 if (taxableAmount >= 0) {
-                    if (otherState === 'yes') {
-                        let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                        igstAmountDisplay = (displayTaxableAmount * igstPercent) / 100;
-                        taxAmount = igstAmountDisplay;
+                    if (isAccessories) {
+                        if (otherState === 'yes') {
+                            igstAmountDisplay = round2(totalRowIgst);
+                            taxAmount = igstAmountDisplay;
+                        } else {
+                            cgstAmountDisplay = round2(totalRowCgst);
+                            sgstAmountDisplay = round2(totalRowSgst);
+                            taxAmount = round2(cgstAmountDisplay + sgstAmountDisplay);
+                        }
                     } else {
-                        let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
-                        let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-                        cgstAmountDisplay = (displayTaxableAmount * cgstPercent) / 100;
-                        sgstAmountDisplay = (displayTaxableAmount * sgstPercent) / 100;
-                        taxAmount = cgstAmountDisplay + sgstAmountDisplay;
+                        if (otherState === 'yes') {
+                            let igstPercent = parseFloat($('#igst_percent').val()) || 0;
+                            igstAmountDisplay = round2((displayTaxableAmount * igstPercent) / 100);
+                            taxAmount = igstAmountDisplay;
+                        } else {
+                            let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
+                            let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
+                            cgstAmountDisplay = round2((displayTaxableAmount * cgstPercent) / 100);
+                            sgstAmountDisplay = round2((displayTaxableAmount * sgstPercent) / 100);
+                            taxAmount = round2(cgstAmountDisplay + sgstAmountDisplay);
+                        }
                     }
                 }
 
-                $('#summary_cgst_amount').val(cgstAmountDisplay.toFixed(2));
-                $('#summary_sgst_amount').val(sgstAmountDisplay.toFixed(2));
-                $('#summary_igst_amount').val(igstAmountDisplay.toFixed(2));
-                $('#tax_amount').val(taxAmount.toFixed(2));
+                $('#summary_cgst_amount').val(format2(cgstAmountDisplay));
+                $('#summary_sgst_amount').val(format2(sgstAmountDisplay));
+                $('#summary_igst_amount').val(format2(igstAmountDisplay));
+                $('#tax_amount').val(format2(taxAmount));
 
-                let totalBeforeRoundOff = parseFloat((displayTaxableAmount + taxAmount).toFixed(2));
+                let totalBeforeRoundOff = round2(displayTaxableAmount + taxAmount);
 
                 let roundOffAmount = parseFloat($('#round_off').val()) || 0;
                 let roundOffType = $('input[name="round_off_type"]:checked').val();
                 let finalTotal = 0;
 
                 if (roundOffType === 'Add') {
-                    finalTotal = totalBeforeRoundOff + roundOffAmount;
+                    finalTotal = round2(totalBeforeRoundOff + roundOffAmount);
                 } else {
-                    finalTotal = totalBeforeRoundOff - roundOffAmount;
+                    finalTotal = round2(totalBeforeRoundOff - roundOffAmount);
                 }
 
                 if (finalTotal < 0) {
                     finalTotal = 0;
                 }
 
-                $('#total_amount').val(finalTotal.toFixed(2));
+                $('#total_amount').val(format2(finalTotal));
 
             }
 
@@ -1484,8 +1567,10 @@
                     if (isAccessories) {
                         $('.th-igst, .td-igst').removeClass('d-none');
                         $('.th-cgst, .th-sgst, .td-cgst, .td-sgst').addClass('d-none');
+                        $('.tax-percent-input').addClass('d-none');
                     } else {
                         $('.th-igst, .td-igst, .th-cgst, .th-sgst, .td-cgst, .td-sgst').addClass('d-none');
+                        $('.tax-percent-input.igst-field').removeClass('d-none');
                     }
                 } else {
                     $('.igst-field').addClass('d-none');
@@ -1493,8 +1578,10 @@
                     if (isAccessories) {
                         $('.th-igst, .td-igst').addClass('d-none');
                         $('.th-cgst, .th-sgst, .td-cgst, .td-sgst').removeClass('d-none');
+                        $('.tax-percent-input').addClass('d-none');
                     } else {
                         $('.th-igst, .td-igst, .th-cgst, .th-sgst, .td-cgst, .td-sgst').addClass('d-none');
+                        $('.tax-percent-input.cgst-field, .tax-percent-input.sgst-field').removeClass('d-none');
                     }
                 }
             }

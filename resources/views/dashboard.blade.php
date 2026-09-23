@@ -1094,7 +1094,7 @@
                                             WIP (Unit Wise)</h6>
                                         <div class="search-box">
                                             <input type="text" id="wipSearchInput" class="form-control form-control-sm"
-                                                placeholder="Search Process...">
+                                                placeholder="Search Process, Inward, Outward, WIP...">
                                         </div>
                                     </div>
                                     <div class="card-body p-0">
@@ -1155,32 +1155,26 @@
                                                 placeholder="Search Job Card...">
                                         </div>
                                     </div>
-                                    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                                        <p class="text-muted small fw-bold mb-1">Total WIP Material Cost</p>
-                                        <h3 class="mb-3 fw-bold text-primary">₹{{ number_format($wip_value, 2) }}</h3>
-                                        <div class="table-responsive w-100 mt-2" style="max-height: 280px; overflow-y: auto;">
-                                            <table class="table table-sm table-hover mb-0">
+                                    <div class="card-body p-3 d-flex flex-column">
+                                        <div class="text-center mb-3">
+                                            <p class="text-muted small fw-bold mb-1">Total WIP Material Cost</p>
+                                            <h3 class="mb-0 fw-bold text-primary">₹{{ number_format($wip_value, 2) }}</h3>
+                                        </div>
+                                        <div class="table-responsive flex-grow-1 w-100">
+                                            <table class="table table-sm table-hover align-middle mb-0 w-100" id="productionCostTable">
                                                 <thead class="bg-light sticky-top">
                                                     <tr>
-                                                        <th class="x-small">Job Card</th>
-                                                        <th class="x-small text-end">Cost</th>
+                                                        <th class="x-small">JOB CARD</th>
+                                                        <th class="x-small text-end">COST</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody class="x-small">
-                                                    @if($wip_cost_breakdown->count() > 0)
-                                                        @foreach($wip_cost_breakdown as $cost)
-                                                            <tr class="cost-row">
-                                                                <td class="cost-jc-no"><strong>{{ $cost->job_card_no }}</strong></td>
-                                                                <td class="text-end fw-bold text-dark">
-                                                                    ₹{{ number_format($cost->total_cost, 2) }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    @else
-                                                        <tr>
-                                                            <td colspan="2" class="text-center text-muted">No material costs
-                                                                recorded yet.</td>
-                                                        </tr>
-                                                    @endif
+                                                <tbody class="x-small" id="productionCostTableBody">
+                                                    <tr>
+                                                        <td colspan="2" class="text-center py-4 text-muted">
+                                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                                            Loading costs...
+                                                        </td>
+                                                    </tr>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -1248,8 +1242,7 @@
                                             <div>
                                                 <p class="text-muted small fw-bold mb-1">Shortage Brands</p>
                                                 <h4 class="mb-0 fw-bold text-warning">{{ $fabric_shortage_count }}</h4>
-                                                <span
-                                                    class="text-muted small">{{ $fabric_shortage_count > 0 ? 'Below Min Req (Reorder)' : 'All Stocks Healthy' }}</span>
+                                                <span class="text-muted small">{{ $fabric_shortage_count > 0 ? 'Below Min Req (Reorder)' : 'All Stocks Healthy' }}</span>
                                             </div>
                                             <div class="kpi-icon bg-light-warning">
                                                 <i class="ri ri-alert-line text-warning"></i>
@@ -2177,6 +2170,15 @@
             // 4. Trigger resize for Chart.js & DataTables
             setTimeout(function () {
                 window.dispatchEvent(new Event('resize'));
+                if (targetId === '#tab-production') {
+                    if (typeof window.initProductionCostDataTable === 'function') {
+                        if (!window.costDataTable) {
+                            window.initProductionCostDataTable();
+                        } else {
+                            window.costDataTable.columns.adjust().draw();
+                        }
+                    }
+                }
                 if ($.fn.DataTable) {
                     $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust().responsive.recalc();
                 }
@@ -2210,27 +2212,16 @@
             const wipSearchInput = document.getElementById('wipSearchInput');
             if (wipSearchInput) {
                 wipSearchInput.addEventListener('keyup', function () {
-                    const value = this.value.toLowerCase();
+                    const value = this.value.toLowerCase().trim();
                     const rows = document.querySelectorAll('.wip-row');
                     rows.forEach(row => {
-                        const text = row.querySelector('.wip-process-name')?.textContent.toLowerCase() || '';
+                        const text = row.textContent.toLowerCase();
                         row.style.display = text.includes(value) ? '' : 'none';
                     });
                 });
             }
 
-            // Cost table search
-            const costSearchInput = document.getElementById('costSearchInput');
-            if (costSearchInput) {
-                costSearchInput.addEventListener('keyup', function () {
-                    const value = this.value.toLowerCase();
-                    const rows = document.querySelectorAll('.cost-row');
-                    rows.forEach(row => {
-                        const text = row.querySelector('.cost-jc-no')?.textContent.toLowerCase() || '';
-                        row.style.display = text.includes(value) ? '' : 'none';
-                    });
-                });
-            }
+
 
             // Fabric stock search
             const fabricSearchInput = document.getElementById('fabricStockSearchInput');
@@ -3845,6 +3836,56 @@
                 }
                 cuttingDataTable.search(this.value).draw();
             });
+
+            // =========================================================================
+            // Production Cost (Unit Wise) AJAX DataTable
+            // =========================================================================
+            window.costDataTable = null;
+            window.initProductionCostDataTable = function () {
+                if (!$('#productionCostTable').length) return;
+                if ($.fn.DataTable.isDataTable('#productionCostTable')) {
+                    $('#productionCostTable').DataTable().destroy();
+                }
+
+                window.costDataTable = $('#productionCostTable').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    pageLength: 6,
+                    lengthChange: false,
+                    searching: true,
+                    ordering: true,
+                    order: [[1, 'desc']],
+                    autoWidth: false,
+                    dom: '<"position-relative"t><"row align-items-center mt-3"<"col-12 d-flex justify-content-center"p>>',
+                    ajax: {
+                        url: "{{ url('/dashboard/production-cost') }}",
+                        type: "GET",
+                        error: function (xhr, err, code) {
+                            console.error('Production cost AJAX error:', xhr, err, code);
+                        }
+                    },
+                    columns: [
+                        { data: 'job_card_no', name: 'job_card_no', orderable: true },
+                        { data: 'cost', name: 'cost', className: 'text-end fw-bold text-dark', orderable: true }
+                    ],
+                    language: {
+                        processing: '<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>',
+                        emptyTable: 'No material costs recorded yet.',
+                        zeroRecords: 'No matching job cards found.'
+                    }
+                });
+            };
+
+            // Search input for Production Cost
+            $(document).on('keyup input', '#costSearchInput', function () {
+                if (!window.costDataTable) {
+                    window.initProductionCostDataTable();
+                }
+                window.costDataTable.search(this.value).draw();
+            });
+
+            // Initialize Production Cost table immediately on load
+            window.initProductionCostDataTable();
         });
     </script>
 

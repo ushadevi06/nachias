@@ -322,26 +322,52 @@
                             </div>
                             @endif
                             
-                            @if($purchaseOrder->other_state)
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">IGST
-                                    ({{ number_format($purchaseOrder->igst_percent, 2) }}%)</span>
-                                <span
-                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount, 2) }}</span>
-                            </div>
+                            @if($isAccessories)
+                                @if($purchaseOrder->other_state)
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">IGST</span>
+                                    <span
+                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount, 2) }}</span>
+                                </div>
+                                @else
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">CGST</span>
+                                    <span
+                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->items->sum('cgst_amount'), 2) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">SGST</span>
+                                    <span
+                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->items->sum('sgst_amount'), 2) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Total GST Amount</span>
+                                    <span
+                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount, 2) }}</span>
+                                </div>
+                                @endif
                             @else
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">CGST
-                                    ({{ number_format($purchaseOrder->cgst_percent, 2) }}%)</span>
-                                <span
-                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">SGST
-                                    ({{ number_format($purchaseOrder->sgst_percent, 2) }}%)</span>
-                                <span
-                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
-                            </div>
+                                @if($purchaseOrder->other_state)
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">IGST
+                                        ({{ number_format($purchaseOrder->igst_percent, 2) }}%)</span>
+                                    <span
+                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount, 2) }}</span>
+                                </div>
+                                @else
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">CGST
+                                        ({{ number_format($purchaseOrder->cgst_percent, 2) }}%)</span>
+                                    <span
+                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">SGST
+                                        ({{ number_format($purchaseOrder->sgst_percent, 2) }}%)</span>
+                                    <span
+                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
+                                </div>
+                                @endif
                             @endif
 
                             @if($purchaseOrder->round_off != 0)

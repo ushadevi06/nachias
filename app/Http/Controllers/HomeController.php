@@ -348,13 +348,7 @@ class HomeController extends Controller
         $wip_process_cost = JobCardOperation::whereIn('job_card_entry_id', $activeJobCardIds)->sum('total_cost');
         $wip_value = $wip_material_cost + $wip_process_cost;
 
-        $wip_cost_breakdown = JobCardIssueItem::whereIn('job_card_entry_id', $activeJobCardIds)
-            ->join('job_card_entries', 'job_card_issue_items.job_card_entry_id', '=', 'job_card_entries.id')
-            ->join('stock_entry_items', 'job_card_issue_items.stock_entry_item_id', '=', 'stock_entry_items.id')
-            ->whereNull('job_card_issue_items.deleted_at')
-            ->select('job_card_entries.job_card_no', DB::raw('SUM(job_card_issue_items.qty_issue * stock_entry_items.price) as total_cost'))
-            ->groupBy('job_card_entries.id', 'job_card_entries.job_card_no')
-            ->get();
+        $wip_cost_breakdown = collect();
 
         $finished_goods_value = StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->sum(DB::raw('(qty_in - COALESCE(qty_out, 0)) * price'));
 
@@ -2841,6 +2835,78 @@ class HomeController extends Controller
                 'active' => $totalActive,
                 'completed' => $totalCompleted
             ]
+        ]);
+    }
+
+    public function getProductionCostAjax(Request $request)
+    {
+        $activeJobCardIds = JobCardEntry::whereNotIn('status', ['Production Completed', 'Closed'])
+            ->whereNull('deleted_at')
+            ->pluck('id');
+
+        $baseQuery = JobCardIssueItem::whereIn('job_card_entry_id', $activeJobCardIds)
+            ->join('job_card_entries', 'job_card_issue_items.job_card_entry_id', '=', 'job_card_entries.id')
+            ->join('stock_entry_items', 'job_card_issue_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+            ->whereNull('job_card_issue_items.deleted_at')
+            ->select(
+                'job_card_entries.id as job_card_id',
+                'job_card_entries.job_card_no',
+                DB::raw('SUM(job_card_issue_items.qty_issue * stock_entry_items.price) as total_cost')
+            )
+            ->groupBy('job_card_entries.id', 'job_card_entries.job_card_no');
+
+        $allRecords = $baseQuery->get();
+        $recordsTotal = $allRecords->count();
+
+        // Search filter
+        $searchValue = trim($request->input('search.value', $request->get('search', '')));
+        if (!empty($searchValue)) {
+            $term = strtolower($searchValue);
+            $cleanSearch = trim(preg_replace('/\s+/', ' ', str_ireplace(['₹', ',', 'rs'], '', $searchValue)));
+            $allRecords = $allRecords->filter(function ($item) use ($term, $cleanSearch) {
+                return stripos($item->job_card_no, $term) !== false
+                    || (!empty($cleanSearch) && stripos((string) $item->total_cost, $cleanSearch) !== false);
+            })->values();
+        }
+
+        $recordsFiltered = $allRecords->count();
+
+        // Ordering
+        $orderColIdx = $request->input('order.0.column');
+        $orderDir = strtolower($request->input('order.0.dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $colMap = [
+            0 => 'job_card_no',
+            1 => 'total_cost',
+        ];
+
+        if ($orderColIdx !== null && isset($colMap[$orderColIdx])) {
+            $colName = $colMap[$orderColIdx];
+            $allRecords = ($orderDir === 'desc')
+                ? $allRecords->sortByDesc($colName)->values()
+                : $allRecords->sortBy($colName)->values();
+        } else {
+            $allRecords = $allRecords->sortByDesc('total_cost')->values();
+        }
+
+        $start = max(0, intval($request->get('start', 0)));
+        $length = intval($request->get('length', 6));
+        if ($length <= 0) $length = 6;
+
+        $pagedData = $allRecords->slice($start, $length)->values();
+
+        $data = [];
+        foreach ($pagedData as $cost) {
+            $data[] = [
+                'job_card_no' => '<strong>' . e($cost->job_card_no) . '</strong>',
+                'cost' => '₹' . number_format($cost->total_cost, 2),
+            ];
+        }
+
+        return response()->json([
+            'draw' => intval($request->get('draw', 1)),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
         ]);
     }
 }

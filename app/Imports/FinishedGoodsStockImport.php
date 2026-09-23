@@ -391,7 +391,9 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         if (!$record) {
             if (str_contains($upper, 'SINGLE') || str_contains($upper, 'ASSORT')) {
                 $record = StoreType::where('id', 12)->orWhere('store_type_name', 'LIKE', '%SINGLE%')->first();
-            } elseif (str_contains($upper, 'DAMAGE')) {
+            } elseif (str_contains($upper, 'RETURN') || str_contains($upper, 'SALES RETURN') || str_contains($upper, 'CUSTOMER RETURN')) {
+                $record = StoreType::where('id', 14)->orWhere('store_type_name', 'LIKE', '%RETURN%')->first();
+            } elseif (str_contains($upper, 'DAMAGE') || str_contains($upper, 'DAMAGED') || str_contains($upper, 'DEFECT') || str_contains($upper, 'REWORK')) {
                 $record = StoreType::where('id', 6)->orWhere('store_type_name', 'LIKE', '%DAMAGE%')->first();
             } elseif (str_contains($upper, 'FINISHED') || str_contains($upper, 'SETWISE') || str_contains($upper, 'MAIN')) {
                 $record = StoreType::where('id', 3)->orWhere('store_type_name', 'LIKE', '%FINISHED%')->first();

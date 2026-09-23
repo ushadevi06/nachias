@@ -85,7 +85,7 @@
                                             @endforeach
                                         @endif
                                     </select>
-                                    <label for="sales_invoice_ids">Invoice No (Multi Select) *</label>
+                                    <label for="sales_invoice_ids">Invoice No (Multi Select) (Optional)</label>
                                     @error('sales_invoice_ids') <small class="text-danger">{{ $message }}</small> @enderror
                                 </div>
                             </div>
@@ -456,8 +456,7 @@
                                     <div class="d-flex align-items-center gap-2">
                                         <input type="number" name="discount_percent" id="discount_percent" class="form-control form-control-sm text-end" style="width: 80px;" value="{{ old('discount_percent', $creditNote->discount_percent ?? 0) }}" step="0.01" min="0" max="100">
                                         <span class="small">%</span>
-                                        <span class="ms-2">₹<span id="discount_text">{{ number_format(old('discount', $creditNote->discount ?? 0), 2) }}</span></span>
-                                        <input type="hidden" name="discount" id="discount" value="{{ old('discount', $creditNote->discount ?? 0) }}">
+                                        <span class="ms-2">₹<span id="sales_discount_text">0.00</span></span>
                                     </div>
                                 </div>
                 
@@ -466,6 +465,21 @@
                                     <div class="d-flex align-items-center gap-2">
                                         <input type="number" name="box_discount_amount" id="box_discount_amount" class="form-control form-control-sm text-end" style="width: 80px;" value="{{ old('box_discount_amount', isset($creditNote) ? number_format($creditNote->box_discount_amount, 2, '.', '') : '0.00') }}" step="0.01" min="0">
                                         <span class="ms-2">₹<span id="box_discount_text">0.00</span></span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between mb-3 mt-2">
+                                    <label class="fw-bold text-muted">Total Discount:</label>
+                                    <div class="text-end">
+                                        <span id="discount_text" class="fw-bold text-danger">- ₹{{ number_format(old('discount', $creditNote->discount ?? 0), 2) }}</span>
+                                        <input type="hidden" name="discount" id="discount" value="{{ old('discount', $creditNote->discount ?? 0) }}">
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between mb-3 mt-2 border-top pt-2">
+                                    <label class="fw-bold text-muted">Net Amount (Before Tax):</label>
+                                    <div class="text-end">
+                                        <span id="taxable_amount_text" class="fw-bold text-dark">₹{{ number_format(max(0, (old('sub_total', $creditNote->sub_total ?? 0) - old('discount', $creditNote->discount ?? 0))), 2) }}</span>
                                     </div>
                                 </div>
 
@@ -596,6 +610,118 @@ $(document).ready(function() {
             }
         }
     });
+    @php
+        $preloadedItems = [];
+        if (old('items')) {
+            foreach (old('items') as $oldItm) {
+                if (empty($oldItm['quantity']) || $oldItm['quantity'] <= 0) continue;
+                $preloadedItems[] = [
+                    'id' => $oldItm['sales_invoice_item_id'] ?? null,
+                    'stock_entry_item_id' => $oldItm['stock_entry_item_id'] ?? null,
+                    'item_id' => $oldItm['item_id'] ?? null,
+                    'brand_category_id' => $oldItm['brand_category_id'] ?? null,
+                    'invoice_no' => !empty($oldItm['sales_invoice_item_id']) ? 'Invoice Item' : 'Return Store',
+                    'item_name' => $oldItm['item_name'] ?? ($oldItm['art_no'] ?? '-'),
+                    'item_code' => $oldItm['item_code'] ?? ($oldItm['art_no'] ?? '-'),
+                    'product_barcode' => $oldItm['sku'] ?? ($oldItm['product_barcode'] ?? '-'),
+                    'color_id' => $oldItm['color_id'] ?? null,
+                    'color_name' => $oldItm['color_name'] ?? 'A',
+                    'art_no' => $oldItm['art_no'] ?? '-',
+                    'uom_id' => $oldItm['uom_id'] ?? null,
+                    'uom_code' => 'PCS',
+                    'size' => $oldItm['size'] ?? '-',
+                    'size_name' => $oldItm['size'] ?? '-',
+                    'sleeve_type' => $oldItm['sleeve_type'] ?? null,
+                    'invoice_qty' => '-',
+                    'returned_qty' => '-',
+                    'balance_qty' => 99999,
+                    'quantity' => (float)($oldItm['quantity'] ?? 1),
+                    'mrp' => (float)($oldItm['mrp'] ?? 0),
+                    'rate' => (float)($oldItm['rate'] ?? 0),
+                    'add_to_inventory' => isset($oldItm['add_to_inventory']) && $oldItm['add_to_inventory'] == 1,
+                ];
+            }
+        } elseif (isset($creditNote) && $creditNote->items && $creditNote->items->count() > 0) {
+            foreach ($creditNote->items as $cItem) {
+                $sInvItem = $cItem->salesInvoiceItem;
+                $stkItem = $cItem->stockEntryItem ?? ($sInvItem ? $sInvItem->stockEntryItem : null);
+
+                $artNo = $cItem->art_no ?: ($sInvItem ? ($stkItem ? ($stkItem->art_no ?: $sInvItem->art_no) : ($sInvItem->art_no ?: '-')) : ($stkItem ? ($stkItem->art_no ?: '-') : '-'));
+
+                $colorName = 'A';
+                if ($sInvItem && !empty($sInvItem->api_color)) {
+                    $colorName = $sInvItem->api_color;
+                } elseif (!empty($artNo) && strpos($artNo, '-') !== false) {
+                    $parts = explode('-', (string)$artNo);
+                    $colorName = trim(end($parts));
+                }
+
+                $itemName = '-';
+                if ($stkItem && $stkItem->finished_item_code) {
+                    $itemName = $stkItem->finished_item_code;
+                } elseif ($sInvItem && $sInvItem->item) {
+                    $itemName = $sInvItem->item->name;
+                } elseif ($cItem->item) {
+                    $itemName = $cItem->item->name;
+                } elseif ($stkItem && $stkItem->item) {
+                    $itemName = $stkItem->item->name;
+                }
+
+                $uomCode = 'PCS';
+                if ($cItem->uom) {
+                    $uomCode = $cItem->uom->uom_code ?: $cItem->uom->uom_name ?: 'PCS';
+                } elseif ($sInvItem && $sInvItem->uom) {
+                    $uomCode = $sInvItem->uom->uom_code ?: 'PCS';
+                }
+
+                $sizeName = $cItem->size ?: ($sInvItem ? ($sInvItem->sizeRatio ? $sInvItem->sizeRatio->size : ($sInvItem->size ?: '-')) : ($stkItem ? ($stkItem->size ?: '-') : '-'));
+                $barcode = $cItem->sku ?: ($sInvItem ? $sInvItem->sku : ($stkItem ? $stkItem->sku : '-'));
+                $invNo = $sInvItem && $sInvItem->salesInvoice ? $sInvItem->salesInvoice->inv_no : ($cItem->stock_entry_item_id ? 'Return Store' : '-');
+
+                $balQty = 0;
+                if ($sInvItem) {
+                    $alreadyRet = \DB::table('credit_note_items')
+                        ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
+                        ->where('credit_note_items.sales_invoice_item_id', $sInvItem->id)
+                        ->whereNull('credit_notes.deleted_at')
+                        ->whereNull('credit_note_items.deleted_at')
+                        ->whereIn('credit_notes.status', ['Draft', 'Approved'])
+                        ->where('credit_notes.id', '!=', $creditNote->id)
+                        ->sum('credit_note_items.quantity');
+                    $balQty = max(0, $sInvItem->quantity - $alreadyRet);
+                } elseif ($stkItem) {
+                    $balQty = max(0, (float)($stkItem->qty_in - $stkItem->qty_out) + (float)$cItem->quantity);
+                }
+
+                $preloadedItems[] = [
+                    'id' => $sInvItem ? $sInvItem->id : null,
+                    'stock_entry_item_id' => $cItem->stock_entry_item_id,
+                    'item_id' => $cItem->item_id,
+                    'brand_category_id' => $cItem->brand_category_id,
+                    'invoice_no' => $invNo,
+                    'item_name' => $itemName,
+                    'item_code' => $itemName,
+                    'product_barcode' => $barcode,
+                    'color_id' => $cItem->color_id,
+                    'color_name' => $colorName,
+                    'art_no' => $artNo,
+                    'uom_id' => $cItem->uom_id,
+                    'uom_code' => $uomCode,
+                    'size' => $sizeName,
+                    'size_name' => $sizeName,
+                    'sleeve_type' => $cItem->sleeve_type,
+                    'invoice_qty' => $sInvItem ? $sInvItem->quantity : '-',
+                    'returned_qty' => '-',
+                    'balance_qty' => $balQty > 0 ? $balQty : $cItem->quantity,
+                    'quantity' => (float)$cItem->quantity,
+                    'mrp' => (float)$cItem->mrp,
+                    'rate' => (float)$cItem->rate,
+                    'add_to_inventory' => $cItem->add_to_inventory == 1,
+                ];
+            }
+        }
+    @endphp
+
     $(".select2").select2();
     $('.flatpickr').flatpickr({
         dateFormat: "d-m-Y",
@@ -679,7 +805,9 @@ $(document).ready(function() {
     $('#sales_invoice_ids').on('change', function() {
         let selectedInvoiceIds = $(this).val();
         if (!selectedInvoiceIds || selectedInvoiceIds.length === 0) {
-            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">Select Invoice(s) to load items</td></tr>');
+            if ($('#item-rows .item-row').length === 0) {
+                $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">Select Invoice(s) to load items</td></tr>');
+            }
             calculateTotal();
             return;
         }
@@ -749,7 +877,7 @@ $(document).ready(function() {
     // Helper to add item to table
     window.addInvoiceItem = function(item, initialQty = 1, isAddedToInventory = true) {
         // Check if item is already in the table
-        if (parseFloat(item.balance_qty) <= 0) {
+        if (item.balance_qty !== '-' && parseFloat(item.balance_qty) <= 0) {
             Swal.fire({
                 icon: 'warning',
                 title: 'No Balance Quantity',
@@ -759,11 +887,11 @@ $(document).ready(function() {
             });
             return;
         }
-        let existingRow = $(`.item-row[data-item-id="${item.id}"]`);
+        let existingRow = $(`.item-row[data-item-id="${item.id || item.product_barcode}"]`);
         if (existingRow.length > 0) {
             let qtyInput = existingRow.find('.qty');
             let currentVal = parseFloat(qtyInput.val()) || 0;
-            let balanceVal = parseFloat(existingRow.find('.balance-qty-val').text()) || 0;
+            let balanceVal = item.balance_qty === '-' ? 999999 : (parseFloat(existingRow.find('.balance-qty-val').text()) || 0);
             if (currentVal + 1 <= balanceVal) {
                 qtyInput.val((currentVal + 1).toFixed(2)).trigger('input');
             } else {
@@ -775,11 +903,10 @@ $(document).ready(function() {
         $('#item-rows .empty-row').remove();
 
         let index = $('#item-rows .item-row').length;
-        let disabledStr = item.balance_qty <= 0 ? 'disabled' : '';
         let returnQty = initialQty;
 
         let rowHtml = `
-            <tr class="item-row" data-item-id="${item.id}" data-barcode="${item.product_barcode || ''}" data-name="${item.item_name.toLowerCase()}" data-code="${item.item_code.toLowerCase()}">
+            <tr class="item-row" data-item-id="${item.id || item.product_barcode}" data-barcode="${item.product_barcode || ''}" data-name="${item.item_name.toLowerCase()}" data-code="${item.item_code.toLowerCase()}">
                 <td class="text-center s-no">${index + 1}</td>
                 <td>
                     <span class="fw-semibold text-primary">${item.invoice_no}</span>
@@ -791,9 +918,11 @@ $(document).ready(function() {
                 </td>
                 <td>
                     <input type="hidden" name="items[${index}][brand_category_id]" value="${item.brand_category_id || ''}">
-                    <input type="hidden" name="items[${index}][sales_invoice_item_id]" value="${item.id}">
-                    <input type="hidden" name="items[${index}][item_id]" value="${item.item_id}">
+                    <input type="hidden" name="items[${index}][sales_invoice_item_id]" value="${item.id || ''}">
+                    <input type="hidden" name="items[${index}][stock_entry_item_id]" value="${item.stock_entry_item_id || ''}">
+                    <input type="hidden" name="items[${index}][item_id]" value="${item.item_id || ''}">
                     <input type="hidden" name="items[${index}][sleeve_type]" value="${item.sleeve_type || ''}">
+                    <input type="hidden" name="items[${index}][sku]" value="${item.product_barcode || ''}">
                     <span class="d-block fw-bold" style="font-size: 13px;">${item.item_name}</span>
                     <small class="text-muted">
                         ${item.product_barcode ? '<i class="ri-barcode-line"></i> ' + item.product_barcode : ''}
@@ -809,33 +938,32 @@ $(document).ready(function() {
                 </td>
                 <td>
                     <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id || ''}">
-                    <span>${item.uom_code || '-'}</span>
+                    <span>${item.uom_code || 'PCS'}</span>
                 </td>
                 <td class="text-center">
                     <input type="text" class="form-control form-control-sm text-center" name="items[${index}][size]" value="${item.size_name || item.size || ''}" readonly style="background-color: #f8f9fa; min-width:65px;">
                 </td>
                 <td class="text-end fw-semibold">${item.invoice_qty}</td>
                 <td class="text-end text-warning fw-semibold">${item.returned_qty}</td>
-                <td class="text-end text-success fw-bold balance-qty-val">${item.balance_qty}</td>
+                <td class="text-end ${item.balance_qty === '-' ? 'text-muted' : 'text-success fw-bold'} balance-qty-val">${item.balance_qty}</td>
                 <td>
                     <input type="number" class="form-control form-control-sm text-center qty" 
                         name="items[${index}][quantity]" 
                         value="${returnQty}" min="0" 
-                        max="${item.balance_qty}" 
-                        style="min-width: 110px;"
-                        ${item.balance_qty <= 0 ? 'disabled' : ''}>
+                        ${item.balance_qty !== '-' ? `max="${item.balance_qty}"` : ''} 
+                        style="min-width: 110px;">
                 </td>
                 <td class="text-end">
                     <input type="number" class="form-control form-control-sm text-end mrp" 
                         name="items[${index}][mrp]" 
-                        value="${item.mrp || 0}" readonly 
-                        style="background-color: #f8f9fa; min-width: 110px;">
+                        value="${item.mrp || 0}" ${item.id ? 'readonly' : ''} 
+                        style="${item.id ? 'background-color: #f8f9fa;' : ''} min-width: 110px;">
                 </td>
                 <td class="text-end">
                     <input type="number" class="form-control form-control-sm text-end rate" 
                         name="items[${index}][rate]" 
-                        value="${item.rate || 0}"  readonly 
-                        style="background-color: #f8f9fa; min-width: 110px;">
+                        value="${item.rate || 0}" ${item.id ? 'readonly' : ''} 
+                        style="${item.id ? 'background-color: #f8f9fa;' : ''} min-width: 110px;">
                 </td>
                 <td>
                     <input type="text" class="form-control form-control-sm text-end line_total" 
@@ -876,58 +1004,90 @@ $(document).ready(function() {
         $(this).closest('tr').remove();
         updateSerialNumbers();
         if ($('#item-rows .item-row').length === 0) {
-            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">No items added. Use the search box above to scan or search items from selected invoices.</td></tr>');
+            $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">No items added. Use the search box above to scan or search items.</td></tr>');
         }
         calculateTotal();
     });
 
-    // Run trigger on page load if editing or has old values
-    if (isEditing || $('#sales_invoice_ids').val()) {
-        $('#sales_invoice_ids').trigger('change');
+    // Preload and render items on page load if editing or has old values
+    const preloadedItems = @json($preloadedItems ?? []);
+    if (preloadedItems && preloadedItems.length > 0) {
+        $('#item-rows').html('');
+        preloadedItems.forEach(function(item) {
+            addInvoiceItem(item, item.quantity, item.add_to_inventory);
+        });
+        calculateTotal();
+    } else {
+        let initialInvoiceIds = $('#sales_invoice_ids').val();
+        if (initialInvoiceIds && initialInvoiceIds.length > 0) {
+            $('#sales_invoice_ids').trigger('change');
+        }
     }
 
     // 4. Autocomplete and Barcode scanner for adding items
     $('#barcode_scanner').autocomplete({
         source: function (request, response) {
-            if (!window.availableInvoiceItems || window.availableInvoiceItems.length === 0) {
-                response([]);
-                return;
-            }
             var term = request.term.toLowerCase();
-            var matches = window.availableInvoiceItems.filter(function (item) {
-                return (item.product_barcode && String(item.product_barcode).toLowerCase().includes(term)) ||
-                    (item.item_code && String(item.item_code).toLowerCase().includes(term)) ||
-                    (item.art_no && String(item.art_no).toLowerCase().includes(term)) ||
-                    (item.item_name && String(item.item_name).toLowerCase().includes(term));
-            });
+            if (window.availableInvoiceItems && window.availableInvoiceItems.length > 0) {
+                var matches = window.availableInvoiceItems.filter(function (item) {
+                    return (item.product_barcode && String(item.product_barcode).toLowerCase().includes(term)) ||
+                        (item.item_code && String(item.item_code).toLowerCase().includes(term)) ||
+                        (item.art_no && String(item.art_no).toLowerCase().includes(term)) ||
+                        (item.item_name && String(item.item_name).toLowerCase().includes(term));
+                });
 
-            var formatted = matches.map(function (item) {
-                var isDisabled = parseFloat(item.balance_qty) <= 0;
-                var label = (item.item_name || '');
-                if (item.invoice_no) label += ' [Inv: ' + item.invoice_no + ']';
-                if (item.art_no && item.art_no !== '-') label += ' | Art: ' + item.art_no;
-                if (item.product_barcode) label += ' | Barcode: ' + item.product_barcode;
-                if (item.size) label += ' | Size: ' + item.size;
+                if (matches.length > 0) {
+                    var formatted = matches.map(function (item) {
+                        var isDisabled = parseFloat(item.balance_qty) <= 0;
+                        var label = (item.item_name || '');
+                        if (item.invoice_no) label += ' [Inv: ' + item.invoice_no + ']';
+                        if (item.art_no && item.art_no !== '-') label += ' | Art: ' + item.art_no;
+                        if (item.product_barcode) label += ' | Barcode: ' + item.product_barcode;
+                        if (item.size) label += ' | Size: ' + item.size;
 
-                return {
-                    label: label,
-                    value: item.product_barcode || item.item_code || '',
-                    itemData: item,
-                    disabled: isDisabled
-                };
-            });
-            formatted = formatted.slice(0, 20);
-
-            if (request.term && formatted.length === 0) {
-                response([{
-                    label: 'Item not found in selected Invoices',
-                    value: '',
-                    noResult: true
-                }]);
-                return;
+                        return {
+                            label: label,
+                            value: item.product_barcode || item.item_code || '',
+                            itemData: item,
+                            disabled: isDisabled
+                        };
+                    });
+                    response(formatted.slice(0, 20));
+                    return;
+                }
             }
 
-            response(formatted);
+            // Fallback: search direct items
+            $.ajax({
+                url: "{{ url('credit_notes/search-direct-items') }}",
+                type: 'GET',
+                data: { term: request.term },
+                success: function(data) {
+                    if (data && data.length > 0) {
+                        var formatted = data.map(function (item) {
+                            var label = (item.item_name || '');
+                            label += ' [Direct Return / No Invoice]';
+                            if (item.art_no && item.art_no !== '-') label += ' | Art: ' + item.art_no;
+                            if (item.product_barcode && item.product_barcode !== '-') label += ' | Barcode: ' + item.product_barcode;
+                            if (item.size) label += ' | Size: ' + item.size;
+
+                            return {
+                                label: label,
+                                value: item.product_barcode || item.item_code || '',
+                                itemData: item,
+                                disabled: false
+                            };
+                        });
+                        response(formatted.slice(0, 20));
+                    } else {
+                        response([{
+                            label: 'Item not found in invoice or inventory. Please check barcode or Art No.',
+                            value: '',
+                            noResult: true
+                        }]);
+                    }
+                }
+            });
         },
         minLength: 1,
         select: function (event, ui) {
@@ -960,9 +1120,10 @@ $(document).ready(function() {
         
         var infoParts = [codeInfo, artInfo, barcodeInfo, sizeInfo].filter(Boolean).join(' | ');
         
-        var isDisabled = item.disabled || parseFloat(it.balance_qty) <= 0;
+        var isDisabled = item.disabled || (it.balance_qty !== '-' && parseFloat(it.balance_qty) <= 0);
         var badgeStyle = isDisabled ? "background-color: #6c757d; color: #fff;" : "";
         var wrapperStyle = isDisabled ? "opacity: 0.45; cursor: not-allowed; pointer-events: none;" : "";
+        var balText = it.balance_qty === '-' ? 'Direct Return' : `Bal Qty: ${parseFloat(it.balance_qty).toFixed(2)}`;
 
         var $li = $("<li>");
         if (isDisabled) {
@@ -973,7 +1134,7 @@ $(document).ready(function() {
             .append(`<div class="ui-menu-item-wrapper ${isDisabled ? 'ui-state-disabled' : ''}" style="${wrapperStyle}">
                 <div class="d-flex justify-content-between align-items-start gap-2">
                     <span class="search-item-title me-2">${item.label}</span>
-                    <span class="search-item-balance badge ${isDisabled ? 'bg-secondary' : 'bg-success-subtle text-success border border-success-subtle'}" style="margin-top: 6px; flex-shrink: 0; font-size: 11px; padding: 4px 8px; ${badgeStyle}">Bal Qty: ${parseFloat(it.balance_qty).toFixed(2)}</span>
+                    <span class="search-item-balance badge ${isDisabled ? 'bg-secondary' : 'bg-success-subtle text-success border border-success-subtle'}" style="margin-top: 6px; flex-shrink: 0; font-size: 11px; padding: 4px 8px; ${badgeStyle}">${balText}</span>
                 </div>
                 <div class="search-item-info mt-1">
                     ${infoParts ? infoParts + ' | ' : ''}Rate: ₹${parseFloat(it.rate || it.mrp || 0).toFixed(2)}
@@ -1048,28 +1209,35 @@ $(document).ready(function() {
         $('#barcode_scanner').val('');
     });
 
-    // 5. Quantity validations & totals auto calculation
-    $(document).on('input', '.qty', function() {
+    // 5. Quantity & Rate validations & totals auto calculation
+    $(document).on('input change', '.qty, .rate', function() {
         let row = $(this).closest('.item-row');
-        let qty = parseFloat($(this).val()) || 0;
+        let qty = parseFloat(row.find('.qty').val()) || 0;
         let balanceQty = parseFloat(row.find('.balance-qty-val').text()) || 0;
 
-        if (qty < 0) {
-            $(this).val(0);
-            qty = 0;
-        }
+        if ($(this).hasClass('qty')) {
+            if (qty < 0) {
+                $(this).val(0);
+                qty = 0;
+            }
 
-        if (qty > balanceQty) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Quantity Exceeded',
-                text: `Return quantity cannot exceed remaining balance quantity of ${balanceQty}!`
-            });
-            $(this).val(balanceQty);
-            qty = balanceQty;
+            if (balanceQty > 0 && qty > balanceQty) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Quantity Exceeded',
+                    text: `Return quantity cannot exceed remaining balance quantity of ${balanceQty}!`
+                });
+                $(this).val(balanceQty);
+                qty = balanceQty;
+            }
         }
 
         let rate = parseFloat(row.find('.rate').val()) || 0;
+        if (rate < 0) {
+            row.find('.rate').val(0);
+            rate = 0;
+        }
+
         let amount = qty * rate;
         row.find('.line_total').val(amount.toFixed(2));
         
@@ -1113,7 +1281,7 @@ $(document).ready(function() {
         $('#sales_discount_text').text(salesDiscountValue.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         $('#box_discount_text').text(totalBoxDiscount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         $('#discount').val(discountAmount.toFixed(2));
-        $('#discount_text').text(discountAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#discount_text').text('- ₹' + discountAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         
         
         // Calculate Pre-GST and Post-GST charges
@@ -1155,21 +1323,24 @@ $(document).ready(function() {
             $('button[type="submit"]').prop('disabled', false);
         }
 
+        let displayNetBeforeTax = Math.max(0, taxableAmount);
+        $('#taxable_amount_text').text('₹' + displayNetBeforeTax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+
         let cgst = 0, sgst = 0, igst = 0;
         let taxAmt = 0;
 
         if ($('#state_yes').is(':checked')) {
             let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-            igst = taxableAmount * (igstPercent / 100);
+            igst = parseFloat((taxableAmount * (igstPercent / 100)).toFixed(2));
             taxAmt = igst;
             $('#igst_amt_text').text(igst.toFixed(2));
             $('#igst_amt').val(igst.toFixed(2));
         } else {
             let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
             let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-            cgst = taxableAmount * (cgstPercent / 100);
-            sgst = taxableAmount * (sgstPercent / 100);
-            taxAmt = cgst + sgst;
+            cgst = parseFloat((taxableAmount * (cgstPercent / 100)).toFixed(2));
+            sgst = parseFloat((taxableAmount * (sgstPercent / 100)).toFixed(2));
+            taxAmt = parseFloat((cgst + sgst).toFixed(2));
             $('#cgst_amt_text').text(cgst.toFixed(2));
             $('#cgst_amt').val(cgst.toFixed(2));
             $('#sgst_amt_text').text(sgst.toFixed(2));
