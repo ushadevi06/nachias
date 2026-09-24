@@ -401,10 +401,15 @@
                                 <span class="fw-bold">₹{{ number_format($creditNote->tax_amount, 2) }}</span>
                             </div>
 
-                            @if($postGstCharges->count() > 0)
+                            @if((float)($creditNote->other_charges ?? 0) > 0)
+                                <div class="d-flex justify-content-between mb-3 text-muted small">
+                                    <span>Other Charges</span>
+                                    <span>+₹{{ number_format($creditNote->other_charges, 2) }}</span>
+                                </div>
+                            @elseif($postGstCharges->count() > 0)
                                 @foreach($postGstCharges as $charge)
                                 <div class="d-flex justify-content-between mb-3 text-muted small">
-                                    <span>{{ $charge->charge_name }} (Post-GST)</span>
+                                    <span>{{ $charge->charge_name }}</span>
                                     <span>+₹{{ number_format($charge->charge_amount, 2) }}</span>
                                 </div>
                                 @endforeach

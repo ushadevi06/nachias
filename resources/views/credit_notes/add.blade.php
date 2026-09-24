@@ -200,6 +200,7 @@
                         </div>
                     </div>
                 </div>
+                {{-- Additional Charges Section (Commented Out)
                 <div class="row g-4">
                     <div class="col-lg-12">
                         <!-- Additional Charges Panel -->
@@ -303,6 +304,7 @@
                         </div>
                     </div>
                 </div>
+                --}}
                 <div class="row g-4">
                     <div class="col-lg-7">
                         <!-- PDF Visibility Checklist -->
@@ -527,11 +529,10 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex justify-content-between mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
                                     <label class="fw-bold text-muted">Other Charges:</label>
-                                    <div class="text-end">
-                                        <input type="hidden" name="other_charges" id="other_charges" value="{{ old('other_charges', $creditNote->other_charges ?? 0) }}">
-                                        <span id="other_charges_text" class="fw-bold">₹{{ number_format(old('other_charges', $creditNote->other_charges ?? 0), 2) }}</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="number" min="0" step="0.01" name="other_charges" id="other_charges" class="form-control form-control-sm text-end" style="width: 95px; border: 1px solid #e5e6e8;" value="{{ old('other_charges', isset($creditNote) ? number_format($creditNote->other_charges, 2, '.', '') : '0.00') }}" placeholder="0.00">
                                     </div>
                                 </div>
 
@@ -583,7 +584,7 @@
 
 <script>
 $(document).ready(function() {
-    $(document).on('keypress keydown', '#charge_amount, #discount_percent, #box_discount_amount, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function (e) {
+    $(document).on('keypress keydown', '#charge_amount, #discount_percent, #box_discount_amount, #cgst_percent, #sgst_percent, #igst_percent, #other_charges, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function (e) {
         if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
             e.preventDefault();
             return false;
@@ -599,7 +600,7 @@ $(document).ready(function() {
         }
     });
 
-    $(document).on('input paste change keyup', '#charge_amount, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function () {
+    $(document).on('input paste change keyup', '#charge_amount, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent, #other_charges, #round_off, .qty, .mrp, .rate, .item-qty-input, .item-rate-input', function () {
         var el = this;
         var val = $(el).val();
         if (val !== '' && (parseFloat(val) < 0 || String(val).indexOf('-') !== -1 || String(val).indexOf('+') !== -1)) {
@@ -1244,7 +1245,14 @@ $(document).ready(function() {
         calculateTotal();
     });
 
-    $(document).on('input', '#cgst_percent, #sgst_percent, #igst_percent, #round_off', calculateTotal);
+    $(document).on('input', '#cgst_percent', function() {
+        $('#sgst_percent').val($(this).val());
+    });
+    $(document).on('input', '#sgst_percent', function() {
+        $('#cgst_percent').val($(this).val());
+    });
+
+    $(document).on('input', '#cgst_percent, #sgst_percent, #igst_percent, #other_charges, #round_off', calculateTotal);
     $(document).on('change', '.round-off-type-radio', calculateTotal);
     
     $('input[name="is_other_state"]').on('change', function() {
@@ -1283,35 +1291,19 @@ $(document).ready(function() {
         $('#discount').val(discountAmount.toFixed(2));
         $('#discount_text').text('- ₹' + discountAmount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         
-        
-        // Calculate Pre-GST and Post-GST charges
-        let preGstCharges = 0;
-        let postGstCharges = 0;
-        $('.charge-row').each(function () {
-            let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-            let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
-            if (taxType === 'Pre-GST') {
-                preGstCharges += amount;
-            } else {
-                postGstCharges += amount;
-            }
-        });
+        let otherCharges = parseFloat($('#other_charges').val()) || 0;
 
-        let totalCharges = preGstCharges + postGstCharges;
-        $('#other_charges').val(totalCharges.toFixed(2));
-        $('#other_charges_text').text('₹' + totalCharges.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-
-        // Taxable Amount = Subtotal - Discount + Pre-GST charges
-        let taxableAmount = subTotal - discountAmount + preGstCharges;
+        // Taxable Amount = Subtotal - Discount
+        let taxableAmount = subTotal - discountAmount;
 
         if (taxableAmount <= 0 && subTotal > 0 && discountAmount > 0) {
             let warningText = '';
             if (taxableAmount < 0) {
-                warningText = 'Taxable Total is negative (₹' + taxableAmount.toFixed(2) + '). Discount (₹' + discountAmount.toFixed(2) + ') exceeds Sub Total + Pre-GST Charges. Showing 0.00.';
+                warningText = 'Taxable Total is negative (₹' + taxableAmount.toFixed(2) + '). Discount (₹' + discountAmount.toFixed(2) + ') exceeds Sub Total. Showing 0.00.';
                 $('#sub_total_text').addClass('text-danger');
                 $('button[type="submit"]').prop('disabled', true);
             } else {
-                warningText = 'Taxable Total is 0.00. Discount (₹' + discountAmount.toFixed(2) + ') equals Sub Total + Pre-GST Charges. Tax and Grand Total will be 0.00.';
+                warningText = 'Taxable Total is 0.00. Discount (₹' + discountAmount.toFixed(2) + ') equals Sub Total. Tax and Grand Total will be 0.00.';
                 $('#sub_total_text').removeClass('text-danger');
                 $('button[type="submit"]').prop('disabled', false);
             }
@@ -1350,7 +1342,7 @@ $(document).ready(function() {
         let roundOff = parseFloat($('#round_off').val()) || 0;
         let roundOffType = $('input[name="round_off_type"]:checked').val();
 
-        let grandTotal = taxableAmount + taxAmt + postGstCharges;
+        let grandTotal = taxableAmount + taxAmt + otherCharges;
         if (roundOffType === 'Less') {
             grandTotal -= roundOff;
         } else {
@@ -1365,7 +1357,7 @@ $(document).ready(function() {
         $('#grand_total').val(grandTotal.toFixed(2));
     }
 
-    $(document).on('input change', '#discount_percent, #box_discount_amount, #cgst_percent, #sgst_percent, #igst_percent, #round_off, .round-off-type-radio', calculateTotal);
+    $(document).on('input change', '#discount_percent, #box_discount_amount, #cgst_percent, #sgst_percent, #igst_percent, #other_charges, #round_off, .round-off-type-radio', calculateTotal);
 
     function refreshChargeDropdownState() {
         let selectedChargeIds = [];

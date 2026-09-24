@@ -2,27 +2,27 @@
     <table class="table premium-table datatables-casino-po mb-0">
         <thead>
             <tr>
-                <th>#</th>
+                <th style="width: 45px;" class="text-center">#</th>
                 <th class="text-start ps-3">PRODUCT GROUP</th>
-                <th>WIDTH</th>
-                <th>PLAIN METERS</th>
-                <th>WHITE METERS</th>
-                <th>PRINT METERS</th>
-                <th>CHECKED METERS</th>
-                <th>STRIPED METERS</th>
-                <th>TOTAL METERS</th>
+                <th class="text-center">WIDTH</th>
+                <th class="text-end">PLAIN METERS</th>
+                <th class="text-end">WHITE METERS</th>
+                <th class="text-end">PRINT METERS</th>
+                <th class="text-end">CHECKED METERS</th>
+                <th class="text-end">STRIPED METERS</th>
+                <th class="text-end">TOTAL METERS</th>
             </tr>
         </thead>
         <tbody></tbody>
         <tfoot>
             <tr class="fw-bold" style="background: #f1f5f9;">
                 <td colspan="3" class="text-end">TOTAL</td>
-                <td id="footer-casino-plain">0.00</td>
-                <td id="footer-casino-white">0.00</td>
-                <td id="footer-casino-print">0.00</td>
-                <td id="footer-casino-checked">0.00</td>
-                <td id="footer-casino-striped">0.00</td>
-                <td id="footer-casino-total">0.00</td>
+                <td id="footer-casino-plain" class="text-end">0.00</td>
+                <td id="footer-casino-white" class="text-end">0.00</td>
+                <td id="footer-casino-print" class="text-end">0.00</td>
+                <td id="footer-casino-checked" class="text-end">0.00</td>
+                <td id="footer-casino-striped" class="text-end">0.00</td>
+                <td id="footer-casino-total" class="text-end">0.00</td>
             </tr>
         </tfoot>
     </table>
@@ -57,15 +57,15 @@
                 }
             },
             columns: [
-                { data: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
                 { data: 'brand_name', className: 'text-start ps-3 fw-medium text-dark' },
-                { data: 'width' },
-                { data: 'plain' },
-                { data: 'white' },
-                { data: 'print' },
-                { data: 'checked' },
-                { data: 'striped' },
-                { data: 'total', className: 'fw-bold' }
+                { data: 'width', className: 'text-center' },
+                { data: 'plain', className: 'text-end' },
+                { data: 'white', className: 'text-end' },
+                { data: 'print', className: 'text-end' },
+                { data: 'checked', className: 'text-end' },
+                { data: 'striped', className: 'text-end' },
+                { data: 'total', className: 'text-end fw-bold text-dark' }
             ],
             drawCallback: function(settings) {
                 var json = settings.json;

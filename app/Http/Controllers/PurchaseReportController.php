@@ -668,22 +668,45 @@ class PurchaseReportController extends Controller
                         $widthVal = $wItems->first()->fabricWidth->width;
                     }
                     
-                    $plainMeters = $wItems->where('style_id', $plainStyleId)->sum('quantity');
-                    $whiteMeters = $wItems->where('style_id', $whiteStyleId)->sum('quantity');
-                    $printMeters = $wItems->where('style_id', $printStyleId)->sum('quantity');
-                    $checkedMeters = $wItems->where('style_id', $checkedStyleId)->sum('quantity');
-                    $stripedMeters = $wItems->where('style_id', $stripedStyleId)->sum('quantity');
+                    $plainWItems = $wItems->where('style_id', $plainStyleId);
+                    $whiteWItems = $wItems->where('style_id', $whiteStyleId);
+                    $printWItems = $wItems->where('style_id', $printStyleId);
+                    $checkedWItems = $wItems->where('style_id', $checkedStyleId);
+                    $stripedWItems = $wItems->where('style_id', $stripedStyleId);
+
+                    $plainMeters = $plainWItems->sum('quantity');
+                    $plainCount = $plainWItems->count();
+
+                    $whiteMeters = $whiteWItems->sum('quantity');
+                    $whiteCount = $whiteWItems->count();
+
+                    $printMeters = $printWItems->sum('quantity');
+                    $printCount = $printWItems->count();
+
+                    $checkedMeters = $checkedWItems->sum('quantity');
+                    $checkedCount = $checkedWItems->count();
+
+                    $stripedMeters = $stripedWItems->sum('quantity');
+                    $stripedCount = $stripedWItems->count();
+
                     $totalMeters = $wItems->sum('quantity');
+                    $totalCount = $wItems->count();
                     
                     $grouped[] = [
                         'brand_name' => $brand->brand_name,
                         'width' => $widthVal,
                         'plain' => $plainMeters,
+                        'plain_count' => $plainCount,
                         'white' => $whiteMeters,
+                        'white_count' => $whiteCount,
                         'print' => $printMeters,
+                        'print_count' => $printCount,
                         'checked' => $checkedMeters,
+                        'checked_count' => $checkedCount,
                         'striped' => $stripedMeters,
+                        'striped_count' => $stripedCount,
                         'total' => $totalMeters,
+                        'total_count' => $totalCount,
                     ];
                 }
             }
@@ -741,6 +764,7 @@ class PurchaseReportController extends Controller
                         }
                     },
                     'items.rawMaterial',
+                    'items.brand',
                     'items.purchaseInvoiceItems.purchaseInvoice',
                     'purchaseInvoices'
                 ])->orderBy('id', 'desc')->get();
@@ -748,11 +772,13 @@ class PurchaseReportController extends Controller
                 $rows = [];
                 foreach ($purchaseOrders as $po) {
                     $totalOrderedPo = (float) $po->items->sum('quantity');
+                    $poItemCount = $po->items->count();
                     $totalReceivedPo = 0;
                     $itemsData = [];
                     $itemSno = 1;
                     $latestReceiptDate = null;
                     $materialNames = [];
+                    $brandNamesList = [];
 
                     if ($po->purchaseInvoices && $po->purchaseInvoices->isNotEmpty()) {
                         foreach ($po->purchaseInvoices as $inv) {
@@ -775,6 +801,11 @@ class PurchaseReportController extends Controller
                         $matName = optional($item->rawMaterial)->name ?: 'N/A';
                         $materialNames[] = $matName;
 
+                        $bName = optional($item->brand)->brand_name ?: '';
+                        if ($bName && !in_array($bName, $brandNamesList)) {
+                            $brandNamesList[] = $bName;
+                        }
+
                         foreach ($item->purchaseInvoiceItems as $pItem) {
                             $iDate = ($pItem->purchaseInvoice ? $pItem->purchaseInvoice->invoice_date : null) ?: $pItem->created_at;
                             if ($iDate) {
@@ -788,12 +819,14 @@ class PurchaseReportController extends Controller
                         $itemsData[] = [
                             'sno' => $itemSno++,
                             'material_name' => $matName,
+                            'brand_name' => $bName ?: '-',
                             'ordered' => number_format($itemOrd, 2),
                             'received' => number_format($itemRec, 2),
                             'balance' => number_format($itemBal, 2),
                         ];
                     }
                     $totalPendingPo = max(0, $totalOrderedPo - $totalReceivedPo);
+                    $brandNamesText = !empty($brandNamesList) ? implode(', ', $brandNamesList) : '-';
 
                     $delayHtml = '-';
                     $delayText = '';
@@ -833,34 +866,44 @@ class PurchaseReportController extends Controller
                     $expectedDeliveryFormatted = $po->due_date ? \Carbon\Carbon::parse($po->due_date)->format('d-M-Y') : '-';
                     $supplierName = optional($po->supplier)->name ?: 'N/A';
                     $remarksText = $po->remarks ?: '-';
+                    $grandTotalPo = (float) ($po->total_amount ?: 0);
 
                     $rows[] = [
                         'po_number' => $po->po_number,
                         'po_date' => $poDateFormatted,
+                        'brand_name' => $brandNamesText,
                         'supplier' => $supplierName,
                         'supplier_name' => $supplierName,
+                        'total_count' => $poItemCount,
                         'total_ordered' => number_format($totalOrderedPo, 2),
                         'total_received' => number_format($totalReceivedPo, 2),
                         'total_pending' => number_format($totalPendingPo, 2),
+                        'total_value' => number_format($grandTotalPo, 2),
                         'order_date' => $orderDateFormatted,
                         'expected_delivery' => $expectedDeliveryFormatted,
                         'delay' => $delayHtml,
                         'remarks' => htmlspecialchars($remarksText),
                         'items' => $itemsData,
+                        '_raw_total_count' => $poItemCount,
                         '_raw_ordered' => $totalOrderedPo,
                         '_raw_received' => $totalReceivedPo,
                         '_raw_pending' => $totalPendingPo,
+                        '_raw_total_value' => $grandTotalPo,
                         '_search_text' => strtolower(implode(' ', [
                             $po->po_number,
                             $poDateFormatted,
                             $po->po_date ? date('d-m-Y', strtotime($po->po_date)) : '',
+                            $brandNamesText,
                             $supplierName,
+                            $poItemCount,
                             $totalOrderedPo,
                             number_format($totalOrderedPo, 2),
                             $totalReceivedPo,
                             number_format($totalReceivedPo, 2),
                             $totalPendingPo,
                             number_format($totalPendingPo, 2),
+                            $grandTotalPo,
+                            number_format($grandTotalPo, 2),
                             $orderDateFormatted,
                             $expectedDeliveryFormatted,
                             $delayText,
@@ -896,14 +939,18 @@ class PurchaseReportController extends Controller
                 $filteredRecords = count($filteredRows);
 
                 // Calculate totals for filtered rows
+                $sumTotalCount = array_sum(array_column($filteredRows, '_raw_total_count'));
                 $sumOrdered = array_sum(array_column($filteredRows, '_raw_ordered'));
                 $sumReceived = array_sum(array_column($filteredRows, '_raw_received'));
                 $sumPending = array_sum(array_column($filteredRows, '_raw_pending'));
+                $sumTotalValue = array_sum(array_column($filteredRows, '_raw_total_value'));
 
                 $totals = [
+                    'total_count' => $sumTotalCount,
                     'total_ordered' => number_format($sumOrdered, 2),
                     'total_received' => number_format($sumReceived, 2),
                     'total_pending' => number_format($sumPending, 2),
+                    'total_value' => number_format($sumTotalValue, 2),
                 ];
 
                 if ($length != -1) {
@@ -1451,31 +1498,50 @@ class PurchaseReportController extends Controller
                     $searchLower = strtolower(trim($search));
                     $casinoData = array_filter($casinoData, function($item) use ($searchLower) {
                         return (strpos(strtolower($item['brand_name'] ?? ''), $searchLower) !== false)
-                            || (strpos(strtolower($item['width'] ?? ''), $searchLower) !== false)
+                            || (strpos(strtolower((string)($item['width'] ?? '')), $searchLower) !== false)
                             || (strpos((string)($item['plain'] ?? ''), $searchLower) !== false)
                             || (strpos(number_format((float)($item['plain'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['plain_count'] ?? ''), $searchLower) !== false)
                             || (strpos((string)($item['white'] ?? ''), $searchLower) !== false)
                             || (strpos(number_format((float)($item['white'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['white_count'] ?? ''), $searchLower) !== false)
                             || (strpos((string)($item['print'] ?? ''), $searchLower) !== false)
                             || (strpos(number_format((float)($item['print'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['print_count'] ?? ''), $searchLower) !== false)
                             || (strpos((string)($item['checked'] ?? ''), $searchLower) !== false)
                             || (strpos(number_format((float)($item['checked'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['checked_count'] ?? ''), $searchLower) !== false)
                             || (strpos((string)($item['striped'] ?? ''), $searchLower) !== false)
                             || (strpos(number_format((float)($item['striped'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['striped_count'] ?? ''), $searchLower) !== false)
                             || (strpos((string)($item['total'] ?? ''), $searchLower) !== false)
-                            || (strpos(number_format((float)($item['total'] ?? 0), 2), $searchLower) !== false);
+                            || (strpos(number_format((float)($item['total'] ?? 0), 2), $searchLower) !== false)
+                            || (strpos((string)($item['total_count'] ?? ''), $searchLower) !== false);
                     });
                 }
 
                 $filteredRecords = count($casinoData);
 
+                $sumPlain = collect($casinoData)->sum('plain');
+                $sumPlainCount = collect($casinoData)->sum('plain_count');
+                $sumWhite = collect($casinoData)->sum('white');
+                $sumWhiteCount = collect($casinoData)->sum('white_count');
+                $sumPrint = collect($casinoData)->sum('print');
+                $sumPrintCount = collect($casinoData)->sum('print_count');
+                $sumChecked = collect($casinoData)->sum('checked');
+                $sumCheckedCount = collect($casinoData)->sum('checked_count');
+                $sumStriped = collect($casinoData)->sum('striped');
+                $sumStripedCount = collect($casinoData)->sum('striped_count');
+                $sumTotal = collect($casinoData)->sum('total');
+                $sumTotalCount = collect($casinoData)->sum('total_count');
+
                 $totals = [
-                    'plain' => number_format(collect($casinoData)->sum('plain'), 2),
-                    'white' => number_format(collect($casinoData)->sum('white'), 2),
-                    'print' => number_format(collect($casinoData)->sum('print'), 2),
-                    'checked' => number_format(collect($casinoData)->sum('checked'), 2),
-                    'striped' => number_format(collect($casinoData)->sum('striped'), 2),
-                    'total' => number_format(collect($casinoData)->sum('total'), 2)
+                    'plain' => number_format($sumPlain, 2) . ' <span class="badge bg-label-primary rounded-pill ms-1">' . $sumPlainCount . '</span>',
+                    'white' => number_format($sumWhite, 2) . ' <span class="badge bg-label-primary rounded-pill ms-1">' . $sumWhiteCount . '</span>',
+                    'print' => number_format($sumPrint, 2) . ' <span class="badge bg-label-primary rounded-pill ms-1">' . $sumPrintCount . '</span>',
+                    'checked' => number_format($sumChecked, 2) . ' <span class="badge bg-label-primary rounded-pill ms-1">' . $sumCheckedCount . '</span>',
+                    'striped' => number_format($sumStriped, 2) . ' <span class="badge bg-label-primary rounded-pill ms-1">' . $sumStripedCount . '</span>',
+                    'total' => number_format($sumTotal, 2) . ' <span class="badge bg-primary text-white rounded-pill ms-1">' . $sumTotalCount . '</span>'
                 ];
 
                 if ($length != -1) {
@@ -1484,16 +1550,27 @@ class PurchaseReportController extends Controller
 
                 $count = $start + 1;
                 foreach ($casinoData as $row) {
+                    $formatCell = function($meters, $itemCount, $isTotal = false) {
+                        $mFormatted = number_format((float) $meters, 2);
+                        if ($isTotal) {
+                            return '<span class="fw-bold">' . $mFormatted . '</span> <span class="badge bg-primary text-white rounded-pill ms-1">' . $itemCount . '</span>';
+                        }
+                        if ($itemCount > 0) {
+                            return $mFormatted . ' <span class="badge bg-label-primary rounded-pill ms-1">' . $itemCount . '</span>';
+                        }
+                        return $mFormatted . ' <span class="badge bg-label-secondary rounded-pill ms-1">0</span>';
+                    };
+
                     $data[] = [
                         'DT_RowIndex' => $count++,
                         'brand_name' => $row['brand_name'],
                         'width' => $row['width'] ?: '-',
-                        'plain' => number_format($row['plain'], 2),
-                        'white' => number_format($row['white'], 2),
-                        'print' => number_format($row['print'], 2),
-                        'checked' => number_format($row['checked'], 2),
-                        'striped' => number_format($row['striped'], 2),
-                        'total' => number_format($row['total'], 2),
+                        'plain' => $formatCell($row['plain'], $row['plain_count'] ?? 0),
+                        'white' => $formatCell($row['white'], $row['white_count'] ?? 0),
+                        'print' => $formatCell($row['print'], $row['print_count'] ?? 0),
+                        'checked' => $formatCell($row['checked'], $row['checked_count'] ?? 0),
+                        'striped' => $formatCell($row['striped'], $row['striped_count'] ?? 0),
+                        'total' => $formatCell($row['total'], $row['total_count'] ?? 0, true),
                     ];
                 }
                 break;

@@ -14,10 +14,13 @@
                 <th style="width: 45px;">#</th>
                 <th>PO NO</th>
                 <th>PO DATE</th>
+                <th>BRAND</th>
                 <th>SUPPLIER</th>
+                <th>TOTAL COUNT</th>
                 <th>ORDER {{ strtoupper($qtyLabel ?? 'QTY') }}</th>
                 <th>RECEIVED {{ strtoupper($qtyLabel ?? 'QTY') }}</th>
                 <th>BALANCE {{ strtoupper($qtyLabel ?? 'QTY') }}</th>
+                <th>TOTAL VALUE</th>
                 <th>ORDER DATE</th>
                 <th>EXPECTED DELIVERY</th>
                 <th>DELAY</th>
@@ -27,10 +30,12 @@
         <tbody></tbody>
         <tfoot>
             <tr class="fw-bold" style="background: #f1f5f9;">
-                <td colspan="4" class="text-end">TOTAL</td>
+                <td colspan="5" class="text-end">TOTAL</td>
+                <td id="footer-po-total-count" class="text-center">0</td>
                 <td id="footer-po-ordered" class="text-end">0.00</td>
                 <td id="footer-po-received" class="text-end">0.00</td>
                 <td id="footer-po-pending" class="text-end">0.00</td>
+                <td id="footer-po-total-value" class="text-end">0.00</td>
                 <td colspan="4"></td>
             </tr>
         </tfoot>
@@ -46,6 +51,7 @@
                     <tr>
                         <th class="text-center" style="width: 60px;">#</th>
                         <th>MATERIAL NAME</th>
+                        <th>BRAND</th>
                         <th class="text-end" style="width: 180px;">ORDERED {{ strtoupper($qtyLabel ?? 'QTY') }}</th>
                         <th class="text-end" style="width: 180px;">RECEIVED {{ strtoupper($qtyLabel ?? 'QTY') }}</th>
                         <th class="text-end" style="width: 180px;">BALANCE {{ strtoupper($qtyLabel ?? 'QTY') }}</th>
@@ -54,7 +60,7 @@
                 <tbody></tbody>
                 <tfoot>
                     <tr class="fw-bold" style="background: #f1f5f9;">
-                        <td colspan="2" class="text-end">TOTAL</td>
+                        <td colspan="3" class="text-end">TOTAL</td>
                         <td id="footer-po-item-ordered" class="text-end">0.00</td>
                         <td id="footer-po-item-received" class="text-end">0.00</td>
                         <td id="footer-po-item-balance" class="text-end">0.00</td>
@@ -130,6 +136,7 @@
             columns: [
                 { data: 'sno', className: 'text-center' },
                 { data: 'material_name', className: 'fw-semibold text-dark' },
+                { data: 'brand_name' },
                 { data: 'ordered', className: 'text-end fw-bold text-dark' },
                 { data: 'received', className: 'text-end text-primary fw-bold' },
                 { data: 'balance', className: 'text-end text-danger fw-bold' }
@@ -176,10 +183,13 @@
                 { data: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
                 { data: 'po_number' },
                 { data: 'po_date', className: 'text-center' },
+                { data: 'brand_name' },
                 { data: 'supplier_name' },
+                { data: 'total_count', className: 'text-center fw-bold' },
                 { data: 'total_ordered', className: 'text-end' },
                 { data: 'total_received', className: 'text-end' },
                 { data: 'total_pending', className: 'text-end' },
+                { data: 'total_value', className: 'text-end fw-semibold text-dark' },
                 { data: 'order_date', className: 'text-center' },
                 { data: 'expected_delivery', className: 'text-center' },
                 { data: 'delay', className: 'text-center' },
@@ -188,9 +198,11 @@
             drawCallback: function(settings) {
                 var json = settings.json;
                 if (json && json.totals) {
+                    $('#footer-po-total-count').html(json.totals.total_count);
                     $('#footer-po-ordered').html(json.totals.total_ordered);
                     $('#footer-po-received').html(json.totals.total_received);
                     $('#footer-po-pending').html(json.totals.total_pending);
+                    $('#footer-po-total-value').html(json.totals.total_value);
                 }
             },
             language: {

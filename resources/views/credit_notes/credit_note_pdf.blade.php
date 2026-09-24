@@ -611,7 +611,7 @@
             @endif
           @endif
           @if($postGstTotal > 0)
-              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Post-GST Charges</td></tr>
+              <tr><td style="padding: 4px 5px; text-align: right; font-size:13px;">Other Charges</td></tr>
           @endif
           @if($creditNote->round_off != 0)
           <tr>

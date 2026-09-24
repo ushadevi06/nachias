@@ -19,6 +19,7 @@ use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
 class PurchaseOrderController extends Controller
@@ -328,7 +329,31 @@ class PurchaseOrderController extends Controller
                 'additional_attachments.*.max' => 'Uploaded file cannot exceed 2MB.',
             ];
 
-            $validated = $request->validate($rules, $messages);
+            $validator = Validator::make($request->all(), $rules, $messages);
+
+            $validator->after(function ($validator) use ($request) {
+                if (is_array($request->items)) {
+                    foreach ($request->items as $index => $item) {
+                        $cgst = isset($item['cgst_percent']) && $item['cgst_percent'] !== '' ? floatval($item['cgst_percent']) : 0;
+                        $sgst = isset($item['sgst_percent']) && $item['sgst_percent'] !== '' ? floatval($item['sgst_percent']) : 0;
+                        if ($cgst != $sgst) {
+                            $validator->errors()->add("items.{$index}.sgst_percent", 'SGST % must be equal to CGST % (' . $cgst . '%).');
+                        }
+                    }
+                }
+
+                $headerCgst = isset($request->cgst_percent) && $request->cgst_percent !== '' ? floatval($request->cgst_percent) : 0;
+                $headerSgst = isset($request->sgst_percent) && $request->sgst_percent !== '' ? floatval($request->sgst_percent) : 0;
+                if ($headerCgst != $headerSgst) {
+                    $validator->errors()->add('sgst_percent', 'SGST % must be equal to CGST % (' . $headerCgst . '%).');
+                }
+            });
+
+            if ($validator->fails()) {
+                return back()->withInput()->withErrors($validator);
+            }
+
+            $validated = $validator->validated();
 
             $subTotal = 0;
             if (is_array($request->items)) {
