@@ -73,9 +73,10 @@ class OllamaService
      * @param string $message The current user message
      * @param string $ragContext Authoritative retrieved knowledge context
      * @param array $history Recent conversation history
+     * @param string|null $imageBase64 Optional base64-encoded image
      * @return array ['success' => bool, 'message' => string]
      */
-    public function chatWithRag(string $message, string $ragContext = '', array $history = []): array
+    public function chatWithRag(string $message, string $ragContext = '', array $history = [], ?string $imageBase64 = null): array
     {
         $cleanMessage = trim($message);
         if ($cleanMessage === '') {
@@ -147,10 +148,21 @@ class OllamaService
         }
 
         // 3. Current user message
-        $messages[] = [
+        $userMsg = [
             'role' => 'user',
             'content' => $cleanMessage,
         ];
+
+        if (!empty($imageBase64)) {
+            if (preg_match('/^data:image\/[a-zA-Z0-9+\.-]+;base64,(.+)$/s', $imageBase64, $m)) {
+                $rawImage = $m[1];
+            } else {
+                $rawImage = $imageBase64;
+            }
+            $userMsg['images'] = [$rawImage];
+        }
+
+        $messages[] = $userMsg;
 
         return $this->sendChatPayload($messages, count($recentHistory));
     }
@@ -212,6 +224,33 @@ class OllamaService
             // Handle HTTP error responses
             $status = $response->status();
             $body = $response->body();
+
+            // If the model does not support multimodal/image input, retry without images
+            if ($status === 400 && (stripos($body, 'multimodal') !== false || stripos($body, 'support image') !== false || stripos($body, 'image input') !== false)) {
+                Log::info('Ollama model does not support image input, retrying without images payload');
+                $strippedMessages = array_map(function ($msg) {
+                    unset($msg['images']);
+                    return $msg;
+                }, $messages);
+                $payload['messages'] = $strippedMessages;
+                $fallbackResponse = Http::timeout($this->timeout)
+                    ->withHeaders([
+                        'Content-Type' => 'application/json',
+                        'Accept' => 'application/json',
+                    ])
+                    ->post("{$this->url}/api/chat", $payload);
+
+                if ($fallbackResponse->successful()) {
+                    $fallbackData = $fallbackResponse->json();
+                    $replyContent = $fallbackData['message']['content'] ?? null;
+                    if ($replyContent !== null && trim($replyContent) !== '') {
+                        return [
+                            'success' => true,
+                            'message' => trim($replyContent),
+                        ];
+                    }
+                }
+            }
 
             Log::error('Ollama HTTP error response', [
                 'user_id' => auth()->id(),

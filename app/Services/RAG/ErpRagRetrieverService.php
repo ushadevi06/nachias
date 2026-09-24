@@ -106,7 +106,12 @@ class ErpRagRetrieverService
             'where', 'i', 'find', 'open', 'show', 'tell', 'me', 'please', 'does', 'do',
             'which', 'nachias', 'erp', 'system', 'get', 'who', 'whom', 'whose', 'why',
             'when', 'are', 'was', 'were', 'am', 'be', 'been', 'being', 'have', 'has',
-            'had', 'a', 'an', 'this', 'that', 'these', 'those'
+            'had', 'a', 'an', 'this', 'that', 'these', 'those',
+            // Image / OCR / Form prompt boilerplate words:
+            'analyze', 'uploaded', 'image', 'screenshot', 'photo', 'picture', 'explain',
+            'doubt', 'details', 'detail', 'select', 'enter', 'click', 'field', 'fields',
+            'value', 'values', 'page', 'screen', 'form', 'box', 'button', 'input', 'label',
+            'question', 'view'
         ];
 
         $tokens = [];
@@ -131,18 +136,30 @@ class ErpRagRetrieverService
         if (!empty($tokens)) {
             $booleanTerms = array_map(function ($t) {
                 return '+' . $t . '*';
-            }, array_slice($tokens, 0, 6));
+            }, array_slice($tokens, 0, 8));
             $booleanQuery = implode(' ', $booleanTerms);
 
             try {
                 $fulltextResults = ErpRagKnowledgeChunk::whereRaw(
                     "MATCH(title, keywords, content) AGAINST(? IN BOOLEAN MODE)",
                     [$booleanQuery]
-                )->limit(25)->get();
+                )->limit(30)->get();
 
                 $candidates = $candidates->merge($fulltextResults);
             } catch (\Throwable $e) {
                 // Fallback to LIKE if fulltext encounters an issue
+            }
+
+            // Natural Language query for relaxed multi-term matching
+            try {
+                $nlTerms = implode(' ', array_slice($tokens, 0, 8));
+                $nlResults = ErpRagKnowledgeChunk::whereRaw(
+                    "MATCH(title, keywords, content) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                    [$nlTerms]
+                )->limit(30)->get();
+
+                $candidates = $candidates->merge($nlResults);
+            } catch (\Throwable $e) {
             }
         }
 
@@ -150,13 +167,13 @@ class ErpRagRetrieverService
         if (!empty($tokens)) {
             $likeQuery = ErpRagKnowledgeChunk::query();
             $likeQuery->where(function ($q) use ($tokens) {
-                foreach (array_slice($tokens, 0, 4) as $token) {
+                foreach (array_slice($tokens, 0, 8) as $token) {
                     $q->orWhere('title', 'LIKE', "%{$token}%")
                       ->orWhere('keywords', 'LIKE', "%{$token}%")
                       ->orWhere('screen', 'LIKE', "%{$token}%");
                 }
             });
-            $likeResults = $likeQuery->limit(25)->get();
+            $likeResults = $likeQuery->limit(35)->get();
             $candidates = $candidates->merge($likeResults);
         }
 
@@ -201,12 +218,19 @@ class ErpRagRetrieverService
             $contentLower = strtolower($chunk->content);
             $keywordsLower = strtolower($chunk->keywords ?? '');
             $screenLower = strtolower($chunk->screen ?? '');
+            $screenSingular = rtrim($screenLower, 's');
             $urlLower = strtolower($chunk->url ?? '');
 
-            // Exact phrase match in screen or title
+            // Exact phrase match in screen or title (supporting singular & plural)
+            $hasExactScreen = false;
             if ($screenLower !== '' && str_contains($lowerQuery, $screenLower)) {
                 $score += 150;
+                $hasExactScreen = true;
+            } elseif ($screenSingular !== '' && strlen($screenSingular) >= 4 && str_contains($lowerQuery, $screenSingular)) {
+                $score += 150;
+                $hasExactScreen = true;
             }
+
             if (str_contains($titleLower, $lowerQuery)) {
                 $score += 200;
             }
@@ -214,6 +238,65 @@ class ErpRagRetrieverService
             // Exact URL match
             if ($urlLower !== '' && str_contains($lowerQuery, ltrim($urlLower, '/'))) {
                 $score += 120;
+            }
+
+            // Explicit Add / Edit / Create screen action boost:
+            // e.g. "Add Purchase Order" or "Edit Purchase Order" or "Create Purchase Order"
+            if ($screenSingular !== '' && strlen($screenSingular) >= 4) {
+                $isAddOrEditHeader = (
+                    str_contains($lowerQuery, 'add ' . $screenSingular) ||
+                    str_contains($lowerQuery, 'add ' . $screenLower) ||
+                    str_contains($lowerQuery, 'create ' . $screenSingular) ||
+                    str_contains($lowerQuery, 'create ' . $screenLower) ||
+                    str_contains($lowerQuery, 'new ' . $screenSingular) ||
+                    str_contains($lowerQuery, 'edit ' . $screenSingular) ||
+                    str_contains($lowerQuery, 'edit ' . $screenLower) ||
+                    str_contains($lowerQuery, $screenSingular . ' add') ||
+                    str_contains($lowerQuery, $screenLower . ' add')
+                );
+                if ($isAddOrEditHeader) {
+                    $score += 350; // Decisive boost for the active form/screen!
+                }
+            }
+
+            // Header position bonus: screen names appearing early in the query/OCR text (< 100 chars)
+            $headerPos = false;
+            if ($screenLower !== '') {
+                $headerPos = strpos($lowerQuery, $screenLower);
+            }
+            if ($headerPos === false && $screenSingular !== '' && strlen($screenSingular) >= 4) {
+                $headerPos = strpos($lowerQuery, $screenSingular);
+            }
+            if ($headerPos !== false) {
+                if ($headerPos < 40) {
+                    $score += 250; // Top page header
+                } elseif ($headerPos < 100) {
+                    $score += 140;
+                }
+            }
+
+            // Dropdown/lookup penalty: when text contains a parent transactional entity ("purchase order", "sales order", "purchase invoice", etc.),
+            // secondary lookup dropdowns (like "purchase commission agent", "sales agent", "store category")
+            // must NOT hijack the main transactional screen navigation!
+            if ((str_contains($lowerQuery, 'purchase order') || str_contains($lowerQuery, 'purchase orders'))
+                && !str_contains($screenLower, 'order')
+                && str_contains($screenLower, 'commission agent')) {
+                $score -= 450;
+            }
+            if ((str_contains($lowerQuery, 'sales order') || str_contains($lowerQuery, 'sales orders'))
+                && !str_contains($screenLower, 'order')
+                && (str_contains($screenLower, 'agent') || str_contains($screenLower, 'category'))) {
+                $score -= 450;
+            }
+
+            // Priority for primary transactional screens over generic master lookup dropdowns
+            $isTransactional = in_array($chunk->screen, [
+                'Purchase Orders', 'Purchase Invoices', 'Sales Orders', 'Sales Invoices',
+                'GRN Entry', 'Stock Entry', 'Debit Notes', 'Credit Notes', 'Job Card Entry',
+                'Production Receipts', 'Billing', 'Manage Payments'
+            ], true);
+            if ($isTransactional && $hasExactScreen) {
+                $score += 150;
             }
 
             // Multiple token matching bonus: how many of the query tokens match this chunk?
@@ -252,7 +335,7 @@ class ErpRagRetrieverService
 
             // If the chunk has no matching tokens and neither title, screen, nor URL matches, its score is 0
             $hasAnyMatch = ($matchedTokens > 0)
-                || ($screenLower !== '' && str_contains($lowerQuery, $screenLower))
+                || $hasExactScreen
                 || str_contains($titleLower, $lowerQuery)
                 || ($urlLower !== '' && str_contains($lowerQuery, ltrim($urlLower, '/')));
 
