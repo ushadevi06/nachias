@@ -19,12 +19,33 @@ class PurchaseInvoiceItem extends Model
         'uom_id',
         'rate',
         'amount',
+        'cgst_percent',
+        'cgst_amount',
+        'sgst_percent',
+        'sgst_amount',
+        'igst_percent',
+        'igst_amount',
         'qty_ordered',
         'qty_received',
         'qty_invoiced',
         'brand_id',
         'fabric_width_id',
         'notes',
+    ];
+
+    protected $casts = [
+        'quantity'     => 'decimal:2',
+        'rate'         => 'decimal:2',
+        'amount'       => 'decimal:2',
+        'cgst_percent' => 'decimal:2',
+        'cgst_amount'  => 'decimal:2',
+        'sgst_percent' => 'decimal:2',
+        'sgst_amount'  => 'decimal:2',
+        'igst_percent' => 'decimal:2',
+        'igst_amount'  => 'decimal:2',
+        'qty_ordered'  => 'decimal:2',
+        'qty_received' => 'decimal:2',
+        'qty_invoiced' => 'decimal:2',
     ];
 
     public function purchaseInvoice()

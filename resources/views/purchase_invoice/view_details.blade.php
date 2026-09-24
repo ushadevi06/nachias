@@ -135,6 +135,15 @@
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">Invoiced Qty</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">UOM</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
+                                        @if($invoice->other_state)
+                                            <th class="py-3 text-muted text-uppercase small fw-bold text-end">IGST %</th>
+                                            <th class="py-3 text-muted text-uppercase small fw-bold text-end">IGST Amt</th>
+                                        @else
+                                            <th class="py-3 text-muted text-uppercase small fw-bold text-end">CGST %</th>
+                                            <th class="py-3 text-muted text-uppercase small fw-bold text-end">CGST Amt</th>
+                                            <th class="py-3 text-muted text-uppercase small fw-bold text-end">SGST %</th>
+                                            <th class="py-3 text-muted text-uppercase small fw-bold text-end">SGST Amt</th>
+                                        @endif
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Amount</th>
                                     </tr>
                                 </thead>
@@ -183,19 +192,28 @@
                                                 </td>
                                                 <td>{{ $item->uom->uom_code ?? '-' }}</td>
                                                 <td class="text-end">₹{{ number_format($item->rate, 2) }}</td>
+                                                @if($invoice->other_state)
+                                                    <td class="text-end">{{ number_format($item->igst_percent ?? 0, 2) }}%</td>
+                                                    <td class="text-end fw-semibold">₹{{ number_format($item->igst_amount ?? 0, 2) }}</td>
+                                                @else
+                                                    <td class="text-end">{{ number_format($item->cgst_percent ?? 0, 2) }}%</td>
+                                                    <td class="text-end fw-semibold">₹{{ number_format($item->cgst_amount ?? 0, 2) }}</td>
+                                                    <td class="text-end">{{ number_format($item->sgst_percent ?? 0, 2) }}%</td>
+                                                    <td class="text-end fw-semibold">₹{{ number_format($item->sgst_amount ?? 0, 2) }}</td>
+                                                @endif
                                                 <td class="text-end fw-bold text-dark pe-4">
                                                     ₹{{ number_format($item->quantity * $item->rate, 2) }}</td>
                                             </tr>
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="15" class="text-center py-5 text-muted">No items found</td>
+                                            <td colspan="{{ $invoice->other_state ? 17 : 19 }}" class="text-center py-5 text-muted">No items found</td>
                                         </tr>
                                     @endif
                                 </tbody>
                                 <tfoot class="bg-light fw-bold border-top">
                                     <tr>
-                                        <td colspan="14" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
+                                        <td colspan="{{ $invoice->other_state ? 16 : 18 }}" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
                                         <td class="text-end pe-4 py-3">₹{{ number_format($invoice->sub_total, 2) }}</td>
                                     </tr>
                                 </tfoot>

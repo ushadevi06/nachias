@@ -616,26 +616,61 @@ $(document).ready(function() {
         if (old('items')) {
             foreach (old('items') as $oldItm) {
                 if (empty($oldItm['quantity']) || $oldItm['quantity'] <= 0) continue;
+
+                $itemName = $oldItm['item_name'] ?? null;
+                $colorName = $oldItm['color_name'] ?? null;
+                $invNo = $oldItm['invoice_no'] ?? null;
+                $uomCode = $oldItm['uom_code'] ?? 'PCS';
+                $invQty = $oldItm['invoice_qty'] ?? '-';
+                $retQty = $oldItm['returned_qty'] ?? '-';
+                $balQty = $oldItm['balance_qty'] ?? 99999;
+                $artNo = $oldItm['art_no'] ?? '-';
+
+                if (empty($itemName) || $itemName === $artNo) {
+                    if (!empty($oldItm['stock_entry_item_id'])) {
+                        $stk = \App\Models\StockEntryItem::with(['item'])->find($oldItm['stock_entry_item_id']);
+                        if ($stk) {
+                            $itemName = $stk->finished_item_code ?: ($stk->item ? $stk->item->name : ($stk->art_no ?: '-'));
+                            if (empty($invNo) || $invNo === 'Return Store') {
+                                $invNo = 'Return Store';
+                            }
+                        }
+                    } elseif (!empty($oldItm['sales_invoice_item_id'])) {
+                        $sInvItem = \App\Models\SalesInvoiceItem::with(['stockEntryItem', 'item', 'salesInvoice'])->find($oldItm['sales_invoice_item_id']);
+                        if ($sInvItem) {
+                            $itemName = ($sInvItem->stockEntryItem && $sInvItem->stockEntryItem->finished_item_code) ? $sInvItem->stockEntryItem->finished_item_code : ($sInvItem->item ? $sInvItem->item->name : ($sInvItem->art_no ?: '-'));
+                            if (empty($invNo) || $invNo === 'Invoice Item') {
+                                $invNo = $sInvItem->salesInvoice ? $sInvItem->salesInvoice->inv_no : 'Invoice Item';
+                            }
+                        }
+                    } elseif (!empty($oldItm['item_id'])) {
+                        $itm = \App\Models\Item::find($oldItm['item_id']);
+                        if ($itm) {
+                            $itemName = $itm->name;
+                        }
+                    }
+                }
+
                 $preloadedItems[] = [
                     'id' => $oldItm['sales_invoice_item_id'] ?? null,
                     'stock_entry_item_id' => $oldItm['stock_entry_item_id'] ?? null,
                     'item_id' => $oldItm['item_id'] ?? null,
                     'brand_category_id' => $oldItm['brand_category_id'] ?? null,
-                    'invoice_no' => !empty($oldItm['sales_invoice_item_id']) ? 'Invoice Item' : 'Return Store',
-                    'item_name' => $oldItm['item_name'] ?? ($oldItm['art_no'] ?? '-'),
-                    'item_code' => $oldItm['item_code'] ?? ($oldItm['art_no'] ?? '-'),
+                    'invoice_no' => $invNo ?: (!empty($oldItm['sales_invoice_item_id']) ? 'Invoice Item' : 'Return Store'),
+                    'item_name' => $itemName ?: ($artNo !== '-' ? $artNo : '-'),
+                    'item_code' => $oldItm['item_code'] ?? ($itemName ?: ($artNo !== '-' ? $artNo : '-')),
                     'product_barcode' => $oldItm['sku'] ?? ($oldItm['product_barcode'] ?? '-'),
                     'color_id' => $oldItm['color_id'] ?? null,
-                    'color_name' => $oldItm['color_name'] ?? 'A',
-                    'art_no' => $oldItm['art_no'] ?? '-',
+                    'color_name' => $colorName ?: 'A',
+                    'art_no' => $artNo,
                     'uom_id' => $oldItm['uom_id'] ?? null,
-                    'uom_code' => 'PCS',
+                    'uom_code' => $uomCode,
                     'size' => $oldItm['size'] ?? '-',
                     'size_name' => $oldItm['size'] ?? '-',
                     'sleeve_type' => $oldItm['sleeve_type'] ?? null,
-                    'invoice_qty' => '-',
-                    'returned_qty' => '-',
-                    'balance_qty' => 99999,
+                    'invoice_qty' => $invQty,
+                    'returned_qty' => $retQty,
+                    'balance_qty' => $balQty,
                     'quantity' => (float)($oldItm['quantity'] ?? 1),
                     'mrp' => (float)($oldItm['mrp'] ?? 0),
                     'rate' => (float)($oldItm['rate'] ?? 0),
@@ -907,10 +942,11 @@ $(document).ready(function() {
         let returnQty = initialQty;
 
         let rowHtml = `
-            <tr class="item-row" data-item-id="${item.id || item.product_barcode}" data-barcode="${item.product_barcode || ''}" data-name="${item.item_name.toLowerCase()}" data-code="${item.item_code.toLowerCase()}">
+            <tr class="item-row" data-item-id="${item.id || item.product_barcode}" data-barcode="${item.product_barcode || ''}" data-name="${(item.item_name || '').toLowerCase()}" data-code="${(item.item_code || '').toLowerCase()}">
                 <td class="text-center s-no">${index + 1}</td>
                 <td>
-                    <span class="fw-semibold text-primary">${item.invoice_no}</span>
+                    <input type="hidden" name="items[${index}][invoice_no]" value="${item.invoice_no || ''}">
+                    <span class="fw-semibold text-primary">${item.invoice_no || '-'}</span>
                 </td>
                 <td class="text-center add-to-inv-col" ${$('#reason').val() === 'Damage' ? 'style="display:none;"' : ''}>
                     <div class="form-check d-flex justify-content-center m-0">
@@ -922,6 +958,8 @@ $(document).ready(function() {
                     <input type="hidden" name="items[${index}][sales_invoice_item_id]" value="${item.id || ''}">
                     <input type="hidden" name="items[${index}][stock_entry_item_id]" value="${item.stock_entry_item_id || ''}">
                     <input type="hidden" name="items[${index}][item_id]" value="${item.item_id || ''}">
+                    <input type="hidden" name="items[${index}][item_name]" value="${item.item_name || ''}">
+                    <input type="hidden" name="items[${index}][item_code]" value="${item.item_code || ''}">
                     <input type="hidden" name="items[${index}][sleeve_type]" value="${item.sleeve_type || ''}">
                     <input type="hidden" name="items[${index}][sku]" value="${item.product_barcode || ''}">
                     <span class="d-block fw-bold" style="font-size: 13px;">${item.item_name}</span>
@@ -931,6 +969,7 @@ $(document).ready(function() {
                 </td>
                 <td>
                     <input type="hidden" name="items[${index}][color_id]" value="${item.color_id || ''}">
+                    <input type="hidden" name="items[${index}][color_name]" value="${item.color_name || ''}">
                     <span>${item.color_name || '-'}</span>
                 </td>
                 <td>
@@ -939,14 +978,24 @@ $(document).ready(function() {
                 </td>
                 <td>
                     <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id || ''}">
+                    <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code || 'PCS'}">
                     <span>${item.uom_code || 'PCS'}</span>
                 </td>
                 <td class="text-center">
                     <input type="text" class="form-control form-control-sm text-center" name="items[${index}][size]" value="${item.size_name || item.size || ''}" readonly style="background-color: #f8f9fa; min-width:65px;">
                 </td>
-                <td class="text-end fw-semibold">${item.invoice_qty}</td>
-                <td class="text-end text-warning fw-semibold">${item.returned_qty}</td>
-                <td class="text-end ${item.balance_qty === '-' ? 'text-muted' : 'text-success fw-bold'} balance-qty-val">${item.balance_qty}</td>
+                <td class="text-end fw-semibold">
+                    <input type="hidden" name="items[${index}][invoice_qty]" value="${item.invoice_qty || ''}">
+                    ${item.invoice_qty}
+                </td>
+                <td class="text-end text-warning fw-semibold">
+                    <input type="hidden" name="items[${index}][returned_qty]" value="${item.returned_qty || ''}">
+                    ${item.returned_qty}
+                </td>
+                <td class="text-end ${item.balance_qty === '-' ? 'text-muted' : 'text-success fw-bold'} balance-qty-val">
+                    <input type="hidden" name="items[${index}][balance_qty]" value="${item.balance_qty || ''}">
+                    ${item.balance_qty}
+                </td>
                 <td>
                     <input type="number" class="form-control form-control-sm text-center qty" 
                         name="items[${index}][quantity]" 

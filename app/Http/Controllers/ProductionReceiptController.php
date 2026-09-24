@@ -200,10 +200,7 @@ class ProductionReceiptController extends Controller
                 ->orderBy('id', 'desc')->get();
         }
 
-        $jobCardReceipts = ProductionReceipt::with('items')
-            ->whereIn('job_card_id', $jobCards->pluck('id'))
-            ->when($id, fn($q) => $q->where('id', '!=', $id))
-            ->get();
+        $jobCardReceipts = ProductionReceipt::with('items')->whereIn('job_card_id', $jobCards->pluck('id'))->when($id, fn($q) => $q->where('id', '!=', $id))->get();
 
         $receiptsSummary = [];
         foreach ($jobCardReceipts as $r) {
@@ -1251,14 +1248,15 @@ class ProductionReceiptController extends Controller
         };
         $missingPriceArtNos = [];
         
-        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap, $isCanvas, &$missingPriceArtNos) {
+        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null, $fgArtNo = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap, $isCanvas, &$missingPriceArtNos) {
             if ($qty > 0) {
                 $sizeVariant = $sleeve ? $size . ' - ' . $sleeve : $size;
                 $itemKey = $jobCard->item_id ?? '0';
                 $normalizedArtNo = trim($artNo ?? '');
+                $displayArtNo = !empty($fgArtNo) ? trim($fgArtNo) : $normalizedArtNo;
                 $resolvedColorId = $artColorMap[$normalizedArtNo]['color_id'] ?? $colorId;
                 $resolvedColor = $artColorMap[$normalizedArtNo]['color'] ?? $color;
-                $key = $itemKey . '|' . $normalizedArtNo . '|' . $sizeVariant . '|' . ($resolvedColorId ?? $resolvedColor ?? '');
+                $key = $itemKey . '|' . $displayArtNo . '|' . $sizeVariant . '|' . ($resolvedColorId ?? $resolvedColor ?? '');
 
                 if (!isset($tempGrouped[$key])) {
                     $pricing = $calculateItemUnitPrice($normalizedArtNo, $size, $sleeve);   
@@ -1300,14 +1298,27 @@ class ProductionReceiptController extends Controller
                     $itemCode = str_replace('/', '', $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $fallbackCode);
                     $itemName = $brandName . ' ' . $styleName . ' ' . $sleeve;
 
+                    if (!empty($fgArtNo)) {
+                        $styleCode = trim($fgArtNo);
+                        $styleName = trim($fgArtNo);
+                        $itemCode = str_replace('/', '', trim($fgArtNo));
+                        $itemName = $brandName ? ($brandName . ' ' . trim($fgArtNo) . ($sleeve ? ' ' . $sleeve : '')) : trim($fgArtNo);
+                    }
+
                     if ($isCanvas) {
-                        $itemCode = $normalizedArtNo;
-                        $itemName = count($pricing['consumption_details']) > 0 ? $pricing['consumption_details'][0]['material_name'] : $normalizedArtNo;
+                        $itemCode = $displayArtNo;
+                        $itemName = count($pricing['consumption_details']) > 0 ? $pricing['consumption_details'][0]['material_name'] : $displayArtNo;
                     }
 
                     $itemPrice = \App\Models\ItemPrice::where('status', 'Active')
-                        ->where('finished_item_code', $itemCode)
-                        ->where('art_no', $normalizedArtNo)
+                        ->where(function($q) use ($itemCode, $normalizedArtNo, $fgArtNo) {
+                            $q->where('finished_item_code', $itemCode)
+                              ->orWhere('art_no', $normalizedArtNo);
+                            if (!empty($fgArtNo)) {
+                                $q->orWhere('art_no', trim($fgArtNo))
+                                  ->orWhere('finished_item_code', trim($fgArtNo));
+                            }
+                        })
                         ->where(function($q) use ($size) {
                             $q->where('size', $size)->orWhereNull('size')->orWhere('size', '');
                         })
@@ -1317,7 +1328,7 @@ class ProductionReceiptController extends Controller
                         ->first();
 
                     if (!$itemPrice) {
-                        $missingPriceArtNos[$normalizedArtNo] = $normalizedArtNo;
+                        $missingPriceArtNos[$displayArtNo] = $displayArtNo;
                     }
 
                     $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
@@ -1354,7 +1365,7 @@ class ProductionReceiptController extends Controller
                         'sleeve' => $sleeve,
                         'size' => $size,
                         'item_name' => $itemName,
-                        'art_no' => $normalizedArtNo ?: null,
+                        'art_no' => $displayArtNo ?: null,
                         'description' => $isCanvas ? $itemName : trim($barcodeMaster && $barcodeMaster->item_name ? $barcodeMaster->item_name : $itemName),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
@@ -1379,10 +1390,10 @@ class ProductionReceiptController extends Controller
                 $colorToUse = $mq->color ?: ($mq->colorRel ? $mq->colorRel->color_name : null);
                 if ($isCanvas) {
                     $qty = ($mq->qty_fs > 0) ? $mq->qty_fs : $mq->qty_hs;
-                    $processQty($fabDetail->art_no, '', $mq->size, $qty, $colorToUse, $mq->color_id);
+                    $processQty($fabDetail->art_no, '', $mq->size, $qty, $colorToUse, $mq->color_id, $fabDetail->fg_art_no);
                 } else {
-                    $processQty($fabDetail->art_no, 'F/S', $mq->size, $mq->qty_fs, $colorToUse, $mq->color_id);
-                    $processQty($fabDetail->art_no, 'H/S', $mq->size, $mq->qty_hs, $colorToUse, $mq->color_id);
+                    $processQty($fabDetail->art_no, 'F/S', $mq->size, $mq->qty_fs, $colorToUse, $mq->color_id, $fabDetail->fg_art_no);
+                    $processQty($fabDetail->art_no, 'H/S', $mq->size, $mq->qty_hs, $colorToUse, $mq->color_id, $fabDetail->fg_art_no);
                 }
             }
         }

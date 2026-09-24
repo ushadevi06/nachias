@@ -10,13 +10,9 @@
 
         $allSizes = $sizes ?? ['36', '38', '40', '42', '44', '46'];
         
-        if ($editingBatch) {
-            $baseFabrics = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) ? $editingBatchGroup : collect([$editingBatch]);
-        } else {
-            $baseFabrics = $jobCard->fabricDetails->where('is_additional', 0)->values();
-            if ($baseFabrics->isEmpty()) {
-                $baseFabrics = $jobCard->fabricDetails->values();
-            }
+        $baseFabrics = $jobCard->fabricDetails->where('is_additional', 0)->values();
+        if ($baseFabrics->isEmpty()) {
+            $baseFabrics = $jobCard->fabricDetails->values();
         }
         $hasMultipleFabrics = $baseFabrics->count() > 1;
 
@@ -129,24 +125,63 @@
         @csrf
 
 
-        <!-- 1. Fabric Details Section (Side-by-Side Columns for All Fabrics) -->
+        <!-- 1. Fabric Details Section -->
         <div class="card mb-4 shadow-sm border-0">
             <div class="card-body">
-                <div class="card-header-box mb-3 border-bottom pb-2 d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Fabric Details</h4>
-                    @if($hasMultipleFabrics)
-                        <span class="badge bg-label-primary px-3 py-2 fs-6">
-                            <i class="ri ri-layout-column-line me-1"></i> {{ $baseFabrics->count() }} Fabrics (Side-by-Side)
-                        </span>
-                    @endif
+                <div class="card-header-box mb-3 border-bottom pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="mb-0">Fabric Details</h4>
+                        @if($hasMultipleFabrics)
+                            <span class="badge bg-label-primary px-3 py-1 fs-6" id="selected-fabrics-badge">
+                                {{ $baseFabrics->count() }} Fabrics Selected
+                            </span>
+                        @endif
+                    </div>
                 </div>
+
+                @if($hasMultipleFabrics)
+                    <!-- Art No Multi-Select Dropdown Filter Bar -->
+                    <div class="card mb-3 border-0 bg-light shadow-xs">
+                        <div class="card-body py-2 px-3">
+                            <div class="row align-items-center g-2">
+                                <div class="col-md-auto">
+                                    <label class="form-label fw-bold text-dark small text-uppercase mb-0 d-flex align-items-center gap-1">
+                                        <i class="ri ri-filter-3-line text-primary fs-5"></i> Select Art No(s) for Addition:
+                                    </label>
+                                </div>
+                                <div class="col-md-6 col-lg-5">
+                                    <select class="form-select select2-multi-fabrics" id="select_addition_fabrics" multiple="multiple" data-placeholder="Choose Art Numbers...">
+                                        @foreach($baseFabrics as $idx => $bf)
+                                            @php
+                                                $isBatchSelected = true;
+                                                if ($editingBatch) {
+                                                    $batchArtNos = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) ? $editingBatchGroup->pluck('art_no')->toArray() : [$editingBatch->art_no];
+                                                    $isBatchSelected = in_array($bf->art_no, $batchArtNos);
+                                                }
+                                            @endphp
+                                            <option value="{{ $idx }}" {{ $isBatchSelected ? 'selected' : '' }}>{{ $bf->art_no }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-auto d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-select-all-fabrics">
+                                        <i class="ri ri-check-double-line me-1"></i> Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-deselect-all-fabrics">
+                                        <i class="ri ri-close-line me-1"></i> Clear All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <div class="table-responsive">
                     <table class="table table-bordered text-center align-middle" id="fabric-details-table" style="min-width: {{ count($baseFabrics) * 1260 }}px; width: max-content; table-layout: fixed;">
                         <thead>
                             <tr id="fabric-details-head">
                                 @foreach($baseFabrics as $idx => $bf)
-                                    <th colspan="2" class="bg-light p-3" style="width: 1260px; min-width: 1260px; max-width: 1260px;">
+                                    <th colspan="2" class="bg-light p-3 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1260px; min-width: 1260px; max-width: 1260px;">
                                         <label class="small text-primary fw-bold text-uppercase d-block mb-2">IMAGE</label>
                                         <div class="d-flex align-items-center justify-content-center gap-3">
                                             <input type="file" class="form-control form-control-sm" name="fabrics[{{ $idx }}][fabric_image]" accept="image/*" style="max-width: 350px;">
@@ -162,8 +197,8 @@
                                     @php
                                         $availStock = floatval($artStockMap[$bf->art_no] ?? 0);
                                     @endphp
-                                    <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">ART NO</td>
-                                    <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
+                                    <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">ART NO</td>
+                                    <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <div class="d-flex align-items-center justify-content-center gap-2">
                                             <input type="text" class="form-control form-control-sm text-center fw-bold" value="{{ $bf->art_no }}" readonly style="max-width: 320px;">
                                             @if($availStock > 0)
@@ -176,7 +211,7 @@
                                                 </span>
                                             @endif
                                         </div>
-                                        <input type="hidden" name="fabrics[{{ $idx }}][art_no]" value="{{ $bf->art_no }}">
+                                        <input type="hidden" class="input-fabric-art" name="fabrics[{{ $idx }}][art_no]" value="{{ $bf->art_no }}">
                                         <input type="hidden" name="fabrics[{{ $idx }}][stock_entry_id]" value="{{ $bf->stock_entry_id }}">
                                         <input type="hidden" id="avail_stock_{{ $idx }}" value="{{ $availStock }}">
                                     </td>
@@ -189,8 +224,8 @@
                                     @php
                                         $widthVal = $bf->width ?? ($jobCard->width ?? '');
                                     @endphp
-                                    <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">WIDTH</td>
-                                    <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
+                                    <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">WIDTH</td>
+                                    <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <select name="fabrics[{{ $idx }}][width]" class="form-select form-select-sm text-center fabric-width-select" data-fabric-index="{{ $idx }}">
                                             <option value="">Select Width</option>
                                             @foreach($fabricSizes as $fs)
@@ -207,10 +242,18 @@
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
-                                        $mtrVal = $editingBatch ? ($bf->mtr ?? '0.00') : '0.00';
+                                        $existingBatchFab = null;
+                                        if ($editingBatch) {
+                                            if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
+                                                $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
+                                            } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                $existingBatchFab = $editingBatch;
+                                            }
+                                        }
+                                        $mtrVal = $existingBatchFab ? ($existingBatchFab->mtr ?? '0.00') : '0.00';
                                     @endphp
-                                    <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">ISSUED METERS</td>
-                                    <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
+                                    <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">ISSUED METERS</td>
+                                    <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <div class="d-flex justify-content-center align-items-center gap-2">
                                             <input type="number" step="0.01" min="0" name="fabrics[{{ $idx }}][total_fabric_meters]" id="issued_meters_{{ $idx }}" class="form-control form-control-sm text-center fw-bold issued-meters-input @error("fabrics.{$idx}.total_fabric_meters") is-invalid @enderror" data-fabric-index="{{ $idx }}" value="{{ old("fabrics.{$idx}.total_fabric_meters", $mtrVal) }}" placeholder="0.00" readonly>
                                             <button type="button" class="btn btn-sm btn-outline-primary btn-recalc-fabric-meters" data-fabric-index="{{ $idx }}" title="Recalculate Fabric Meters"><i class="ri ri-refresh-line"></i></button>
@@ -227,10 +270,18 @@
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
-                                        $inOutVal = $bf->in_out ?? 'NO';
+                                        $existingBatchFab = null;
+                                        if ($editingBatch) {
+                                            if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
+                                                $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
+                                            } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                $existingBatchFab = $editingBatch;
+                                            }
+                                        }
+                                        $inOutVal = $existingBatchFab ? ($existingBatchFab->in_out ?? 'NO') : ($bf->in_out ?? 'NO');
                                     @endphp
-                                    <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">IN/OUT</td>
-                                    <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
+                                    <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">IN/OUT</td>
+                                    <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <input type="text" name="fabrics[{{ $idx }}][in_out]" class="form-control form-control-sm text-center in-out-input" value="{{ old("fabrics.{$idx}.in_out", $inOutVal) }}">
                                     </td>
                                 @endforeach
@@ -240,10 +291,18 @@
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
-                                        $nPattiVal = $bf->n_patti ?? 'WHITE';
+                                        $existingBatchFab = null;
+                                        if ($editingBatch) {
+                                            if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
+                                                $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
+                                            } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                $existingBatchFab = $editingBatch;
+                                            }
+                                        }
+                                        $nPattiVal = $existingBatchFab ? ($existingBatchFab->n_patti ?? 'WHITE') : ($bf->n_patti ?? 'WHITE');
                                     @endphp
-                                    <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px;">N.PATTI</td>
-                                    <td class="p-2" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
+                                    <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">N.PATTI</td>
+                                    <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <input type="text" name="fabrics[{{ $idx }}][n_patti]" class="form-control form-control-sm text-center n-patti-input" value="{{ old("fabrics.{$idx}.n_patti", $nPattiVal) }}">
                                     </td>
                                 @endforeach
@@ -252,11 +311,11 @@
                             <!-- CONSUMPTION MTR Row -->
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
-                                    <td class="fw-bold bg-light" style="width: 160px; min-width: 160px; max-width: 160px; vertical-align: middle;">
+                                    <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px; vertical-align: middle;">
                                         CONSUMPTION<br>
                                         <span class="badge bg-secondary">MTR</span>
                                     </td>
-                                    <td class="p-0" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
+                                    <td class="p-0 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <table class="table table-bordered table-sm mb-0 align-middle text-center lay-mark-table" id="lay-mark-table-art-{{ $idx }}" data-fabric-index="{{ $idx }}" data-art="{{ $bf->art_no }}">
                                             <thead class="table-light">
                                                 <tr>
@@ -270,9 +329,15 @@
                                             </thead>
                                             <tbody class="consumption-lay-tbody" id="consumption-lay-tbody-{{ $idx }}">
                                                 @php
-                                                    $batchLayMarks = ($editingBatch && $bf->layMarks && $bf->layMarks->count() > 0) 
-                                                        ? $bf->layMarks 
-                                                        : collect();
+                                                    $existingBatchFab = null;
+                                                    if ($editingBatch) {
+                                                        if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
+                                                            $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
+                                                        } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                            $existingBatchFab = $editingBatch;
+                                                        }
+                                                    }
+                                                    $batchLayMarks = ($existingBatchFab && $existingBatchFab->layMarks && $existingBatchFab->layMarks->count() > 0) ? $existingBatchFab->layMarks : collect();
                                                 @endphp
                                                 @if($batchLayMarks->count() > 0)
                                                     @foreach($batchLayMarks as $lmIdx => $lm)
@@ -596,15 +661,23 @@
                         <tbody>
                             @foreach($baseFabrics as $idx => $bf)
                                 @php
-                                    $batchQuantities = ($editingBatch && $bf->quantities && $bf->quantities->count() > 0)
-                                        ? $bf->quantities
+                                    $existingBatchFab = null;
+                                    if ($editingBatch) {
+                                        if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
+                                            $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
+                                        } elseif ($editingBatch->art_no == $bf->art_no) {
+                                            $existingBatchFab = $editingBatch;
+                                        }
+                                    }
+                                    $batchQuantities = ($existingBatchFab && $existingBatchFab->quantities && $existingBatchFab->quantities->count() > 0)
+                                        ? $existingBatchFab->quantities
                                         : collect();
                                     $matName = $jobCard->item->item_name ?? 'COTTON LINEN';
                                 @endphp
-                                <tr class="matrix-art-row" data-fabric-index="{{ $idx }}" data-art="{{ $bf->art_no }}">
+                                <tr class="matrix-art-row fabric-matrix-row-{{ $idx }}" data-fabric-index="{{ $idx }}" data-art="{{ $bf->art_no }}">
                                     <td>
                                         <div class="border rounded p-1 mb-1 text-center fw-bold small bg-white text-primary">{{ $bf->art_no }}</div>
-                                        <input type="hidden" name="fabrics[{{ $idx }}][art_no]" value="{{ $bf->art_no }}">
+                                        <input type="hidden" class="input-matrix-art" name="fabrics[{{ $idx }}][art_no]" value="{{ $bf->art_no }}">
                                         <div class="small text-muted text-center text-uppercase" style="font-size: 10px; line-height: 1.1;">{{ $matName }}</div>
                                     </td>
                                     @if(!$isCanvas)
@@ -713,7 +786,74 @@ $(document).ready(function() {
     // Initialize Select2 & Flatpickr
     $('.select2').select2({ width: '100%' });
     $('.select2-multi-sizes').select2({ width: '100%', placeholder: 'Select Sizes' });
+    $('.select2-multi-fabrics').select2({ width: '100%', placeholder: 'Select Art Numbers...' });
     $('.flatpickr-date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
+
+    // ==========================================
+    // Dynamic Fabric / Art No Selection Handler
+    // ==========================================
+    function applySelectedFabrics(selectedIndices) {
+        if (!selectedIndices) selectedIndices = [];
+        selectedIndices = selectedIndices.map(v => parseInt(v));
+
+        for (let i = 0; i < fabricCount; i++) {
+            const isVisible = selectedIndices.includes(i);
+            const $colCells = $(`.fabric-col-${i}`);
+            const $matrixRow = $(`.fabric-matrix-row-${i}`);
+
+            if (isVisible) {
+                $colCells.show();
+                $matrixRow.show();
+                // Enable inputs inside so they submit
+                $colCells.find('input, select, button').prop('disabled', false);
+                $matrixRow.find('input').prop('disabled', false);
+            } else {
+                $colCells.hide();
+                $matrixRow.hide();
+                // Disable inputs inside so they don't submit or validate
+                $colCells.find('input, select, button').prop('disabled', true);
+                $matrixRow.find('input').prop('disabled', true);
+            }
+        }
+
+        const checkedCount = selectedIndices.length;
+        $('#fabric-details-table').css('min-width', Math.max(1260, checkedCount * 1260) + 'px');
+        $('#selected-fabrics-badge').text(checkedCount + ' Fabrics Selected');
+
+        // If first fabric has lay marks, sync them to any newly enabled empty fabrics
+        const firstCheckedIdx = selectedIndices[0];
+        if (firstCheckedIdx !== undefined) {
+            const hasMasterData = $(`#consumption-lay-tbody-${firstCheckedIdx} tr.lay-mark-row`).first().find('.input-no-of-lay').val();
+            if (hasMasterData) {
+                syncAllLayMarksFromMaster();
+            }
+        }
+
+        recalcMatrixTotals();
+    }
+
+    // Select2 Multi-Select change event
+    $('#select_addition_fabrics').on('change', function() {
+        const vals = $(this).val() || [];
+        applySelectedFabrics(vals);
+    });
+
+    // Select All Fabrics
+    $('#btn-select-all-fabrics').on('click', function() {
+        const allVals = [];
+        for (let i = 0; i < fabricCount; i++) {
+            allVals.push(String(i));
+        }
+        $('#select_addition_fabrics').val(allVals).trigger('change');
+    });
+
+    // Clear All Fabrics (uncheck all)
+    $('#btn-deselect-all-fabrics').on('click', function() {
+        $('#select_addition_fabrics').val([]).trigger('change');
+    });
+
+    // On page load, apply initial dropdown selection state
+    applySelectedFabrics($('#select_addition_fabrics').val() || []);
 
     // Stage rate auto-fill & trigger deadline calculation
     $(document).on('change', '.stage-select', function() {
@@ -870,13 +1010,16 @@ $(document).ready(function() {
         let copiedSleeve = 'F/S';
         let copiedMeter = '';
         let copiedNoOfLay = '';
-        if (fIdx !== 0) {
-            const $row0 = $('#consumption-lay-tbody-0 tr.lay-mark-row').eq(markIdx);
-            if ($row0.length) {
-                copiedSizes = $row0.find('.select-lay-sizes').val() || [];
-                copiedSleeve = $row0.find('.select-lay-sleeve').val() || 'F/S';
-                copiedMeter = $row0.find('.input-lay-meter').val() || '';
-                copiedNoOfLay = $row0.find('.input-no-of-lay').val() || '';
+        
+        const selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+        const firstCheckedIdx = selectedIndices[0];
+        if (fIdx !== firstCheckedIdx && firstCheckedIdx !== undefined) {
+            const $rowMaster = $(`#consumption-lay-tbody-${firstCheckedIdx} tr.lay-mark-row`).eq(markIdx);
+            if ($rowMaster.length) {
+                copiedSizes = $rowMaster.find('.select-lay-sizes').val() || [];
+                copiedSleeve = $rowMaster.find('.select-lay-sleeve').val() || 'F/S';
+                copiedMeter = $rowMaster.find('.input-lay-meter').val() || '';
+                copiedNoOfLay = $rowMaster.find('.input-no-of-lay').val() || '';
             }
         }
 
@@ -921,22 +1064,25 @@ $(document).ready(function() {
         }
     }
 
-    // Auto-Sync from Fabric 0 to all other Fabrics
-    function syncAllLayMarksFromFabric0() {
+    // Auto-Sync from Master Visible Fabric to all other checked Fabrics
+    function syncAllLayMarksFromMaster() {
         if (isSyncing) return;
         isSyncing = true;
         try {
-            const $rows0 = $('#consumption-lay-tbody-0 tr.lay-mark-row');
+            const selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+            if (!selectedIndices.length) return;
+            const firstCheckedIdx = selectedIndices[0];
+
+            const $rows0 = $(`#consumption-lay-tbody-${firstCheckedIdx} tr.lay-mark-row`);
             const rowCount0 = $rows0.length;
 
-            $('.lay-mark-table').each(function() {
-                const fIdx = parseInt($(this).data('fabric-index'));
-                if (isNaN(fIdx) || fIdx === 0) return;
+            selectedIndices.forEach(fIdx => {
+                if (fIdx === firstCheckedIdx) return;
 
                 const $tbody = $(`#consumption-lay-tbody-${fIdx}`);
                 let currentRows = $tbody.find('tr.lay-mark-row');
 
-                // Adjust row count to match Fabric 0
+                // Adjust row count to match Master
                 while (currentRows.length < rowCount0) {
                     addLayMarkRowToFabric(fIdx, false);
                     currentRows = $tbody.find('tr.lay-mark-row');
@@ -981,8 +1127,10 @@ $(document).ready(function() {
     $(document).on('click', '.add-lay-mark-btn', function() {
         const fIdx = $(this).data('fabric-index');
         addLayMarkRowToFabric(fIdx);
-        if (fIdx === 0) {
-            syncAllLayMarksFromFabric0();
+        const selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+        const firstCheckedIdx = selectedIndices[0];
+        if (fIdx === firstCheckedIdx) {
+            syncAllLayMarksFromMaster();
         }
     });
 
@@ -1000,11 +1148,13 @@ $(document).ready(function() {
             recalcFabricMeters(fabricIndex);
             syncCuttingRatioFromLayMarks(fabricIndex);
 
-            if (fabricIndex === 0) {
-                // Also remove the same row index from other fabrics
-                $('.lay-mark-table').each(function() {
-                    const otherFIdx = parseInt($(this).data('fabric-index'));
-                    if (isNaN(otherFIdx) || otherFIdx === 0) return;
+            const selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+            const firstCheckedIdx = selectedIndices[0];
+            if (fabricIndex === firstCheckedIdx) {
+                // Also remove the same row index from other checked fabrics
+                selectedIndices.forEach(otherFIdx => {
+                    if (otherFIdx === firstCheckedIdx) return;
+
                     const $otherTbody = $(`#consumption-lay-tbody-${otherFIdx}`);
                     const $otherRow = $otherTbody.find('tr.lay-mark-row').eq(rowIndex);
                     if ($otherRow.length && $otherTbody.find('tr.lay-mark-row').length > 1) {
@@ -1018,9 +1168,14 @@ $(document).ready(function() {
         }
     });
 
-    // Auto-Sync from Art 0 (First Fabric) to All Other Fabrics on any input/select change
-    $(document).on('input change select2:select select2:unselect', '.lay-mark-table[id$="-art-0"] input, .lay-mark-table[id$="-art-0"] select', function() {
-        syncAllLayMarksFromFabric0();
+    // Auto-Sync from Master Visible Fabric on input/select change
+    $(document).on('input change select2:select select2:unselect', '.lay-mark-table input, .lay-mark-table select', function() {
+        const fIdx = $(this).closest('.lay-mark-table').data('fabric-index');
+        const selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+        const firstCheckedIdx = selectedIndices[0];
+        if (fIdx === firstCheckedIdx) {
+            syncAllLayMarksFromMaster();
+        }
     });
 
     // Calculate Fabric Meters from Lay Mark Rows for a specific Fabric
@@ -1115,7 +1270,7 @@ $(document).ready(function() {
         }
     });
 
-    // Calculate Matrix Totals across all Fabrics & Sizes
+    // Calculate Matrix Totals across all VISIBLE Fabrics & Sizes
     function recalcMatrixTotals() {
         let grandTotalExtra = 0;
         const colTotalsFs = {};
@@ -1126,8 +1281,8 @@ $(document).ready(function() {
             colTotalsHs[s] = 0;
         });
 
-        // Loop over each fabric row in the matrix
-        $('.matrix-art-row').each(function() {
+        // Loop over each visible fabric row in the matrix
+        $('.matrix-art-row:visible').each(function() {
             const fIdx = $(this).data('fabric-index');
             let rowTotal = 0;
 
@@ -1174,9 +1329,55 @@ $(document).ready(function() {
             scrollTop: $firstError.offset().top - 180
         }, 400);
     }
+    $(document).on('keypress', '.lay-mark-table input[type="number"]', function (e) {
+        if (e.which === 45 || e.which === 43) {
+            e.preventDefault();
+        }
+    });
+    // Form Submission Validation
+    $('#formAdditionalQty').on('submit', function(e) {
+        const selected = $('#select_addition_fabrics').val() || [];
+        if (fabricCount > 1 && selected.length === 0) {
+            e.preventDefault();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Art No Selected',
+                    text: 'Please select at least one Art No in "Select Art No(s) for Addition" before submitting!',
+                    confirmButtonColor: '#696cff'
+                }).then(() => {
+                    $('#select_addition_fabrics').select2('open');
+                });
+            } else {
+                alert('Please select at least one Art No in "Select Art No(s) for Addition" before submitting!');
+                $('#select_addition_fabrics').select2('open');
+            }
+            return false;
+        }
 
-    // Standard Normal Form Submission (Shows spinner upon submit, no JS blocking)
-    $('#formAdditionalQty').on('submit', function() {
+        const grandQty = parseInt($('#grand_extra_matrix_total').text()) || 0;
+        if (grandQty <= 0) {
+            // Check if any fabric has meters
+            let hasMeters = false;
+            $('.issued-meters-input:visible').each(function() {
+                if (parseFloat($(this).val()) > 0) hasMeters = true;
+            });
+            if (!hasMeters) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Quantity / Meters',
+                        text: 'Please enter additional pieces or fabric meters for the selected Art No(s)!',
+                        confirmButtonColor: '#696cff'
+                    });
+                } else {
+                    alert('Please enter additional pieces or fabric meters for the selected Art No(s)!');
+                }
+                return false;
+            }
+        }
+
         const btn = $('#btnSubmitForm');
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Submitting...');
     });

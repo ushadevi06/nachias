@@ -95,7 +95,7 @@
                                 <div class="col-md-6 col-xl-4">
                                     <div class="input-group">
                                         <div class="form-floating form-floating-outline" style="position: relative;">
-                                            <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off" {{ $hasTasks ? 'readonly' : '' }}>
+                                            <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off" {{ (isset($isFgConverted) && $isFgConverted) ? 'readonly' : '' }}>
                                             <label for="stock_entry_search">Type Stock Entry No or Material Name *</label>
                                         </div>
                                     </div>
@@ -768,7 +768,7 @@
                                                     }
                                                 @endphp
                                                 <td>
-                                                    <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
+                                                    <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ (isset($isFgConverted) && $isFgConverted) ? 'readonly' : '' }}>
                                                     <input type="hidden" name="matrix_items[{{ $idx }}][size]" value="{{ $s }}">
                                                     <input type="hidden" name="matrix_items[{{ $idx }}][article_no]" value="{{ old("matrix_items.$idx.article_no", $jobCard ? $jobCard->article_no : '') }}">
                                                 </td>
@@ -801,7 +801,7 @@
                                                 }
                                                 @endphp
                                                 <td>
-                                                    <input type="number" name="matrix_items[{{ $idx }}][qty_hs]" class="form-control form-control-sm text-center fw-bold qty-direct-input hs-summary-{{ $s }}" data-type="hs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
+                                                    <input type="number" name="matrix_items[{{ $idx }}][qty_hs]" class="form-control form-control-sm text-center fw-bold qty-direct-input hs-summary-{{ $s }}" data-type="hs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ (isset($isFgConverted) && $isFgConverted) ? 'readonly' : '' }}>
                                                 </td>
                                             @endforeach
                                             <td class=""></td><td class=""></td>
@@ -1110,7 +1110,8 @@
 
 <script>
     $(document).ready(function() {
-        $(document).on('keydown keypress', 'input[type="number"], .stage-rate, .qty-input, .mtr-input, .lay-mark-table input[type="number"], .qty-direct-input, #cutting-size-table input, #article-qty-matrix input, #production-stages-table input', function(e) {
+        $(document).on('keydown keypress', 'input[type="number"], .stage-rate, .qty-input, .mtr-input, .lay-mark-table input[type="number"], .qty-direct-input, #cutting-size-table input[type="number"], #article-qty-matrix input[type="number"], #production-stages-table input[type="number"]', function(e) {
+            if ($(this).hasClass('fg-art-input') || $(this).attr('type') === 'text') return;
             if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.which === 45 || e.which === 43 || e.which === 189 || e.which === 109 || e.which === 107 || e.which === 187) {
                 e.preventDefault();
                 return false;
@@ -1126,7 +1127,8 @@
             }
         });
 
-        $(document).on('input paste', 'input[type="number"], .stage-rate, .qty-input, .mtr-input, .lay-mark-table input[type="number"], .qty-direct-input, #cutting-size-table input, #article-qty-matrix input, #production-stages-table input:not(.issue-date):not(.deadline-date)', function() {
+        $(document).on('input paste', 'input[type="number"], .stage-rate, .qty-input, .mtr-input, .lay-mark-table input[type="number"], .qty-direct-input, #cutting-size-table input[type="number"], #article-qty-matrix input[type="number"], #production-stages-table input[type="number"]', function() {
+            if ($(this).hasClass('fg-art-input') || $(this).attr('type') === 'text') return;
             var el = this;
             setTimeout(function() {
                 var val = $(el).val();
@@ -1148,6 +1150,7 @@
         const oldFabrics = rawOldFabrics;
 
         const hasTasks = @json($hasTasks);
+        const isFgConverted = @json($isFgConverted ?? false);
         const existingImages = @json($jobCard && $jobCard->images ? $jobCard->images : []);
         const grnImageMap = @json($grnImageMap ?? []);
         const matrixItems = @json(array_values(old('matrix_items', $jobCard && $jobCard->cuttingSizeRatios ? $jobCard->cuttingSizeRatios->toArray() : [])));
@@ -1688,6 +1691,28 @@
             const grandTotal = $('#article-qty-matrix-grand-total').text().trim();
             const total = parseFloat(grandTotal) || 0;
 
+            @if($jobCard && $hasTasks && !$isFgConverted)
+            const lockedTargetQty = parseFloat("{{ (float)($jobCard->grand_total_qty ?? 0) }}") || 0;
+            if (Math.abs(total - lockedTargetQty) > 0.01) {
+                const diffVal = Math.round((total - lockedTargetQty) * 100) / 100;
+                const diffMsg = diffVal > 0 ? `+${diffVal} Pcs Excess` : `${Math.abs(diffVal)} Pcs Shortage`;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Total Quantity Mismatch',
+                    html: `<div class="text-start">` +
+                          `<p>Task has already been assigned for this Job Card.</p>` +
+                          `<div class="p-2 border rounded bg-light mb-3">` +
+                          `<div><b>Locked Target Quantity:</b> <span class="badge bg-primary fs-6">${lockedTargetQty} Pcs</span></div>` +
+                          `<div class="mt-2"><b>Current Matrix Total:</b> <span class="badge bg-danger fs-6">${total} Pcs</span> (${diffMsg})</div>` +
+                          `</div>` +
+                          `<p class="text-danger mb-0">Total cutting quantity cannot be increased or decreased. You can split sizes and sleeves freely, but the total sum must equal exactly <b>${lockedTargetQty} Pcs</b> before submitting.</p>` +
+                          `</div>`,
+                    confirmButtonText: 'Understand & Adjust'
+                });
+                return false;
+            }
+            @endif
+
             let missingFabricArtNos = [];
             $('.art-no-input').each(function() {
                 const artNo = $(this).val();
@@ -1771,7 +1796,7 @@
                 selectedIds.push(id);
                 $hiddenWrap.append(`<input type="hidden" name="stock_entry_ids[]" value="${id}">`);
 
-                const removeButton = hasTasks ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${id}" title="Remove"></button>`;
+                const removeButton = isFgConverted ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${id}" title="Remove"></button>`;
                 const $tag = $(`
                     <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6" data-id="${id}" style="cursor:default; max-width:300px; white-space:normal; text-align:left;">
                         <span style="font-size:11px; line-height:1.3;">${text}</span>
@@ -1869,7 +1894,7 @@
             }
 
             var $ac = $input.autocomplete({
-                disabled: hasTasks,
+                disabled: isFgConverted,
                 source: function (request, response) {
                     $.get(searchUrl, { q: request.term, brand_id: $('#brand').val() }, function (data) {
                         const mappedResults = data.results.map(function(item) {
@@ -1937,7 +1962,7 @@
                         selectedIds.push(String(entry.id));
                     }
                     if ($tags.find(`[data-id="${entry.id}"]`).length === 0) {
-                        const removeButton = hasTasks ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${entry.id}" title="Remove"></button>`;
+                        const removeButton = isFgConverted ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${entry.id}" title="Remove"></button>`;
                         const $tag = $(`
                             <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6"
                                     data-id="${entry.id}" style="cursor:default; max-width:300px; white-space:normal; text-align:left;">
@@ -2048,6 +2073,10 @@
                 const art = String($(this).data('art') || "").trim();
                 if (art) {
                     capturedMatrix[art] = {};
+                    const fgVal = $(this).find('.fg-art-input').val();
+                    if (fgVal !== undefined) {
+                        capturedMatrix[art]['fg_art_no'] = fgVal;
+                    }
                     $(this).find('.qty-input').each(function() {
                         const col = $(this).data('col');
                         if (col) {
@@ -2068,12 +2097,12 @@
 
             const headHtml = isCanvas ? `
                 <tr class="size-headers">
-                    <th class="align-middle" style="min-width: 150px;">ART NO / MATERIAL</th>
+                    <th class="align-middle" style="min-width: 170px;">ART NO / FG ART NO</th>
                     ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
                     <th class="align-middle">TOTAL</th>
                 </tr>` : `
                 <tr>
-                    <th rowspan="2" class="align-middle" style="min-width: 150px;">ART NO / MATERIAL</th>
+                    <th rowspan="2" class="align-middle" style="min-width: 170px;">ART NO / FG ART NO</th>
                     ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
                     ${activeHsSizes.length > 0 ? `<th colspan="${activeHsSizes.length}">H/S</th>` : ''}
                     <th rowspan="2" class="align-middle">TOTAL</th>
@@ -2134,16 +2163,28 @@
                     }
                 }
 
-                const isTaskReadOnly = hasTasks ? 'readonly tabindex="-1"' : '';
+                const isTaskReadOnly = isFgConverted ? 'readonly tabindex="-1"' : '';
                 const readonlyAttr = (!isFabric && !hasAutoCons && !isCanvas) ? '' : ((isFabric || isCanvas) ? isTaskReadOnly : 'readonly tabindex="-1"');
                 const rowClass = (isFabric || isCanvas) ? 'cat1-row' : (hasAutoCons ? 'cat2-row-auto' : 'cat2-row-manual');
                 const styleAttr = (isFabric || hasAutoCons || isCanvas) ? '' : 'style="display: none;"';
 
+                let fgArtNo = '';
+                if (capturedMatrix[art] && capturedMatrix[art].fg_art_no !== undefined) {
+                    fgArtNo = capturedMatrix[art].fg_art_no;
+                } else if (oldRow && oldRow.fg_art_no !== undefined) {
+                    fgArtNo = oldRow.fg_art_no;
+                } else if (existingRow && existingRow.fg_art_no) {
+                    fgArtNo = existingRow.fg_art_no;
+                }
+
                 let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" data-index="${index}" ${styleAttr}>
-                                <td>
-                                    <div class="border rounded p-1 mb-1 text-center fw-bold small" style="background: #f8f9fa;">${actualArt}</div>
+                                <td style="min-width: 170px;">
+                                    <div class="border rounded p-1 mb-1 text-center fw-bold small bg-light">${actualArt}</div>
                                     <input type="hidden" name="article_matrix[${index}][art_no]" value="${art}">
-                                    <div class="small text-muted text-center" style="font-size: 10px; line-height: 1.1;">${artName}</div>
+                                    <div class="small text-muted text-center mb-1" style="font-size: 10px; line-height: 1.1;">${artName}</div>
+                                    <div class="mt-1">
+                                        <input type="text" name="article_matrix[${index}][fg_art_no]" class="form-control form-control-sm text-center fw-semibold fg-art-input" placeholder="FG Art No" value="${fgArtNo}" ${isTaskReadOnly} title="Finished Good Art No / Receipt Style">
+                                    </div>
                                 </td>`;
 
                 activeFsSizes.forEach(s => {
@@ -2773,7 +2814,7 @@
                             : fallbackMtr;
                 }
 
-                const isTaskReadOnly = hasTasks ? 'readonly' : '';
+                const isTaskReadOnly = isFgConverted ? 'readonly' : '';
                 let widthOptions = '<option value="">Select</option>';
                 @foreach($fabricSizes as $fs)
                     widthOptions += `<option value="{{ $fs->id }}" ${vWidth == '{{ $fs->id }}' ? 'selected' : ''}>{{ $fs->width }}</option>`;

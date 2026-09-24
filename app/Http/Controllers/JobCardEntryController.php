@@ -336,11 +336,30 @@ class JobCardEntryController extends Controller
 
             $validator = Validator::make($request->all(), $rules, $messages);
 
-            $validator->after(function ($validator) use ($request) {
+            $validator->after(function ($validator) use ($request, $id) {
                 $totalFs = (float) ($request->total_qty_fs ?? 0);
                 $totalHs = (float) ($request->total_qty_hs ?? 0);
-                if (($totalFs + $totalHs) <= 0) {
+                $submittedGrandTotal = $totalFs + $totalHs;
+                if ($submittedGrandTotal <= 0) {
                     $validator->errors()->add('article_matrix', 'Please enter at least one quantity in the Article Quantity Matrix.');
+                }
+
+                if ($id) {
+                    $existingJc = JobCardEntry::find($id);
+                    if ($existingJc) {
+                        $hasAssignedTasks = $existingJc->tasks()->where(function($q) {
+                            $q->where('is_additional', 0)->orWhereNull('is_additional');
+                        })->exists();
+                        $hasReceipts = \App\Models\ProductionReceipt::where('job_card_id', $existingJc->id)->exists();
+                        $isFg = ($existingJc->status === 'Production Completed' || $hasReceipts);
+
+                        if ($hasAssignedTasks && !$isFg) {
+                            $originalTarget = (float) ($existingJc->grand_total_qty ?? 0);
+                            if (abs($submittedGrandTotal - $originalTarget) > 0.01) {
+                                $validator->errors()->add('article_matrix', "Task has already been assigned for {$originalTarget} pcs. Total cutting quantity cannot be increased or decreased (Current Total: {$submittedGrandTotal} pcs). You can redistribute sizes and sleeves within {$originalTarget} pcs.");
+                            }
+                        }
+                    }
                 }
 
                 $fabrics = $request->input('fabrics', []);
@@ -578,10 +597,12 @@ class JobCardEntryController extends Controller
                         }
 
                         $matrix = collect($request->article_matrix ?? [])->where('art_no', $artNo)->first();
+                        $fgArtNo = $matrix['fg_art_no'] ?? ($fabric['fg_art_no'] ?? null);
 
                         $fdMatch = ['art_no' => $artNo, 'stock_entry_id' => $seId, 'is_additional' => 0];
                         $fdVal = [
                             'is_additional' => 0,
+                            'fg_art_no' => !empty($fgArtNo) ? trim($fgArtNo) : null,
                             'width' => $fabric['width'] ?? null,
                             'mtr' => $fabric['mtr'] ?? null,
                             'in_out' => $fabric['in_out'] ?? null,
@@ -885,6 +906,8 @@ class JobCardEntryController extends Controller
         }
         $hasTasks = $jobCard ? $jobCard->tasks()->where(function($q) { $q->where('is_additional', 0)->orWhereNull('is_additional'); })->exists() : false;
         $hasIssuedItems = $jobCard ? $jobCard->issueItems()->exists() : false;
+        $hasProductionReceipts = $jobCard ? \App\Models\ProductionReceipt::where('job_card_id', $jobCard->id)->exists() : false;
+        $isFgConverted = $jobCard ? ($jobCard->status === 'Production Completed' || $hasProductionReceipts) : false;
         return view('job_card_entry/add', compact(
             'jobCard',
             'grnImageMap',
@@ -907,6 +930,8 @@ class JobCardEntryController extends Controller
             'stageTaskStatus',
             'hasTasks',
             'hasIssuedItems',
+            'hasProductionReceipts',
+            'isFgConverted',
             'colors',
             'isRestrictedEdit',
             'fabricSizes'
@@ -1896,8 +1921,8 @@ class JobCardEntryController extends Controller
             'production_stages.*.deadline_date.required' => 'This field is required',
         ]);
 
-        // Validate Lay Marks per fabric
-        foreach ($fabricsData as $fIdx => $fData) {
+        // Validate Lay Marks per valid/selected fabric
+        foreach ($validFabrics as $fIdx => $fData) {
             if (isset($fData['lay_marks']) && is_array($fData['lay_marks'])) {
                 foreach ($fData['lay_marks'] as $lmIdx => $lm) {
                     if (empty($lm['sizes'])) {
@@ -2218,8 +2243,8 @@ class JobCardEntryController extends Controller
             'production_stages.*.deadline_date.required' => 'This field is required',
         ]);
 
-        // Validate Lay Marks per fabric
-        foreach ($fabricsData as $fIdx => $fData) {
+        // Validate Lay Marks per valid/selected fabric
+        foreach ($validFabrics as $fIdx => $fData) {
             if (isset($fData['lay_marks']) && is_array($fData['lay_marks'])) {
                 foreach ($fData['lay_marks'] as $lmIdx => $lm) {
                     if (empty($lm['sizes'])) {

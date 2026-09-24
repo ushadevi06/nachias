@@ -301,7 +301,7 @@
                                                     @enderror
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
-                                                    <input type="number"  class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item['cgst_percent'] ?? 0 }}" readonly>
+                                                    <input type="number" class="form-control cgst_percent text-end @error('items.' . $index . '.cgst_percent') is-invalid @enderror" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item['cgst_percent'] ?? 0 }}">
                                                     @error('items.' . $index . '.cgst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -310,7 +310,7 @@
                                                     <input type="number" class="form-control cgst_amount text-end" name="items[{{ $index }}][cgst_amount]" step="0.01" min="0" value="{{ $item['cgst_amount'] ?? 0 }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-sgst d-none">
-                                                    <input type="number" class="form-control sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item['sgst_percent'] ?? 0 }}" readonly>
+                                                    <input type="number" class="form-control sgst_percent text-end @error('items.' . $index . '.sgst_percent') is-invalid @enderror" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item['sgst_percent'] ?? 0 }}">
                                                     @error('items.' . $index . '.sgst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -319,7 +319,7 @@
                                                     <input type="number" class="form-control sgst_amount text-end" name="items[{{ $index }}][sgst_amount]" step="0.01" min="0" value="{{ $item['sgst_amount'] ?? 0 }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-igst d-none">
-                                                    <input type="number" class="form-control igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item['igst_percent'] ?? 0 }}" readonly>
+                                                    <input type="number" class="form-control igst_percent text-end @error('items.' . $index . '.igst_percent') is-invalid @enderror" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item['igst_percent'] ?? 0 }}">
                                                     @error('items.' . $index . '.igst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -415,13 +415,12 @@
                                                     @enderror
                                                 </td>
                                                 <td class="td-fabric-width">
-                                                    <select class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror" name="items[{{ $index }}][fabric_width_id]" {{ $index > 0 ? 'disabled' : '' }} data-placeholder="Select Width">
+                                                    <select class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror" name="items[{{ $index }}][fabric_width_id]" data-placeholder="Select Width">
                                                         <option value="">Select Width</option>
                                                         @foreach($fabricSizes as $fabricSize)
                                                             <option value="{{ $fabricSize->id }}" {{ ($item->fabric_width_id ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                         @endforeach
                                                     </select>
-                                                    <input type="hidden" name="items[{{ $index }}][fabric_width_id]" class="fabric_width_hidden" value="{{ $item->fabric_width_id ?? '' }}" {{ $index == 0 ? 'disabled' : '' }}>
                                                     <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.fabric_width_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -480,7 +479,7 @@
                                                     @enderror
                                                 </td>
                                                 <td class="td-gst td-cgst d-none">
-                                                    <input type="number" class="form-control cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item->cgst_percent }}">
+                                                    <input type="number" class="form-control cgst_percent text-end @error('items.' . $index . '.cgst_percent') is-invalid @enderror" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item->cgst_percent }}">
                                                     @error('items.' . $index . '.cgst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -489,7 +488,7 @@
                                                     <input type="number" class="form-control cgst_amount text-end" name="items[{{ $index }}][cgst_amount]" step="0.01" min="0" value="{{ $item->cgst_amount }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-sgst d-none">
-                                                    <input type="number" class="form-control sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item->sgst_percent }}">
+                                                    <input type="number" class="form-control sgst_percent text-end @error('items.' . $index . '.sgst_percent') is-invalid @enderror" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item->sgst_percent }}">
                                                     @error('items.' . $index . '.sgst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -498,7 +497,7 @@
                                                     <input type="number" class="form-control sgst_amount text-end" name="items[{{ $index }}][sgst_amount]" step="0.01" min="0" value="{{ $item->sgst_amount }}" readonly>
                                                 </td>
                                                 <td class="td-gst td-igst d-none">
-                                                    <input type="number" class="form-control igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item->igst_percent }}">
+                                                    <input type="number" class="form-control igst_percent text-end @error('items.' . $index . '.igst_percent') is-invalid @enderror" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item->igst_percent }}">
                                                     @error('items.' . $index . '.igst_percent')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -590,7 +589,6 @@
                                                         <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                                                     @endforeach
                                                 </select>
-                                                <input type="hidden" name="items[0][fabric_width_id]" class="fabric_width_hidden" value="" disabled>
                                                 <span class="hyphen d-none">-</span>
                                             </td>
                                             <td class="td-fabric-type">
@@ -629,19 +627,28 @@
                                                 <input type="number" class="form-control rate" name="items[0][rate]" step="any" min="0" placeholder="Enter Rate">
                                             </td>
                                             <td class="td-gst td-cgst d-none">
-                                                <input type="number" class="form-control cgst_percent text-end" name="items[0][cgst_percent]" step="0.01" min="0" value="">
+                                                <input type="number" class="form-control cgst_percent text-end @error('items.0.cgst_percent') is-invalid @enderror" name="items[0][cgst_percent]" step="0.01" min="0" value="">
+                                                @error('items.0.cgst_percent')
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                @enderror
                                             </td>
                                             <td class="td-gst td-cgst d-none">
                                                 <input type="number" class="form-control cgst_amount text-end" name="items[0][cgst_amount]" step="0.01" min="0" value="" readonly>
                                             </td>
                                             <td class="td-gst td-sgst d-none">
-                                                <input type="number" class="form-control sgst_percent text-end" name="items[0][sgst_percent]" step="0.01" min="0" value="">
+                                                <input type="number" class="form-control sgst_percent text-end @error('items.0.sgst_percent') is-invalid @enderror" name="items[0][sgst_percent]" step="0.01" min="0" value="">
+                                                @error('items.0.sgst_percent')
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                @enderror
                                             </td>
                                             <td class="td-gst td-sgst d-none">
                                                 <input type="number" class="form-control sgst_amount text-end" name="items[0][sgst_amount]" step="0.01" min="0" value="" readonly>
                                             </td>
                                             <td class="td-gst td-igst d-none">
-                                                <input type="number" class="form-control igst_percent text-end" name="items[0][igst_percent]" step="0.01" min="0" value="">
+                                                <input type="number" class="form-control igst_percent text-end @error('items.0.igst_percent') is-invalid @enderror" name="items[0][igst_percent]" step="0.01" min="0" value="">
+                                                @error('items.0.igst_percent')
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                @enderror
                                             </td>
                                             <td class="td-gst td-igst d-none">
                                                 <input type="number" class="form-control igst_amount text-end" name="items[0][igst_amount]" step="0.01" min="0" value="" readonly>
@@ -988,13 +995,12 @@
                         <span class="hyphen d-none">-</span>
                     </td>
                     <td class="td-fabric-width">
-                        <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" disabled data-placeholder="Select Width">
+                        <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" data-placeholder="Select Width">
                             <option value="">Select Width</option>
                             @foreach($fabricSizes as $fabricSize)
                                 <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                             @endforeach
                         </select>
-                        <input type="hidden" name="items[${itemIndex}][fabric_width_id]" class="fabric_width_hidden" value="">
                         <span class="hyphen d-none">-</span>
                     </td>
                     <td class="td-fabric-type">
@@ -1069,7 +1075,7 @@
                 </tr>`;
                 
                 let firstRowBrandVal = $('#item-rows tbody tr:first').find('.brand').val() || $('#item-rows tbody tr:first').find('.brand_hidden').val();
-                let firstRowWidthVal = $('#item-rows tbody tr:first').find('.fabric_width').val() || $('#item-rows tbody tr:first').find('.fabric_width_hidden').val();
+                let firstRowWidthVal = $('#item-rows tbody tr:first').find('.fabric_width').val();
 
                 $('#item-rows tbody').append(rowHtml);
 
@@ -1083,10 +1089,7 @@
 
                 if (firstRowWidthVal) {
                     lastRow.find('.fabric_width').val(firstRowWidthVal);
-                    lastRow.find('.fabric_width_hidden').val(firstRowWidthVal);
                 }
-                lastRow.find('.fabric_width').prop('disabled', true);
-                lastRow.find('.fabric_width_hidden').prop('disabled', false);
 
                 initSelect2Fields();
                 
@@ -1211,46 +1214,24 @@
                 });
             });
 
-            $(document).on('change', '#item-rows tbody tr:first .fabric_width', function () {
-                let widthVal = $(this).val();
-                $('#item-rows tbody tr:first .fabric_width_hidden').val(widthVal);
-                $('#item-rows tbody tr:not(:first)').each(function () {
-                    let rowWidth = $(this).find('.fabric_width');
-                    rowWidth.val(widthVal).trigger('change.select2');
-                    $(this).find('.fabric_width_hidden').val(widthVal);
-                });
-            });
-
             function updateBrandRowStates() {
                 let rows = $('#item-rows tbody tr');
                 if (!rows.length) return;
 
                 let firstBrandVal = rows.first().find('.brand').val() || rows.first().find('.brand_hidden').val();
-                let firstWidthVal = rows.first().find('.fabric_width').val() || rows.first().find('.fabric_width_hidden').val();
 
                 rows.each(function (index) {
                     let brandSelect = $(this).find('.brand');
                     let brandHidden = $(this).find('.brand_hidden');
-                    let widthSelect = $(this).find('.fabric_width');
-                    let widthHidden = $(this).find('.fabric_width_hidden');
 
                     if (index === 0) {
                         brandSelect.prop('disabled', false);
                         brandHidden.prop('disabled', true);
-                        widthSelect.prop('disabled', false);
-                        widthHidden.prop('disabled', true);
 
                         if (brandSelect.hasClass('select2-hidden-accessible')) {
                             brandSelect.select2('destroy');
                             brandSelect.select2({
                                 dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
-                                width: '100%'
-                            });
-                        }
-                        if (widthSelect.hasClass('select2-hidden-accessible')) {
-                            widthSelect.select2('destroy');
-                            widthSelect.select2({
-                                dropdownParent: widthSelect.closest('.card-body').length ? widthSelect.closest('.card-body') : $('body'),
                                 width: '100%'
                             });
                         }
@@ -1262,13 +1243,6 @@
                         brandSelect.prop('disabled', true);
                         brandHidden.prop('disabled', false);
 
-                        if (firstWidthVal) {
-                            widthSelect.val(firstWidthVal).trigger('change.select2');
-                            widthHidden.val(firstWidthVal);
-                        }
-                        widthSelect.prop('disabled', true);
-                        widthHidden.prop('disabled', false);
-
                         if (brandSelect.hasClass('select2-hidden-accessible')) {
                             brandSelect.select2('destroy');
                             brandSelect.select2({
@@ -1276,16 +1250,27 @@
                                 width: '100%'
                             });
                         }
-                        if (widthSelect.hasClass('select2-hidden-accessible')) {
-                            widthSelect.select2('destroy');
-                            widthSelect.select2({
-                                dropdownParent: widthSelect.closest('.card-body').length ? widthSelect.closest('.card-body') : $('body'),
-                                width: '100%'
-                            });
-                        }
                     }
                 });
             }
+
+            $(document).on('input', '.cgst_percent', function () {
+                let row = $(this).closest('tr');
+                row.find('.sgst_percent').val($(this).val());
+            });
+
+            $(document).on('input', '.sgst_percent', function () {
+                let row = $(this).closest('tr');
+                row.find('.cgst_percent').val($(this).val());
+            });
+
+            $(document).on('input', '#cgst_percent', function () {
+                $('#sgst_percent').val($(this).val());
+            });
+
+            $(document).on('input', '#sgst_percent', function () {
+                $('#cgst_percent').val($(this).val());
+            });
 
             $(document).on('input', '.quantity, .rate, .cgst_percent, .sgst_percent, .igst_percent', function () {
                 let row = $(this).closest('tr');
@@ -1417,24 +1402,12 @@
                     
                     if (isAccessories) {
                         if (otherState === 'yes') {
-                            let itemIgstStr = $(this).find('.igst_percent').val();
-                            if (itemIgstStr === '' && orderIgst > 0) {
-                                $(this).find('.igst_percent').val(orderIgst);
-                            }
                             let itemIgstPercent = parseFloat($(this).find('.igst_percent').val()) || 0;
                             let igstAmount = round2((amount * itemIgstPercent) / 100);
                             $(this).find('.igst_amount').val(format2(igstAmount));
                             itemsTaxTotal += igstAmount;
                             totalRowIgst += igstAmount;
                         } else {
-                            let itemCgstStr = $(this).find('.cgst_percent').val();
-                            let itemSgstStr = $(this).find('.sgst_percent').val();
-                            if (itemCgstStr === '' && orderCgst > 0) {
-                                $(this).find('.cgst_percent').val(orderCgst);
-                            }
-                            if (itemSgstStr === '' && orderSgst > 0) {
-                                $(this).find('.sgst_percent').val(orderSgst);
-                            }
                             let itemCgstPercent = parseFloat($(this).find('.cgst_percent').val()) || 0;
                             let itemSgstPercent = parseFloat($(this).find('.sgst_percent').val()) || 0;
                             let cgstAmount = round2((amount * itemCgstPercent) / 100);

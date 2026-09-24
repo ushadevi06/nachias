@@ -193,6 +193,12 @@ class PurchaseInvoiceController extends Controller
                 'items.*.raw_material_id' => 'required|exists:raw_materials,id',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'required|numeric|min:0',
+                'items.*.cgst_percent' => 'nullable|numeric|min:0|max:100',
+                'items.*.cgst_amount' => 'nullable|numeric|min:0',
+                'items.*.sgst_percent' => 'nullable|numeric|min:0|max:100',
+                'items.*.sgst_amount' => 'nullable|numeric|min:0',
+                'items.*.igst_percent' => 'nullable|numeric|min:0|max:100',
+                'items.*.igst_amount' => 'nullable|numeric|min:0',
                 'items.*.hsn_code' => [
                     'nullable',
                     'digits_between:4,8'
@@ -576,6 +582,12 @@ class PurchaseInvoiceController extends Controller
                                         'amount' => $item['quantity'] * $newRate,
                                         'qty_received' => $item['quantity'],
                                         'qty_invoiced' => $item['quantity'],
+                                        'cgst_percent' => $item['cgst_percent'] ?? 0,
+                                        'cgst_amount' => $item['cgst_amount'] ?? 0,
+                                        'sgst_percent' => $item['sgst_percent'] ?? 0,
+                                        'sgst_amount' => $item['sgst_amount'] ?? 0,
+                                        'igst_percent' => $item['igst_percent'] ?? 0,
+                                        'igst_amount' => $item['igst_amount'] ?? 0,
                                     ]);
 
                                     if ($oldRate !== $newRate) {
@@ -607,6 +619,12 @@ class PurchaseInvoiceController extends Controller
                                     'qty_ordered' => $item['qty_ordered'] ?? 0,
                                     'qty_received' => $item['quantity'],
                                     'qty_invoiced' => $item['quantity'],
+                                    'cgst_percent' => $item['cgst_percent'] ?? 0,
+                                    'cgst_amount' => $item['cgst_amount'] ?? 0,
+                                    'sgst_percent' => $item['sgst_percent'] ?? 0,
+                                    'sgst_amount' => $item['sgst_amount'] ?? 0,
+                                    'igst_percent' => $item['igst_percent'] ?? 0,
+                                    'igst_amount' => $item['igst_amount'] ?? 0,
                                 ]);
                             }
                         }
@@ -735,7 +753,7 @@ class PurchaseInvoiceController extends Controller
                     $query->orWhere('suppliers.id', old('supplier_id'));
                 }
             })
-            ->orderBy('name', 'asc')
+            ->orderBy('id', 'desc')
             ->get();
         $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
         $nextInvoiceNumber = '';
@@ -847,6 +865,12 @@ class PurchaseInvoiceController extends Controller
                 'uom_code' => $item->uom->uom_code,
                 'rate' => $item->rate,
                 'amount' => $item->amount,
+                'cgst_percent' => $item->cgst_percent ?? $purchaseOrder->cgst_percent ?? 0,
+                'cgst_amount' => $item->cgst_amount ?? 0,
+                'sgst_percent' => $item->sgst_percent ?? $purchaseOrder->sgst_percent ?? 0,
+                'sgst_amount' => $item->sgst_amount ?? 0,
+                'igst_percent' => $item->igst_percent ?? $purchaseOrder->igst_percent ?? 0,
+                'igst_amount' => $item->igst_amount ?? 0,
             ];
         })->filter()->values();
 
@@ -956,6 +980,12 @@ class PurchaseInvoiceController extends Controller
                     'uom_code' => $item->uom->uom_code,
                     'rate' => $item->rate,
                     'amount' => $item->amount,
+                    'cgst_percent' => $item->cgst_percent ?? $purchaseOrder->cgst_percent ?? 0,
+                    'cgst_amount' => $item->cgst_amount ?? 0,
+                    'sgst_percent' => $item->sgst_percent ?? $purchaseOrder->sgst_percent ?? 0,
+                    'sgst_amount' => $item->sgst_amount ?? 0,
+                    'igst_percent' => $item->igst_percent ?? $purchaseOrder->igst_percent ?? 0,
+                    'igst_amount' => $item->igst_amount ?? 0,
                     'po_number' => $purchaseOrder->po_number // add PO number for display
                 ];
             })->filter();

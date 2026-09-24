@@ -205,6 +205,12 @@
                                         <th class="invoice-qty-column">Invoiced Qty <span class="text-danger">*</span></th>
                                         <th>UOM</th>
                                         <th>Rate</th>
+                                        <th class="th-gst th-cgst d-none" style="min-width: 100px;">CGST %</th>
+                                        <th class="th-gst th-cgst d-none" style="min-width: 100px;">CGST Amt</th>
+                                        <th class="th-gst th-sgst d-none" style="min-width: 100px;">SGST %</th>
+                                        <th class="th-gst th-sgst d-none" style="min-width: 100px;">SGST Amt</th>
+                                        <th class="th-gst th-igst d-none" style="min-width: 100px;">IGST %</th>
+                                        <th class="th-gst th-igst d-none" style="min-width: 100px;">IGST Amt</th>
                                         <th>Amount</th>
                                     </tr>
                                 </thead>
@@ -302,8 +308,26 @@
                                                 </td>
                                                 <td>{{ $item['uom_code'] ?? '-' }}</td>
                                                 <td class="rate-display">
-                                                <input type="number" step="any" min="0" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" {{ isset($item['selected']) ? '' : 'readonly' }}>
-                                            </td>
+                                                    <input type="number" step="any" min="0" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                                </td>
+                                                <td class="td-gst td-cgst d-none">
+                                                    <input type="number" class="form-control form-control-sm cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $item['cgst_percent'] ?? 0 }}" {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                                </td>
+                                                <td class="td-gst td-cgst d-none">
+                                                    <input type="number" class="form-control form-control-sm cgst_amount text-end" name="items[{{ $index }}][cgst_amount]" step="0.01" min="0" value="{{ $item['cgst_amount'] ?? 0 }}" readonly>
+                                                </td>
+                                                <td class="td-gst td-sgst d-none">
+                                                    <input type="number" class="form-control form-control-sm sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $item['sgst_percent'] ?? 0 }}" {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                                </td>
+                                                <td class="td-gst td-sgst d-none">
+                                                    <input type="number" class="form-control form-control-sm sgst_amount text-end" name="items[{{ $index }}][sgst_amount]" step="0.01" min="0" value="{{ $item['sgst_amount'] ?? 0 }}" readonly>
+                                                </td>
+                                                <td class="td-gst td-igst d-none">
+                                                    <input type="number" class="form-control form-control-sm igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $item['igst_percent'] ?? 0 }}" {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                                </td>
+                                                <td class="td-gst td-igst d-none">
+                                                    <input type="number" class="form-control form-control-sm igst_amount text-end" name="items[{{ $index }}][igst_amount]" step="0.01" min="0" value="{{ $item['igst_amount'] ?? 0 }}" readonly>
+                                                </td>
                                                 <td class="item-amount">
                                                      {{ isset($item['selected']) ? number_format(($item['quantity'] ?? 0) * ($item['rate'] ?? 0), 2) : '0.00' }}
                                                 </td>
@@ -408,8 +432,26 @@
 
                                                 <td>{{ $invItem->uom->uom_code ?? '-' }}</td>
                                                 <td class="rate-display">
-                                                <input type="number" step="any" min="0" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;">
-                                            </td>
+                                                    <input type="number" step="any" min="0" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;">
+                                                </td>
+                                                <td class="td-gst td-cgst d-none">
+                                                    <input type="number" class="form-control form-control-sm cgst_percent text-end" name="items[{{ $index }}][cgst_percent]" step="0.01" min="0" value="{{ $invItem->cgst_percent ?? 0 }}">
+                                                </td>
+                                                <td class="td-gst td-cgst d-none">
+                                                    <input type="number" class="form-control form-control-sm cgst_amount text-end" name="items[{{ $index }}][cgst_amount]" step="0.01" min="0" value="{{ $invItem->cgst_amount ?? 0 }}" readonly>
+                                                </td>
+                                                <td class="td-gst td-sgst d-none">
+                                                    <input type="number" class="form-control form-control-sm sgst_percent text-end" name="items[{{ $index }}][sgst_percent]" step="0.01" min="0" value="{{ $invItem->sgst_percent ?? 0 }}">
+                                                </td>
+                                                <td class="td-gst td-sgst d-none">
+                                                    <input type="number" class="form-control form-control-sm sgst_amount text-end" name="items[{{ $index }}][sgst_amount]" step="0.01" min="0" value="{{ $invItem->sgst_amount ?? 0 }}" readonly>
+                                                </td>
+                                                <td class="td-gst td-igst d-none">
+                                                    <input type="number" class="form-control form-control-sm igst_percent text-end" name="items[{{ $index }}][igst_percent]" step="0.01" min="0" value="{{ $invItem->igst_percent ?? 0 }}">
+                                                </td>
+                                                <td class="td-gst td-igst d-none">
+                                                    <input type="number" class="form-control form-control-sm igst_amount text-end" name="items[{{ $index }}][igst_amount]" step="0.01" min="0" value="{{ $invItem->igst_amount ?? 0 }}" readonly>
+                                                </td>
                                                 <td class="item-amount">
                                                     {{ number_format($invItem->quantity * $invItem->rate, 2) }}
                                                 </td>
@@ -417,7 +459,7 @@
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="13" class="text-center text-muted">
+                                            <td colspan="19" class="text-center text-muted">
                                                 Please select a Purchase Order to load items
                                             </td>
                                         </tr>
@@ -700,36 +742,51 @@
                                 </div>
                             </div>
                             @php
-                                $subTotal = old('sub_total', $invoice->sub_total ?? 0);
-                                $discountPercent = old('discount_percent', $invoice->discount_percent ?? 0);
-                                $discountAmount = old('discount_amount', $invoice->discount_amount ?? 0);
-                                $taxableAmount = old('taxable_amount', $invoice->taxable_amount ?? 0);
-                                $otherState = old('other_state', isset($invoice) && $invoice->other_state ? 'Y' : 'N');
-                                $igstPercent = old('igst_percent', $invoice->igst_percent ?? $web_settings->igst);
-                                $igstAmount = old('igst_amount', $invoice->igst_amount ?? 0);
-                                $cgstPercent = old('cgst_percent', $invoice->cgst_percent ?? $web_settings->cgst);
-                                $cgstAmount = old('cgst_amount', $invoice->cgst_amount ?? 0);
-                                $sgstPercent = old('sgst_percent', $invoice->sgst_percent ?? $web_settings->sgst);
-                                $sgstAmount = old('sgst_amount', $invoice->sgst_amount ?? 0);
-                                $taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
-                                $otherCharges = old('other_charges', $invoice->other_charges ?? 0);
-                                $roundOff = old('round_off', $invoice->round_off ?? 0);
-                                $roundOffType = old('round_off_type', $invoice->round_off_type ?? 'Add');
-                                $grandTotal = old('grand_total', $invoice->grand_total ?? 0);
-                                $receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
-                                $dueAmount = old('due_amount', $invoice->due_amount ?? 0);
+                                $hasAccessories = false;
+                                    if (isset($invoice) && $invoice && $invoice->items->count()) {
+                                        $hasAccessories = $invoice->items->contains(function($invItem) {
+                                            $catId = $invItem->purchaseOrderItem->store_category_id ?? $invItem->rawMaterial->store_category_id ?? 0;
+                                            return $catId != 1 && $catId != 0;
+                                        });
+                                    } elseif (old('items')) {
+                                        foreach (old('items') as $oldItem) {
+                                            $catId = $oldItem['store_category_id'] ?? 0;
+                                            if ($catId != 1 && $catId != 0) {
+                                                $hasAccessories = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    $subTotal = old('sub_total', $invoice->sub_total ?? 0);
+                                    $discountPercent = old('discount_percent', $invoice->discount_percent ?? 0);
+                                    $discountAmount = old('discount_amount', $invoice->discount_amount ?? 0);
+                                    $taxableAmount = old('taxable_amount', $invoice->taxable_amount ?? 0);
+                                    $otherState = old('other_state', isset($invoice) && $invoice->other_state ? 'Y' : 'N');
+                                    $igstPercent = old('igst_percent', $invoice->igst_percent ?? $web_settings->igst);
+                                    $igstAmount = old('igst_amount', $invoice->igst_amount ?? 0);
+                                    $cgstPercent = old('cgst_percent', $invoice->cgst_percent ?? $web_settings->cgst);
+                                    $cgstAmount = old('cgst_amount', $invoice->cgst_amount ?? 0);
+                                    $sgstPercent = old('sgst_percent', $invoice->sgst_percent ?? $web_settings->sgst);
+                                    $sgstAmount = old('sgst_amount', $invoice->sgst_amount ?? 0);
+                                    $taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
+                                    $otherCharges = old('other_charges', $invoice->other_charges ?? 0);
+                                    $roundOff = old('round_off', $invoice->round_off ?? 0);
+                                    $roundOffType = old('round_off_type', $invoice->round_off_type ?? 'Add');
+                                    $grandTotal = old('grand_total', $invoice->grand_total ?? 0);
+                                    $receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
+                                    $dueAmount = old('due_amount', $invoice->due_amount ?? 0);
 
-                                $preGstTotal = 0;
-                                $postGstTotal = 0;
-                                foreach ($chargesToLoop as $c) {
-                                $amt = is_array($c) ? ($c['amount'] ?? 0) : ($c->charge_amount ?? 0);
-                                $type = is_array($c) ? ($c['tax_type'] ?? 'Post-GST') : ($c->tax_type ?? 'Post-GST');
-                                if ($type === 'Pre-GST')
-                                    $preGstTotal += $amt;
-                                else
-                                    $postGstTotal += $amt;
-                                }
-                            @endphp
+                                    $preGstTotal = 0;
+                                    $postGstTotal = 0;
+                                    foreach ($chargesToLoop as $c) {
+                                    $amt = is_array($c) ? ($c['amount'] ?? 0) : ($c->charge_amount ?? 0);
+                                    $type = is_array($c) ? ($c['tax_type'] ?? 'Post-GST') : ($c->tax_type ?? 'Post-GST');
+                                    if ($type === 'Pre-GST')
+                                        $preGstTotal += $amt;
+                                    else
+                                        $postGstTotal += $amt;
+                                    }
+                                @endphp
 
                             <div class="col-lg-6">
                                 <div class="p-3">
@@ -818,8 +875,10 @@
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span>IGST</span>
                                             <div class="d-flex gap-2 align-items-center" style="min-width: 180px;">
-                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" step="any" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;" min="0">
-                                                <span>%</span>
+                                                <div class="tax-percent-input d-flex gap-1 align-items-center {{ $hasAccessories ? 'd-none' : '' }}">
+                                                    <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" step="any" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;" min="0">
+                                                    <span>%</span>
+                                                </div>
                                                 <strong id="igst_amt">{{ number_format($igstAmount, 2) }}</strong>
                                                 <input type="hidden" name="igst_amount" id="igst_amount_input" value="{{ $igstAmount }}">
                                             </div>
@@ -831,11 +890,13 @@
                                     
                                     <div id="cgst_sgst_div" class="py-2 border-bottom"
                                         style="{{ $otherState === 'N' ? '' : 'display:none;' }}">
-                                        <div class="d-flex justify-content-between mb-2">
+                                        <div class="d-flex justify-content-between mb-2 align-items-center">
                                             <span>CGST</span>
                                             <div class="d-flex gap-2 align-items-center">
-                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ $cgstPercent }}" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" style="width:80px;" min="0" readonly>
-                                                <span>%</span>
+                                                <div class="tax-percent-input d-flex gap-1 align-items-center {{ $hasAccessories ? 'd-none' : '' }}">
+                                                    <input type="number" name="cgst_percent" id="cgst_percent" value="{{ $cgstPercent }}" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" style="width:80px;" min="0" readonly>
+                                                    <span>%</span>
+                                                </div>
                                                 <strong id="cgst_amt">{{ number_format($cgstAmount, 2) }}</strong>
                                                 <input type="hidden" name="cgst_amount" id="cgst_amount_input" value="{{ $cgstAmount }}">
                                             </div>
@@ -844,11 +905,13 @@
                                             <div class="text-danger mt-1">{{ $message }}</div>
                                         @enderror
 
-                                        <div class="d-flex justify-content-between">
+                                        <div class="d-flex justify-content-between align-items-center">
                                             <span>SGST</span>
                                             <div class="d-flex gap-2 align-items-center">
-                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ $sgstPercent }}" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" style="width:80px;" min="0" readonly>
-                                                <span>%</span>
+                                                <div class="tax-percent-input d-flex gap-1 align-items-center {{ $hasAccessories ? 'd-none' : '' }}">
+                                                    <input type="number" name="sgst_percent" id="sgst_percent" value="{{ $sgstPercent }}" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" style="width:80px;" min="0" readonly>
+                                                    <span>%</span>
+                                                </div>
                                                 <strong id="sgst_amt">{{ number_format($sgstAmount, 2) }}</strong>
                                                 <input type="hidden" name="sgst_amount" id="sgst_amount_input" value="{{ $sgstAmount }}">
                                             </div>
@@ -941,8 +1004,39 @@
         }
     }
 
+    function toggleGstColumns(isOtherState) {
+        let isAccessories = false;
+        $('.item-row').each(function() {
+            let catId = parseInt($(this).find('input[name*="[store_category_id]"]').val()) || 0;
+            if (catId != 1 && catId != 0) {
+                isAccessories = true;
+            }
+        });
+
+        if (isOtherState) {
+            $('.th-cgst, .td-cgst, .th-sgst, .td-sgst').addClass('d-none');
+            if (isAccessories) {
+                $('.th-igst, .td-igst').removeClass('d-none');
+                $('.tax-percent-input').addClass('d-none');
+            } else {
+                $('.th-igst, .td-igst').addClass('d-none');
+                $('.tax-percent-input').removeClass('d-none');
+            }
+        } else {
+            $('.th-igst, .td-igst').addClass('d-none');
+            if (isAccessories) {
+                $('.th-cgst, .td-cgst, .th-sgst, .td-sgst').removeClass('d-none');
+                $('.tax-percent-input').addClass('d-none');
+            } else {
+                $('.th-cgst, .td-cgst, .th-sgst, .td-sgst').addClass('d-none');
+                $('.tax-percent-input').removeClass('d-none');
+            }
+        }
+    }
+
     $(document).ready(function () {
         toggleFabricColumns({{ $hasFabricItems ? 'true' : 'false' }});
+        toggleGstColumns($('input[name="other_state"]:checked').val() === 'Y');
         $('.select2').select2({
             width: '100%',
             dropdownParent: $('body')
@@ -1162,6 +1256,24 @@
                                         <td class="rate-display">
                                             <input type="number" step="any" min="0" name="items[${index}][rate]" value="${parseFloat(item.rate).toFixed(4)}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" readonly>
                                         </td>
+                                        <td class="td-gst td-cgst d-none">
+                                            <input type="number" class="form-control form-control-sm cgst_percent text-end" name="items[${index}][cgst_percent]" step="0.01" min="0" value="${item.cgst_percent || 0}" readonly>
+                                        </td>
+                                        <td class="td-gst td-cgst d-none">
+                                            <input type="number" class="form-control form-control-sm cgst_amount text-end" name="items[${index}][cgst_amount]" step="0.01" min="0" value="${item.cgst_amount || 0}" readonly>
+                                        </td>
+                                        <td class="td-gst td-sgst d-none">
+                                            <input type="number" class="form-control form-control-sm sgst_percent text-end" name="items[${index}][sgst_percent]" step="0.01" min="0" value="${item.sgst_percent || 0}" readonly>
+                                        </td>
+                                        <td class="td-gst td-sgst d-none">
+                                            <input type="number" class="form-control form-control-sm sgst_amount text-end" name="items[${index}][sgst_amount]" step="0.01" min="0" value="${item.sgst_amount || 0}" readonly>
+                                        </td>
+                                        <td class="td-gst td-igst d-none">
+                                            <input type="number" class="form-control form-control-sm igst_percent text-end" name="items[${index}][igst_percent]" step="0.01" min="0" value="${item.igst_percent || 0}" readonly>
+                                        </td>
+                                        <td class="td-gst td-igst d-none">
+                                            <input type="number" class="form-control form-control-sm igst_amount text-end" name="items[${index}][igst_amount]" step="0.01" min="0" value="${item.igst_amount || 0}" readonly>
+                                        </td>
                                         <td class="item-amount">0.00</td>
 
                                     </tr>`;
@@ -1173,6 +1285,7 @@
                             });
                             let hasFabric = response.items.some(i => parseInt(i.store_category_id) === 1);
                             toggleFabricColumns(hasFabric);
+                            toggleGstColumns($('input[name="other_state"]:checked').val() === 'Y');
 
                             $('#select_all_items').prop('checked', false);
 
@@ -1191,7 +1304,7 @@
                 });
             } else {
                 toggleFabricColumns(false);
-                $('#items_tbody').html('<tr><td colspan="13" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
+                $('#items_tbody').html('<tr><td colspan="19" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
                 $('#purchase_order_no').val('');
                 $('#supplier_id').val('');
                 $('#purchase_commission_agent_id').val('');
@@ -1246,26 +1359,48 @@
             let $hsnInput = $row.find('.item-hsn');
             let $qtyInput = $row.find('.item-quantity');
             let $rateInput = $row.find('.item-rate');
+            let $gstInputs = $row.find('.cgst_percent, .sgst_percent, .igst_percent');
             let isEditMode = $('#isEditMode').val() == '1';
 
             if ($checkbox.is(':checked')) {
                 $hsnInput.prop('readonly', false);
                 $qtyInput.prop('readonly', false);
                 $rateInput.prop('readonly', false);
+                $gstInputs.prop('readonly', false);
             } else {
                 $hsnInput.prop('readonly', true);
                 $qtyInput.prop('readonly', true);
                 $rateInput.prop('readonly', true);
+                $gstInputs.prop('readonly', true);
                 $hsnInput.removeClass('is-invalid');
                 $qtyInput.removeClass('is-invalid');
                 $rateInput.removeClass('is-invalid');
+                $gstInputs.removeClass('is-invalid');
                 $hsnInput.next('.invalid-feedback').remove();
                 $qtyInput.next('.invalid-feedback').remove();
             }
         }
 
 
-        $(document).on('input', '.item-quantity, .item-rate', function () {
+        $(document).on('input', '.cgst_percent', function () {
+            let row = $(this).closest('tr');
+            row.find('.sgst_percent').val($(this).val());
+        });
+
+        $(document).on('input', '.sgst_percent', function () {
+            let row = $(this).closest('tr');
+            row.find('.cgst_percent').val($(this).val());
+        });
+
+        $(document).on('input', '#cgst_percent', function () {
+            $('#sgst_percent').val($(this).val());
+        });
+
+        $(document).on('input', '#sgst_percent', function () {
+            $('#cgst_percent').val($(this).val());
+        });
+
+        $(document).on('input', '.item-quantity, .item-rate, .cgst_percent, .sgst_percent, .igst_percent', function () {
             let $row = $(this).closest('tr');
             let qtyInput = $row.find('.item-quantity');
             let qty = parseFloat(qtyInput.val()) || 0;
@@ -1282,30 +1417,29 @@
 
             if (!checkbox.is(':checked')) {
                 $row.find('.item-amount').text('0.00');
+                $row.find('.cgst_amount, .sgst_amount, .igst_amount').val('0.00');
                 calculateTotals();
                 return;
             }
 
             const maxTotalQty = orderedQty * 1.5;
-            let oldQty = 0;
             let isEditMode = $('#isEditMode').val() == '1';
-            if (isEditMode) {
-            }
             let maxAllowed = maxTotalQty - invoicedQty;
             if (isEditMode) {
                 maxAllowed = maxTotalQty;
             }
-            console.log(maxTotalQty,invoicedQty,maxAllowed);
             if (qty > maxAllowed && !isEditMode) {
                 qtyInput.addClass('is-invalid');
                 qtyInput.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${maxAllowed.toFixed(2)} (Order + 50% Tolerance minus already invoiced)</div>`);
                 $row.find('.item-amount').text('0.00');
+                $row.find('.cgst_amount, .sgst_amount, .igst_amount').val('0.00');
                 calculateTotals();
                 return;
             } else if (qty > maxTotalQty) {
                 qtyInput.addClass('is-invalid');
                 qtyInput.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${(maxTotalQty).toFixed(2)} (Total Order + 50% Tolerance)</div>`);
                 $row.find('.item-amount').text('0.00');
+                $row.find('.cgst_amount, .sgst_amount, .igst_amount').val('0.00');
                 calculateTotals();
                 return;
             }
@@ -1316,7 +1450,7 @@
             calculateTotals();
         });
 
-        $(document).on('keypress', '.item-quantity, .item-rate, #charge_amount', function (e) {
+        $(document).on('keypress', '.item-quantity, .item-rate, .cgst_percent, .sgst_percent, .igst_percent, #charge_amount', function (e) {
             if (e.which === 45 || e.which === 43) {
                 e.preventDefault();
             }
@@ -1337,15 +1471,17 @@
         });
 
         $('#discount_input').on('input', function () {
-            calculateSummaryOnly();
+            calculateTotals();
         });
 
         $('#commission_input').on('input', function () {
-            calculateSummaryOnly();
+            calculateTotals();
         });
 
         $('input[name="other_state"]').on('change', function () {
-            if ($(this).val() === 'Y') {
+            let isOtherState = $(this).val() === 'Y';
+            toggleGstColumns(isOtherState);
+            if (isOtherState) {
                 $('#igst_div').show();
                 $('#cgst_sgst_div').hide();
                 if (parseFloat($('#igst_percent').val()) == 0) {
@@ -1362,9 +1498,8 @@
                 }
             }
 
-            calculateTaxOnly();
+            calculateTotals();
         });
-
 
         $('#igst_percent, #cgst_percent, #sgst_percent').on('input', function () {
             calculateTotals();
@@ -1375,7 +1510,7 @@
                 let val = parseFloat($(this).val());
                 if (val < 0) $(this).val(Math.abs(val));
             }
-            calculateSummaryOnly();
+            calculateTotals();
         });
 
         function calculateGrandTotalOnly() {
@@ -1423,21 +1558,48 @@
 
         function calculateTotals() {
             let subTotal = 0;
+            let otherState = $('input[name="other_state"]:checked').val();
+            let orderIgst = parseFloat($('#igst_percent').val()) || 0;
+            let orderCgst = parseFloat($('#cgst_percent').val()) || 0;
+            let orderSgst = parseFloat($('#sgst_percent').val()) || 0;
+            let totalRowCgst = 0;
+            let totalRowSgst = 0;
+            let totalRowIgst = 0;
+
             $('.item-row').each(function () {
                 let $row = $(this);
                 let isChecked = $row.find('.item-checkbox').is(':checked');
 
                 if (!isChecked) {
                     $row.find('.item-amount').text('0.00');
+                    $row.find('.cgst_amount, .sgst_amount, .igst_amount').val('0.00');
                     return;
                 }
 
                 let qty = parseFloat($row.find('.item-quantity').val()) || 0;
                 let rate = parseFloat($row.find('.item-rate').val()) || 0;
 
-                let amount = qty * rate;
+                let amount = (qty > 0 && rate > 0) ? (qty * rate) : 0;
                 $row.find('.item-amount').text(amount.toFixed(2));
                 subTotal += amount;
+
+                if (otherState === 'Y') {
+                    let itemIgstPercent = parseFloat($row.find('.igst_percent').val()) || 0;
+                    let igstAmount = (amount * itemIgstPercent) / 100;
+                    $row.find('.igst_amount').val(igstAmount.toFixed(2));
+                    $row.find('.cgst_amount, .sgst_amount').val('0.00');
+                    totalRowIgst += igstAmount;
+                } else {
+                    let itemCgstPercent = parseFloat($row.find('.cgst_percent').val()) || 0;
+                    let itemSgstPercent = parseFloat($row.find('.sgst_percent').val()) || 0;
+                    let cgstAmount = (amount * itemCgstPercent) / 100;
+                    let sgstAmount = (amount * itemSgstPercent) / 100;
+                    $row.find('.cgst_amount').val(cgstAmount.toFixed(2));
+                    $row.find('.sgst_amount').val(sgstAmount.toFixed(2));
+                    $row.find('.igst_amount').val('0.00');
+                    totalRowCgst += cgstAmount;
+                    totalRowSgst += sgstAmount;
+                }
             });
 
             $('#subtotal').text(subTotal.toFixed(2));
@@ -1510,9 +1672,9 @@
             let taxAmount = 0;
 
             if (taxableAmount >= 0) {
-                if ($('input[name="other_state"]:checked').val() === 'Y') {
+                if (otherState === 'Y') {
                     let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                   let igstAmount = parseFloat(((dispTaxableAmt * igstPercent) / 100).toFixed(2));
+                    let igstAmount = totalRowIgst > 0 ? totalRowIgst : ((dispTaxableAmt * igstPercent) / 100);
 
                     $('#igst_amt').text(igstAmount.toFixed(2));
                     $('#igst_amount_input').val(igstAmount.toFixed(2));
@@ -1528,8 +1690,8 @@
                     let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                     let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
 
-                    let cgstAmount = parseFloat(((dispTaxableAmt * cgstPercent) / 100).toFixed(2));
-                    let sgstAmount = parseFloat(((dispTaxableAmt * sgstPercent) / 100).toFixed(2));
+                    let cgstAmount = totalRowCgst > 0 ? totalRowCgst : ((dispTaxableAmt * cgstPercent) / 100);
+                    let sgstAmount = totalRowSgst > 0 ? totalRowSgst : ((dispTaxableAmt * sgstPercent) / 100);
 
                     $('#cgst_amt').text(cgstAmount.toFixed(2));
                     $('#sgst_amt').text(sgstAmount.toFixed(2));

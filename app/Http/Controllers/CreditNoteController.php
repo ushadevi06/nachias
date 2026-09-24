@@ -358,6 +358,14 @@ class CreditNoteController extends Controller
                 }
                 foreach ($request->items as $item) {
                     if (($item['quantity'] ?? 0) > 0) {
+                        $uomId = $item['uom_id'] ?? null;
+                        if (!empty($uomId) && !is_numeric($uomId)) {
+                            $uomId = \App\Models\Uom::where('uom_code', $uomId)->orWhere('uom_name', $uomId)->value('id');
+                        }
+                        if (empty($uomId)) {
+                            $uomId = \App\Models\Uom::where('uom_code', 'PCS')->orWhere('uom_name', 'PCS')->value('id') ?? 1;
+                        }
+
                         CreditNoteItem::create([
                             'credit_note_id' => $creditNote->id,
                             'sales_invoice_item_id' => !empty($item['sales_invoice_item_id']) ? $item['sales_invoice_item_id'] : null,
@@ -371,7 +379,7 @@ class CreditNoteController extends Controller
                             'sleeve_type' => $item['sleeve_type'] ?? null,
                             'quantity' => $item['quantity'],
                             'mrp' => $item['mrp'] ?? 0,
-                            'uom_id' => $item['uom_id'] ?? null,
+                            'uom_id' => $uomId,
                             'rate' => $item['rate'] ?? 0,
                             'amount' => $item['amount'] ?? 0,
                             'add_to_inventory' => isset($item['add_to_inventory']) ? 1 : 0,
@@ -501,8 +509,30 @@ class CreditNoteController extends Controller
                 $balanceQty = max(0, $item->quantity - $alreadyReturned);
                 
                 $uomCode = 'PCS';
+                $uomId = 1;
                 if ($item->stock_entry_item_id && isset($soItemsUom[$item->stock_entry_item_id])) {
-                    $uomCode = $soItemsUom[$item->stock_entry_item_id];
+                    $uomVal = $soItemsUom[$item->stock_entry_item_id];
+                    if (is_numeric($uomVal)) {
+                        $uomId = (int)$uomVal;
+                        $uomModel = \App\Models\Uom::find($uomId);
+                        $uomCode = $uomModel ? ($uomModel->uom_code ?: $uomModel->uom_name) : 'PCS';
+                    } else {
+                        $uomCode = (string)$uomVal;
+                        $uomId = \App\Models\Uom::where('uom_code', $uomCode)->orWhere('uom_name', $uomCode)->value('id') ?? 1;
+                    }
+                } elseif ($item->uom_id) {
+                    if (is_numeric($item->uom_id)) {
+                        $uomId = (int)$item->uom_id;
+                        $uomModel = \App\Models\Uom::find($uomId);
+                        $uomCode = $uomModel ? ($uomModel->uom_code ?: $uomModel->uom_name) : 'PCS';
+                    } else {
+                        $uomCode = (string)$item->uom_id;
+                        $uomId = \App\Models\Uom::where('uom_code', $uomCode)->orWhere('uom_name', $uomCode)->value('id') ?? 1;
+                    }
+                } elseif ($item->stockEntryItem && $item->stockEntryItem->uom_id) {
+                    $uomId = (int)$item->stockEntryItem->uom_id;
+                    $uomModel = \App\Models\Uom::find($uomId);
+                    $uomCode = $uomModel ? ($uomModel->uom_code ?: $uomModel->uom_name) : 'PCS';
                 }
 
                 $artNo = $item->art_no ?: ($item->stockEntryItem ? $item->stockEntryItem->art_no : '');
@@ -533,7 +563,7 @@ class CreditNoteController extends Controller
                     'art_no' => $artNo ?: '-',
                     'size' => $item->size,
                     'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
-                    'uom_id'              => $uomCode,  
+                    'uom_id'              => $uomId,  
                     'uom_code'            => $uomCode,  
                     'sleeve_type' => $item->sleeve_type,
                     'invoice_qty' => $item->quantity,

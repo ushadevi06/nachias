@@ -547,13 +547,13 @@
                                             </tr>
                                             @else
                                             <tr>
-                                                <td class="text-left" style="padding: 4px;">Add CGST:</td>
+                                                <td class="text-left" style="padding: 4px;">CGST:</td>
                                                 <td class="text-right" style="padding: 4px;">
                                                     {{ number_format($purchaseOrder->items->sum('cgst_amount'), 2) }}
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td class="text-left" style="padding: 4px;">Add SGST:</td>
+                                                <td class="text-left" style="padding: 4px;">SGST:</td>
                                                 <td class="text-right" style="padding: 4px;">
                                                     {{ number_format($purchaseOrder->items->sum('sgst_amount'), 2) }}
                                                 </td>

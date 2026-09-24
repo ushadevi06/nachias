@@ -12,7 +12,7 @@ class JobCardFabricDetail extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_entry_id', 'is_additional', 'additional_batch_no', 'art_no', 'stock_entry_id',
+        'job_card_entry_id', 'is_additional', 'additional_batch_no', 'art_no', 'fg_art_no', 'stock_entry_id',
         'width', 'mtr', 'stock_total_qty', 'in_out', 'n_patti', 'row_total',
         'fs_qty', 'hs_qty', 'total_qty', 'used_qty', 'remaining_qty', 'grn_image'
     ];
