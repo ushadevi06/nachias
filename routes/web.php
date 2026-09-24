@@ -181,6 +181,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Chatbot */
     Route::get('/chatbot', [ChatbotController::class, 'index'])->name('chatbot.index');
     Route::post('/chatbot/message', [ChatbotController::class, 'sendMessage'])->name('chatbot.message');
+    Route::get('/chatbot/sessions', [ChatbotController::class, 'getSessions'])->name('chatbot.sessions');
+    Route::post('/chatbot/sessions/save', [ChatbotController::class, 'saveSession'])->name('chatbot.sessions.save');
+    Route::post('/chatbot/sessions/delete', [ChatbotController::class, 'deleteSession'])->name('chatbot.sessions.delete');
+    Route::post('/chatbot/sessions/rename', [ChatbotController::class, 'renameSession'])->name('chatbot.sessions.rename');
+    Route::post('/chatbot/sessions/clear-all', [ChatbotController::class, 'clearAllSessions'])->name('chatbot.sessions.clear_all');
 
     /* Roles */
     Route::get('/roles', [RoleController::class, 'index']);
