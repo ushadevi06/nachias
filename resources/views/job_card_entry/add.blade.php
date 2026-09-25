@@ -2074,7 +2074,7 @@
                 if (art) {
                     capturedMatrix[art] = {};
                     const fgVal = $(this).find('.fg-art-input').val();
-                    if (fgVal !== undefined) {
+                    if (fgVal !== undefined && fgVal !== 'null' && fgVal !== null) {
                         capturedMatrix[art]['fg_art_no'] = fgVal;
                     }
                     $(this).find('.qty-input').each(function() {
@@ -2169,12 +2169,16 @@
                 const styleAttr = (isFabric || hasAutoCons || isCanvas) ? '' : 'style="display: none;"';
 
                 let fgArtNo = '';
-                if (capturedMatrix[art] && capturedMatrix[art].fg_art_no !== undefined) {
+                if (capturedMatrix[art] && capturedMatrix[art].fg_art_no !== undefined && capturedMatrix[art].fg_art_no !== null && capturedMatrix[art].fg_art_no !== 'null' && String(capturedMatrix[art].fg_art_no).trim() !== '') {
                     fgArtNo = capturedMatrix[art].fg_art_no;
-                } else if (oldRow && oldRow.fg_art_no !== undefined) {
+                } else if (oldRow && oldRow.fg_art_no !== undefined && oldRow.fg_art_no !== null && oldRow.fg_art_no !== 'null' && String(oldRow.fg_art_no).trim() !== '') {
                     fgArtNo = oldRow.fg_art_no;
-                } else if (existingRow && existingRow.fg_art_no) {
+                } else if (existingRow && existingRow.fg_art_no && existingRow.fg_art_no !== 'null' && String(existingRow.fg_art_no).trim() !== '') {
                     fgArtNo = existingRow.fg_art_no;
+                }
+
+                if (!fgArtNo || fgArtNo === 'null' || fgArtNo === null || String(fgArtNo).trim() === '') {
+                    fgArtNo = actualArt || art;
                 }
 
                 let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" data-index="${index}" ${styleAttr}>

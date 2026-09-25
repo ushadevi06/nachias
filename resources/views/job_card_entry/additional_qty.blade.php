@@ -10,7 +10,7 @@
 
         $allSizes = $sizes ?? ['36', '38', '40', '42', '44', '46'];
         
-        $baseFabrics = $jobCard->fabricDetails->where('is_additional', 0)->values();
+        $baseFabrics = $baseFabrics ?? ($jobCard->fabricDetails->where('is_additional', 0)->values());
         if ($baseFabrics->isEmpty()) {
             $baseFabrics = $jobCard->fabricDetails->values();
         }
@@ -77,14 +77,6 @@
                 <div>
                     <h5 class="mb-0 fw-bold text-dark d-flex align-items-center flex-wrap gap-1">
                         <span>Editing Addition Batch #{{ $batchIndex }}</span>
-                        @if($artCount <= 3)
-                            <span class="text-muted fs-6 fw-normal">({{ $editBatchArts->implode(', ') }})</span>
-                        @else
-                            <span class="text-muted fs-6 fw-normal">({{ $editBatchArts->take(3)->implode(', ') }}</span>
-                            <span class="badge bg-label-dark fs-7" title="{{ $editBatchArts->implode(', ') }}">+{{ $artCount - 3 }} more</span>
-                            <span class="text-muted fs-6 fw-normal">)</span>
-                            <span class="badge bg-label-primary fs-7 ms-1">{{ $artCount }} Fabrics</span>
-                        @endif
                     </h5>
                     <div class="small text-muted mt-1">
                         Added on: <strong>{{ $editingBatch->created_at ? $editingBatch->created_at->format('d-m-Y h:i A') : '-' }}</strong> | 
@@ -124,57 +116,177 @@
     <form id="formAdditionalQty" method="POST" action="{{ $editingBatch ? route('job_card_entries.update_additional_batch', [$jobCard->id, $editingBatch->id]) : route('job_card_entries.add_additional_qty', $jobCard->id) }}" enctype="multipart/form-data" novalidate>
         @csrf
 
-
-        <!-- 1. Fabric Details Section -->
-        <div class="card mb-4 shadow-sm border-0">
+        <!-- Art No / Stock Entry Selection Section (Above Item Details) -->
+        <div class="card mb-4 shadow-sm border-0" id="addition-art-selection-card">
             <div class="card-body">
-                <div class="card-header-box mb-3 border-bottom pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <label class="form-label fw-bold text-dark small text-uppercase mb-0 d-flex align-items-center gap-1">
+                        <i class="ri ri-filter-3-line text-primary fs-5"></i> Select Art No(s) for Addition:
+                    </label>
                     <div class="d-flex align-items-center gap-2">
-                        <h4 class="mb-0">Fabric Details</h4>
-                        @if($hasMultipleFabrics)
-                            <span class="badge bg-label-primary px-3 py-1 fs-6" id="selected-fabrics-badge">
-                                {{ $baseFabrics->count() }} Fabrics Selected
-                            </span>
-                        @endif
+                        <span class="badge bg-label-primary px-3 py-1 fs-6" id="selected-fabrics-badge">
+                            {{ $baseFabrics->count() }} Fabrics Selected
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-select-all-fabrics">
+                            <i class="ri ri-check-double-line me-1"></i> Select All
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-deselect-all-fabrics">
+                            <i class="ri ri-close-line me-1"></i> Clear All
+                        </button>
                     </div>
                 </div>
 
-                @if($hasMultipleFabrics)
-                    <!-- Art No Multi-Select Dropdown Filter Bar -->
-                    <div class="card mb-3 border-0 bg-light shadow-xs">
-                        <div class="card-body py-2 px-3">
-                            <div class="row align-items-center g-2">
-                                <div class="col-md-auto">
-                                    <label class="form-label fw-bold text-dark small text-uppercase mb-0 d-flex align-items-center gap-1">
-                                        <i class="ri ri-filter-3-line text-primary fs-5"></i> Select Art No(s) for Addition:
-                                    </label>
-                                </div>
-                                <div class="col-md-6 col-lg-5">
-                                    <select class="form-select select2-multi-fabrics" id="select_addition_fabrics" multiple="multiple" data-placeholder="Choose Art Numbers...">
-                                        @foreach($baseFabrics as $idx => $bf)
-                                            @php
-                                                $isBatchSelected = true;
-                                                if ($editingBatch) {
-                                                    $batchArtNos = (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) ? $editingBatchGroup->pluck('art_no')->toArray() : [$editingBatch->art_no];
-                                                    $isBatchSelected = in_array($bf->art_no, $batchArtNos);
-                                                }
-                                            @endphp
-                                            <option value="{{ $idx }}" {{ $isBatchSelected ? 'selected' : '' }}>{{ $bf->art_no }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-auto d-flex align-items-center gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-select-all-fabrics">
-                                        <i class="ri ri-check-double-line me-1"></i> Select All
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-deselect-all-fabrics">
-                                        <i class="ri ri-close-line me-1"></i> Clear All
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Autocomplete Search Input -->
+                <div class="position-relative">
+                    <div class="form-floating form-floating-outline position-relative">
+                        <input type="text" id="addition_art_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off">
+                        <label for="addition_art_search">Type Stock Entry No or Material Name *</label>
                     </div>
-                @endif
+                    <div id="addition_art_suggestions" class="dropdown-menu w-100 shadow-lg p-1 border mt-1" style="display: none; max-height: 280px; overflow-y: auto; z-index: 1050; position: absolute; top: 100%; left: 0;"></div>
+                </div>
+
+                <!-- Selected Badges / Tags -->
+                <div id="addition_art_tags" class="mt-2 d-flex flex-wrap gap-2"></div>
+
+                <!-- Hidden multi-select for form sync -->
+                <select class="d-none" id="select_addition_fabrics" multiple="multiple">
+                    @foreach($baseFabrics as $idx => $bf)
+                        @php
+                            $isBatchSelected = !empty($bf->is_default_selected);
+                        @endphp
+                        <option value="{{ $idx }}" {{ $isBatchSelected ? 'selected' : '' }}>{{ $bf->art_no }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
+        <!-- Item Details Section -->
+        <div class="card mb-4 shadow-sm border-0" id="item-details-card">
+            <div class="card-body">
+                <div class="card-header-box mb-3 border-bottom pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h4 class="mb-0 text-dark fw-bold">Item Details</h4>
+                </div>
+
+                <div id="item-details-table-wrapper" class="table-responsive">
+                    <h6 class="text-primary mt-1 mb-2 fw-bold d-flex align-items-center gap-1">
+                        <i class="ri ri-scissors-2-line"></i> Fabric
+                    </h6>
+                    <table class="table table-bordered table-sm align-middle text-center mb-0" id="item-details-fabric-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 70px; min-width: 70px;">S.NO</th>
+                                <th class="text-start" style="min-width: 250px;">RAW MATERIAL NAME</th>
+                                <th style="width: 180px; min-width: 180px;">TOTAL QUANTITY</th>
+                                <th style="width: 250px; min-width: 250px;">QUANTITY ISSUED</th>
+                                <th style="width: 180px; min-width: 180px;">QUANTITY REMAINING</th>
+                            </tr>
+                        </thead>
+                        <tbody id="item-details-fabric-tbody">
+                            @foreach($baseFabrics as $idx => $bf)
+                                @php
+                                    $art = trim($bf->art_no);
+                                    $rmName = $bf->raw_material_name ?? ($jobCard->item->name ?? 'COTTON');
+                                    $seNo = $bf->stock_entry_no ?? '';
+                                    $seId = $bf->stock_entry_id ?? null;
+                                    $totalStock = floatval($bf->available_stock ?? 0);
+                                    
+                                    $existingBatchFab = $bf->existing_batch_fab ?? null;
+                                    if ($editingBatch && !$existingBatchFab) {
+                                        if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
+                                            $existingBatchFab = $editingBatchGroup->where('art_no', $bf->art_no)->where('stock_entry_id', $seId)->first();
+                                        } elseif ($editingBatch->art_no == $bf->art_no && $editingBatch->stock_entry_id == $seId) {
+                                            $existingBatchFab = $editingBatch;
+                                        }
+                                    }
+                                    $issuedMtrVal = $existingBatchFab ? floatval($existingBatchFab->mtr ?? 0) : 0;
+                                    $remaining = $totalStock - $issuedMtrVal;
+                                @endphp
+                                <tr class="item-details-row item-details-row-{{ $idx }}" data-fabric-index="{{ $idx }}" data-art="{{ $bf->art_no }}">
+                                    <td class="fw-bold item-details-sno">{{ $idx + 1 }}</td>
+                                    <td class="text-start">
+                                        <div class="fw-bold text-dark">{{ $rmName }}</div>
+                                        <div class="small fw-semibold text-secondary">{{ $bf->art_no }}</div>
+                                        @if(!empty($seNo))
+                                            @if(!empty($seId))
+                                                <a href="{{ url('stock_entries/view/' . $seId) }}" target="_blank" class="small text-info text-decoration-none fw-semibold">
+                                                    {{ $seNo }}
+                                                </a>
+                                            @else
+                                                <span class="small text-info fw-semibold">{{ $seNo }}</span>
+                                            @endif
+                                        @endif
+                                    </td>
+                                    <td class="fw-bold item-details-total-qty" data-total="{{ $totalStock }}">
+                                        {{ number_format($totalStock, 2) }}
+                                    </td>
+                                    <td style="width: 250px; min-width: 250px;">
+                                        <div class="input-group input-group-sm mx-auto" style="min-width: 170px; max-width: 200px;">
+                                            <input type="number" step="0.01" min="0" 
+                                                class="form-control text-center fw-bold item-details-issued-input @error("fabrics.{$idx}.total_fabric_meters") is-invalid @enderror" 
+                                                id="item_details_issued_{{ $idx }}" 
+                                                data-fabric-index="{{ $idx }}" 
+                                                data-art="{{ $bf->art_no }}" 
+                                                value="{{ old("fabrics.{$idx}.total_fabric_meters", $issuedMtrVal > 0 ? number_format($issuedMtrVal, 2, '.', '') : '0.00') }}"
+                                                style="min-width: 110px; font-size: 13.5px;">
+                                            <span class="input-group-text bg-light fw-semibold px-3">MTR</span>
+                                        </div>
+                                        @error("fabrics.{$idx}.total_fabric_meters")
+                                            <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
+                                        @enderror
+                                    </td>
+                                    <td class="fw-bold item-details-remaining-cell">
+                                        <span class="item-details-remaining-val {{ $remaining < -0.001 ? 'text-danger' : 'text-success' }}" id="item_details_remaining_{{ $idx }}">
+                                            {{ number_format($remaining, 2) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    @php
+                        $accItems = $jobCard->issueItems ? $jobCard->issueItems->filter(fn($i) => ($i->rawMaterial && $i->rawMaterial->store_category_id != 1)) : collect();
+                    @endphp
+                    @if($accItems->count() > 0)
+                        <h6 class="text-primary mt-3 mb-2 fw-bold d-flex align-items-center gap-1">
+                            <i class="ri ri-ink-bottle-line"></i> Accessories
+                        </h6>
+                        <table class="table table-bordered table-sm align-middle text-center mb-0" id="item-details-accessories-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 70px;">S.NO</th>
+                                    <th class="text-start">RAW MATERIAL NAME</th>
+                                    <th style="width: 180px;">TOTAL QUANTITY</th>
+                                    <th style="width: 220px;">QUANTITY ISSUED</th>
+                                    <th style="width: 180px;">QUANTITY REMAINING</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($accItems as $aIdx => $acc)
+                                    <tr>
+                                        <td class="fw-bold">{{ $aIdx + 1 }}</td>
+                                        <td class="text-start">
+                                            <div class="fw-bold text-dark">{{ $acc->rawMaterial->name ?? '-' }}</div>
+                                            <div class="small fw-semibold text-secondary">{{ $acc->rawMaterial->code ?? '-' }}</div>
+                                        </td>
+                                        <td class="fw-bold">{{ number_format($acc->qty_issue, 2) }}</td>
+                                        <td class="fw-bold">{{ number_format($acc->qty_used, 2) }} {{ $acc->rawMaterial->uom->uom_code ?? 'PCS' }}</td>
+                                        <td class="fw-bold text-success">{{ number_format(max(0, $acc->qty_issue - $acc->qty_used), 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. Fabric Details Section -->
+        <div class="card mb-4 shadow-sm border-0" id="fabric-details-card">
+            <div class="card-body">
+                <div class="card-header-box mb-3 border-bottom pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h4 class="mb-0 text-dark fw-bold">Fabric Details</h4>
+                </div>
 
                 <div class="table-responsive">
                     <table class="table table-bordered text-center align-middle" id="fabric-details-table" style="min-width: {{ count($baseFabrics) * 1260 }}px; width: max-content; table-layout: fixed;">
@@ -195,14 +307,14 @@
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
-                                        $availStock = floatval($artStockMap[$bf->art_no] ?? 0);
+                                        $availStock = floatval($bf->available_stock ?? 0);
                                     @endphp
                                     <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">ART NO</td>
                                     <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
                                         <div class="d-flex align-items-center justify-content-center gap-2">
-                                            <input type="text" class="form-control form-control-sm text-center fw-bold" value="{{ $bf->art_no }}" readonly style="max-width: 320px;">
+                                            <input type="text" class="form-control form-control-sm text-center fw-bold" value="{{ $bf->art_no }}" readonly style="max-width: 350px;">
                                             @if($availStock > 0)
-                                                <span class="badge bg-success py-2 px-3 fs-7 shadow-sm" title="Available stock in warehouse">
+                                                <span class="badge bg-success py-2 px-3 fs-7 shadow-sm" title="Available stock in {{ $bf->stock_entry_no ?? 'warehouse' }}">
                                                     <i class="ri ri-checkbox-circle-line me-1"></i> Available Stock: {{ number_format($availStock, 2) }} MTR
                                                 </span>
                                             @else
@@ -250,7 +362,7 @@
                                                 $existingBatchFab = $editingBatch;
                                             }
                                         }
-                                        $mtrVal = $existingBatchFab ? ($existingBatchFab->mtr ?? '0.00') : '0.00';
+                                        $mtrVal = $existingBatchFab ? number_format(floatval($existingBatchFab->mtr ?? 0), 2, '.', '') : '0.00';
                                     @endphp
                                     <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">ISSUED METERS</td>
                                     <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
@@ -673,12 +785,19 @@
                                         ? $existingBatchFab->quantities
                                         : collect();
                                     $matName = $jobCard->item->item_name ?? 'COTTON LINEN';
+                                    $rawFg = ($existingBatchFab && !empty($existingBatchFab->fg_art_no) && trim($existingBatchFab->fg_art_no) !== 'null')
+                                        ? $existingBatchFab->fg_art_no
+                                        : (!empty($bf->fg_art_no) && trim($bf->fg_art_no) !== 'null' ? $bf->fg_art_no : '');
+                                    $fgArtNo = (!empty($rawFg) && trim($rawFg) !== 'null') ? $rawFg : $bf->art_no;
                                 @endphp
                                 <tr class="matrix-art-row fabric-matrix-row-{{ $idx }}" data-fabric-index="{{ $idx }}" data-art="{{ $bf->art_no }}">
                                     <td>
-                                        <div class="border rounded p-1 mb-1 text-center fw-bold small bg-white text-primary">{{ $bf->art_no }}</div>
+                                        <div class="border rounded p-1 mb-1 text-center fw-bold small bg-light">{{ $bf->art_no }}</div>
                                         <input type="hidden" class="input-matrix-art" name="fabrics[{{ $idx }}][art_no]" value="{{ $bf->art_no }}">
-                                        <div class="small text-muted text-center text-uppercase" style="font-size: 10px; line-height: 1.1;">{{ $matName }}</div>
+                                        <div class="small text-muted text-center mb-1" style="font-size: 10px; line-height: 1.1;">{{ $bf->raw_material_name ?? $matName }}</div>
+                                        <div class="mt-1">
+                                            <input type="text" name="fabrics[{{ $idx }}][fg_art_no]" class="form-control form-control-sm text-center fw-semibold fg-art-input" placeholder="FG Art No" value="{{ $fgArtNo }}" title="Finished Good Art No / Receipt Style">
+                                        </div>
                                     </td>
                                     @if(!$isCanvas)
                                         <!-- F/S Inputs -->
@@ -792,7 +911,109 @@ $(document).ready(function() {
     // ==========================================
     // Dynamic Fabric / Art No Selection Handler
     // ==========================================
-    function applySelectedFabrics(selectedIndices) {
+    const fabricsMasterData = [
+        @foreach($baseFabrics as $idx => $bf)
+            @php
+                $art = trim($bf->art_no);
+                $rmName = $bf->raw_material_name ?? ($jobCard->item->name ?? 'COTTON');
+                $seNoStr = !empty($bf->stock_entry_no) ? $bf->stock_entry_no : '';
+                $totalStock = floatval($bf->available_stock ?? 0);
+                $displayLabel = ($seNoStr ? $seNoStr . ' | ' : '') . $art . ' | ' . $rmName . ' | Qty: ' . number_format($totalStock, 0) . ' MTR';
+                $isDef = !empty($bf->is_default_selected);
+            @endphp
+            {
+                index: {{ $idx }},
+                art_no: "{{ addslashes($art) }}",
+                raw_material_name: "{{ addslashes($rmName) }}",
+                stock_entry_no: "{{ addslashes($seNoStr) }}",
+                stock_entry_id: "{{ $bf->stock_entry_id }}",
+                total_stock: {{ $totalStock }},
+                display_label: "{{ addslashes($displayLabel) }}",
+                is_default_selected: {{ $isDef ? 'true' : 'false' }}
+            },
+        @endforeach
+    ];
+
+    function renderFabricTags(selectedIndices) {
+        const $tags = $('#addition_art_tags');
+        $tags.empty();
+        selectedIndices.forEach(idx => {
+            const item = fabricsMasterData.find(f => f.index === idx);
+            if (!item) return;
+            const $tag = $(`
+                <span class="badge d-inline-flex align-items-center gap-1 px-2 py-1 shadow-sm" style="background-color: #591a75; color: #ffffff; border-radius: 4px; cursor: default;">
+                    <span>${item.display_label}</span>
+                    <i class="ri ri-close-line btn-remove-fabric-tag" data-index="${item.index}" style="cursor: pointer; font-size: 14px; line-height: 1;" title="Remove"></i>
+                </span>
+            `);
+            $tags.append($tag);
+        });
+    }
+
+    function renderFabricSuggestions(query = '') {
+        const $dropdown = $('#addition_art_suggestions');
+        $dropdown.empty();
+        const term = query.toLowerCase().trim();
+        const selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+
+        const matched = fabricsMasterData.filter(item => {
+            if (!term) return true;
+            return item.art_no.toLowerCase().includes(term) ||
+                   item.stock_entry_no.toLowerCase().includes(term) ||
+                   item.raw_material_name.toLowerCase().includes(term);
+        });
+
+        if (matched.length === 0) {
+            $dropdown.append('<div class="p-3 text-muted text-center small">No matching materials or art numbers found</div>');
+        } else {
+            matched.forEach(item => {
+                const isSelected = selectedIndices.includes(item.index);
+                const $item = $(`
+                    <a href="javascript:void(0);" class="dropdown-item py-2 px-3 d-flex justify-content-between align-items-center suggestion-fabric-item ${isSelected ? 'active bg-light text-primary' : ''}" data-index="${item.index}">
+                        <div>
+                            <div class="fw-bold text-dark">${item.display_label}</div>
+                            <small class="text-muted">Art: ${item.art_no} &bull; ${item.raw_material_name}</small>
+                        </div>
+                        ${isSelected ? '<i class="ri ri-checkbox-circle-fill text-success fs-5"></i>' : '<i class="ri ri-add-circle-line text-primary fs-5"></i>'}
+                    </a>
+                `);
+                $dropdown.append($item);
+            });
+        }
+        $dropdown.show();
+    }
+
+    $('#addition_art_search').on('focus input keyup', function() {
+        renderFabricSuggestions($(this).val());
+    });
+
+    $(document).on('click', '.suggestion-fabric-item', function(e) {
+        e.preventDefault();
+        const fIdx = parseInt($(this).data('index'));
+        let selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+        if (!selectedIndices.includes(fIdx)) {
+            selectedIndices.push(fIdx);
+            $('#select_addition_fabrics').val(selectedIndices.map(String)).trigger('change');
+        }
+        $('#addition_art_search').val('');
+        $('#addition_art_suggestions').hide();
+    });
+
+    $(document).on('click', '.btn-remove-fabric-tag', function(e) {
+        e.stopPropagation();
+        const fIdx = parseInt($(this).data('index'));
+        let selectedIndices = ($('#select_addition_fabrics').val() || []).map(v => parseInt(v));
+        selectedIndices = selectedIndices.filter(i => i !== fIdx);
+        $('#select_addition_fabrics').val(selectedIndices.map(String)).trigger('change');
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#addition-art-selection-card').length) {
+            $('#addition_art_suggestions').hide();
+        }
+    });
+
+    function applySelectedFabrics(selectedIndices, isInitialLoad = false) {
         if (!selectedIndices) selectedIndices = [];
         selectedIndices = selectedIndices.map(v => parseInt(v));
 
@@ -800,32 +1021,45 @@ $(document).ready(function() {
             const isVisible = selectedIndices.includes(i);
             const $colCells = $(`.fabric-col-${i}`);
             const $matrixRow = $(`.fabric-matrix-row-${i}`);
+            const $itemRow = $(`.item-details-row-${i}`);
 
             if (isVisible) {
                 $colCells.show();
                 $matrixRow.show();
+                $itemRow.show();
                 // Enable inputs inside so they submit
                 $colCells.find('input, select, button').prop('disabled', false);
                 $matrixRow.find('input').prop('disabled', false);
+                $itemRow.find('input').prop('disabled', false);
             } else {
                 $colCells.hide();
                 $matrixRow.hide();
+                $itemRow.hide();
                 // Disable inputs inside so they don't submit or validate
                 $colCells.find('input, select, button').prop('disabled', true);
                 $matrixRow.find('input').prop('disabled', true);
+                $itemRow.find('input').prop('disabled', true);
             }
         }
+
+        // Renumber Item Details S.No for visible rows
+        let sno = 1;
+        $('.item-details-row:visible').each(function() {
+            $(this).find('.item-details-sno').text(sno++);
+        });
 
         const checkedCount = selectedIndices.length;
         $('#fabric-details-table').css('min-width', Math.max(1260, checkedCount * 1260) + 'px');
         $('#selected-fabrics-badge').text(checkedCount + ' Fabrics Selected');
 
-        // If first fabric has lay marks, sync them to any newly enabled empty fabrics
-        const firstCheckedIdx = selectedIndices[0];
-        if (firstCheckedIdx !== undefined) {
-            const hasMasterData = $(`#consumption-lay-tbody-${firstCheckedIdx} tr.lay-mark-row`).first().find('.input-no-of-lay').val();
-            if (hasMasterData) {
-                syncAllLayMarksFromMaster();
+        // If first fabric has lay marks, sync them to any newly enabled empty fabrics (only on user interaction, not initial load)
+        if (!isInitialLoad) {
+            const firstCheckedIdx = selectedIndices[0];
+            if (firstCheckedIdx !== undefined) {
+                const hasMasterData = $(`#consumption-lay-tbody-${firstCheckedIdx} tr.lay-mark-row`).first().find('.input-no-of-lay').val();
+                if (hasMasterData) {
+                    syncAllLayMarksFromMaster();
+                }
             }
         }
 
@@ -834,16 +1068,14 @@ $(document).ready(function() {
 
     // Select2 Multi-Select change event
     $('#select_addition_fabrics').on('change', function() {
-        const vals = $(this).val() || [];
-        applySelectedFabrics(vals);
+        const vals = ($(this).val() || []).map(v => parseInt(v));
+        renderFabricTags(vals);
+        applySelectedFabrics(vals, false);
     });
 
     // Select All Fabrics
     $('#btn-select-all-fabrics').on('click', function() {
-        const allVals = [];
-        for (let i = 0; i < fabricCount; i++) {
-            allVals.push(String(i));
-        }
+        const allVals = fabricsMasterData.map(f => String(f.index));
         $('#select_addition_fabrics').val(allVals).trigger('change');
     });
 
@@ -852,8 +1084,20 @@ $(document).ready(function() {
         $('#select_addition_fabrics').val([]).trigger('change');
     });
 
-    // On page load, apply initial dropdown selection state
-    applySelectedFabrics($('#select_addition_fabrics').val() || []);
+    // On page load, apply initial dropdown selection state (only default selected items)
+    let initialSelected = [];
+    fabricsMasterData.forEach(item => {
+        if (item.is_default_selected) {
+            initialSelected.push(String(item.index));
+        }
+    });
+    if (initialSelected.length === 0 && fabricsMasterData.length > 0) {
+        initialSelected = ['0'];
+    }
+    $('#select_addition_fabrics').val(initialSelected);
+    const initialIntSelected = initialSelected.map(v => parseInt(v));
+    renderFabricTags(initialIntSelected);
+    applySelectedFabrics(initialIntSelected, true);
 
     // Stage rate auto-fill & trigger deadline calculation
     $(document).on('change', '.stage-select', function() {
@@ -966,6 +1210,8 @@ $(document).ready(function() {
         if ($('#production-stages-tbody tr').length > 1) {
             $(this).closest('tr').remove();
             renumberStageRows();
+        } else {
+            alert('At least one row is required.');
         }
     });
 
@@ -1165,6 +1411,8 @@ $(document).ready(function() {
                     }
                 });
             }
+        } else {
+            alert('At least one row is required.');
         }
     });
 
@@ -1178,8 +1426,60 @@ $(document).ready(function() {
         }
     });
 
+    function updateItemDetailsRowStatus(fIdx, issuedVal) {
+        const $itemInput = $(`#item_details_issued_${fIdx}`);
+        if (!$itemInput.length) return;
+        const $row = $itemInput.closest('tr');
+        const totalStock = parseFloat($row.find('.item-details-total-qty').attr('data-total')) || parseFloat($row.find('.item-details-total-qty').text().trim()) || 0;
+        let remaining = totalStock - issuedVal;
+        if (Math.abs(remaining) < 0.001) remaining = 0;
+
+        const $remSpan = $row.find('.item-details-remaining-val');
+        if ($remSpan.length) {
+            $remSpan.text(remaining.toFixed(2));
+        }
+
+        $row.find('.qty-error-msg').remove();
+        if (remaining < -0.001) {
+            $remSpan.removeClass('text-success').addClass('text-danger');
+            $itemInput.addClass('border-danger text-danger is-invalid');
+            $itemInput.closest('.input-group').after('<small class="text-danger qty-error-msg d-block mt-1 fw-semibold text-center" style="font-size: 11px;">Issued Qty cannot exceed Total Qty</small>');
+        } else {
+            $remSpan.removeClass('text-danger').addClass('text-success');
+            $itemInput.removeClass('border-danger text-danger is-invalid');
+        }
+
+        checkSubmitButtonState();
+    }
+
+    function checkSubmitButtonState() {
+        let hasError = false;
+        $('.item-details-row:visible').each(function() {
+            if ($(this).find('.qty-error-msg').length > 0) {
+                hasError = true;
+                return false;
+            }
+        });
+
+        if (!hasError) {
+            $('.issued-meters-input:visible').each(function() {
+                if ($(this).hasClass('is-invalid')) {
+                    hasError = true;
+                    return false;
+                }
+            });
+        }
+
+        const $btn = $('#btnSubmitForm');
+        if (hasError) {
+            $btn.prop('disabled', true).addClass('disabled opacity-50').attr('title', 'Please resolve stock errors before submitting');
+        } else {
+            $btn.prop('disabled', false).removeClass('disabled opacity-50').removeAttr('title');
+        }
+    }
+
     // Calculate Fabric Meters from Lay Mark Rows for a specific Fabric
-    function recalcFabricMeters(fIdx) {
+    function recalcFabricMeters(fIdx, autoSetIssued = false) {
         let totalMtrs = 0;
         $(`#consumption-lay-tbody-${fIdx} tr.lay-mark-row`).each(function() {
             const meter = parseFloat($(this).find('.input-lay-meter').val()) || 0;
@@ -1188,23 +1488,95 @@ $(document).ready(function() {
                 totalMtrs += (meter * lays);
             }
         });
-        $(`#issued_meters_${fIdx}`).val(totalMtrs.toFixed(2));
+        
+        if (autoSetIssued) {
+            $(`#issued_meters_${fIdx}`).val(totalMtrs.toFixed(2));
+            const $itemIssuedInput = $(`#item_details_issued_${fIdx}`);
+            if ($itemIssuedInput.length) {
+                $itemIssuedInput.val(totalMtrs.toFixed(2));
+                updateItemDetailsRowStatus(fIdx, totalMtrs);
+            }
+        }
 
         const avail = parseFloat($(`#avail_stock_${fIdx}`).val()) || 0;
         const $caption = $(`#matrix_need_caption_${fIdx}`);
         const $input = $(`#issued_meters_${fIdx}`);
-        if (totalMtrs > avail + 0.0001) {
-            $caption.html(`<span class="text-danger fw-bold"><i class="ri ri-error-warning-line"></i> Matrix Need: ${totalMtrs.toFixed(2)} MTR (Exceeds Available Stock: ${avail.toFixed(2)} MTR)</span>`);
-            $input.addClass('is-invalid border-danger text-danger bg-danger-subtle');
+        if (totalMtrs > 0) {
+            if (totalMtrs > avail + 0.0001) {
+                $caption.html(`<span class="text-danger fw-bold"><i class="ri ri-error-warning-line"></i> Lay Total: ${totalMtrs.toFixed(2)} MTR (Exceeds Available Stock: ${avail.toFixed(2)} MTR)</span>`);
+            } else {
+                $caption.html(`Lay Total: ${totalMtrs.toFixed(2)} MTR`);
+            }
         } else {
-            $caption.html(`Matrix Need: ${totalMtrs.toFixed(2)} MTR ${avail > 0 ? '<span class="text-success fw-semibold ms-1">(In Stock)</span>' : ''}`);
-            $input.removeClass('is-invalid border-danger text-danger bg-danger-subtle');
+            $caption.html('');
         }
+
+        checkSubmitButtonState();
     }
+
+    // Sync Item Details Issued input with Fabric Details table without cursor/decimal locking
+    $(document).on('input keyup change paste', '.item-details-issued-input', function() {
+        const $input = $(this);
+        const fIdx = $input.data('fabric-index') !== undefined ? $input.data('fabric-index') : $input.attr('data-fabric-index');
+        const rawVal = $input.val();
+        const issuedVal = parseFloat(rawVal) || 0;
+        updateItemDetailsRowStatus(fIdx, issuedVal);
+
+        const $fabIssuedInput = $(`#issued_meters_${fIdx}`);
+        if ($fabIssuedInput.length && !$fabIssuedInput.is(':focus')) {
+            $fabIssuedInput.val(rawVal);
+        }
+    });
+
+    $(document).on('input keyup change paste', '.issued-meters-input', function() {
+        const fIdx = $(this).data('fabric-index');
+        const rawVal = $(this).val();
+        const issuedVal = parseFloat(rawVal) || 0;
+        const $itemIssuedInput = $(`#item_details_issued_${fIdx}`);
+        if ($itemIssuedInput.length) {
+            if (!$itemIssuedInput.is(':focus')) {
+                $itemIssuedInput.val(rawVal);
+            }
+            updateItemDetailsRowStatus(fIdx, issuedVal);
+        }
+    });
+
+    // Format issued meters to 2 decimal places on blur / change
+    $(document).on('blur change', '.item-details-issued-input, .issued-meters-input', function() {
+        const rawVal = parseFloat($(this).val());
+        if (!isNaN(rawVal)) {
+            const formatted = rawVal.toFixed(2);
+            $(this).val(formatted);
+            const fIdx = $(this).data('fabric-index');
+            const $otherInput = $(this).hasClass('item-details-issued-input') 
+                ? $(`#issued_meters_${fIdx}`) 
+                : $(`#item_details_issued_${fIdx}`);
+            if ($otherInput.length) {
+                $otherInput.val(formatted);
+            }
+            updateItemDetailsRowStatus(fIdx, rawVal);
+        }
+    });
+
+    // Format all inputs on page load and initialize status check
+    $('.item-details-issued-input').each(function() {
+        const fIdx = $(this).data('fabric-index');
+        const val = parseFloat($(this).val());
+        if (!isNaN(val)) {
+            $(this).val(val.toFixed(2));
+            updateItemDetailsRowStatus(fIdx, val);
+        }
+    });
+    $('.issued-meters-input').each(function() {
+        const val = parseFloat($(this).val());
+        if (!isNaN(val)) {
+            $(this).val(val.toFixed(2));
+        }
+    });
 
     $(document).on('click', '.btn-recalc-fabric-meters', function() {
         const fIdx = $(this).data('fabric-index');
-        recalcFabricMeters(fIdx);
+        recalcFabricMeters(fIdx, true);
     });
 
     // Auto-Sync Cutting Size Ratio Matrix from Lay Marks for a specific Fabric
@@ -1323,61 +1695,21 @@ $(document).ready(function() {
     recalcMatrixTotals();
 
     // Smooth scroll to the first validation error if any returned from server
-    const $firstError = $('.text-danger.fw-bold.small').first();
+    const $firstError = $('.is-invalid, .invalid-feedback, .text-danger.fw-bold.small').first();
     if ($firstError.length && $firstError.offset().top > 0) {
         $('html, body').animate({
             scrollTop: $firstError.offset().top - 180
         }, 400);
     }
+
     $(document).on('keypress', '.lay-mark-table input[type="number"]', function (e) {
         if (e.which === 45 || e.which === 43) {
             e.preventDefault();
         }
     });
-    // Form Submission Validation
-    $('#formAdditionalQty').on('submit', function(e) {
-        const selected = $('#select_addition_fabrics').val() || [];
-        if (fabricCount > 1 && selected.length === 0) {
-            e.preventDefault();
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Art No Selected',
-                    text: 'Please select at least one Art No in "Select Art No(s) for Addition" before submitting!',
-                    confirmButtonColor: '#696cff'
-                }).then(() => {
-                    $('#select_addition_fabrics').select2('open');
-                });
-            } else {
-                alert('Please select at least one Art No in "Select Art No(s) for Addition" before submitting!');
-                $('#select_addition_fabrics').select2('open');
-            }
-            return false;
-        }
 
-        const grandQty = parseInt($('#grand_extra_matrix_total').text()) || 0;
-        if (grandQty <= 0) {
-            // Check if any fabric has meters
-            let hasMeters = false;
-            $('.issued-meters-input:visible').each(function() {
-                if (parseFloat($(this).val()) > 0) hasMeters = true;
-            });
-            if (!hasMeters) {
-                e.preventDefault();
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Missing Quantity / Meters',
-                        text: 'Please enter additional pieces or fabric meters for the selected Art No(s)!',
-                        confirmButtonColor: '#696cff'
-                    });
-                } else {
-                    alert('Please enter additional pieces or fabric meters for the selected Art No(s)!');
-                }
-                return false;
-            }
-        }
-
+    // Form Submission: Normal Laravel Form Submission
+    $('#formAdditionalQty').on('submit', function() {
         const btn = $('#btnSubmitForm');
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Submitting...');
     });

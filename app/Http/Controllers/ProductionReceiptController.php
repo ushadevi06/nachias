@@ -181,10 +181,7 @@ class ProductionReceiptController extends Controller
                 ->where(function ($query) use ($currentReceipt, $fullyReceivedJobCardIds) {
                     $query->where(function ($sub) use ($fullyReceivedJobCardIds) {
                         $sub->whereNotIn('id', $fullyReceivedJobCardIds)
-                            ->whereHas('tasks')
-                            ->whereDoesntHave('tasks', function ($t) {
-                                $t->where('status', '!=', 'Completed');
-                            });
+                            ->whereHas('tasks');
                     });
                     if ($currentReceipt && $currentReceipt->job_card_id) {
                         $query->orWhere('id', $currentReceipt->job_card_id);
@@ -194,9 +191,6 @@ class ProductionReceiptController extends Controller
             $jobCards = JobCardEntry::with(['serviceProvider', 'fabricDetails', 'tasks'])
                 ->whereNotIn('id', $fullyReceivedJobCardIds)
                 ->whereHas('tasks')
-                ->whereDoesntHave('tasks', function ($t) {
-                    $t->where('status', '!=', 'Completed');
-                })
                 ->orderBy('id', 'desc')->get();
         }
 
@@ -256,14 +250,56 @@ class ProductionReceiptController extends Controller
             $request->validate($rules, $messages);
 
             if (!$id && $request->job_card_id) {
-                $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)->exists();
-                $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
-                    ->where('status', '!=', 'Completed')
-                    ->exists();
-                if (!$hasTasks || $hasIncompleteTasks) {
-                    return redirect()->back()->withInput()->withErrors([
-                        'job_card_id' => 'Cannot create Production Receipt: All production stage tasks for this Job Card must be assigned and Completed.'
-                    ]);
+                if ($request->is_additional && $request->job_card_fabric_detail_id) {
+                    $batchFabDetailId = $request->job_card_fabric_detail_id;
+                    $batchFab = \App\Models\JobCardFabricDetail::find($batchFabDetailId);
+                    $batchFabricIds = [$batchFabDetailId];
+                    if ($batchFab) {
+                        $batchFabricIds = \App\Models\JobCardFabricDetail::where('job_card_entry_id', $request->job_card_id)
+                            ->where('is_additional', 1)
+                            ->where(function($q) use ($batchFab) {
+                                if ($batchFab->additional_batch_no) {
+                                    $q->where('additional_batch_no', $batchFab->additional_batch_no);
+                                } else {
+                                    $q->where('id', $batchFab->id);
+                                }
+                            })->pluck('id')->toArray();
+                    }
+                    $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
+                        ->whereIn('job_card_fabric_detail_id', $batchFabricIds)
+                        ->exists();
+                    $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
+                        ->whereIn('job_card_fabric_detail_id', $batchFabricIds)
+                        ->where('status', '!=', 'Completed')
+                        ->exists();
+                    if (!$hasTasks || $hasIncompleteTasks) {
+                        return redirect()->back()->withInput()->withErrors([
+                            'job_card_id' => 'Cannot create Production Receipt: All tasks for this Additional Batch must be assigned and Completed.'
+                        ]);
+                    }
+                } else {
+                    $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
+                        ->where(function($q) {
+                            $q->whereNull('is_additional')->orWhere('is_additional', 0);
+                        })
+                        ->where(function($q) {
+                            $q->whereNull('job_card_fabric_detail_id')->orWhere('job_card_fabric_detail_id', 0);
+                        })
+                        ->exists();
+                    $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
+                        ->where(function($q) {
+                            $q->whereNull('is_additional')->orWhere('is_additional', 0);
+                        })
+                        ->where(function($q) {
+                            $q->whereNull('job_card_fabric_detail_id')->orWhere('job_card_fabric_detail_id', 0);
+                        })
+                        ->where('status', '!=', 'Completed')
+                        ->exists();
+                    if (!$hasTasks || $hasIncompleteTasks) {
+                        return redirect()->back()->withInput()->withErrors([
+                            'job_card_id' => 'Cannot create Production Receipt: All production stage tasks for this Job Card must be assigned and Completed.'
+                        ]);
+                    }
                 }
             }
 

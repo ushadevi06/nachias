@@ -838,12 +838,20 @@ $(document).ready(function() {
         }
     });
 
-    $('#sales_invoice_ids').on('change', function() {
+    $('#sales_invoice_ids').on('change', function(e, isInitialBackgroundLoad) {
         let selectedInvoiceIds = $(this).val();
         if (!selectedInvoiceIds || selectedInvoiceIds.length === 0) {
+            window.availableInvoiceItems = [];
+            $('#item-rows .item-row').each(function() {
+                let isDirect = !$(this).find('input[name*="[sales_invoice_item_id]"]').val();
+                if (!isDirect) {
+                    $(this).remove();
+                }
+            });
             if ($('#item-rows .item-row').length === 0) {
                 $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">Select Invoice(s) to load items</td></tr>');
             }
+            updateSerialNumbers();
             calculateTotal();
             return;
         }
@@ -860,8 +868,22 @@ $(document).ready(function() {
                 if (response.success) {
                     window.availableInvoiceItems = response.items || [];
                     
-                    $('#item-rows').html('');
-                    
+                    if (isInitialBackgroundLoad && $('#item-rows .item-row').length > 0) {
+                        return;
+                    }
+
+                    // Existing rows currently in table
+                    let existingRowsState = {};
+                    $('#item-rows .item-row').each(function() {
+                        let invItemId = $(this).find('input[name*="[sales_invoice_item_id]"]').val();
+                        if (invItemId) {
+                            existingRowsState[invItemId] = {
+                                qty: $(this).find('.qty').val(),
+                                addToInv: $(this).find('.add-to-inv-checkbox').is(':checked')
+                            };
+                        }
+                    });
+
                     let oldItemsMap = {};
                     @if(old('items'))
                         @foreach(old('items') as $idx => $oldItm)
@@ -879,17 +901,31 @@ $(document).ready(function() {
                         @endforeach
                     @endif
 
-                    let hasPrepopulated = false;
-                    response.items.forEach((item) => {
-                        if (oldItemsMap[item.id]) {
-                            let returnQty = oldItemsMap[item.id].qty;
-                            let addToInv = oldItemsMap[item.id].addToInv == 1;
-                            addInvoiceItem(item, returnQty, addToInv);
-                            hasPrepopulated = true;
+                    // Keep direct return items (without invoice)
+                    let directRows = [];
+                    $('#item-rows .item-row').each(function() {
+                        let invItemId = $(this).find('input[name*="[sales_invoice_item_id]"]').val();
+                        if (!invItemId) {
+                            directRows.push($(this));
                         }
                     });
 
-                    if (!hasPrepopulated) {
+                    $('#item-rows').html('');
+                    directRows.forEach(r => $('#item-rows').append(r));
+
+                    let hasItemsAdded = directRows.length > 0;
+                    response.items.forEach((item) => {
+                        let savedState = existingRowsState[item.id] || oldItemsMap[item.id];
+                        let returnQty = savedState ? savedState.qty : (parseFloat(item.balance_qty) > 0 ? item.balance_qty : item.invoice_qty);
+                        let addToInv = savedState ? (savedState.addToInv == 1 || savedState.addToInv === true) : true;
+
+                        if (parseFloat(item.balance_qty) > 0 || savedState) {
+                            addInvoiceItem(item, returnQty, addToInv);
+                            hasItemsAdded = true;
+                        }
+                    });
+
+                    if (!hasItemsAdded) {
                         $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">No items added. Use the search box above to scan or search items from selected invoices.</td></tr>');
                     }
                     if (response.agent_id && !$('#agent_id').val()) {
@@ -1067,6 +1103,11 @@ $(document).ready(function() {
             addInvoiceItem(item, item.quantity, item.add_to_inventory);
         });
         calculateTotal();
+
+        let initialInvoiceIds = $('#sales_invoice_ids').val();
+        if (initialInvoiceIds && initialInvoiceIds.length > 0) {
+            $('#sales_invoice_ids').trigger('change', [true]);
+        }
     } else {
         let initialInvoiceIds = $('#sales_invoice_ids').val();
         if (initialInvoiceIds && initialInvoiceIds.length > 0) {
@@ -1081,6 +1122,7 @@ $(document).ready(function() {
             if (window.availableInvoiceItems && window.availableInvoiceItems.length > 0) {
                 var matches = window.availableInvoiceItems.filter(function (item) {
                     return (item.product_barcode && String(item.product_barcode).toLowerCase().includes(term)) ||
+                        (item.sku && String(item.sku).toLowerCase().includes(term)) ||
                         (item.item_code && String(item.item_code).toLowerCase().includes(term)) ||
                         (item.art_no && String(item.art_no).toLowerCase().includes(term)) ||
                         (item.item_name && String(item.item_name).toLowerCase().includes(term));
@@ -1092,12 +1134,13 @@ $(document).ready(function() {
                         var label = (item.item_name || '');
                         if (item.invoice_no) label += ' [Inv: ' + item.invoice_no + ']';
                         if (item.art_no && item.art_no !== '-') label += ' | Art: ' + item.art_no;
-                        if (item.product_barcode) label += ' | Barcode: ' + item.product_barcode;
+                        if (item.sku && item.sku !== '-') label += ' | SKU: ' + item.sku;
+                        else if (item.product_barcode && item.product_barcode !== '-') label += ' | Barcode: ' + item.product_barcode;
                         if (item.size) label += ' | Size: ' + item.size;
 
                         return {
                             label: label,
-                            value: item.product_barcode || item.item_code || '',
+                            value: item.sku || item.product_barcode || item.item_code || '',
                             itemData: item,
                             disabled: isDisabled
                         };
@@ -1118,12 +1161,13 @@ $(document).ready(function() {
                             var label = (item.item_name || '');
                             label += ' [Direct Return / No Invoice]';
                             if (item.art_no && item.art_no !== '-') label += ' | Art: ' + item.art_no;
-                            if (item.product_barcode && item.product_barcode !== '-') label += ' | Barcode: ' + item.product_barcode;
+                            if (item.sku && item.sku !== '-') label += ' | SKU: ' + item.sku;
+                            else if (item.product_barcode && item.product_barcode !== '-') label += ' | Barcode: ' + item.product_barcode;
                             if (item.size) label += ' | Size: ' + item.size;
 
                             return {
                                 label: label,
-                                value: item.product_barcode || item.item_code || '',
+                                value: item.sku || item.product_barcode || item.item_code || '',
                                 itemData: item,
                                 disabled: false
                             };
@@ -1165,7 +1209,7 @@ $(document).ready(function() {
         var it = item.itemData;
         var codeInfo = (it.item_code && it.item_code !== '-') ? `Code: ${it.item_code}` : '';
         var artInfo = (it.art_no && it.art_no !== '-') ? `Art: ${it.art_no}` : '';
-        var barcodeInfo = it.product_barcode ? `Barcode: ${it.product_barcode}` : '';
+        var barcodeInfo = it.sku ? `SKU: ${it.sku}` : (it.product_barcode ? `Barcode: ${it.product_barcode}` : '');
         var sizeInfo = it.size ? `Size: ${it.size}` : '';
         
         var infoParts = [codeInfo, artInfo, barcodeInfo, sizeInfo].filter(Boolean).join(' | ');
@@ -1212,7 +1256,8 @@ $(document).ready(function() {
 
             var matchedItem = window.availableInvoiceItems.find(function(item) {
                 return (item.product_barcode && String(item.product_barcode).toLowerCase() === barcode.toLowerCase()) || 
-                        (item.item_code && String(item.item_code).toLowerCase() === barcode.toLowerCase());
+                       (item.sku && String(item.sku).toLowerCase() === barcode.toLowerCase()) || 
+                       (item.item_code && String(item.item_code).toLowerCase() === barcode.toLowerCase());
             });
 
             if (matchedItem) {

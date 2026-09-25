@@ -50,7 +50,7 @@
                         </div>
                     </div>
                     <div class="card-datatable table-responsive">
-                        <table class="table" id="creditNoteTable">
+                        <table class="table nowrap w-100" id="creditNoteTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -58,7 +58,11 @@
                                     <th>Date</th>
                                     <th>Invoice No.</th>
                                     <th>Customer</th>
-                                    <th>Amount</th>
+                                    <th>Total Qty</th>
+                                    <th>Subtotal</th>
+                                    <th>Discount</th>
+                                    <th>Taxable Value</th>
+                                    <th>Total Amount</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -100,6 +104,10 @@
                 { data: 'note_date' },
                 { data: 'sales_invoice_no' },
                 { data: 'customer_name' },
+                { data: 'total_qty' },
+                { data: 'sub_total' },
+                { data: 'discount' },
+                { data: 'taxable_value' },
                 { data: 'grand_total' },
                 { data: 'status' },
                 { data: 'action', orderable: false, searchable: false },

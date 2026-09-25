@@ -1,23 +1,6 @@
 @extends('layouts.common')
 @section('title', ($invoice ? 'Edit' : 'Add') . ' Sales Invoice - ' . env('WEBSITE_NAME'))
 @section('content')
-    <style>
-        .art-no-filter-row {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 1rem;
-        }
-
-        .art-no-filter-input {
-            width: 280px;
-        }
-
-        @media (max-width: 767.98px) {
-            .art-no-filter-input {
-                max-width: 100%;
-            }
-        }
-    </style>
     <div class="container-xxl section-padding">
         <div class="row">
             <div class="col-lg-12">
@@ -1587,6 +1570,24 @@
             </div>
         </div>
     </div>
+    
+    <style>
+        .art-no-filter-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        .art-no-filter-input {
+            width: 280px;
+        }
+
+        @media (max-width: 767.98px) {
+            .art-no-filter-input {
+                max-width: 100%;
+            }
+        }
+    </style>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>

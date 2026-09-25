@@ -23,6 +23,9 @@ class PurchaseReportController extends Controller
             if ($request->report_type === 'brandwise-po-drilldown') {
                 return $this->getBrandwisePoDrilldownData($request);
             }
+            if ($request->report_type === 'casino-po-drilldown') {
+                return $this->getCasinoPoDrilldownData($request);
+            }
             return $this->getReportJson($request, true);
         }
 
@@ -462,13 +465,13 @@ class PurchaseReportController extends Controller
                 }
 
                 $grouped[$key] = [
-                    'art_no' => ($item->rawMaterial && $item->rawMaterial->artNos->count() > 0) ? $item->rawMaterial->artNos->pluck('art_no')->implode(', ') : 'N/A',
+                    'art_no' => ($item->rawMaterial && $item->rawMaterial->artNos->count() > 0) ? $item->rawMaterial->artNos->pluck('art_no')->implode(', ') : '-',
                     'brand' => $brandName,
                     'item_name' => $itemName,
-                    'style' => $item->style ? $item->style->style_name : 'N/A',
-                    'color' => $item->color ? $item->color->color_name : 'N/A',
-                    'fabric_type' => $item->fabricType ? $item->fabricType->fabric_type : 'N/A',
-                    'width' => $item->fabricWidth ? $item->fabricWidth->width : ($item->size ?: 'N/A'),
+                    'style' => $item->style ? $item->style->style_name : '-',
+                    'color' => $item->color ? $item->color->color_name : '-',
+                    'fabric_type' => $item->fabricType ? $item->fabricType->fabric_type : '-',
+                    'width' => $item->fabricWidth ? $item->fabricWidth->width : ($item->size ?: '-'),
                     '0_30' => 0,
                     '31_60' => 0,
                     '61_90' => 0,
@@ -573,13 +576,10 @@ class PurchaseReportController extends Controller
 
     private function getReturnGoodsData($storeCategoryId, Request $request)
     {
-        $query = DB::table('debit_note_items as items')
-            ->join('debit_notes as dn', 'items.debit_note_id', '=', 'dn.id')
+        $query = DB::table('debit_note_items as items')->join('debit_notes as dn', 'items.debit_note_id', '=', 'dn.id')
             ->join('raw_materials as rm', 'items.raw_material_id', '=', 'rm.id')
             ->leftJoin('suppliers as sup', 'dn.supplier_id', '=', 'sup.id')
-            ->where('rm.store_category_id', $storeCategoryId)
-            ->whereNull('dn.deleted_at')
-            ->whereNull('items.deleted_at');
+            ->where('rm.store_category_id', $storeCategoryId)->whereNull('dn.deleted_at')->whereNull('items.deleted_at');
 
         if ($request->from_date) {
             $query->whereDate('dn.debit_note_date', '>=', date('Y-m-d', strtotime($request->from_date)));
@@ -1550,27 +1550,31 @@ class PurchaseReportController extends Controller
 
                 $count = $start + 1;
                 foreach ($casinoData as $row) {
-                    $formatCell = function($meters, $itemCount, $isTotal = false) {
+                    $bName = $row['brand_name'] ?? '';
+                    $wVal = $row['width'] ?: '';
+
+                    $formatCell = function($meters, $itemCount, $styleName, $isTotal = false) use ($bName, $wVal) {
                         $mFormatted = number_format((float) $meters, 2);
-                        if ($isTotal) {
-                            return '<span class="fw-bold">' . $mFormatted . '</span> <span class="badge bg-primary text-white rounded-pill ms-1">' . $itemCount . '</span>';
-                        }
-                        if ($itemCount > 0) {
-                            return $mFormatted . ' <span class="badge bg-label-primary rounded-pill ms-1">' . $itemCount . '</span>';
-                        }
-                        return $mFormatted . ' <span class="badge bg-label-secondary rounded-pill ms-1">0</span>';
+                        $hasData = ($itemCount > 0 || (float)$meters > 0);
+                        $badgeClass = $isTotal ? 'bg-primary text-white' : ($itemCount > 0 ? 'bg-label-primary' : 'bg-label-secondary');
+                        $cursorClass = $hasData ? 'cursor-pointer text-primary fw-semibold casino-drilldown-cell text-decoration-underline' : 'text-dark';
+
+                        return '<span class="' . $cursorClass . '" data-brand="' . htmlspecialchars($bName) . '" data-width="' . htmlspecialchars($wVal) . '" data-style="' . $styleName . '" style="' . ($hasData ? 'cursor: pointer;' : '') . '">' .
+                            '<span class="' . ($isTotal ? 'fw-bold' : '') . '">' . $mFormatted . '</span> ' .
+                            '<span class="badge ' . $badgeClass . ' rounded-pill ms-1">' . $itemCount . '</span>' .
+                        '</span>';
                     };
 
                     $data[] = [
                         'DT_RowIndex' => $count++,
                         'brand_name' => $row['brand_name'],
                         'width' => $row['width'] ?: '-',
-                        'plain' => $formatCell($row['plain'], $row['plain_count'] ?? 0),
-                        'white' => $formatCell($row['white'], $row['white_count'] ?? 0),
-                        'print' => $formatCell($row['print'], $row['print_count'] ?? 0),
-                        'checked' => $formatCell($row['checked'], $row['checked_count'] ?? 0),
-                        'striped' => $formatCell($row['striped'], $row['striped_count'] ?? 0),
-                        'total' => $formatCell($row['total'], $row['total_count'] ?? 0, true),
+                        'plain' => $formatCell($row['plain'], $row['plain_count'] ?? 0, 'PLAIN'),
+                        'white' => $formatCell($row['white'], $row['white_count'] ?? 0, 'WHITE'),
+                        'print' => $formatCell($row['print'], $row['print_count'] ?? 0, 'PRINT'),
+                        'checked' => $formatCell($row['checked'], $row['checked_count'] ?? 0, 'CHECKED'),
+                        'striped' => $formatCell($row['striped'], $row['striped_count'] ?? 0, 'STRIPED'),
+                        'total' => $formatCell($row['total'], $row['total_count'] ?? 0, 'TOTAL', true),
                     ];
                 }
                 break;
@@ -1749,22 +1753,7 @@ class PurchaseReportController extends Controller
         $orderFabricMap = DB::table('grn_entry_items as gei')->join('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')->leftJoin('purchase_invoices as pi', 'ge.purchase_invoice_id', '=', 'pi.id')->leftJoin('purchase_orders as po', 'pi.purchase_order_id', '=', 'po.id')->where('po.store_type_id', 1)->whereIn('gei.art_no', $artNos)->whereNull('ge.deleted_at')->whereNull('gei.deleted_at')->whereNull('pi.deleted_at')->whereNull('po.deleted_at')->select('gei.art_no', DB::raw('SUM(gei.qty_ordered) as total_qty'))->groupBy('gei.art_no')->pluck('total_qty', 'art_no');
 
         // Order Fabric PO Numbers per art_no
-        $orderFabricPoNumbers = DB::table('grn_entry_items as gei')
-            ->join('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')
-            ->leftJoin('purchase_invoices as pi', 'ge.purchase_invoice_id', '=', 'pi.id')
-            ->leftJoin('purchase_orders as po', 'pi.purchase_order_id', '=', 'po.id')
-            ->where('po.store_type_id', 1)
-            ->whereIn('gei.art_no', $artNos)
-            ->whereNotNull('po.po_number')
-            ->whereNull('ge.deleted_at')
-            ->whereNull('gei.deleted_at')
-            ->whereNull('pi.deleted_at')
-            ->whereNull('po.deleted_at')
-            ->select('gei.art_no', 'po.po_number')
-            ->distinct()
-            ->orderBy('po.id', 'desc')
-            ->get()
-            ->groupBy('art_no');
+        $orderFabricPoNumbers = DB::table('grn_entry_items as gei')->join('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')->leftJoin('purchase_invoices as pi', 'ge.purchase_invoice_id', '=', 'pi.id')->leftJoin('purchase_orders as po', 'pi.purchase_order_id', '=', 'po.id')->where('po.store_type_id', 1)->whereIn('gei.art_no', $artNos)->whereNotNull('po.po_number')->whereNull('ge.deleted_at')->whereNull('gei.deleted_at')->whereNull('pi.deleted_at')->whereNull('po.deleted_at')->select('gei.art_no', 'po.po_number')->distinct()->orderBy('po.id', 'desc')->get()->groupBy('art_no');
 
         // Fabric Stock per art_no (include store_type_id = 1 or stock_type = raw_material)
         $fabricStockMap = DB::table('stock_entry_items')
@@ -2863,6 +2852,138 @@ class PurchaseReportController extends Controller
                 'order_qty' => number_format($totalOrder, 2),
                 'received_qty' => number_format($totalReceived, 2),
                 'balance_qty' => number_format($totalBalance, 2),
+            ]
+        ]);
+    }
+
+    public function getCasinoPoDrilldownData(Request $request)
+    {
+        $brandName = trim($request->brand_name ?? '');
+        $width = trim($request->width ?? '');
+        $styleName = strtoupper(trim($request->style_name ?? ''));
+
+        $query = \App\Models\PurchaseOrderItem::with(['brand', 'fabricWidth', 'style', 'purchaseOrder', 'rawMaterial'])
+            ->whereHas('purchaseOrder', function($q) use ($request) {
+                $q->where('store_type_id', 1);
+                if ($request->from_date) {
+                    $q->whereDate('po_date', '>=', date('Y-m-d', strtotime($request->from_date)));
+                }
+                if ($request->to_date) {
+                    $q->whereDate('po_date', '<=', date('Y-m-d', strtotime($request->to_date)));
+                }
+                if ($request->supplier_id) {
+                    $q->where('supplier_id', $request->supplier_id);
+                }
+            });
+
+        if (!empty($brandName) && $brandName !== 'N/A') {
+            $query->whereHas('brand', function($b) use ($brandName) {
+                $b->where('brand_name', $brandName);
+            });
+        } elseif ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
+        } else {
+            $query->whereHas('brand', function($b) {
+                $b->where('brand_name', 'like', 'CASINO%');
+            });
+        }
+
+        if (!empty($width) && $width !== '-' && $width !== 'N/A') {
+            $query->whereHas('fabricWidth', function($w) use ($width) {
+                $w->where('width', $width);
+            });
+        }
+
+        if (!empty($styleName) && !in_array($styleName, ['TOTAL', 'ALL'])) {
+            $query->whereHas('style', function($st) use ($styleName) {
+                $st->where('style_name', 'like', "%{$styleName}%");
+            });
+        }
+
+        $items = $query->get();
+
+        // Define PR Range Slabs
+        $slabs = [
+            ['label' => '50 to 64',   'min' => 50,   'max' => 64.999],
+            ['label' => '65 to 79',   'min' => 65,   'max' => 79.999],
+            ['label' => '80 to 94',   'min' => 80,   'max' => 94.999],
+            ['label' => '95 to 110',  'min' => 95,   'max' => 110.999],
+            ['label' => '111 to 130', 'min' => 111,  'max' => 130.999],
+            ['label' => '131 to 150', 'min' => 131,  'max' => 150.999],
+            ['label' => '151 to 180', 'min' => 151,  'max' => 180.999],
+            ['label' => '181 to 210', 'min' => 181,  'max' => 210.999],
+            ['label' => '211 above',  'min' => 211,  'max' => 99999999],
+        ];
+
+        // Check for any below 50
+        $hasBelow50 = false;
+        foreach ($items as $item) {
+            $rate = (float)($item->rate ?: ($item->unit_price ?: ($item->price ?: 0)));
+            if ($rate < 50 && $rate > 0) {
+                $hasBelow50 = true;
+                break;
+            }
+        }
+        if ($hasBelow50) {
+            array_unshift($slabs, ['label' => 'Below 50', 'min' => 0, 'max' => 49.999]);
+        }
+
+        $slabData = [];
+        foreach ($slabs as $s) {
+            $slabData[$s['label']] = [
+                'label' => $s['label'],
+                'min' => $s['min'],
+                'max' => $s['max'],
+                'art_nos' => [],
+                'meters' => 0,
+            ];
+        }
+
+        foreach ($items as $item) {
+            $rate = (float)($item->rate ?: ($item->unit_price ?: ($item->price ?: 0)));
+            $qty = (float)($item->quantity ?: 0);
+            $designId = trim((string)($item->supplier_design_name ?: ($item->rawMaterial->name ?? $item->id)));
+
+            foreach ($slabs as $s) {
+                if ($rate >= $s['min'] && $rate <= $s['max']) {
+                    if ($designId && !in_array($designId, $slabData[$s['label']]['art_nos'])) {
+                        $slabData[$s['label']]['art_nos'][] = $designId;
+                    }
+                    $slabData[$s['label']]['meters'] += $qty;
+                    break;
+                }
+            }
+        }
+
+        $rows = [];
+        $sno = 1;
+        $grandTotalDesigns = 0;
+        $grandTotalMeters = 0;
+
+        foreach ($slabData as $dataItem) {
+            $designCount = count($dataItem['art_nos']);
+            $meters = $dataItem['meters'];
+
+            $grandTotalDesigns += $designCount;
+            $grandTotalMeters += $meters;
+
+            $rows[] = [
+                'sno' => $sno++,
+                'pr_range' => $dataItem['label'],
+                'design_count' => $designCount,
+                'meters' => number_format($meters, 2),
+                'raw_meters' => $meters,
+            ];
+        }
+
+        return response()->json([
+            'draw' => intval($request->draw ?? 1),
+            'recordsTotal' => count($rows),
+            'recordsFiltered' => count($rows),
+            'data' => $rows,
+            'totals' => [
+                'design_count' => $grandTotalDesigns,
+                'meters' => number_format($grandTotalMeters, 2),
             ]
         ]);
     }

@@ -361,7 +361,7 @@
                             @endphp
                             <tr>
                                 <td>
-                                    <div class="border rounded p-1 mb-1 text-center fw-bold small bg-white text-primary">{{ $bf->art_no }}</div>
+                                    <div class="border rounded p-1 mb-1 text-center fw-bold small bg-white text-primary">{{ !empty($bf->fg_art_no) ? $bf->fg_art_no : $bf->art_no }}</div>
                                     <div class="small text-muted text-center text-uppercase" style="font-size: 10px; line-height: 1.1;">{{ $matName }}</div>
                                 </td>
                                 @if(!$isCanvas)

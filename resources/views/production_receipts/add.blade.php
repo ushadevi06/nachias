@@ -45,6 +45,12 @@
 
                                                 $baseReceived = $receiptsSummary[$jobCard->id]['base'] ?? 0;
                                                 $isBaseDone = ($baseOrdered > 0 && $baseReceived >= ($baseOrdered - 0.001));
+
+                                                $baseTasks = $jobCard->tasks ? $jobCard->tasks->filter(function($t) {
+                                                    return empty($t->is_additional) && empty($t->job_card_fabric_detail_id);
+                                                }) : collect();
+                                                $isBaseTasksCompleted = $baseTasks->isNotEmpty() && $baseTasks->every(fn($t) => $t->status === 'Completed');
+
                                                 $isCurrentBaseSelected = ($receipt && $receipt->job_card_id == $jobCard->id && !$receipt->job_card_fabric_detail_id);
                                                 $isBaseOptionSelected = ($oldRawVal == (string)$jobCard->id && empty($oldFabId) && !str_contains((string)$oldRawVal, '_add_')) || (empty($oldRawVal) && $isCurrentBaseSelected);
 
@@ -55,7 +61,7 @@
                                                     : collect();
                                             @endphp
 
-                                            @if(!$isBaseDone || $isCurrentBaseSelected || $isBaseOptionSelected)
+                                            @if((!$isBaseDone && $isBaseTasksCompleted) || $isCurrentBaseSelected || $isBaseOptionSelected)
                                                 <option value="{{ $jobCard->id }}" {{ $isBaseOptionSelected ? 'selected' : '' }}>
                                                     {{ $jobCard->job_card_no }}
                                                 </option>
@@ -78,6 +84,11 @@
                                                     }
                                                     $isBatchDone = ($batchTotalQty > 0 && $batchReceived >= ($batchTotalQty - 0.001));
 
+                                                    $batchTasks = $jobCard->tasks ? $jobCard->tasks->filter(function($t) use ($batchIds) {
+                                                        return in_array($t->job_card_fabric_detail_id, $batchIds) || ($t->is_additional == 1 && in_array($t->job_card_fabric_detail_id, $batchIds));
+                                                    }) : collect();
+                                                    $isBatchTasksCompleted = $batchTasks->isNotEmpty() && $batchTasks->every(fn($t) => $t->status === 'Completed');
+
                                                     $isBatchSelected = false;
                                                     if ($receipt && $receipt->job_card_id == $jobCard->id && $receipt->job_card_fabric_detail_id) {
                                                         $isBatchSelected = in_array($receipt->job_card_fabric_detail_id, $batchIds);
@@ -88,7 +99,7 @@
                                                         (empty($oldRawVal) && $isBatchSelected);
                                                 @endphp
 
-                                                @if(!$isBatchDone || $isBatchSelected || $isOptionSelected)
+                                                @if((!$isBatchDone && $isBatchTasksCompleted) || $isBatchSelected || $isOptionSelected)
                                                     <option value="{{ $addVal }}" {{ $isOptionSelected ? 'selected' : '' }}>
                                                         {{ $jobCard->job_card_no }} - Additional {{ $addQty }} qty
                                                     </option>

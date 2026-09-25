@@ -385,6 +385,17 @@
             }
         });
 
+        if ($('#art_no').length) {
+            if ($('#art_no').hasClass('select2-hidden-accessible')) {
+                $('#art_no').select2('destroy');
+            }
+            $('#art_no').select2({
+                tags: true,
+                placeholder: "Select Art No",
+                allowClear: true
+            });
+        }
+
         function loadArtNos(itemCode) {
             let currentArtNo = "{{ old('art_no', $price->art_no ?? '') }}";
             let artNoSelect = $('#art_no');

@@ -417,6 +417,13 @@ $(document).ready(function() {
             renderStockLevel1();
         }
 
+        if (currentTabId === 'casino-po-report' && $('#casinoDrilldownContainer').is(':visible') && $.fn.DataTable.isDataTable('#casinoDrilldownTable')) {
+            $('#casinoDrilldownTable').DataTable().ajax.reload(function() {
+                submitBtn.html(origHtml).prop('disabled', false);
+            }, false);
+            return;
+        }
+
         let activeTable = $('#' + currentTabId).find('table').first();
         if (activeTable.length && $.fn.DataTable.isDataTable(activeTable[0])) {
             let dt = activeTable.DataTable();

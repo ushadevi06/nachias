@@ -509,18 +509,18 @@
           <td style="text-align:center; border-right:1px solid #000;"></td>
           <td style="text-align:center; border-right:1px solid #000;"></td>
           <td style="text-align:center; border-right:1px solid #000;"></td>
-          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($totalQty, 2) }}</td>
+          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($creditNote->items->sum('quantity'), 2) }}</td>
           <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;" @if($showMrp && $showPrice) colspan="2" @endif>Gross</td>
           @if($showAmount)
           <td class="right" style="border-top:1px solid #000; border-right:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($creditNote->sub_total, 2) }}</td>
           @endif
         @elseif($showAmount)
           <td colspan="6" style="text-align:right; border-right:1px solid #000; border-top:1px solid #000; padding-right:8px; font-weight:bold; font-size:12px;">Gross</td>
-          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($totalQty, 2) }}</td>
+          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($creditNote->items->sum('quantity'), 2) }}</td>
           <td class="right" style="border-top:1px solid #000; border-right:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($creditNote->sub_total, 2) }}</td>
         @else
           <td colspan="6" style="border-right:1px solid #000; border-top:1px solid #000;"></td>
-          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($totalQty, 2) }}</td>
+          <td class="center" style="border-right:1px solid #000; border-top:1px solid #000; font-weight:bold; font-size:12px;">{{ number_format($creditNote->items->sum('quantity'), 2) }}</td>
         @endif
       </tr>
       @endif

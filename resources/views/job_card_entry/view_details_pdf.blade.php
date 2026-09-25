@@ -535,10 +535,7 @@
                     <td class="bg-light fw-bold" style="font-size:8px;">ART NO</td>
                     @foreach($chunk as $detail)
                         <td class="text-center fw-bold" style="font-size:8px;">
-                            {{ $detail->art_no }}
-                            @if(!empty($detail->fg_art_no))
-                                <div style="font-size: 7px; color: #555; font-weight: normal;">({{ $detail->fg_art_no }})</div>
-                            @endif
+                            {{ !empty($detail->fg_art_no) ? $detail->fg_art_no : $detail->art_no }}
                         </td>
                     @endforeach
                     @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
@@ -607,10 +604,7 @@
                         @endphp
                         <tr class="text-center">
                             <td class="fw-bold">
-                                {{ $detail->art_no }}
-                                @if(!empty($detail->fg_art_no))
-                                    <span style="font-size: 6.5pt; font-weight: normal; color: #555;">({{ $detail->fg_art_no }})</span>
-                                @endif
+                                {{ !empty($detail->fg_art_no) ? $detail->fg_art_no : $detail->art_no }}
                             </td>
                             @foreach($allSizes as $s)
                                 @php $q = $detail->quantities->where('size', $s)->first(); @endphp

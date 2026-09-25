@@ -436,7 +436,12 @@ class ItemPriceController extends Controller
         if (count($parts) >= 1) {
             $brandCode = trim($parts[0]);
             if ($brandCode !== '') {
-                $brand = \DB::table('brands')->where('code', $brandCode)->first();
+                $brand = \DB::table('brands')
+                    ->where(function($q) use ($brandCode) {
+                        $q->where('code', $brandCode)
+                          ->orWhere('brand_name', 'LIKE', "%{$brandCode}%");
+                    })
+                    ->first();
                 if ($brand) {
                     $artNos3 = \DB::table('job_card_fabric_details')
                         ->join('job_card_entries', 'job_card_fabric_details.job_card_entry_id', '=', 'job_card_entries.id')
@@ -446,11 +451,28 @@ class ItemPriceController extends Controller
                         ->distinct()
                         ->pluck('job_card_fabric_details.art_no')
                         ->toArray();
+
+                    $fgArtNosBrand = \DB::table('job_card_fabric_details')
+                        ->join('job_card_entries', 'job_card_fabric_details.job_card_entry_id', '=', 'job_card_entries.id')
+                        ->where('job_card_entries.brand_id', $brand->id)
+                        ->whereNotNull('job_card_fabric_details.fg_art_no')
+                        ->where('job_card_fabric_details.fg_art_no', '!=', '')
+                        ->distinct()
+                        ->pluck('job_card_fabric_details.fg_art_no')
+                        ->toArray();
                     
-                    $artNos = array_values(array_unique(array_merge($artNos, $artNos3)));
+                    $artNos = array_values(array_unique(array_merge($artNos, $artNos3, $fgArtNosBrand)));
                 }
             }
         }
+
+        $allFgArtNos = \DB::table('job_card_fabric_details')->whereNotNull('fg_art_no')->where('fg_art_no', '!=', '')->distinct()->pluck('fg_art_no')->toArray();
+        $allJobCardArtNos = \DB::table('job_card_fabric_details')->whereNotNull('art_no')->where('art_no', '!=', '')->distinct()->pluck('art_no')->toArray();
+
+        $artNos = array_values(array_filter(array_unique(array_merge($artNos, $allFgArtNos, $allJobCardArtNos)), function($val) {
+            return !empty($val) && strtolower(trim((string)$val)) !== 'null';
+        }));
+        sort($artNos);
 
         return response()->json(['art_nos' => $artNos]);
     }

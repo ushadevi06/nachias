@@ -673,7 +673,7 @@
                                         <td class="fw-bold bg-light">ART NO</td>
                                         @foreach($chunk as $detail)
                                             <td>
-                                                {{ $detail->art_no }}
+                                                {{ !empty($detail->fg_art_no) ? $detail->fg_art_no : $detail->art_no }}
                                             </td>
                                         @endforeach
                                         @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
@@ -777,7 +777,7 @@
                                                 @php
                                                     $materialName = $artMaterialMap[$detail->art_no] ?? '';
                                                 @endphp
-                                                {{ $detail->art_no }}
+                                                {{ !empty($detail->fg_art_no) ? $detail->fg_art_no : $detail->art_no }}
                                                 {{-- @if($materialName)
                                                     <br><small class="text-muted" style="font-size: 0.65rem;">{{ $materialName }}</small>
                                                 @endif --}}

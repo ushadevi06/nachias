@@ -18,7 +18,7 @@ class CreditNoteController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = CreditNote::with(['customer', 'salesInvoice'])->orderBy('id', 'desc');
+            $query = CreditNote::with(['customer', 'salesInvoice'])->withSum('items', 'quantity')->orderBy('id', 'desc');
 
             if (!empty($request->customer_id)) {
                 $query->where('customer_id', $request->customer_id);
@@ -69,7 +69,10 @@ class CreditNoteController extends Controller
                 $query->where(function ($q) use ($search, $numericSearch, $matchingInvoiceIds) {
                     $q->where('note_no', 'like', "%{$search}%")
                       ->orWhereRaw("DATE_FORMAT(note_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                      ->orWhere('sub_total', 'like', "%{$numericSearch}%")
+                      ->orWhere('discount', 'like', "%{$numericSearch}%")
                       ->orWhere('grand_total', 'like', "%{$numericSearch}%")
+                      ->orWhereRaw("(sub_total - COALESCE(discount, 0)) LIKE ?", ["%{$numericSearch}%"])
                       ->orWhere('status', 'like', "%{$search}%")
                       ->orWhereHas('customer', function($q2) use ($search) {
                           $q2->where('name', 'like', "%{$search}%")
@@ -150,12 +153,21 @@ class CreditNoteController extends Controller
                     $invoiceNos = $note->salesInvoice->inv_no;
                 }
 
+                $totalQty = $note->items_sum_quantity ?? 0;
+                $subTotal = $note->sub_total ?? 0;
+                $discount = $note->discount ?? 0;
+                $taxableValue = max(0, $subTotal - $discount);
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'note_no' => $note->note_no,
-                    'note_date' => $note->note_date->format('d-m-Y'),
+                    'note_date' => $note->note_date ? $note->note_date->format('d-m-Y') : '-',
                     'sales_invoice_no' => $invoiceNos,
                     'customer_name' => $note->customer ? $note->customer->name : '-',
+                    'total_qty' => number_format($totalQty, 2),
+                    'sub_total' => '₹' . number_format($subTotal, 2),
+                    'discount' => '₹' . number_format($discount, 2),
+                    'taxable_value' => '₹' . number_format($taxableValue, 2),
                     'grand_total' => '₹' . number_format($note->grand_total, 2),
                     'status' => $status,
                     'action' => $action,
@@ -552,10 +564,12 @@ class CreditNoteController extends Controller
                     'id' => $item->id,
                     'invoice_id' => $invoice->id,
                     'invoice_no' => $invoice->inv_no,
+                    'stock_entry_item_id' => $item->stock_entry_item_id,
                     'item_id' => $item->item_id,
                     'item_name' => ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) ? $item->stockEntryItem->finished_item_code : ($item->item ? $item->item->name : '-'),
                     'item_code' => $item->item ? $item->item->code : '-',
-                    'product_barcode' => $item->sku ?? '-',
+                    'sku' => $item->sku ?: ($item->stockEntryItem ? $item->stockEntryItem->sku : ''),
+                    'product_barcode' => $item->sku ?: ($item->stockEntryItem ? $item->stockEntryItem->sku : ($item->product_barcode ?: '-')),
                     'brand_category_id' => $item->brand_id,
                     'brand_category_name' => $item->brandCategory ? $item->brandCategory->name : '-',
                     'color_id' => $item->color_id,

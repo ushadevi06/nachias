@@ -243,7 +243,7 @@
                                                         data-item="{{ $itemDisplayNamePlain }}" 
                                                         data-art="{{ $item->art_no }}" 
                                                         data-uom="{{ $uomName }}" 
-                                                        data-qty-issue="{{ $savedItem->qty_issue ?? $item->mtr }}" 
+                                                        data-qty-issue="{{ number_format(floatval($savedItem->qty_issue ?? $item->mtr), 2, '.', '') }}" 
                                                         data-matrix-id="{{ $item->id }}" 
                                                         data-qty-adjusted="{{ $savedItem->qty_adjusted ?? '0.00' }}" 
                                                         data-qty-wastage="{{ $savedItem->qty_wastage ?? '0.00' }}" 
@@ -280,16 +280,16 @@
                                                     @endif
                                                 </td>
                                                 <td>1</td><td>{{ $uomName }}</td>
-                                                <td><p class="mb-0 col-qty-issue text-end">{{ $savedItem->qty_issue ?? $item->mtr }}</p></td>
-                                                <td><p class="mb-0 col-qty-wastage text-end">{{ $savedItem->qty_wastage ?? '0.00' }}</p></td>
-                                                <td><p class="mb-0 col-qty-used text-end">{{ $savedItem->qty_used ?? '0.00' }}</p></td>
-                                                <td><p class="mb-0 col-qty-adjusted text-end">{{ $savedItem->qty_adjusted ?? '0.00' }}</p></td>
+                                                <td><p class="mb-0 col-qty-issue text-end">{{ number_format(floatval($savedItem->qty_issue ?? $item->mtr), 2, '.', '') }}</p></td>
+                                                <td><p class="mb-0 col-qty-wastage text-end">{{ number_format(floatval($savedItem->qty_wastage ?? 0), 2, '.', '') }}</p></td>
+                                                <td><p class="mb-0 col-qty-used text-end">{{ number_format(floatval($savedItem->qty_used ?? 0), 2, '.', '') }}</p></td>
+                                                <td><p class="mb-0 col-qty-adjusted text-end">{{ number_format(floatval($savedItem->qty_adjusted ?? 0), 2, '.', '') }}</p></td>
                                                 <td><p class="mb-0 col-produced-qty text-end">{{ $produced_qty }}</p></td>
                                                 @php
-                                                    $issue = $savedItem->qty_issue ?? $item->mtr;
-                                                    $used = $savedItem->qty_used ?? 0;
-                                                    $wastage = $savedItem->qty_wastage ?? 0;
-                                                    $adjusted = $savedItem->qty_adjusted ?? 0;
+                                                    $issue = floatval($savedItem->qty_issue ?? $item->mtr);
+                                                    $used = floatval($savedItem->qty_used ?? 0);
+                                                    $wastage = floatval($savedItem->qty_wastage ?? 0);
+                                                    $adjusted = floatval($savedItem->qty_adjusted ?? 0);
                                                     $remaining = ($issue + $adjusted) - $used - $wastage;
                                                 @endphp
                                                 <td><p class="mb-0 col-qty-remaining text-end text-success fw-bold">{{ number_format($remaining, 2, '.', '') }}</p></td>
@@ -761,10 +761,10 @@ $(document).ready(function() {
                 data: formData,
                 success: function(response) {
                     if(response.success) {
-                        currentRow.find('.col-qty-issue').text(parseFloat($('#modal_qty_issue').val()).toFixed(2));
-                        currentRow.find('.col-qty-adjusted').text(adj);
-                        currentRow.find('.col-qty-wastage').text(was);
-                        currentRow.find('.col-qty-used').text(use);
+                        currentRow.find('.col-qty-issue').text((parseFloat($('#modal_qty_issue').val()) || 0).toFixed(2));
+                        currentRow.find('.col-qty-adjusted').text((parseFloat(adj) || 0).toFixed(2));
+                        currentRow.find('.col-qty-wastage').text((parseFloat(was) || 0).toFixed(2));
+                        currentRow.find('.col-qty-used').text((parseFloat(use) || 0).toFixed(2));
                         currentRow.find('.col-produced-qty').text(pro);
                         
                         const issue_val = parseFloat($('#modal_qty_issue').val()) || 0;
