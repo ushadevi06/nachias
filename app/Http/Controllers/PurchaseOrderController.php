@@ -57,21 +57,35 @@ class PurchaseOrderController extends Controller
 
             if ($request->has('search') && !empty($request->input('search')['value'])) {
                 $search = $request->input('search')['value'];
-                $query->where(function ($q) use ($search) {
+                $numericSearch = preg_replace('/[₹,\s]/', '', $search);
+                $query->where(function ($q) use ($search, $numericSearch) {
                     $q->where('po_number', 'like', "%{$search}%")
                         ->orWhere('reference_no', 'like', "%{$search}%")
                         ->orWhere('status', 'like', "%{$search}%")
-                        ->orWhere('total_qty', 'like', "%{$search}%")
-                        ->orWhere('total_amount', 'like', "%{$search}%")
-                        ->orWhere(DB::raw("DATE_FORMAT(po_date, '%d-%m-%Y')"), 'like', "%{$search}%")
-                        ->orWhere(DB::raw("DATE_FORMAT(due_date, '%d-%m-%Y')"), 'like', "%{$search}%")
+                        ->orWhereRaw("DATE_FORMAT(po_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                        ->orWhereRaw("DATE_FORMAT(due_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                         ->orWhereHas('supplier', function ($q2) use ($search) {
                             $q2->where('name', 'like', "%{$search}%")
                                 ->orWhere('code', 'like', "%{$search}%");
                         })
                         ->orWhereHas('storeType', function ($q2) use ($search) {
                             $q2->where('store_type_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('items.brand', function ($q3) use ($search) {
+                            $q3->where('brand_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('items.rawMaterial', function ($q4) use ($search) {
+                            $q4->where('name', 'like', "%{$search}%");
                         });
+
+                    if ($numericSearch !== '') {
+                        $q->orWhereRaw("CAST(total_amount AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT(total_amount, 2) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("CAST(total_qty AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT(total_qty, 2) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("CAST(sub_total AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT(sub_total, 2) LIKE ?", ["%{$numericSearch}%"]);
+                    }
                 });
             }
 
@@ -616,7 +630,7 @@ class PurchaseOrderController extends Controller
 
         $setting = Setting::first();
         $totalInWords = numberToWords($purchaseOrder->total_amount);
-
+        
         $pdf = Pdf::loadView('purchase_orders.purchase_order_pdf', compact('purchaseOrder', 'setting', 'totalInWords'));
         return $pdf->stream('PO-' . $purchaseOrder->po_number . '.pdf');
     }

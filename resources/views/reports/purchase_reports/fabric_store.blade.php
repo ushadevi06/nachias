@@ -635,6 +635,24 @@ $(document).ready(function() {
             return;
         }
 
+        if (currentTabId === 'casino-po-report') {
+            let brandId = $('select[name="brand_id"]').val() || '';
+            let fromDate = $('.start_date').val() || '';
+            let toDate = $('.end_date').val() || '';
+            let supplierId = $('select[name="supplier_id"]').val() || '';
+            let search = $('.datatables-casino-po_filter input').val() || '';
+
+            let exportUrl = "{{ url('purchase_reports/fabric') }}?export=casino-po-excel"
+                + "&brand_id=" + encodeURIComponent(brandId)
+                + "&from_date=" + encodeURIComponent(fromDate)
+                + "&to_date=" + encodeURIComponent(toDate)
+                + "&supplier_id=" + encodeURIComponent(supplierId)
+                + "&search=" + encodeURIComponent(search);
+
+            window.location.href = exportUrl;
+            return;
+        }
+
         triggerFabricExport('.buttons-excel', $(this));
     });
 

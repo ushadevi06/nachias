@@ -111,6 +111,7 @@
                     @php
                         $totalIssueItems = 0;
                         foreach($jobCard->fabricDetails as $item) {
+                            if (!empty($item->is_additional)) continue;
                             $fs = array_sum([$item->fs_36 ?? 0, $item->fs_38 ?? 0, $item->fs_40 ?? 0, $item->fs_42 ?? 0, $item->fs_44 ?? 0]);
                             $hs = array_sum([$item->hs_36 ?? 0, $item->hs_38 ?? 0, $item->hs_40 ?? 0, $item->hs_42 ?? 0, $item->hs_44 ?? 0, $item->hs_46 ?? 0]);
                             if($fs > 0) $totalIssueItems++;
@@ -134,12 +135,12 @@
                     <ul class="nav nav-tabs mb-3" id="issueTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="main-consumption-tab" data-bs-toggle="tab" data-bs-target="#main-consumption-content" type="button" role="tab">
-                                <i class="ri-scissors-2-line me-1"></i> Fabric
+                                <i class="ri ri-scissors-2-line me-1"></i> Fabric
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="accessories-tab" data-bs-toggle="tab" data-bs-target="#accessories-content" type="button" role="tab">
-                                <i class="ri-ink-bottle-line me-1"></i> Accessories
+                                <i class="ri ri-ink-bottle-line me-1"></i> Accessories
                             </button>
                         </li>
                     </ul>
@@ -156,6 +157,7 @@
                             $mainItems = [];
                             $accItems = [];
                             foreach($jobCard->fabricDetails as $item) {
+                                if (!empty($item->is_additional)) continue;
                                 $catId = $artCategoryMap[$item->art_no] ?? 1;
                                 if($catId == 1) $mainItems[] = $item;
                                 else $accItems[] = $item;
@@ -421,7 +423,7 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white py-3">
                 <h5 class="modal-title text-white d-flex align-items-center">
-                    <i class="ri-edit-circle-line me-2 fs-4"></i> Edit Item Details
+                    <i class="ri ri-edit-circle-line me-2 fs-4"></i> Edit Item Details
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -457,7 +459,7 @@
 
                     <div class="p-4 rounded-3 border">
                         <h6 class="mb-4 text-primary fw-bold d-flex align-items-center">
-                            <i class="ri-calculator-line me-2 fs-5"></i> Issue Quantities & Wastage Calculation
+                            <i class="ri ri-calculator-line me-2 fs-5"></i> Issue Quantities & Wastage Calculation
                         </h6>
                         <div class="row g-4">
                             <div class="col-md-3">

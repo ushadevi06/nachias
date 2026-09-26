@@ -40,6 +40,13 @@
         </thead>
         <tbody id="orderReportTbody">
         </tbody>
+        <tfoot class="table-light fw-bold">
+            <tr>
+                <th colspan="3" class="text-end text-uppercase">Total:</th>
+                <th class="text-center text-primary fw-bold" id="order_report_total_qty">0</th>
+                <th></th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 

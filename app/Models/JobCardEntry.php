@@ -170,4 +170,66 @@ class JobCardEntry extends Model
     {
         return $this->belongsTo(StoreType::class, 'receipt_store_id');
     }
+
+    public function isFullyConvertedToFg()
+    {
+        $grandTotal = floatval($this->grand_total_qty ?? 0);
+        if ($grandTotal <= 0) {
+            return false;
+        }
+
+        $totalFgReceived = (float) \DB::table('production_receipt_items as pri')->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')->where('pr.job_card_id', $this->id)->where('pr.status', 'Posted')->sum('pri.qty_to_receive');
+
+        if ($totalFgReceived < ($grandTotal - 0.001)) {
+            return false;
+        }
+
+        $baseOrdered = max(0, $grandTotal - floatval($this->additional_qty ?? 0));
+        if ($baseOrdered <= 0) {
+            $baseFabrics = $this->fabricDetails ? $this->fabricDetails->where('is_additional', 0) : collect();
+            if ($baseFabrics->isNotEmpty() && $baseFabrics->first()->quantities) {
+                $baseOrdered = $baseFabrics->first()->quantities->sum('total_qty');
+            }
+        }
+        if ($baseOrdered <= 0) {
+            $baseOrdered = ($this->total_qty_fs ?? 0) + ($this->total_qty_hs ?? 0);
+        }
+        if ($baseOrdered <= 0) {
+            $baseOrdered = $grandTotal;
+        }
+
+        $baseReceived = (float) \DB::table('production_receipt_items as pri')
+            ->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')
+            ->where('pr.job_card_id', $this->id)
+            ->where('pr.status', 'Posted')
+            ->where(function ($q) {
+                $q->where('pr.is_additional', 0)
+                  ->orWhereNull('pr.is_additional')
+                  ->orWhereNull('pr.job_card_fabric_detail_id');
+            })
+            ->sum('pri.qty_to_receive');
+
+        if ($baseOrdered > 0 && $baseReceived < ($baseOrdered - 0.001)) {
+            return false;
+        }
+
+        $additionalBatches = $this->fabricDetails ? $this->fabricDetails->where('is_additional', 1)->groupBy(function ($item) {
+            return $item->additional_batch_no ?? ($item->created_at ? $item->created_at->format('Y-m-d H:i') : $item->id);
+        }) : collect();
+
+        foreach ($additionalBatches as $batchGroup) {
+            $firstFab = $batchGroup->first();
+            $bOrdered = ($firstFab && $firstFab->quantities) ? $firstFab->quantities->sum('total_qty') : 0;
+            if ($bOrdered <= 0) {
+                $bOrdered = $batchGroup->sum('total_qty');
+            }
+            $bIds = $batchGroup->pluck('id')->toArray();
+            $bReceived = (float) \DB::table('production_receipt_items as pri')->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')->where('pr.job_card_id', $this->id)->where('pr.status', 'Posted')->where('pr.is_additional', 1)->whereIn('pr.job_card_fabric_detail_id', $bIds)->sum('pri.qty_to_receive');
+            if ($bOrdered > 0 && $bReceived < ($bOrdered - 0.001)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

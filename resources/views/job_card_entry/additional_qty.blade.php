@@ -125,7 +125,7 @@
                     </label>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-label-primary px-3 py-1 fs-6" id="selected-fabrics-badge">
-                            {{ $baseFabrics->count() }} Fabrics Selected
+                            {{ $baseFabrics->where('is_default_selected', true)->count() }} Fabrics Selected
                         </span>
                         <button type="button" class="btn btn-sm btn-outline-primary" id="btn-select-all-fabrics">
                             <i class="ri ri-check-double-line me-1"></i> Select All
@@ -176,9 +176,8 @@
                             <tr>
                                 <th style="width: 70px; min-width: 70px;">S.NO</th>
                                 <th class="text-start" style="min-width: 250px;">RAW MATERIAL NAME</th>
-                                <th style="width: 180px; min-width: 180px;">TOTAL QUANTITY</th>
-                                <th style="width: 250px; min-width: 250px;">QUANTITY ISSUED</th>
-                                <th style="width: 180px; min-width: 180px;">QUANTITY REMAINING</th>
+                                <th style="width: 220px; min-width: 220px;">TOTAL ALLOCATED</th>
+                                <th style="width: 280px; min-width: 280px;">THIS ADDITION (MTR)</th>
                             </tr>
                         </thead>
                         <tbody id="item-details-fabric-tbody">
@@ -188,6 +187,9 @@
                                     $rmName = $bf->raw_material_name ?? ($jobCard->item->name ?? 'COTTON');
                                     $seNo = $bf->stock_entry_no ?? '';
                                     $seId = $bf->stock_entry_id ?? null;
+                                    $isBaseJobFabric = !empty($bf->is_base_job_fabric);
+                                    $allocatedMtr = floatval($bf->job_card_allocated_mtr ?? ($bf->available_stock ?? 0));
+                                    $warehouseStock = floatval($bf->warehouse_stock ?? ($bf->available_stock ?? 0));
                                     $totalStock = floatval($bf->available_stock ?? 0);
                                     
                                     $existingBatchFab = $bf->existing_batch_fab ?? null;
@@ -199,9 +201,8 @@
                                         }
                                     }
                                     $issuedMtrVal = $existingBatchFab ? floatval($existingBatchFab->mtr ?? 0) : 0;
-                                    $remaining = $totalStock - $issuedMtrVal;
                                 @endphp
-                                <tr class="item-details-row item-details-row-{{ $idx }}" data-fabric-index="{{ $idx }}" data-art="{{ $bf->art_no }}">
+                                <tr class="item-details-row item-details-row-{{ $idx }}" data-fabric-index="{{ $idx }}" data-art="{{ $bf->art_no }}" data-is-base-fabric="{{ $isBaseJobFabric ? '1' : '0' }}">
                                     <td class="fw-bold item-details-sno">{{ $idx + 1 }}</td>
                                     <td class="text-start">
                                         <div class="fw-bold text-dark">{{ $rmName }}</div>
@@ -217,10 +218,15 @@
                                         @endif
                                     </td>
                                     <td class="fw-bold item-details-total-qty" data-total="{{ $totalStock }}">
-                                        {{ number_format($totalStock, 2) }}
+                                        <div class="fs-6 text-dark">{{ number_format($totalStock, 2) }} <span class="small text-muted">MTR</span></div>
+                                        @if($isBaseJobFabric)
+                                            <div class="badge bg-label-primary mt-1" style="font-size: 10px;" title="Fabric Allocated to this Job Card">Job Card Allocation</div>
+                                        @else
+                                            <div class="badge bg-label-secondary mt-1" style="font-size: 10px;">Store Stock</div>
+                                        @endif
                                     </td>
-                                    <td style="width: 250px; min-width: 250px;">
-                                        <div class="input-group input-group-sm mx-auto" style="min-width: 170px; max-width: 200px;">
+                                    <td style="width: 280px; min-width: 280px;">
+                                        <div class="input-group input-group-sm mx-auto" style="min-width: 170px; max-width: 220px;">
                                             <input type="number" step="0.01" min="0" 
                                                 class="form-control text-center fw-bold item-details-issued-input @error("fabrics.{$idx}.total_fabric_meters") is-invalid @enderror" 
                                                 id="item_details_issued_{{ $idx }}" 
@@ -233,11 +239,6 @@
                                         @error("fabrics.{$idx}.total_fabric_meters")
                                             <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
                                         @enderror
-                                    </td>
-                                    <td class="fw-bold item-details-remaining-cell">
-                                        <span class="item-details-remaining-val {{ $remaining < -0.001 ? 'text-danger' : 'text-success' }}" id="item_details_remaining_{{ $idx }}">
-                                            {{ number_format($remaining, 2) }}
-                                        </span>
                                     </td>
                                 </tr>
                             @endforeach
@@ -308,12 +309,18 @@
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
                                         $availStock = floatval($bf->available_stock ?? 0);
+                                        $isBaseJobFabric = !empty($bf->is_base_job_fabric);
+                                        $allocatedMtr = floatval($bf->job_card_allocated_mtr ?? $availStock);
                                     @endphp
                                     <td class="fw-bold bg-light fabric-col-cell fabric-col-{{ $idx }}" style="width: 160px; min-width: 160px; max-width: 160px;">ART NO</td>
                                     <td class="p-2 fabric-col-cell fabric-col-{{ $idx }}" style="width: 1100px; min-width: 1100px; max-width: 1100px;">
-                                        <div class="d-flex align-items-center justify-content-center gap-2">
-                                            <input type="text" class="form-control form-control-sm text-center fw-bold" value="{{ $bf->art_no }}" readonly style="max-width: 350px;">
-                                            @if($availStock > 0)
+                                        <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                                            <input type="text" class="form-control form-control-sm text-center fw-bold" value="{{ $bf->art_no }}" readonly style="max-width: 300px;">
+                                            @if($isBaseJobFabric && $allocatedMtr > 0)
+                                                <span class="badge bg-primary py-2 px-3 fs-7 shadow-sm" title="Total fabric allocated to this Job Card">
+                                                    <i class="ri ri-scissors-2-line me-1"></i> JC Fabric: {{ number_format($allocatedMtr, 2) }} MTR
+                                                </span>
+                                            @elseif($availStock > 0)
                                                 <span class="badge bg-success py-2 px-3 fs-7 shadow-sm" title="Available stock in {{ $bf->stock_entry_no ?? 'warehouse' }}">
                                                     <i class="ri ri-checkbox-circle-line me-1"></i> Available Stock: {{ number_format($availStock, 2) }} MTR
                                                 </span>
@@ -354,11 +361,11 @@
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
-                                        $existingBatchFab = null;
-                                        if ($editingBatch) {
+                                        $existingBatchFab = $bf->existing_batch_fab ?? null;
+                                        if ($editingBatch && !$existingBatchFab) {
                                             if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
-                                                $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
-                                            } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                $existingBatchFab = $editingBatchGroup->first(fn($f) => trim(strtolower($f->art_no)) === strtolower(trim($bf->art_no)));
+                                            } elseif (trim(strtolower($editingBatch->art_no)) === strtolower(trim($bf->art_no))) {
                                                 $existingBatchFab = $editingBatch;
                                             }
                                         }
@@ -382,11 +389,11 @@
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
-                                        $existingBatchFab = null;
-                                        if ($editingBatch) {
+                                        $existingBatchFab = $bf->existing_batch_fab ?? null;
+                                        if ($editingBatch && !$existingBatchFab) {
                                             if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
-                                                $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
-                                            } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                $existingBatchFab = $editingBatchGroup->first(fn($f) => trim(strtolower($f->art_no)) === strtolower(trim($bf->art_no)));
+                                            } elseif (trim(strtolower($editingBatch->art_no)) === strtolower(trim($bf->art_no))) {
                                                 $existingBatchFab = $editingBatch;
                                             }
                                         }
@@ -403,11 +410,11 @@
                             <tr>
                                 @foreach($baseFabrics as $idx => $bf)
                                     @php
-                                        $existingBatchFab = null;
-                                        if ($editingBatch) {
+                                        $existingBatchFab = $bf->existing_batch_fab ?? null;
+                                        if ($editingBatch && !$existingBatchFab) {
                                             if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
-                                                $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
-                                            } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                $existingBatchFab = $editingBatchGroup->first(fn($f) => trim(strtolower($f->art_no)) === strtolower(trim($bf->art_no)));
+                                            } elseif (trim(strtolower($editingBatch->art_no)) === strtolower(trim($bf->art_no))) {
                                                 $existingBatchFab = $editingBatch;
                                             }
                                         }
@@ -441,11 +448,11 @@
                                             </thead>
                                             <tbody class="consumption-lay-tbody" id="consumption-lay-tbody-{{ $idx }}">
                                                 @php
-                                                    $existingBatchFab = null;
-                                                    if ($editingBatch) {
+                                                    $existingBatchFab = $bf->existing_batch_fab ?? null;
+                                                    if ($editingBatch && !$existingBatchFab) {
                                                         if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
-                                                            $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
-                                                        } elseif ($editingBatch->art_no == $bf->art_no) {
+                                                            $existingBatchFab = $editingBatchGroup->first(fn($f) => trim(strtolower($f->art_no)) === strtolower(trim($bf->art_no)));
+                                                        } elseif (trim(strtolower($editingBatch->art_no)) === strtolower(trim($bf->art_no))) {
                                                             $existingBatchFab = $editingBatch;
                                                         }
                                                     }
@@ -653,12 +660,10 @@
                                                     } else {
                                                         $previousTaskAssigned = true;
                                                     }
-                                                    $canAssignCurrentStage = !empty($hasIssuedItems) && $previousTaskAssigned && !$hasTask;
+                                                    $canAssignCurrentStage = $previousTaskAssigned && !$hasTask;
                                                     $buttonText = $hasTask ? 'Assigned (#' . $taskNo . ')' : 'Assign Task';
 
-                                                    if (empty($hasIssuedItems) && !$hasTask) {
-                                                        $buttonTitle = 'Materials not yet issued for this batch (Please issue extra batch fabric in Issue Items first)';
-                                                    } elseif (!$previousTaskAssigned) {
+                                                    if (!$previousTaskAssigned) {
                                                         $buttonTitle = 'Previous stage task not assigned';
                                                     } elseif ($hasTask) {
                                                         $buttonTitle = "Task already assigned (Status: $taskStatus)";
@@ -773,11 +778,11 @@
                         <tbody>
                             @foreach($baseFabrics as $idx => $bf)
                                 @php
-                                    $existingBatchFab = null;
-                                    if ($editingBatch) {
+                                    $existingBatchFab = $bf->existing_batch_fab ?? null;
+                                    if ($editingBatch && !$existingBatchFab) {
                                         if (!empty($editingBatchGroup) && $editingBatchGroup->count() > 0) {
-                                            $existingBatchFab = $editingBatchGroup->firstWhere('art_no', $bf->art_no);
-                                        } elseif ($editingBatch->art_no == $bf->art_no) {
+                                            $existingBatchFab = $editingBatchGroup->first(fn($f) => trim(strtolower($f->art_no)) === strtolower(trim($bf->art_no)));
+                                        } elseif (trim(strtolower($editingBatch->art_no)) === strtolower(trim($bf->art_no))) {
                                             $existingBatchFab = $editingBatch;
                                         }
                                     }
@@ -1430,53 +1435,19 @@ $(document).ready(function() {
         const $itemInput = $(`#item_details_issued_${fIdx}`);
         if (!$itemInput.length) return;
         const $row = $itemInput.closest('tr');
-        const totalStock = parseFloat($row.find('.item-details-total-qty').attr('data-total')) || parseFloat($row.find('.item-details-total-qty').text().trim()) || 0;
-        let remaining = totalStock - issuedVal;
-        if (Math.abs(remaining) < 0.001) remaining = 0;
-
-        const $remSpan = $row.find('.item-details-remaining-val');
-        if ($remSpan.length) {
-            $remSpan.text(remaining.toFixed(2));
-        }
-
         $row.find('.qty-error-msg').remove();
-        if (remaining < -0.001) {
-            $remSpan.removeClass('text-success').addClass('text-danger');
-            $itemInput.addClass('border-danger text-danger is-invalid');
-            $itemInput.closest('.input-group').after('<small class="text-danger qty-error-msg d-block mt-1 fw-semibold text-center" style="font-size: 11px;">Issued Qty cannot exceed Total Qty</small>');
-        } else {
-            $remSpan.removeClass('text-danger').addClass('text-success');
-            $itemInput.removeClass('border-danger text-danger is-invalid');
-        }
-
-        checkSubmitButtonState();
+        $itemInput.removeClass('border-danger text-danger is-invalid');
     }
 
     function checkSubmitButtonState() {
-        let hasError = false;
-        $('.item-details-row:visible').each(function() {
-            if ($(this).find('.qty-error-msg').length > 0) {
-                hasError = true;
-                return false;
-            }
-        });
-
-        if (!hasError) {
-            $('.issued-meters-input:visible').each(function() {
-                if ($(this).hasClass('is-invalid')) {
-                    hasError = true;
-                    return false;
-                }
-            });
-        }
-
         const $btn = $('#btnSubmitForm');
-        if (hasError) {
-            $btn.prop('disabled', true).addClass('disabled opacity-50').attr('title', 'Please resolve stock errors before submitting');
-        } else {
-            $btn.prop('disabled', false).removeClass('disabled opacity-50').removeAttr('title');
-        }
+        $btn.prop('disabled', false).removeClass('disabled opacity-50').removeAttr('title');
     }
+
+    $(document).on('input change select2:select', 'input, select', function() {
+        $(this).removeClass('is-invalid border-danger');
+        $(this).closest('td, .input-group, .form-floating').find('.text-danger').remove();
+    });
 
     // Calculate Fabric Meters from Lay Mark Rows for a specific Fabric
     function recalcFabricMeters(fIdx, autoSetIssued = false) {

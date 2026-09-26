@@ -480,7 +480,14 @@ $(document).ready(function() {
                 { data: 'customer', name: 'customer' },
                 { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
                 { data: 'status', name: 'status', className: 'text-center' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#order_report_total_qty').html(json.totals.qty);
+                }
+            }
         },
         'sales-gst-report': {
             tableId: '#salesGstReportTable',
@@ -582,7 +589,15 @@ $(document).ready(function() {
                 { data: 'customer', name: 'customer' },
                 { data: 'ord_qty', name: 'ord_qty', className: 'text-center' },
                 { data: 'bal_qty', name: 'bal_qty', className: 'text-center fw-bold text-danger' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#pending_report_total_ord_qty').html(json.totals.ord_qty);
+                    $('#pending_report_total_bal_qty').html(json.totals.bal_qty);
+                }
+            }
         },
         'incentive-report': {
             tableId: '#incentiveReportTable',
@@ -593,7 +608,15 @@ $(document).ready(function() {
                 { data: 'total_sales', name: 'total_sales', className: 'text-end fw-bold' },
                 { data: 'incentive_pc', name: 'incentive_pc', className: 'text-center' },
                 { data: 'incentive_amt', name: 'incentive_amt', className: 'text-end fw-bold text-success' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#incentive_report_total_sales').html(json.totals.total_sales);
+                    $('#incentive_report_total_incentive').html(json.totals.incentive_amt);
+                }
+            }
         },
         'credit-note-report': {
             tableId: '#creditNoteReportTable',
@@ -612,7 +635,19 @@ $(document).ready(function() {
                 { data: 'other_charges', name: 'other_charges', className: 'text-end' },
                 { data: 'grand_total', name: 'grand_total', className: 'text-end fw-bold text-success' },
                 { data: 'status', name: 'status', className: 'text-center' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#cn_report_total_qty').html(json.totals.total_qty);
+                    $('#cn_report_sub_total').html(json.totals.sub_total);
+                    $('#cn_report_discount').html(json.totals.discount);
+                    $('#cn_report_tax_amount').html(json.totals.tax_amount);
+                    $('#cn_report_other_charges').html(json.totals.other_charges);
+                    $('#cn_report_grand_total').html(json.totals.grand_total);
+                }
+            }
         },
         'despatch-report': {
             tableId: '#despatchReportTable',
@@ -641,7 +676,22 @@ $(document).ready(function() {
                 { data: 'partial_d_date', name: 'partial_d_date', className: 'text-nowrap' },
                 { data: 'despatch_complete_date', name: 'despatch_complete_date', className: 'text-nowrap' },
                 { data: 'reason', name: 'reason' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#despatch_report_dhoti_qty').html(json.totals.dhoti_qty);
+                    $('#despatch_report_white_qty').html(json.totals.white_qty);
+                    $('#despatch_report_core_qty').html(json.totals.core_qty);
+                    $('#despatch_report_bravo_qty').html(json.totals.bravo_qty);
+                    $('#despatch_report_deal_qty').html(json.totals.deal_qty);
+                    $('#despatch_report_formal_qty').html(json.totals.formal_qty);
+                    $('#despatch_report_total_qty').html(json.totals.total_qty);
+                    $('#despatch_report_delivered_qty').html(json.totals.delivered_qty);
+                    $('#despatch_report_pending_qty').html(json.totals.pending_qty);
+                }
+            }
         },
         'comparison-report': {
             tableId: '#comparisonReportTable',
@@ -651,7 +701,16 @@ $(document).ready(function() {
                 { data: 'prev_year_sales', name: 'prev_year_sales', className: 'text-end' },
                 { data: 'curr_year_sales', name: 'curr_year_sales', className: 'text-end' },
                 { data: 'growth_pc', name: 'growth_pc', className: 'text-center' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#comparison_report_prev_year').html(json.totals.prev_year_sales);
+                    $('#comparison_report_curr_year').html(json.totals.curr_year_sales);
+                    $('#comparison_report_growth').html('<span class="badge ' + (parseFloat(json.totals.growth_pc) >= 0 ? 'bg-label-success' : 'bg-label-danger') + ' rounded-pill">' + json.totals.growth_pc + '</span>');
+                }
+            }
         },
         'outstanding-report': {
             tableId: '#outstandingReportTable',
@@ -663,7 +722,17 @@ $(document).ready(function() {
                 { data: 'total_sales', name: 'total_sales', className: 'text-end' },
                 { data: 'received', name: 'received', className: 'text-end' },
                 { data: 'outstanding', name: 'outstanding', className: 'text-end' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#outstanding_report_bills_count').html(json.totals.bills_count);
+                    $('#outstanding_report_total_sales').html(json.totals.total_sales);
+                    $('#outstanding_report_received').html(json.totals.received);
+                    $('#outstanding_report_outstanding').html(json.totals.outstanding);
+                }
+            }
         }
     };
 
@@ -803,6 +872,16 @@ $(document).ready(function() {
             <th class="text-center fw-bold">QTY</th>
             <th class="text-center fw-bold">STATUS</th>
         `);
+        $('#orderReportTable tfoot').remove();
+        $('#orderReportTable').append(`
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <th colspan="3" class="text-end text-uppercase">Total:</th>
+                    <th class="text-center text-primary fw-bold" id="order_report_total_qty">0</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        `);
         $('#orderReportTbody').empty();
 
         loadActiveTabTable('order-report');
@@ -840,6 +919,16 @@ $(document).ready(function() {
             <th class="text-center fw-bold">SIZE</th>
             <th class="text-center fw-bold">SLEEVE</th>
             <th class="text-end fw-bold pe-3">QUANTITY</th>
+        `);
+
+        $('#orderReportTable tfoot').remove();
+        $('#orderReportTable').append(`
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <th colspan="4" class="text-end text-uppercase">Total:</th>
+                    <th class="text-end text-primary fw-bold pe-3" id="order_item_level_total_qty">0</th>
+                </tr>
+            </tfoot>
         `);
 
         $('#orderReportTbody').empty();
@@ -884,6 +973,13 @@ $(document).ready(function() {
                 },
                 { data: 'qty', name: 'qty', className: 'text-end fw-bold pe-3' }
             ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#order_item_level_total_qty').html(json.totals.qty);
+                }
+            },
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -936,6 +1032,16 @@ $(document).ready(function() {
             <th class="text-center fw-bold">ORD. QTY</th>
             <th class="text-center fw-bold">BAL. QTY</th>
         `);
+        $('#pendingReportTable tfoot').remove();
+        $('#pendingReportTable').append(`
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <th colspan="2" class="text-end text-uppercase">Total:</th>
+                    <th class="text-center text-primary fw-bold" id="pending_report_total_ord_qty">0</th>
+                    <th class="text-center text-danger fw-bold" id="pending_report_total_bal_qty">0</th>
+                </tr>
+            </tfoot>
+        `);
         $('#pendingReportTbody').empty();
 
         loadActiveTabTable('pending-report');
@@ -966,6 +1072,16 @@ $(document).ready(function() {
             <th class="text-center fw-bold">SIZE</th>
             <th class="text-center fw-bold">SLEEVE</th>
             <th class="text-end fw-bold pe-3">QUANTITY</th>
+        `);
+
+        $('#pendingReportTable tfoot').remove();
+        $('#pendingReportTable').append(`
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <th colspan="4" class="text-end text-uppercase">Total:</th>
+                    <th class="text-end text-primary fw-bold pe-3" id="pending_order_item_level_total_qty">0</th>
+                </tr>
+            </tfoot>
         `);
 
         $('#pendingReportTbody').empty();
@@ -1010,6 +1126,13 @@ $(document).ready(function() {
                 },
                 { data: 'qty', name: 'qty', className: 'text-end fw-bold pe-3' }
             ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#pending_order_item_level_total_qty').html(json.totals.qty);
+                }
+            },
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -1020,7 +1143,7 @@ $(document).ready(function() {
             pageLength: 10,
             lengthMenu: [10, 25, 50, 100],
             language: {
-                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</div>',
+                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</div>',
                 processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> Loading items...'
             },
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'

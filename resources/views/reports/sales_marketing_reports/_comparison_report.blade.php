@@ -30,10 +30,10 @@
         </tbody>
         <tfoot class="bg-light fw-bold">
             <tr>
-                <td>Annual Total:</td>
-                <td class="text-end">₹{{ number_format(array_sum(array_column($comparisonReport, 'prev_year_sales')), 2) }}</td>
-                <td class="text-end text-primary">₹{{ number_format(array_sum(array_column($comparisonReport, 'curr_year_sales')), 2) }}</td>
-                <td class="text-center">
+                <td class="text-uppercase">Annual Total:</td>
+                <td class="text-end text-primary fw-bold" id="comparison_report_prev_year">₹{{ number_format(array_sum(array_column($comparisonReport, 'prev_year_sales')), 2) }}</td>
+                <td class="text-end text-primary fw-bold" id="comparison_report_curr_year">₹{{ number_format(array_sum(array_column($comparisonReport, 'curr_year_sales')), 2) }}</td>
+                <td class="text-center fw-bold" id="comparison_report_growth">
                     @php
                         $totalPrev = array_sum(array_column($comparisonReport, 'prev_year_sales'));
                         $totalCurr = array_sum(array_column($comparisonReport, 'curr_year_sales'));

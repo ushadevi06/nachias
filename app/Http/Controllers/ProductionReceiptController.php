@@ -33,7 +33,7 @@ class ProductionReceiptController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation', 'warehouse', 'additionalBatch'])->orderBy('id', 'desc');
+            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation', 'warehouse', 'additionalBatch', 'employee', 'items'])->orderBy('id', 'desc');
 
             $totalRecords = $query->count();
 
@@ -76,8 +76,11 @@ class ProductionReceiptController extends Controller
 
             if ($request->has('search') && !empty($request->input('search')['value'])) {
                 $search = $request->input('search')['value'];
-                $query->where(function ($q) use ($search) {
+                $numericSearch = preg_replace('/[₹,\s]/', '', $search);
+                $query->where(function ($q) use ($search, $numericSearch) {
                     $q->where('receipt_no', 'like', "%{$search}%")
+                        ->orWhereDate('receipt_date', $search)
+                        ->orWhereRaw("DATE_FORMAT(receipt_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                         ->orWhereHas('jobCard', function ($q2) use ($search) {
                             $q2->where('job_card_no', 'like', "%{$search}%");
                         })
@@ -89,7 +92,19 @@ class ProductionReceiptController extends Controller
                         })
                         ->orWhereHas('warehouse', function ($q5) use ($search) {
                             $q5->where('warehouse_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('employee', function ($q6) use ($search) {
+                            $cleanEmpSearch = str_replace('.', '', $search);
+                            $q6->where('name', 'like', "%{$search}%")
+                               ->orWhere('emp_id', 'like', "%{$search}%")
+                               ->orWhereRaw("CONCAT(name, ' (', COALESCE(emp_id, ''), ')') LIKE ?", ["%{$search}%"])
+                               ->orWhereRaw("REPLACE(name, '.', '') LIKE ?", ["%{$cleanEmpSearch}%"]);
                         });
+
+                    if ($numericSearch !== '' && preg_match('/\d/', $numericSearch)) {
+                        $q->orWhereRaw("(SELECT COALESCE(SUM(qty_to_receive), 0) FROM production_receipt_items WHERE production_receipt_items.production_receipt_id = production_receipts.id) LIKE ?", ["%{$numericSearch}%"])
+                          ->orWhereRaw("FORMAT((SELECT COALESCE(SUM(qty_to_receive), 0) FROM production_receipt_items WHERE production_receipt_items.production_receipt_id = production_receipts.id), 2) LIKE ?", ["%{$numericSearch}%"]);
+                    }
                 });
             }
 
@@ -127,6 +142,16 @@ class ProductionReceiptController extends Controller
                     $jobCardLabel .= ' <span class="badge bg-warning text-white" style="font-size: 10px;">+' . intval($row->jobCard->additional_qty) . ' pcs</span>';
                 }
 
+                $employeeName = '-';
+                if ($row->employee) {
+                    $employeeName = $row->employee->name;
+                    if (!empty($row->employee->emp_id)) {
+                        $employeeName .= ' <span class="text-muted">(' . $row->employee->emp_id . ')</span>';
+                    }
+                }
+
+                $totalQty = $row->items ? $row->items->sum('qty_to_receive') : 0;
+
                 $data[] = [
                     'DT_RowIndex' => $i++,
                     'receipt_no' => $row->receipt_no ?? ('RCPT-' . str_pad($row->id, 4, '0', STR_PAD_LEFT)),
@@ -134,8 +159,10 @@ class ProductionReceiptController extends Controller
                     'receipt_date' => $row->receipt_date ? date('d-m-Y', strtotime($row->receipt_date)) : '-',
                     'warehouse' => $row->warehouse ? $row->warehouse->warehouse_name : '-',
                     'store' => $row->storeType ? $row->storeType->store_type_name : '-',
-                    'status' => $statusBadge,
                     'store_location' => $row->storeLocation ? $row->storeLocation->store_location : '-',
+                    'responsible_person' => $employeeName,
+                    'total_qty' => number_format($totalQty, 2),
+                    'status' => $statusBadge,
                     'action' => $action,
                 ];
             }
@@ -423,10 +450,28 @@ class ProductionReceiptController extends Controller
                 if ($newData['status'] == 'Posted') {
                     $this->createStockEntry($receipt, $request->store_location_id);
                     $this->updateActualConsumables($receipt);
+
+                    if ($receipt->job_card_id) {
+                        $jc = JobCardEntry::with('fabricDetails.quantities')->find($receipt->job_card_id);
+                        if ($jc) {
+                            $newJcStatus = $jc->isFullyConvertedToFg() ? 'Completed' : 'Inprogress';
+                            $jc->status = $newJcStatus;
+                            $jc->save();
+                        }
+                    }
                 }
                 else {
                     if (isset($oldData) && $oldData['status'] == 'Posted') {
                         $this->revertActualConsumables($receipt, $oldData);
+
+                        if ($receipt->job_card_id) {
+                            $jc = JobCardEntry::with('fabricDetails.quantities')->find($receipt->job_card_id);
+                            if ($jc) {
+                                $newJcStatus = $jc->isFullyConvertedToFg() ? 'Completed' : 'Inprogress';
+                                $jc->status = $newJcStatus;
+                                $jc->save();
+                            }
+                        }
                     }
                 }
 

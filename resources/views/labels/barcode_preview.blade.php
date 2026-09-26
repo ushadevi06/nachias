@@ -37,7 +37,7 @@
             <div id="sortableFields" class="sortable-list">
                 <div class="sortable-item" data-id="product"><span class="field-key">PRODUCT:</span> <span class="field-val">{{ $labelData['product_name'] }}</span></div>
                 <div class="sortable-item" data-id="brand"><span class="field-key">BRAND NAME:</span> <span class="field-val">{{ $labelData['brand_name'] }}</span></div>
-                <div class="sortable-item" data-id="art"><span class="field-key">ART NO:</span> <span class="field-val">{{ $labelData['design'] }}</span></div>
+                <div class="sortable-item" data-id="art"><span class="field-key">ART NO:</span> <span class="field-val">{{ (!empty($labelData['design']) && !in_array(strtolower(trim($labelData['design'])), ['null', 'undefined', 'nan', 'none', '-'])) ? $labelData['design'] : '-' }}</span></div>
                 <div class="sortable-item" data-id="color"><span class="field-key">COLOUR:</span> <span class="field-val"><input type="text" id="customColorInput" value="{{ $labelData['color'] }}" class="form-control form-control-sm d-inline-block" style="width: auto; height: 26px; font-weight: bold; padding: 2px 8px;" onclick="event.stopPropagation();"></span></div>
                 <div class="sortable-item" data-id="fabric"><span class="field-key">FABRIC:</span> <span class="field-val"><input type="text" id="customFabricInput" value="{{ $labelData['fabric'] }}" class="form-control form-control-sm d-inline-block" style="width: auto; height: 26px; font-weight: bold; padding: 2px 8px;" onclick="event.stopPropagation();"></span></div>
                 <div class="sortable-item" data-id="size"><span class="field-key">SIZE:</span> <span class="field-val">{{ $labelData['size'] }}</span></div>

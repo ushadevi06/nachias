@@ -10,5 +10,13 @@
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="bg-light fw-bold">
+            <tr>
+                <th colspan="2" class="text-end text-uppercase">Total:</th>
+                <th class="text-end text-primary fw-bold" id="incentive_report_total_sales">₹0.00</th>
+                <th></th>
+                <th class="text-end text-success fw-bold" id="incentive_report_total_incentive">₹0.00</th>
+            </tr>
+        </tfoot>
     </table>
 </div>

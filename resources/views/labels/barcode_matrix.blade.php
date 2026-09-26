@@ -64,8 +64,14 @@
                                         </a>
                                     </li>
                                 </ul>
-                            </div> --}}
-                            <span class="badge bg-label-info px-3 py-2 me-2">ART: {{ $issueItem->fabricDetail->art_no ?? $issueItem->rawMaterial->code ?? '-' }}</span>
+                            @php
+                                $matArt = (!empty($issueItem->fabricDetail?->fg_art_no) && !in_array(strtolower(trim($issueItem->fabricDetail->fg_art_no)), ['null', 'undefined', 'nan', ''])) 
+                                    ? $issueItem->fabricDetail->fg_art_no 
+                                    : ((!empty($issueItem->fabricDetail?->art_no) && !in_array(strtolower(trim($issueItem->fabricDetail->art_no)), ['null', 'undefined', 'nan', ''])) 
+                                        ? $issueItem->fabricDetail->art_no 
+                                        : ($issueItem->stockEntryItem?->art_no ?? ($issueItem->rawMaterial?->code ?? '-')));
+                            @endphp
+                            <span class="badge bg-label-info px-3 py-2 me-2">ART: {{ $matArt }}</span>
                             {{-- <span class="badge bg-label-secondary px-3 py-2">COLOR: {{ $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-') }}</span> --}}
                         </div>
                     </div>

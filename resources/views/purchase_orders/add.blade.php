@@ -237,7 +237,7 @@
                                                     <select class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror" name="items[{{ $index }}][fabric_width_id]" data-placeholder="Select Width">
                                                         <option value="">Select Width</option>
                                                         @foreach($fabricSizes as $fabricSize)
-                                                            <option value="{{ $fabricSize->id }}" {{ ($item['fabric_width_id'] ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
+                                                            <option value="{{ $fabricSize->id }}" {{ (isset($item['fabric_width_id']) && $item['fabric_width_id'] !== '') ? ($item['fabric_width_id'] == $fabricSize->id ? 'selected' : '') : (trim((string)$fabricSize->width) === '58' ? 'selected' : '') }}>{{ $fabricSize->width }}</option>
                                                         @endforeach
                                                     </select>
                                                     <span class="hyphen d-none">-</span>
@@ -586,7 +586,7 @@
                                                 <select class="select2 form-select fabric_width" name="items[0][fabric_width_id]" data-placeholder="Select Width">
                                                     <option value="">Select Width</option>
                                                     @foreach($fabricSizes as $fabricSize)
-                                                        <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
+                                                        <option value="{{ $fabricSize->id }}" {{ trim((string)$fabricSize->width) === '58' || trim((string)$fabricSize->id) === '58' ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                     @endforeach
                                                 </select>
                                                 <span class="hyphen d-none">-</span>
@@ -998,7 +998,7 @@
                         <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" data-placeholder="Select Width">
                             <option value="">Select Width</option>
                             @foreach($fabricSizes as $fabricSize)
-                                <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
+                                <option value="{{ $fabricSize->id }}" {{ trim((string)$fabricSize->width) === '58' || trim((string)$fabricSize->id) === '58' ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                             @endforeach
                         </select>
                         <span class="hyphen d-none">-</span>

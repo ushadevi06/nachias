@@ -1040,15 +1040,15 @@ $(document).ready(function() {
                         style="min-width: 110px;">
                 </td>
                 <td class="text-end">
-                    <input type="number" class="form-control form-control-sm text-end mrp" 
+                    <input type="number" step="0.01" class="form-control form-control-sm text-end mrp" 
                         name="items[${index}][mrp]" 
-                        value="${item.mrp || 0}" ${item.id ? 'readonly' : ''} 
+                        value="${parseFloat(item.mrp || 0).toFixed(2)}" ${item.id ? 'readonly' : ''} 
                         style="${item.id ? 'background-color: #f8f9fa;' : ''} min-width: 110px;">
                 </td>
                 <td class="text-end">
-                    <input type="number" class="form-control form-control-sm text-end rate" 
+                    <input type="number" step="0.01" class="form-control form-control-sm text-end rate" 
                         name="items[${index}][rate]" 
-                        value="${item.rate || 0}" ${item.id ? 'readonly' : ''} 
+                        value="${parseFloat(item.rate || 0).toFixed(2)}" ${item.id ? 'readonly' : ''} 
                         style="${item.id ? 'background-color: #f8f9fa;' : ''} min-width: 110px;">
                 </td>
                 <td>
@@ -1337,6 +1337,11 @@ $(document).ready(function() {
         row.find('.line_total').val(amount.toFixed(2));
         
         calculateTotal();
+    });
+
+    $(document).on('blur', '.mrp, .rate', function() {
+        let val = parseFloat($(this).val()) || 0;
+        $(this).val(val.toFixed(2));
     });
 
     $(document).on('input', '#cgst_percent', function() {

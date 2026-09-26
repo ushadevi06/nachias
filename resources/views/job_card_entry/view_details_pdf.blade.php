@@ -5,7 +5,10 @@
     <title>Job Card - {{ $jobCard->job_card_no }}</title>
     <style>
         @page {
-            margin: 8px 10px;
+            margin-top: 22px;
+            margin-bottom: 8px;
+            margin-left: 10px;
+            margin-right: 10px;
             size: landscape;
         }
         body {
@@ -61,7 +64,7 @@
         }
         .art-img {
             max-width: 65pt;
-            max-height: 55pt;
+            max-height: 65pt;
             display: block;
             margin: 2px auto;
         }
@@ -308,7 +311,7 @@
             <table class="table table-bordered" style="margin-top: -0.5pt;">
                 <tr>
                     <td class="fw-bold" style="width: 8%; font-size: 8px;">CUTTING NO</td>
-                    <td style="width: 12%; font-size: 9px;">{{ $jobCard->job_card_no }}</td>
+                    <td style="width: 12%; font-size: 9px;" class="fw-bold">{{ $jobCard->job_card_no }}</td>
                     <td class="bg-light fw-bold" style="width: 5%; font-size: 8px;">FIT</td>
                     <td class="text-center fw-bold" style="width: 15%; font-size: 9px;">{{ strtoupper($jobCard->fit->fit_name ?? 'CROSS') }}</td>
                     <td class="bg-light fw-bold" style="width: 6%; font-size: 8px;">CUFF</td>
@@ -318,7 +321,7 @@
                 </tr>
                 <tr>
                     <td class="fw-bold" style="font-size: 8px;">ISSUE DATE</td>
-                    <td style="font-size: 9px;">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
+                    <td style="font-size: 9px;" class="fw-bold">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
                     <td class="bg-light fw-bold" style="font-size: 8px;">N.PATTI</td>
                     <td class="text-center fw-bold" style="font-size: 9px;">{{ strtoupper($jobCard->pattiType->patti_type_name ?? 'CROSS') }}</td>
                     <td class="bg-light fw-bold" style="font-size: 8px;">POCKET</td>
@@ -328,7 +331,7 @@
                 </tr>
                 <tr>
                     <td class="fw-bold" style="font-size: 8px;">DELIVERY DATE</td>
-                    <td style="font-size: 9px;">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
+                    <td style="font-size: 9px;" class="fw-bold">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
                     <td class="bg-light fw-bold" style="font-size: 8px;">COLLAR</td>
                     <td class="text-center fw-bold" style="font-size: 9px;">{{ strtoupper($jobCard->collarType->collar_type_name ?? 'CROSS') }}</td>
                     <td class="bg-light fw-bold" style="font-size: 8px;">BOT.CUT</td>
@@ -619,6 +622,20 @@
                             <td class="fw-bold">{{ (int) $rowTotal }}</td>
                         </tr>
                     @endforeach
+                    @for($i = $chunk->count(); $i < 6; $i++)
+                        <tr class="text-center">
+                            <td>&nbsp;</td>
+                            @foreach($allSizes as $s)
+                                <td>&nbsp;</td>
+                            @endforeach
+                            @if(!$isCanvas)
+                            @foreach($allSizes as $s)
+                                <td>&nbsp;</td>
+                            @endforeach
+                            @endif
+                            <td>&nbsp;</td>
+                        </tr>
+                    @endfor
                     <tr class="bg-light text-center fw-bold">
                         <td>TOTAL</td>
                         @foreach($allSizes as $s)

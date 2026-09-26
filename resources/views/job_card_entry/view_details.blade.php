@@ -803,6 +803,20 @@
                                             <td class="fw-bold">{{ $row_total ?: '-' }}</td>
                                         </tr>
                                     @endforeach
+                                    @for($i = $chunk->count(); $i < 6; $i++)
+                                        <tr class="text-center">
+                                            <td>&nbsp;</td>
+                                            @foreach($activeFs as $s)
+                                                <td>&nbsp;</td>
+                                            @endforeach
+                                            @if(!$isCanvas)
+                                                @foreach($activeHs as $s)
+                                                    <td>&nbsp;</td>
+                                                @endforeach
+                                            @endif
+                                            <td>&nbsp;</td>
+                                        </tr>
+                                    @endfor
                                 </tbody>
                                 <tfoot>
                                     <tr class="text-center fw-bold">

@@ -251,7 +251,11 @@
             $currentSize = preg_replace('/[^0-9]/', '', $labelData['size'] ?? '');
             $bgColor = $sizeColors[$currentSize] ?? '#888888';
             
-            $qrString = $labelData['sku'] ?? $labelData['barcode'] ?? ($labelData['design'] ?? '-');
+            $designRaw = trim((string)($labelData['design'] ?? ''));
+            $designVal = (!empty($designRaw) && !in_array(strtolower($designRaw), ['null', 'undefined', 'nan', 'none', '-'])) ? $designRaw : '-';
+
+            $skuRaw = trim((string)($labelData['sku'] ?? ($labelData['barcode'] ?? '')));
+            $qrString = (!empty($skuRaw) && stripos($skuRaw, 'null') === false) ? $skuRaw : ($designVal !== '-' ? $designVal : ($labelData['lot_no'] ?? '-'));
             
             $sText = $labelData['sleeve'] ?? 'Full';
             $sText = str_replace(['F/S', 'H/S'], ['Full', 'Half'], $sText);
@@ -285,7 +289,7 @@
                         </div>
                         <div class="art-no-box">
                             <span class="fw-bold" style="font-size: 8pt; margin-right: 1mm; color: #000000;">Art No :</span>
-                            <span class="font-bebas" style="font-size: 13.5pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</span>
+                            <span class="font-bebas" style="font-size: 13.5pt; letter-spacing: 1px;">{{ $designVal }}</span>
                         </div>
                     </div>
                     

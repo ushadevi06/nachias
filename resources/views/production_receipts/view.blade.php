@@ -67,8 +67,10 @@
                                     <th>Receipt Date</th>
                                     <th>Warehouse</th>
                                     <th>Store</th>
-                                    <th>Status</th>
                                     <th>Store Location</th>
+                                    <th>Responsible Person</th>
+                                    <th>Total Qty</th>
+                                    <th>Status</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -116,8 +118,10 @@
                 { data: 'receipt_date', name: 'receipt_date' },
                 { data: 'warehouse', name: 'warehouse' },
                 { data: 'store', name: 'store' },
-                { data: 'status', name: 'status' },
                 { data: 'store_location', name: 'store_location' },
+                { data: 'responsible_person', name: 'responsible_person' },
+                { data: 'total_qty', name: 'total_qty' },
+                { data: 'status', name: 'status' },
                 { data: 'action', name: 'action', orderable: false, searchable: false },
             ],
             order: [[0, 'asc']]

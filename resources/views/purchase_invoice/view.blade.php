@@ -55,7 +55,10 @@
                                         <th>PO Number</th>
                                         <th>Invoice Date</th>
                                         <th>Supplier Name</th>
-                                        <th>Total Qty</th>
+                                        <th>Total meters/qty</th>
+                                        <th>Subtotal</th>
+                                        <th>Discount</th>
+                                        <th>Taxable Value</th>
                                         <th>Total Amount</th>
                                         <th>Status</th>
                                         <th>Actions</th>
@@ -162,6 +165,18 @@
                 {
                     data: 'total_qty',
                     name: 'total_qty'
+                },
+                {
+                    data: 'sub_total',
+                    name: 'sub_total'
+                },
+                {
+                    data: 'discount_amount',
+                    name: 'discount_amount'
+                },
+                {
+                    data: 'taxable_amount',
+                    name: 'taxable_amount'
                 },
                 {
                     data: 'total_amount',

@@ -15,6 +15,12 @@ class PurchaseReportController extends Controller
         if ($request->has('export') && $request->export === 'brandwise-minstock-excel') {
             return $this->exportBrandwiseMinStockExcel($request);
         }
+        if ($request->has('export') && in_array($request->export, ['casino-po-excel', 'casino-po-merged-excel'])) {
+            return $this->exportCasinoPoMergedExcel($request);
+        }
+        if ($request->has('export') && $request->export === 'casino-po-drilldown-excel') {
+            return $this->exportCasinoPoDrilldownExcel($request);
+        }
 
         if ($request->ajax() && ($request->has('draw') || ($request->has('report_type') && !$request->has('fetch_report')))) {
             if ($request->report_type === 'stock-report-drilldown') {
@@ -2986,6 +2992,105 @@ class PurchaseReportController extends Controller
                 'meters' => number_format($grandTotalMeters, 2),
             ]
         ]);
+    }
+
+    public function exportCasinoPoMergedExcel(Request $request)
+    {
+        $summaryData = $this->getCasinoPoData($request);
+
+        $search = $request->search;
+        if (is_array($search)) {
+            $search = $search['value'] ?? null;
+        }
+        if (!empty($search)) {
+            $searchLower = strtolower(trim($search));
+            $summaryData = array_filter($summaryData, function($item) use ($searchLower) {
+                return (strpos(strtolower($item['brand_name'] ?? ''), $searchLower) !== false)
+                    || (strpos(strtolower((string)($item['width'] ?? '')), $searchLower) !== false)
+                    || (strpos((string)($item['plain'] ?? ''), $searchLower) !== false)
+                    || (strpos((string)($item['print'] ?? ''), $searchLower) !== false)
+                    || (strpos((string)($item['checked'] ?? ''), $searchLower) !== false)
+                    || (strpos((string)($item['striped'] ?? ''), $searchLower) !== false)
+                    || (strpos((string)($item['total'] ?? ''), $searchLower) !== false);
+            });
+        }
+
+        $summaryData = array_values($summaryData);
+
+        $summaryTotals = [
+            'plain' => collect($summaryData)->sum('plain'),
+            'plain_count' => collect($summaryData)->sum('plain_count'),
+            'print' => collect($summaryData)->sum('print'),
+            'print_count' => collect($summaryData)->sum('print_count'),
+            'checked' => collect($summaryData)->sum('checked'),
+            'checked_count' => collect($summaryData)->sum('checked_count'),
+            'striped' => collect($summaryData)->sum('striped'),
+            'striped_count' => collect($summaryData)->sum('striped_count'),
+            'total' => collect($summaryData)->sum('total'),
+            'total_count' => collect($summaryData)->sum('total_count'),
+        ];
+
+        // Build PR Range detailed breakdown for all active styles in summary
+        $breakdownData = [];
+        $styleKeys = [
+            'PLAIN' => 'plain',
+            'PRINT' => 'print',
+            'CHECKED' => 'checked',
+            'STRIPED' => 'striped',
+        ];
+
+        foreach ($summaryData as $row) {
+            $brandName = $row['brand_name'] ?? '';
+            $width = $row['width'] ?? '';
+
+            foreach ($styleKeys as $styleName => $key) {
+                $styleMtr = floatval($row[$key] ?? 0);
+                $styleCnt = intval($row[$key . '_count'] ?? 0);
+
+                if ($styleMtr > 0 || $styleCnt > 0) {
+                    $subReq = new Request([
+                        'brand_name' => $brandName,
+                        'width' => $width,
+                        'style_name' => $styleName,
+                        'from_date' => $request->from_date,
+                        'to_date' => $request->to_date,
+                        'supplier_id' => $request->supplier_id,
+                        'brand_id' => $request->brand_id,
+                    ]);
+
+                    $drilldownRes = $this->getCasinoPoDrilldownData($subReq);
+                    $drilldownJson = $drilldownRes->getData(true);
+                    $slabRows = $drilldownJson['data'] ?? [];
+
+                    $breakdownData[] = [
+                        'brand_name' => $brandName,
+                        'width' => $width,
+                        'style_name' => $styleName,
+                        'rows' => $slabRows,
+                        'total_designs' => $drilldownJson['totals']['design_count'] ?? $styleCnt,
+                        'total_meters' => floatval(str_replace(',', '', $drilldownJson['totals']['meters'] ?? $styleMtr)),
+                    ];
+                }
+            }
+        }
+
+        $dateRange = '';
+        if ($request->from_date || $request->to_date) {
+            $dateRange = ($request->from_date ?: 'Start') . ' to ' . ($request->to_date ?: date('d-m-Y'));
+        }
+
+        $title = 'CASINO PURCHASE ORDER CONSOLIDATED REPORT';
+        $fileName = 'CASINO_PO_CONSOLIDATED_REPORT_' . date('Ymd_His') . '.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\CasinoPoMergedExport($summaryData, $breakdownData, $dateRange, $title, $summaryTotals),
+            $fileName
+        );
+    }
+
+    public function exportCasinoPoDrilldownExcel(Request $request)
+    {
+        return $this->exportCasinoPoMergedExcel($request);
     }
 }
 

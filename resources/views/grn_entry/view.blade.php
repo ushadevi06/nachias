@@ -54,6 +54,7 @@
                                     <th>Supplier Name</th>
                                     <th>Supplier Invoice No.</th>
                                     <th>Total Items</th>
+                                    <th>Total Meters/Qty</th>
                                     <th>Amount (₹)</th>
                                     <th>QC Status</th>
                                     <th>Status</th>
@@ -97,6 +98,7 @@
                 {data: 'supplier_name', name: 'supplier_name'},
                 {data: 'supplier_invoice_no', name: 'supplier_invoice_no'},
                 {data: 'total_items', name: 'total_items'},
+                {data: 'total_qty', name: 'total_qty'},
                 {data: 'amount', name: 'amount'},
                 {data: 'qc_status', name: 'qc_status', orderable: false, searchable: false},
                 {data: 'status', name: 'status', orderable: false, searchable: false},

@@ -38,7 +38,8 @@ class GrnEntryController extends Controller
 
             if ($request->has('search') && !empty($request->input('search')['value'])) {
                 $search = $request->input('search')['value'];
-                $query->where(function ($q) use ($search) {
+                $numericSearch = preg_replace('/[₹,\s]/', '', $search);
+                $query->where(function ($q) use ($search, $numericSearch) {
                     $q->where('grn_number', 'like', "%{$search}%")
                         ->orWhere('status', 'like', "%{$search}%")
                         ->orWhereRaw("DATE_FORMAT(grn_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
@@ -57,6 +58,13 @@ class GrnEntryController extends Controller
                         ->orWhereHas('grnEntryItems', function ($q5) use ($search) {
                             $q5->where('quality_check_status', 'like', "%{$search}%");
                         });
+
+                    if ($numericSearch !== '') {
+                        $q->orWhereRaw("(SELECT COALESCE(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.grn_entry_id = grn_entries.id AND grn_entry_items.deleted_at IS NULL) LIKE ?", ["%{$numericSearch}%"])
+                          ->orWhereRaw("FORMAT((SELECT COALESCE(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.grn_entry_id = grn_entries.id AND grn_entry_items.deleted_at IS NULL), 2) LIKE ?", ["%{$numericSearch}%"])
+                          ->orWhereRaw("(SELECT COALESCE(SUM(amount), 0) FROM grn_entry_items WHERE grn_entry_items.grn_entry_id = grn_entries.id AND grn_entry_items.deleted_at IS NULL) LIKE ?", ["%{$numericSearch}%"])
+                          ->orWhereRaw("FORMAT((SELECT COALESCE(SUM(amount), 0) FROM grn_entry_items WHERE grn_entry_items.grn_entry_id = grn_entries.id AND grn_entry_items.deleted_at IS NULL), 2) LIKE ?", ["%{$numericSearch}%"]);
+                    }
                 });
             }
 
@@ -107,6 +115,8 @@ class GrnEntryController extends Controller
                     $badgeClass = 'bg-warning';
                 }
 
+                $totalQty = $grn->grnEntryItems ? $grn->grnEntryItems->sum('qty_received') : 0;
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'grn_number' => $grn->grn_number,
@@ -115,6 +125,7 @@ class GrnEntryController extends Controller
                     'supplier_name' => ($grn->supplier->name ?? '-') . ' <span class="mini-title">(' . ($grn->supplier->code ?? '') . ')</span>',
                     'supplier_invoice_no' => $grn->purchaseInvoice->po_reference ?? '-',
                     'total_items' => $grn->grnEntryItems->count(),
+                    'total_qty' => number_format($totalQty, 2),
                     'amount' => '₹' . number_format($grn->grnEntryItems->sum('amount'), 2),
                     'qc_status' => '<span class="badge ' . $badgeClass . '">' . $finalQcStatus . '</span>',
                     'status' => $statusDisplay,

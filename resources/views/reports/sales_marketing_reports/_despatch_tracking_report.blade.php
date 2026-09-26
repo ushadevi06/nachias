@@ -28,6 +28,22 @@
             </tr>
         </thead>
         <tbody></tbody>
+        <tfoot class="bg-light fw-bold">
+            <tr>
+                <th colspan="9" class="text-end text-uppercase">Total:</th>
+                <th class="text-center text-primary fw-bold" id="despatch_report_dhoti_qty">0</th>
+                <th class="text-center text-primary fw-bold" id="despatch_report_white_qty">0</th>
+                <th class="text-center text-primary fw-bold" id="despatch_report_core_qty">0</th>
+                <th class="text-center text-primary fw-bold" id="despatch_report_bravo_qty">0</th>
+                <th class="text-center text-primary fw-bold" id="despatch_report_deal_qty">0</th>
+                <th class="text-center text-primary fw-bold" id="despatch_report_formal_qty">0</th>
+                <th class="text-center fw-bold text-dark" id="despatch_report_total_qty">0</th>
+                <th colspan="2"></th>
+                <th class="text-center text-success fw-bold" id="despatch_report_delivered_qty">0</th>
+                <th class="text-center text-danger fw-bold" id="despatch_report_pending_qty">0</th>
+                <th colspan="3"></th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 

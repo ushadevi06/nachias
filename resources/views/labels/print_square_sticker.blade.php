@@ -131,7 +131,12 @@
 
     @foreach($labelCollection as $labelData)
         @php
-            $qrString = $labelData['sku'] ?? $labelData['barcode'] ?? ($labelData['design'] ?? '-');
+            $designRaw = trim((string)($labelData['design'] ?? ''));
+            $designVal = (!empty($designRaw) && !in_array(strtolower($designRaw), ['null', 'undefined', 'nan', 'none', '-'])) ? $designRaw : '-';
+
+            $skuRaw = trim((string)($labelData['sku'] ?? ($labelData['barcode'] ?? '')));
+            $qrString = (!empty($skuRaw) && stripos($skuRaw, 'null') === false) ? $skuRaw : ($designVal !== '-' ? $designVal : ($labelData['lot_no'] ?? '-'));
+
             $sText = strtoupper($labelData['sleeve'] ?? 'F/S');
             if (strpos($sText, 'FULL') !== false) {
                 $sText = 'F/S';
@@ -151,7 +156,7 @@
             <div class="square-main">
                 <div class="square-left">
                     <table class="details-table">
-                        <tr><td class="td-lbl">Design</td><td class="td-col">:</td><td class="td-val">{{ $labelData['design'] ?? '-' }}</td></tr>
+                        <tr><td class="td-lbl">Design</td><td class="td-col">:</td><td class="td-val">{{ $designVal }}</td></tr>
                         <tr><td class="td-lbl">Size</td><td class="td-col">:</td><td class="td-val">{{ $labelData['size'] ?? '-' }}</td></tr>
                         <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
                         <tr><td class="td-lbl">MRP</td><td class="td-col">:</td><td class="td-val">₹ {{ number_format((float) ($labelData['raw_price'] ?? str_replace(',', '', $labelData['price'] ?? 0)), 2) }}</td></tr>

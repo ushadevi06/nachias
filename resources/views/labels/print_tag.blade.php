@@ -243,7 +243,11 @@
             $currentSize = preg_replace('/[^0-9]/', '', $labelData['size'] ?? '');
             $bgColor = $sizeColors[$currentSize] ?? '#888888';
             
-            $qrString = $labelData['sku'] ?? $labelData['barcode'] ?? ($labelData['design'] ?? '-');
+            $designRaw = trim((string)($labelData['design'] ?? ''));
+            $designVal = (!empty($designRaw) && !in_array(strtolower($designRaw), ['null', 'undefined', 'nan', 'none', '-'])) ? $designRaw : '-';
+
+            $skuRaw = trim((string)($labelData['sku'] ?? ($labelData['barcode'] ?? '')));
+            $qrString = (!empty($skuRaw) && stripos($skuRaw, 'null') === false) ? $skuRaw : ($designVal !== '-' ? $designVal : ($labelData['lot_no'] ?? '-'));
             
             $rawSleeve = strtoupper($labelData['sleeve'] ?? 'F/S');
             if (strpos($rawSleeve, 'FULL') !== false || $rawSleeve === 'F/S' || $rawSleeve === 'F') {
@@ -286,7 +290,7 @@
                         <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
                         <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
                         <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
-                        <tr><td class="td-lbl" style="padding-top: 2mm;">Art No</td><td class="td-col" style="padding-top: 2mm;">:</td><td class="td-val font-bebas" style="padding-top: 2mm; font-size: 12pt; letter-spacing: 0.5px;">{{ $labelData['design'] ?? '-' }}</td></tr>
+                        <tr><td class="td-lbl" style="padding-top: 2mm;">Art No</td><td class="td-col" style="padding-top: 2mm;">:</td><td class="td-val font-bebas" style="padding-top: 2mm; font-size: 12pt; letter-spacing: 0.5px;">{{ $designVal }}</td></tr>
                     </table>
                     <div class="tag-qr-section">
                         {!! QrCode::size(60)->generate($qrString) !!}

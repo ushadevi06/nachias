@@ -39,6 +39,13 @@
         </thead>
         <tbody id="pendingReportTbody">
         </tbody>
+        <tfoot class="table-light fw-bold">
+            <tr>
+                <th colspan="2" class="text-end text-uppercase">Total:</th>
+                <th class="text-center text-primary fw-bold" id="pending_report_total_ord_qty">0</th>
+                <th class="text-center text-danger fw-bold" id="pending_report_total_bal_qty">0</th>
+            </tr>
+        </tfoot>
     </table>
 </div>
 

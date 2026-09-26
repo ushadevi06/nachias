@@ -79,6 +79,7 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = $countQuery->count();
+                    $totalQtySum = (float)(clone $countQuery)->sum('total_qty');
 
                     $dataQuery = clone $countQuery;
                     $ordersQuery = $dataQuery->with(['customer', 'items.stockEntryItem', 'salesInvoices.items'])->orderBy('id', 'desc');
@@ -154,7 +155,10 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
-                        'data' => $data
+                        'data' => $data,
+                        'totals' => [
+                            'qty' => number_format($totalQtySum, 0)
+                        ]
                     ]);
 
                 case 'pending-report':
@@ -187,6 +191,13 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = $countQuery->count();
+                    $allOrdersForTotals = (clone $countQuery)->select('sales_orders.id', 'sales_orders.total_qty')->selectSub($deliveredQtySubquery, 'delivered_qty')->get();
+                    $totalOrdQty = $allOrdersForTotals->sum(function($o) { return (float)($o->total_qty ?? 0); });
+                    $totalBalQty = $allOrdersForTotals->sum(function($o) {
+                        $del = (float)($o->delivered_qty ?? 0);
+                        $tot = (float)($o->total_qty ?? 0);
+                        return max(0, $tot - $del);
+                    });
 
                     $dataQuery = clone $countQuery;
                     $ordersQuery = $dataQuery->with(['customer', 'items.stockEntryItem'])
@@ -252,7 +263,11 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
-                        'data' => $data
+                        'data' => $data,
+                        'totals' => [
+                            'ord_qty' => number_format($totalOrdQty, 0),
+                            'bal_qty' => number_format($totalBalQty, 0)
+                        ]
                     ]);
 
                 case 'order-items':
@@ -278,6 +293,7 @@ class SalesMarketingReportController extends Controller
 
                     $itemsBaseQuery = SalesOrderItem::where('sale_order_id', $order->id)->whereNull('deleted_at');
                     $totalRecords = (clone $itemsBaseQuery)->count();
+                    $totalItemQty = (float)(clone $itemsBaseQuery)->sum('qty');
 
                     $filteredQuery = clone $itemsBaseQuery;
                     if ($search) {
@@ -329,7 +345,10 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $filteredRecords,
-                        'data' => $data
+                        'data' => $data,
+                        'totals' => [
+                            'qty' => number_format($totalItemQty, 0)
+                        ]
                     ]);
 
                 case 'comparison-report':
@@ -345,6 +364,11 @@ class SalesMarketingReportController extends Controller
                     $currentYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')->whereYear('inv_date', $currentYear)->whereNull('deleted_at')->groupByRaw('month')->pluck('total', 'month')->toArray();
 
                     $prevYearSales = SalesInvoice::selectRaw('MONTH(inv_date) as month, SUM(grand_total) as total')->whereYear('inv_date', $prevYear)->whereNull('deleted_at')->groupByRaw('month')->pluck('total', 'month')->toArray();
+
+                    $sumPrevSales = array_sum($prevYearSales);
+                    $sumCurrSales = array_sum($currentYearSales);
+                    $totGrowth = $sumPrevSales > 0 ? (($sumCurrSales - $sumPrevSales) / $sumPrevSales) * 100 : ($sumCurrSales > 0 ? 100 : 0);
+                    $totGrowthDisplay = ($totGrowth > 0 ? '+' : '') . number_format($totGrowth, 1) . '%';
 
                     $comparisonData = [];
                     foreach ($months as $num => $name) {
@@ -373,7 +397,12 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => count($comparisonData),
                         'recordsFiltered' => count($comparisonData),
-                        'data' => $comparisonData
+                        'data' => $comparisonData,
+                        'totals' => [
+                            'prev_year_sales' => '₹' . number_format($sumPrevSales, 2),
+                            'curr_year_sales' => '₹' . number_format($sumCurrSales, 2),
+                            'growth_pc' => $totGrowthDisplay
+                        ]
                     ]);
 
                 case 'sales-gst-report':
@@ -655,6 +684,9 @@ class SalesMarketingReportController extends Controller
                     $orders = $ordersQuery->get();
 
                     $incentiveReport = [];
+                    $sumTotalSales = 0;
+                    $sumTotalCommission = 0;
+
                     foreach ($agents as $agent) {
                         if ($agentId && $agent->id != $agentId) continue;
 
@@ -669,6 +701,9 @@ class SalesMarketingReportController extends Controller
                                     continue;
                                 }
                             }
+                            $sumTotalSales += $totalSales;
+                            $sumTotalCommission += $totalCommission;
+
                             $incentiveReport[] = [
                                 'zone' => '<span class="fw-bold text-primary">' . htmlspecialchars((string)$zoneName) . '</span>',
                                 'agent' => htmlspecialchars((string)$agent->name) . ' <small class="text-muted">(' . htmlspecialchars((string)$agent->code) . ')</small>',
@@ -686,7 +721,11 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
-                        'data' => $pagedIncentives
+                        'data' => $pagedIncentives,
+                        'totals' => [
+                            'total_sales' => '₹' . number_format($sumTotalSales, 2),
+                            'incentive_amt' => '₹' . number_format($sumTotalCommission, 2)
+                        ]
                     ]);
 
                 case 'credit-note-report':
@@ -705,6 +744,12 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = $countQuery->count();
+                    $totalQty = (float)\App\Models\CreditNoteItem::whereIn('credit_note_id', (clone $countQuery)->select('id'))->whereNull('deleted_at')->sum('quantity');
+                    $totalSubTotal = (float)(clone $countQuery)->sum('sub_total');
+                    $totalDiscount = (float)(clone $countQuery)->sum('discount');
+                    $totalTaxAmount = (float)(clone $countQuery)->sum('tax_amount');
+                    $totalOtherCharges = (float)(clone $countQuery)->sum('other_charges');
+                    $totalGrandTotal = (float)(clone $countQuery)->sum('grand_total');
 
                     $dataQuery = clone $countQuery;
                     $notesQuery = $dataQuery->with(['customer', 'salesAgent', 'zone'])->withSum('items', 'quantity')->orderBy('id', 'desc');
@@ -740,7 +785,15 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
-                        'data' => $data
+                        'data' => $data,
+                        'totals' => [
+                            'total_qty' => number_format($totalQty, 0),
+                            'sub_total' => '₹' . number_format($totalSubTotal, 2),
+                            'discount' => ($totalDiscount > 0 ? '-₹' . number_format($totalDiscount, 2) : '₹0.00'),
+                            'tax_amount' => '₹' . number_format($totalTaxAmount, 2),
+                            'other_charges' => '₹' . number_format($totalOtherCharges, 2),
+                            'grand_total' => '₹' . number_format($totalGrandTotal, 2)
+                        ]
                     ]);
 
                 case 'despatch-report':
@@ -759,6 +812,43 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = $countQuery->count();
+                    $totOrderQty = (float)(clone $countQuery)->sum('total_qty');
+
+                    $deliveredQtySum = (float)DB::table('sales_invoices as si')
+                        ->join('sales_invoice_items as sii', 'sii.sales_invoice_id', '=', 'si.id')
+                        ->whereIn('si.so_id', (clone $countQuery)->select('sales_orders.id'))
+                        ->whereNull('si.deleted_at')
+                        ->whereNull('sii.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('si.einvoice_status')
+                              ->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
+                        })
+                        ->sum('sii.quantity');
+
+                    $totDeliveredQty = $deliveredQtySum;
+                    $totPendingQty = max(0, $totOrderQty - $totDeliveredQty);
+
+                    $orderItemSums = DB::table('sales_order_items as soi')
+                        ->leftJoin('items as i', 'i.id', '=', 'soi.item_id')
+                        ->leftJoin('brands as b', 'b.id', '=', 'i.brand_id')
+                        ->whereIn('soi.sale_order_id', (clone $countQuery)->select('sales_orders.id'))
+                        ->whereNull('soi.deleted_at')
+                        ->selectRaw("
+                            SUM(CASE WHEN UPPER(COALESCE(b.brand_name, '')) LIKE '%DHOTI%' OR UPPER(COALESCE(soi.categories_path_val, '')) LIKE '%DHOTI%' OR UPPER(COALESCE(soi.category_name, '')) LIKE '%DHOTI%' THEN soi.qty ELSE 0 END) as dhoti_qty,
+                            SUM(CASE WHEN UPPER(COALESCE(b.brand_name, '')) LIKE '%WHITE%' OR UPPER(COALESCE(soi.categories_path_val, '')) LIKE '%WHITE%' OR UPPER(COALESCE(soi.category_name, '')) LIKE '%WHITE%' THEN soi.qty ELSE 0 END) as white_qty,
+                            SUM(CASE WHEN UPPER(COALESCE(b.brand_name, '')) LIKE '%CORE%' OR UPPER(COALESCE(soi.categories_path_val, '')) LIKE '%CORE%' OR UPPER(COALESCE(soi.category_name, '')) LIKE '%CORE%' THEN soi.qty ELSE 0 END) as core_qty,
+                            SUM(CASE WHEN UPPER(COALESCE(b.brand_name, '')) LIKE '%BRAVO%' OR UPPER(COALESCE(soi.categories_path_val, '')) LIKE '%BRAVO%' OR UPPER(COALESCE(soi.category_name, '')) LIKE '%BRAVO%' THEN soi.qty ELSE 0 END) as bravo_qty,
+                            SUM(CASE WHEN UPPER(COALESCE(b.brand_name, '')) LIKE '%DEAL%' OR UPPER(COALESCE(soi.categories_path_val, '')) LIKE '%DEAL%' OR UPPER(COALESCE(soi.category_name, '')) LIKE '%DEAL%' THEN soi.qty ELSE 0 END) as deal_qty,
+                            SUM(CASE WHEN (UPPER(COALESCE(b.brand_name, '')) LIKE '%FORMAL%' OR UPPER(COALESCE(soi.categories_path_val, '')) LIKE '%FORMAL%' OR UPPER(COALESCE(soi.category_name, '')) LIKE '%FORMAL%') AND NOT (UPPER(COALESCE(b.brand_name, '')) LIKE '%CORE%' OR UPPER(COALESCE(soi.categories_path_val, '')) LIKE '%CORE%' OR UPPER(COALESCE(soi.category_name, '')) LIKE '%CORE%') THEN soi.qty ELSE 0 END) as formal_qty
+                        ")
+                        ->first();
+
+                    $totDhoti = (float)($orderItemSums->dhoti_qty ?? 0);
+                    $totWhite = (float)($orderItemSums->white_qty ?? 0);
+                    $totCore = (float)($orderItemSums->core_qty ?? 0);
+                    $totBravo = (float)($orderItemSums->bravo_qty ?? 0);
+                    $totDeal = (float)($orderItemSums->deal_qty ?? 0);
+                    $totFormal = (float)($orderItemSums->formal_qty ?? 0);
 
                     $dataQuery = clone $countQuery;
                     $ordersQuery = $dataQuery->with(['customer.city', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices.items'])->orderBy('id', 'desc');
@@ -858,7 +948,18 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
-                        'data' => $data
+                        'data' => $data,
+                        'totals' => [
+                            'dhoti_qty' => number_format($totDhoti, 0),
+                            'white_qty' => number_format($totWhite, 0),
+                            'core_qty' => number_format($totCore, 0),
+                            'bravo_qty' => number_format($totBravo, 0),
+                            'deal_qty' => number_format($totDeal, 0),
+                            'formal_qty' => number_format($totFormal, 0),
+                            'total_qty' => number_format($totOrderQty, 0),
+                            'delivered_qty' => number_format($totDeliveredQty, 0),
+                            'pending_qty' => number_format($totPendingQty, 0),
+                        ]
                     ]);
 
                 case 'outstanding-report':
@@ -881,6 +982,11 @@ class SalesMarketingReportController extends Controller
                     }])->get();
 
                     $outstandingReport = [];
+                    $sumBills = 0;
+                    $sumSales = 0;
+                    $sumReceived = 0;
+                    $sumOutstanding = 0;
+
                     foreach ($allCustomers as $cust) {
                         $invoices = $cust->salesInvoices;
                         if ($invoices->count() > 0) {
@@ -889,6 +995,11 @@ class SalesMarketingReportController extends Controller
                             $outstanding = max(0, $totalSales - $received);
 
                             if ($outstanding > 0 || $totalSales > 0) {
+                                $sumBills += $invoices->count();
+                                $sumSales += $totalSales;
+                                $sumReceived += $received;
+                                $sumOutstanding += $outstanding;
+
                                 $outstandingReport[] = [
                                     'zone' => '<span class="badge bg-label-secondary">' . htmlspecialchars((string)($cust->zone->zone_name ?? '-')) . '</span>',
                                     'customer' => '<div class="fw-bold text-dark">' . htmlspecialchars((string)$cust->name) . '</div><small class="text-muted">' . htmlspecialchars((string)$cust->code) . '</small>',
@@ -908,7 +1019,13 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
-                        'data' => $pagedData
+                        'data' => $pagedData,
+                        'totals' => [
+                            'bills_count' => number_format($sumBills),
+                            'total_sales' => '₹' . number_format($sumSales, 2),
+                            'received' => '₹' . number_format($sumReceived, 2),
+                            'outstanding' => '₹' . number_format($sumOutstanding, 2),
+                        ]
                     ]);
 
                 default:

@@ -33,17 +33,14 @@
             @endforeach
             @endif
         </tbody>
-        @if(count($outstandingReport) > 0)
         <tfoot class="bg-light fw-bold">
             <tr>
-                <td></td>
-                <td></td>
-                <td class="text-end">Grand Total:</td>
-                <td class="text-end text-primary">₹{{ number_format(array_sum(array_column($outstandingReport, 'total_sales')), 2) }}</td>
-                <td class="text-end text-success">₹{{ number_format(array_sum(array_column($outstandingReport, 'received')), 2) }}</td>
-                <td class="text-end text-danger">₹{{ number_format(array_sum(array_column($outstandingReport, 'outstanding')), 2) }}</td>
+                <th colspan="2" class="text-end text-uppercase">Total:</th>
+                <th class="text-center text-primary fw-bold" id="outstanding_report_bills_count">{{ count($outstandingReport) > 0 ? number_format(array_sum(array_column($outstandingReport, 'bills_count'))) : 0 }}</th>
+                <th class="text-end text-primary fw-bold" id="outstanding_report_total_sales">₹{{ count($outstandingReport) > 0 ? number_format(array_sum(array_column($outstandingReport, 'total_sales')), 2) : '0.00' }}</th>
+                <th class="text-end text-success fw-bold" id="outstanding_report_received">₹{{ count($outstandingReport) > 0 ? number_format(array_sum(array_column($outstandingReport, 'received')), 2) : '0.00' }}</th>
+                <th class="text-end text-danger fw-bold" id="outstanding_report_outstanding">₹{{ count($outstandingReport) > 0 ? number_format(array_sum(array_column($outstandingReport, 'outstanding')), 2) : '0.00' }}</th>
             </tr>
         </tfoot>
-        @endif
     </table>
 </div>

@@ -197,7 +197,7 @@
                                         <th>Raw Material</th>
                                         <th>Supplier Design Name</th>
                                         <th>Brand</th>
-                                        <th class="hsn-column">HSN Code</th>
+                                        <th class="hsn-column">HSN Code <span class="text-danger">*</span></th>
                                         <th class="col-fabric">Fabric Width</th>
                                         <th class="col-fabric">Fabric Type</th>
                                         <th>Ordered Qty</th>

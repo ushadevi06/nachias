@@ -5,19 +5,33 @@
     <meta charset="utf-8">
     <title>Purchase Order - {{ $purchaseOrder->po_number }}</title>
     <style>
+        @font-face {
+            font-family: "dejavusans-regular";
+            src: url("{{ asset('assets/fonts/DejaVuSans.ttf') }}");
+        }
+        @font-face {
+            font-family: "dejavusans-bold";
+            src: url("{{ asset('assets/fonts/DejaVuSans-Bold.ttf') }}");
+        }
+
         @page {
             size: A4 portrait;
-            margin: 15mm 8mm 12mm 8mm;
+            margin: 10mm 8mm 6mm 8mm;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'dejavusans-regular', sans-serif;
             font-size: 8px;
             color: #292929ff;
             margin: 0;
             padding: 0;
+            line-height: 1.15;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+        }
+
+        strong, .bold, th {
+            font-family: 'dejavusans-bold', sans-serif;
         }
 
         .container {
@@ -77,7 +91,7 @@
         }
 
         .item-table tbody td {
-            padding: 6px 4px;
+            padding: 2.5px 3px;
             vertical-align: middle;
         }
 
@@ -106,9 +120,8 @@
         .no-border th,
         .no-border td {
             border: none !important;
-            padding:2px;
-            margin:2px;
-            gap:4px;
+            padding: 3px 2px;
+            margin: 0;
         }
 
         .text-center {
@@ -160,7 +173,7 @@
         }
 
         .item-table tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: transparent;
         }
 
         .item-table tfoot td {
@@ -205,24 +218,80 @@
         $allItems = collect($purchaseOrder->items);
         $totalItemCount = $allItems->count();
 
+        $isAccessoriesStore = $purchaseOrder->storeType && (
+            stripos($purchaseOrder->storeType->store_type_name, 'ACCESSORIES') !== false
+            || $purchaseOrder->store_type_id == 2
+        );
+        $isFabricStore = !$isAccessoriesStore;
+        $isOtherState = ($purchaseOrder->other_state ?? '') === 'yes';
+        $totalCols = $isFabricStore ? 14 : ($isOtherState ? 12 : 14);
+
+        $hasImages = $allItems->contains(function($it) {
+            return !empty($it->attached_file) && file_exists(public_path('uploads/purchase_orders/' . $it->attached_file));
+        });
+
+        $PAGE_HEIGHT_PX = 915; 
+        
+        // Dynamic Header Height
+        $s = $purchaseOrder->supplier;
+        $addrParts = array_filter([$s->address_line_1 ?? null, $s->address_line_2 ?? null, $s->address_line_3 ?? null]);
+        $addrLineCount = count($addrParts);
+        $addrText = implode(' ', $addrParts);
+        $extraAddrLines = max(0, $addrLineCount - 1) + (strlen($addrText) > 60 ? (int)floor(strlen($addrText) / 60) : 0);
+        
+        $HEADER_HEIGHT_PX = 235 + ($extraAddrLines * 14);
+        $ROW_HEIGHT_PX = $hasImages ? 38 : 22;
+        $CONTINUE_NOTE_PX = 28;
+
+        // Dynamic Footer/Summary Height calculation (Summary + Remarks + 90px Signature Box)
+        $summaryLines = 3; // Total Qty, Sub Total, Taxable Amount
+        if (($purchaseOrder->discount_amount ?? 0) > 0) $summaryLines++;
+        if (($purchaseOrder->commission ?? 0) > 0) $summaryLines++;
+        if (($purchaseOrder->cgst_amount ?? 0) > 0 || ($purchaseOrder->cgst_percent ?? 0) > 0) $summaryLines++;
+        if (($purchaseOrder->sgst_amount ?? 0) > 0 || ($purchaseOrder->sgst_percent ?? 0) > 0) $summaryLines++;
+        if (($purchaseOrder->igst_amount ?? 0) > 0 || ($purchaseOrder->igst_percent ?? 0) > 0) $summaryLines++;
+        if (($purchaseOrder->round_off ?? 0) != 0) $summaryLines++;
+        $summaryLines++; // Grand Total
+
+        $remarksLen = strlen($purchaseOrder->remarks ?? '');
+        $remarksLines = !empty($purchaseOrder->remarks) ? max(1, (int)ceil($remarksLen / 50)) : 0;
+
+        $footerHeight = 240 + (max(0, $summaryLines - 5) * 14) + ($remarksLines * 14);
+
+        $contentAreaHeight = $PAGE_HEIGHT_PX - $HEADER_HEIGHT_PX;
+        
+        $rowsPerFullPage = min($hasImages ? 16 : 26, max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX) / $ROW_HEIGHT_PX)));
+        $rowsPerLastPage = min($hasImages ? 12 : 22, max(1, (int) floor(($PAGE_HEIGHT_PX - $HEADER_HEIGHT_PX - $footerHeight) / $ROW_HEIGHT_PX)));
+
+        // Intelligent Page Chunking
         $pages = [];
         $remaining = collect($allItems);
 
         if ($totalItemCount === 0) {
             $pages[] = collect();
+        } elseif ($totalItemCount <= $rowsPerLastPage) {
+            $pages[] = $remaining;
         } else {
             while ($remaining->count() > 0) {
-                if ($remaining->count() <= 7) {
+                $remCount = $remaining->count();
+
+                if ($remCount <= $rowsPerLastPage) {
                     $pages[] = $remaining;
-                    $remaining = collect();
-                } else if ($remaining->count() <= 12) {
-                    $pages[] = $remaining;
-                    $remaining = collect();
-                    $pages[] = collect();
-                } else {
-                    $pages[] = $remaining->take(12);
-                    $remaining = $remaining->slice(12)->values();
+                    break;
                 }
+
+                if ($remCount <= $rowsPerFullPage + $rowsPerLastPage) {
+                    $leftForLast = min($rowsPerLastPage, max(1, $remCount - $rowsPerFullPage));
+                    $take = $remCount - $leftForLast;
+                    if ($take > $rowsPerFullPage) {
+                        $take = $rowsPerFullPage;
+                    }
+                } else {
+                    $take = $rowsPerFullPage;
+                }
+
+                $pages[] = $remaining->take($take);
+                $remaining = $remaining->slice($take)->values();
             }
         }
 
@@ -236,7 +305,7 @@
         <table class="item-table">
             <thead>
                 <tr>
-                    <td colspan="14" style="border: none; padding: 4px 0 0 0; background: #fff;">
+                    <td colspan="{{ $totalCols }}" style="border: none; padding: 4px 0 0 0; background: #fff;">
                         <div style="position: relative;">
                             <table class="header-table" style="width: 100%; border: none;">
                                 <tr>
@@ -261,7 +330,7 @@
                                                     <img src="{{ $logoPath }}" style="width: 140px;">
                                                 </td>
                                                 <td style="border: none; vertical-align: top; padding-left: 10px; width:75%;">
-                                                    <div style="font-size: 9px; line-height: 1.2;">
+                                                    <div style="font-size: 9.5px; line-height: 1.25;">
                                                         {{ $setting->address }}
                                                         <table style="width: 100%; border-collapse: collapse; margin-top: 2px;">
                                                             <tr>
@@ -292,10 +361,10 @@
                                 </tr>
                             </table>
                         </div>
-                        <div class="header-title" style="margin-top: 3px; margin-bottom: 3px;">Purchase Order</div>
-                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 4px;">
+                        <div class="header-title" style="margin-top: 6px; margin-bottom: 6px;">Purchase Order</div>
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 8px; font-size: 9.5px;">
                             <tr>
-                                <td width="50%" style="padding: 4px 4px; vertical-align: top; border-right: 1px solid #000; border-bottom: none; border-top: none; border-left: none;">
+                                <td width="55%" style="padding: 4px 6px; vertical-align: top; border-right: 1px solid #000; border-bottom: none; border-top: none; border-left: none;">
                                     <table class="no-border" style="margin: 0; width: 100%;">
                                         <tr>
                                             <td width="22%">Supplier</td>
@@ -333,7 +402,7 @@
                                         </tr>
                                     </table>
                                 </td>
-                                <td width="50%" style="padding: 2px 4px; vertical-align: top; border: none;">
+                                <td width="45%" style="padding: 4px 6px; vertical-align: top; border: none;">
                                     <table class="no-border" style="margin: 0; width: 100%;">
                                         <tr>
                                             <td width="30%">PO No.</td>
@@ -373,20 +442,50 @@
                 </tr>
 
                 <tr>
-                    <th width="3.5%">S.No</th>
-                    <th width="7.5%">Store Category</th>
-                    <th width="7.5%">Brand</th>
-                    <th width="10%">Raw Material</th>
-                    <th width="7%">Style</th>
-                    <th width="5.5%">Fabric Width</th>
-                    <th width="6.5%">Fabric Type</th>
-                    <th width="7.5%">Supplier Design</th>
-                    <th width="6.5%">Color</th>
-                    <th width="4.5%">UOM</th>
-                    <th width="7.5%">Quantity</th>
-                    <th width="6.5%">Rate</th>
-                    <th width="10%">Amount</th>
-                    <th width="10%">Image</th>
+                    @if($isFabricStore)
+                        <th width="3.5%">S.No</th>
+                        <th width="7.5%">Store Category</th>
+                        <th width="7.5%">Brand</th>
+                        <th width="10%">Raw Material</th>
+                        <th width="7%">Style</th>
+                        <th width="5.5%">Fabric Width</th>
+                        <th width="6.5%">Fabric Type</th>
+                        <th width="7.5%">Supplier Design</th>
+                        <th width="6.5%">Color</th>
+                        <th width="4.5%">UOM</th>
+                        <th width="7.5%">Quantity</th>
+                        <th width="6.5%">Rate</th>
+                        <th width="10%">Amount</th>
+                        <th width="10%">Image</th>
+                    @elseif($isOtherState)
+                        <th width="3.5%">S.No</th>
+                        <th width="8.5%">Store Category</th>
+                        <th width="8.5%">Brand</th>
+                        <th width="14%">Raw Material</th>
+                        <th width="10%">Supplier Design</th>
+                        <th width="5.5%">UOM</th>
+                        <th width="8%">Quantity</th>
+                        <th width="7.5%">Rate</th>
+                        <th width="6.5%">IGST %</th>
+                        <th width="9%">IGST Amt</th>
+                        <th width="10%">Amount</th>
+                        <th width="9%">Image</th>
+                    @else
+                        <th width="3.5%">S.No</th>
+                        <th width="7.5%">Store Category</th>
+                        <th width="7.5%">Brand</th>
+                        <th width="11%">Raw Material</th>
+                        <th width="8.5%">Supplier Design</th>
+                        <th width="4.5%">UOM</th>
+                        <th width="7%">Quantity</th>
+                        <th width="6.5%">Rate</th>
+                        <th width="5.5%">CGST %</th>
+                        <th width="7.5%">CGST Amt</th>
+                        <th width="5.5%">SGST %</th>
+                        <th width="7.5%">SGST Amt</th>
+                        <th width="9%">Amount</th>
+                        <th width="9%">Image</th>
+                    @endif
                 </tr>
             </thead>
 
@@ -413,16 +512,33 @@
                     <td class="text-center">{{ $item->storeCategory->category_name ?? '-' }}</td>
                     <td class="text-center">{{ $item->brand->brand_name ?? '-' }}</td>
                     <td><strong>{{ $item->rawMaterial->name ?? '' }}</strong></td>
-                    <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
-                    <td class="text-center no-wrap">{{ $item->fabricWidth->width ?? '-' }}</td>
-                    <td class="text-center">{{ $item->fabricType->fabric_type ?? '-' }}</td>
-                    <td class="text-center bold">
-                        {{ $item->supplier_design_name ?? '-' }}
-                    </td>
-                    <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
+
+                    @if($isFabricStore)
+                        <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
+                        <td class="text-center no-wrap">{{ $item->fabricWidth->width ?? '-' }}</td>
+                        <td class="text-center">{{ $item->fabricType->fabric_type ?? '-' }}</td>
+                        <td class="text-center bold">{{ $item->supplier_design_name ?? '-' }}</td>
+                        <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
+                    @else
+                        <td class="text-center bold">{{ $item->supplier_design_name ?? '-' }}</td>
+                    @endif
+
                     <td class="text-center no-wrap">{{ $item->uom->uom_code ?? '-' }}</td>
                     <td class="text-center no-wrap">{{ number_format($item->quantity, 2) }}</td>
                     <td class="text-right no-wrap">{{ number_format($item->rate, 2) }}</td>
+
+                    @if(!$isFabricStore)
+                        @if($isOtherState)
+                            <td class="text-center no-wrap">{{ number_format($item->igst_percent ?? 0, 2) }}%</td>
+                            <td class="text-right no-wrap">{{ number_format($item->igst_amount ?? 0, 2) }}</td>
+                        @else
+                            <td class="text-center no-wrap">{{ number_format($item->cgst_percent ?? 0, 2) }}%</td>
+                            <td class="text-right no-wrap">{{ number_format($item->cgst_amount ?? 0, 2) }}</td>
+                            <td class="text-center no-wrap">{{ number_format($item->sgst_percent ?? 0, 2) }}%</td>
+                            <td class="text-right no-wrap">{{ number_format($item->sgst_amount ?? 0, 2) }}</td>
+                        @endif
+                    @endif
+
                     <td class="text-right no-wrap">{{ number_format($item->amount, 2) }}</td>
 
                     <td class="text-center">
@@ -438,8 +554,20 @@
                 @endforeach
 
                 @if($chunkIndex < $totalChunks - 1)
+                @php
+                    $intermediateCount = count($chunk);
+                    $dummyRowsIntermediate = max(0, $rowsPerFullPage - $intermediateCount);
+                @endphp
+                @for($i = 0; $i < $dummyRowsIntermediate; $i++)
+                    <tr style="page-break-inside: avoid;">
+                        <td style="height: 20px; line-height: 18px;">&nbsp;</td>
+                        @for($c = 1; $c < $totalCols; $c++)
+                            <td>&nbsp;</td>
+                        @endfor
+                    </tr>
+                @endfor
                 <tr style="page-break-inside: avoid;">
-                    <td colspan="14" class="text-right bold" style="padding: 6px 12px; border-top: 1px solid #000; font-style: italic;">
+                    <td colspan="{{ $totalCols }}" class="text-right bold" style="padding: 6px 12px; border-top: 1px solid #000; font-style: italic;">
                         Continue to Page {{ $chunkIndex + 2 }}...
                     </td>
                 </tr>
@@ -448,42 +576,66 @@
                 @if($chunkIndex == $totalChunks - 1)
                 @php
                     $lastChunkCount = count($chunk);
-                    $dummyRowsNeeded = $lastChunkCount === 0 ? 6 : max(0, 6 - $lastChunkCount);
+                    $dummyRowsNeeded = max(0, $rowsPerLastPage - $lastChunkCount);
                 @endphp
 
                 @for($i = 0; $i < $dummyRowsNeeded; $i++)
                     <tr style="page-break-inside: avoid;">
-                        <td style="height: 24px;">&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
+                        <td style="height: 20px; line-height: 18px;">&nbsp;</td>
+                        @for($c = 1; $c < $totalCols; $c++)
+                            <td>&nbsp;</td>
+                        @endfor
                     </tr>
                 @endfor
 
                 <tr class="total-row" style="page-break-inside: avoid;">
-                    <td colspan="10" class="text-right bold">Total</td>
-                    <td class="text-center bold no-wrap">
-                        {{ number_format($purchaseOrder->total_qty, 2) }}
-                    </td>
-                    <td></td>
-                    <td class="text-right bold no-wrap">
-                        {{ number_format($purchaseOrder->sub_total, 2) }}
-                    </td>
-                    <td></td>
+                    @if($isFabricStore)
+                        <td colspan="10" class="text-right bold">Total</td>
+                        <td class="text-center bold no-wrap">
+                            {{ number_format($purchaseOrder->total_qty, 2) }}
+                        </td>
+                        <td></td>
+                        <td class="text-right bold no-wrap">
+                            {{ number_format($purchaseOrder->sub_total, 2) }}
+                        </td>
+                        <td></td>
+                    @elseif($isOtherState)
+                        <td colspan="6" class="text-right bold">Total</td>
+                        <td class="text-center bold no-wrap">
+                            {{ number_format($purchaseOrder->total_qty, 2) }}
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-right bold no-wrap">
+                            {{ number_format($purchaseOrder->items->sum('igst_amount'), 2) }}
+                        </td>
+                        <td class="text-right bold no-wrap">
+                            {{ number_format($purchaseOrder->sub_total, 2) }}
+                        </td>
+                        <td></td>
+                    @else
+                        <td colspan="6" class="text-right bold">Total</td>
+                        <td class="text-center bold no-wrap">
+                            {{ number_format($purchaseOrder->total_qty, 2) }}
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-right bold no-wrap">
+                            {{ number_format($purchaseOrder->items->sum('cgst_amount'), 2) }}
+                        </td>
+                        <td></td>
+                        <td class="text-right bold no-wrap">
+                            {{ number_format($purchaseOrder->items->sum('sgst_amount'), 2) }}
+                        </td>
+                        <td class="text-right bold no-wrap">
+                            {{ number_format($purchaseOrder->sub_total, 2) }}
+                        </td>
+                        <td></td>
+                    @endif
                 </tr>
 
                 <tr style="page-break-inside: avoid;">
-                    <td colspan="14" style="padding: 0; border: 1px solid #000;">
+                    <td colspan="{{ $totalCols }}" style="padding: 0; border: 1px solid #000;">
                         <table style="width: 100%; border-collapse: collapse; border: none;">
                             <tr>
                                 <td style="width: 60%; padding: 8px; vertical-align: top; border-right: 1px solid #000; border-top: none; border-bottom: none; border-left: none;">
@@ -612,7 +764,7 @@
         </table>
 
         @if($chunkIndex == $totalChunks - 1)
-        <table class="no-border" style="margin-top: 20px; width: 100%; page-break-inside: avoid;">
+        <table class="no-border" style="margin-top: 10px; width: 100%; page-break-inside: avoid;">
             <tr>
                 <td width="50%">
                     @if(isset($purchaseOrder->payment_terms) && $purchaseOrder->payment_terms != '')

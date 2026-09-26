@@ -26,7 +26,7 @@ class PurchaseInvoiceController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = PurchaseInvoice::with(['supplier', 'purchaseOrder'])->withCount('grnEntries')->orderBy('id', 'desc');
+            $query = PurchaseInvoice::with(['supplier', 'purchaseOrder', 'items'])->withCount('grnEntries')->orderBy('id', 'desc');
 
             if (!empty($request->supplier_id)) {
                 $query->where('supplier_id', $request->supplier_id);
@@ -48,7 +48,6 @@ class PurchaseInvoiceController extends Controller
                         ->orWhere('invoice_status', 'like', "%{$search}%")
                         ->orWhereDate('invoice_date', $search)
                         ->orWhereRaw("DATE_FORMAT(invoice_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
-                        ->orWhereRaw("CAST(grand_total AS CHAR) LIKE ?", ["%{$numericSearch}%"])
                         ->orWhereHas('supplier', function ($q2) use ($search) {
                             $q2->where('name', 'like', "%{$search}%")
                             ->orWhere('code', 'like', "%{$search}%");
@@ -56,6 +55,20 @@ class PurchaseInvoiceController extends Controller
                         ->orWhereHas('purchaseOrder', function ($q2) use ($search) {
                             $q2->where('po_number', 'like', "%{$search}%");
                         });
+
+                    if ($numericSearch !== '') {
+                        $q->orWhereRaw("CAST(grand_total AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT(grand_total, 2) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("CAST(sub_total AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT(sub_total, 2) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("CAST(discount_amount AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT(discount_amount, 2) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("CAST(discount_percent AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("CAST(taxable_amount AS CHAR) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT(taxable_amount, 2) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("(SELECT COALESCE(SUM(quantity), 0) FROM purchase_invoice_items WHERE purchase_invoice_items.purchase_invoice_id = purchase_invoices.id AND purchase_invoice_items.deleted_at IS NULL) LIKE ?", ["%{$numericSearch}%"])
+                            ->orWhereRaw("FORMAT((SELECT COALESCE(SUM(quantity), 0) FROM purchase_invoice_items WHERE purchase_invoice_items.purchase_invoice_id = purchase_invoices.id AND purchase_invoice_items.deleted_at IS NULL), 2) LIKE ?", ["%{$numericSearch}%"]);
+                    }
                 });
             }
 
@@ -120,6 +133,9 @@ class PurchaseInvoiceController extends Controller
                     'supplier_name' => $invoice->supplier ? $invoice->supplier->name . ' <a href="' . url('suppliers/view_details/' . $invoice->supplier->id) . '" target="_blank"><span class="mini-title">(' . $invoice->supplier->code . ')</span></a>' : '-',
                     'destination' => $invoice->destination ?? '-',
                     'total_qty' => number_format($totalQty, 2),
+                    'sub_total' => '₹' . number_format($invoice->sub_total ?? 0, 2),
+                    'discount_amount' => '₹' . number_format($invoice->discount_amount ?? 0, 2),
+                    'taxable_amount' => '₹' . number_format($invoice->taxable_amount ?? 0, 2),
                     'total_amount' => '₹' . number_format($invoice->grand_total, 2),
                     'status' => $statusDropdown,
                     'action' => $action,
@@ -200,7 +216,7 @@ class PurchaseInvoiceController extends Controller
                 'items.*.igst_percent' => 'nullable|numeric|min:0|max:100',
                 'items.*.igst_amount' => 'nullable|numeric|min:0',
                 'items.*.hsn_code' => [
-                    'nullable',
+                    'required',
                     'digits_between:4,8'
                 ],
                 'other_state' => ($id ? 'nullable' : 'required') . '|in:Y,N',
@@ -231,6 +247,7 @@ class PurchaseInvoiceController extends Controller
                 '*.date' => 'Please enter a valid date.',
                 'items.required' => 'Please add at least one item.',
                 'items.*.quantity' => 'Quantity is required.',
+                'items.*.hsn_code.required' => 'This field is required.',
                 'items.*.hsn_code.digits_between' => 'HSN Code must be between 4 and 8 digits.',
                 'other_state.required' => 'Please select if it is an other state transaction.',
                 'igst_percent.numeric' => 'IGST % must be a number.',
@@ -305,7 +322,6 @@ class PurchaseInvoiceController extends Controller
                 ]);
             }
 
-            // Recalculate amounts to validate against negative values
             $subTotal = 0;
             if ($request->has('items')) {
                 foreach ($request->items as $item) {
@@ -555,9 +571,7 @@ class PurchaseInvoiceController extends Controller
                                 }
                             }
                         }
-                        PurchaseInvoiceItem::where('purchase_invoice_id', $id)
-                            ->whereNotIn('purchase_order_item_id', $selectedPoItemIds)
-                            ->delete();
+                        PurchaseInvoiceItem::where('purchase_invoice_id', $id)->whereNotIn('purchase_order_item_id', $selectedPoItemIds)->delete();
                     }
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == '1') {
