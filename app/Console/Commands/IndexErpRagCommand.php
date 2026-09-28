@@ -19,7 +19,7 @@ class IndexErpRagCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Extract and index Laravel code (routes, menus), Nachias Documentation.docx, and nachias.sql into the RAG knowledge base';
+    protected $description = 'Extract and index Laravel code (routes, menus), Nachias Documentation (.docx & .md), and nachias.sql into the RAG knowledge base';
 
     /**
      * Execute the console command.
@@ -38,8 +38,10 @@ class IndexErpRagCommand extends Command
             ['Source', 'Chunks Indexed'],
             [
                 ['Laravel Code (Menus & Routes)', $stats['menus_and_routes']],
-                ['Documentation (Nachias Documentation.docx)', $stats['documentation']],
+                ['Documentation (Nachias Documentation.docx)', $stats['documentation_docx']],
+                ['Documentation (Nachias Documentation.md)', $stats['documentation_md']],
                 ['Database Schema (nachias.sql)', $stats['sql_tables']],
+                ['Field & Select Box Data Lineages', $stats['field_data_sources']],
                 ['Total Knowledge Chunks', $stats['total_indexed']],
             ]
         );
