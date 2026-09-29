@@ -70,26 +70,26 @@ class ChatbotController extends Controller
         $hasImage = $request->filled('image');
 
         $validator = Validator::make($request->all(), [
-            'message' => [$hasImage ? 'nullable' : 'required', 'string', 'max:2000'],
+            'message' => [$hasImage ? 'nullable' : 'required', 'string', 'max:5000'],
             'session_id' => ['nullable', 'string', 'max:100'],
             'chat_title' => ['nullable', 'string', 'max:255'],
             'image' => ['nullable', 'string'],
             'image_name' => ['nullable', 'string', 'max:255'],
-            'image_text' => ['nullable', 'string', 'max:5000'],
+            'image_text' => ['nullable', 'string', 'max:20000'],
             'is_voice' => ['nullable', 'boolean'],
             'audio' => ['nullable', 'string'],
-            'history' => ['nullable', 'array', 'max:12'],
-            'history.*.role' => ['required_with:history', 'string', 'in:user,assistant'],
-            'history.*.content' => ['required_with:history', 'string', 'max:2000'],
+            'history' => ['nullable', 'array'],
+            'history.*.role' => ['nullable', 'string', 'in:user,assistant'],
+            'history.*.content' => ['nullable', 'string'],
         ], [
             'message.required' => 'Please enter a message or upload an image.',
-            'message.max' => 'The message is too long (maximum 2000 characters).',
+            'message.max' => 'The message is too long (maximum 5000 characters).',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => $validator->errors()->first('message') ?: 'Invalid input provided.',
+                'message' => $validator->errors()->first() ?: 'Invalid input provided.',
             ], 422);
         }
 
@@ -97,7 +97,8 @@ class ChatbotController extends Controller
         $imageData = $request->input('image');
         $imageName = $request->input('image_name');
         $imageText = trim((string) $request->input('image_text'));
-        $history = $request->input('history', []);
+        $rawHistory = $request->input('history', []);
+        $history = is_array($rawHistory) ? array_slice($rawHistory, -12) : [];
         $isVoice = (bool) $request->input('is_voice', false);
         $audioData = $request->input('audio');
         $requestedTargetLang = $request->input('target_lang');
@@ -192,10 +193,10 @@ class ChatbotController extends Controller
                 $screenHeader = "[IDENTIFIED ERP SCREEN FROM IMAGE]: Screen: {$detectedChunk->screen} | Menu Path: {$detectedChunk->menu_path} | URL: {$detectedUrl}" . ($detectedScreen['is_add'] ? " (Add Form)" : "");
 
                 $ragQuery = $detectedChunk->screen . " " . $detectedChunk->menu_path . " " . $ragQuery . " " . $imageText;
-                $effectivePromptForLlm = $effectivePrompt . "\n\n" . $screenHeader . "\n\n[Context from Uploaded Image / Screenshot]:\n" . $imageText;
+                $effectivePromptForLlm = $screenHeader . "\n\n[Context from Uploaded Image / Screenshot]:\n" . $imageText . "\n\n[User Question]:\n" . $effectivePrompt;
             } else {
                 $ragQuery .= " " . $imageText;
-                $effectivePromptForLlm = $effectivePrompt . "\n\n[Context from Uploaded Image / Screenshot]:\n" . $imageText;
+                $effectivePromptForLlm = "[Context from Uploaded Image / Screenshot]:\n" . $imageText . "\n\n[User Question]:\n" . $effectivePrompt;
             }
         } else {
             $effectivePromptForLlm = $effectivePrompt;
@@ -222,8 +223,20 @@ class ChatbotController extends Controller
             $ragResult['chunks'] = array_slice($filteredChunks, 0, 4);
         }
 
-        // If no documented Nachias ERP knowledge chunks match this question and it has no Nachias context:
-        $hasNachiasContext = stripos($effectivePrompt, 'nachias') !== false || !empty($imageData);
+        // If an image is uploaded or error question asked, but no chunks were retrieved, fetch relevant controller validation chunks
+        $hasNachiasContext = stripos($effectivePrompt, 'nachias') !== false || !empty($imageData) || stripos($effectivePrompt, 'error') !== false || stripos($effectivePrompt, 'screen') !== false || stripos($effectivePrompt, 'fix') !== false;
+        if (empty($ragResult['chunks']) && $hasNachiasContext) {
+            $fallbackChunks = ErpRagKnowledgeChunk::where('source_type', 'controller')
+                ->whereIn('screen', ['Purchase Orders', 'Sales Orders', 'GRN Entry', 'Customers', 'Billing'])
+                ->limit(3)
+                ->get();
+            if ($fallbackChunks->isNotEmpty()) {
+                $ragResult['chunks'] = $fallbackChunks->all();
+                $ragResult['context'] = app(\App\Services\RAG\ErpRagRetrieverService::class)->formatContext($fallbackChunks);
+            }
+        }
+
+        // If no documented Nachias ERP knowledge chunks match this question and it has no Nachias / image context:
         if (empty($ragResult['chunks']) && !$hasNachiasContext) {
             $refusalMessage = "I am only permitted to assist with Nachias ERP application features and navigation. I cannot answer general or unrelated questions.";
             $result = [

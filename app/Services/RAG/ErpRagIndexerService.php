@@ -13,19 +13,22 @@ class ErpRagIndexerService
     protected MarkdownDocumentationExtractor $mdExtractor;
     protected SqlSchemaExtractor $sqlExtractor;
     protected FormDataLineageExtractor $fieldLineageExtractor;
+    protected ControllerCodeExtractor $controllerExtractor;
 
     public function __construct(
         CodeRouteMenuExtractor $menuExtractor,
         DocxDocumentationExtractor $docxExtractor,
         MarkdownDocumentationExtractor $mdExtractor,
         SqlSchemaExtractor $sqlExtractor,
-        FormDataLineageExtractor $fieldLineageExtractor
+        FormDataLineageExtractor $fieldLineageExtractor,
+        ControllerCodeExtractor $controllerExtractor
     ) {
         $this->menuExtractor = $menuExtractor;
         $this->docxExtractor = $docxExtractor;
         $this->mdExtractor = $mdExtractor;
         $this->sqlExtractor = $sqlExtractor;
         $this->fieldLineageExtractor = $fieldLineageExtractor;
+        $this->controllerExtractor = $controllerExtractor;
     }
 
     /**
@@ -48,6 +51,7 @@ class ErpRagIndexerService
 
         $stats = [
             'menus_and_routes' => 0,
+            'controllers' => 0,
             'documentation_docx' => 0,
             'documentation_md' => 0,
             'sql_tables' => 0,
@@ -60,27 +64,32 @@ class ErpRagIndexerService
         $this->batchInsert($codeChunks);
         $stats['menus_and_routes'] = count($codeChunks);
 
-        // 2. Index Nachias Documentation.docx (legacy support)
+        // 2. Index Laravel Controller Codebase (Validation, Methods, Business Flows)
+        $controllerChunks = $this->controllerExtractor->extract();
+        $this->batchInsert($controllerChunks);
+        $stats['controllers'] = count($controllerChunks);
+
+        // 3. Index Nachias Documentation.docx (legacy support)
         $docxChunks = $this->docxExtractor->extract();
         $this->batchInsert($docxChunks);
         $stats['documentation_docx'] = count($docxChunks);
 
-        // 3. Index Nachias Documentation.md (primary documentation source)
+        // 4. Index Nachias Documentation.md (primary documentation source)
         $mdChunks = $this->mdExtractor->extract();
         $this->batchInsert($mdChunks);
         $stats['documentation_md'] = count($mdChunks);
 
-        // 4. Index nachias.sql
+        // 5. Index nachias.sql
         $sqlChunks = $this->sqlExtractor->extract();
         $this->batchInsert($sqlChunks);
         $stats['sql_tables'] = count($sqlChunks);
 
-        // 5. Index Form Field & Select Box Data Lineages
+        // 6. Index Form Field & Select Box Data Lineages
         $fieldChunks = $this->fieldLineageExtractor->extract();
         $this->batchInsert($fieldChunks);
         $stats['field_data_sources'] = count($fieldChunks);
 
-        $stats['total_indexed'] = $stats['menus_and_routes'] + $stats['documentation_docx'] + $stats['documentation_md'] + $stats['sql_tables'] + $stats['field_data_sources'];
+        $stats['total_indexed'] = $stats['menus_and_routes'] + $stats['controllers'] + $stats['documentation_docx'] + $stats['documentation_md'] + $stats['sql_tables'] + $stats['field_data_sources'];
 
         Log::info('ERP RAG indexing completed successfully', $stats);
 

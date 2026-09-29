@@ -61,7 +61,12 @@ class ErpRagRetrieverService
     {
         $q = strtolower($query);
 
-        // 1. Form field and select box data lineage intent (MUST be checked first!)
+        // 1. Error troubleshooting intent (when asking about errors, failures, validation, or screenshot issues)
+        if (preg_match('/\b(error|failed|failure|exception|warning|issue|problem|why.*error|fix.*error|resolve.*error|troubleshoot|invalid|cannot|already taken|already exists|sqlstate|duplicate entry|required field|validation error|not allowed|access denied)\b/i', $q)) {
+            return 'error_troubleshoot';
+        }
+
+        // 2. Form field and select box data lineage intent
         if (
             preg_match('/\b(where does.*data come from|data comes from where|where.*comes from|comes from where|come from where|options show|where do.*options.*come|where.*options.*come from|dropdown.*where|select box.*where|where.*select box.*get|where to add.*options|source of.*dropdown|source of.*select|data source|options come from|data source of)\b/i', $q) ||
             ((str_contains($q, 'select box') || str_contains($q, 'dropdown') || str_contains($q, 'select') || str_contains($q, 'options')) && (str_contains($q, 'where') || str_contains($q, 'from') || str_contains($q, 'source')))
@@ -71,6 +76,10 @@ class ErpRagRetrieverService
 
         if (preg_match('/\b(table|database|schema|column|columns|datatype|primary key|foreign key|stored in|store in|sql)\b/i', $q)) {
             return 'schema';
+        }
+
+        if (preg_match('/\b(controller|backend|validation|validate|required field|mandatory field|rules|status change|can i edit|only draft|self close|calculation|tax calculation|commission calculation|permission|authorized)\b/i', $q)) {
+            return 'controller_logic';
         }
 
         if (preg_match('/\b(how to add|how to create|add new|create new|new employee|add employee|create employee|add role|create role|add |create )\b/i', $q)) {
@@ -199,6 +208,29 @@ class ErpRagRetrieverService
                 }
             });
             $candidates = $candidates->merge($fieldQuery->limit(25)->get());
+        }
+
+        // 5. Error troubleshooting search: retrieve relevant controller validation and workflow chunks
+        if ($intent === 'error_troubleshoot') {
+            $errQuery = ErpRagKnowledgeChunk::whereIn('source_type', ['controller', 'documentation', 'menu']);
+            if (!empty($tokens)) {
+                $errQuery->where(function ($q) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $q->orWhere('title', 'LIKE', "%{$token}%")
+                          ->orWhere('keywords', 'LIKE', "%{$token}%")
+                          ->orWhere('screen', 'LIKE', "%{$token}%");
+                    }
+                });
+                $candidates = $candidates->merge($errQuery->limit(35)->get());
+            }
+
+            // Fallback: if candidates are empty on an error question, include key transactional controllers
+            if ($candidates->isEmpty()) {
+                $fallbackControllers = ErpRagKnowledgeChunk::where('source_type', 'controller')
+                    ->whereIn('screen', ['Purchase Orders', 'Sales Orders', 'GRN Entry', 'Customers', 'Billing'])
+                    ->get();
+                $candidates = $candidates->merge($fallbackControllers);
+            }
         }
 
         return $candidates->unique('id');
@@ -411,9 +443,27 @@ class ErpRagRetrieverService
                 if ($chunk->source_type === 'sql_schema') {
                     $score += 300; // Overwhelming priority for database table queries!
                 }
+            } elseif ($intent === 'controller_logic') {
+                if ($chunk->source_type === 'controller') {
+                    $score += 320; // Top priority for controller codebase, validation and business logic!
+                } elseif ($chunk->source_type === 'menu') {
+                    $score += 100;
+                } elseif ($chunk->source_type === 'documentation') {
+                    $score += 90;
+                }
+            } elseif ($intent === 'error_troubleshoot') {
+                if ($chunk->source_type === 'controller') {
+                    $score += 350; // Top priority: controller validation rules & error conditions!
+                } elseif ($chunk->source_type === 'documentation') {
+                    $score += 180;
+                } elseif ($chunk->source_type === 'menu') {
+                    $score += 130;
+                }
             } elseif ($intent === 'workflow' || $intent === 'field_explanation') {
                 if ($chunk->source_type === 'documentation') {
                     $score += 160;
+                } elseif ($chunk->source_type === 'controller') {
+                    $score += 120;
                 } elseif ($chunk->source_type === 'menu') {
                     $score += 70;
                 }
@@ -486,6 +536,35 @@ class ErpRagRetrieverService
             if ($topSchema) {
                 $selected->push($topSchema);
                 $seenTitles[$topSchema->title] = true;
+            }
+        }
+
+        // If error_troubleshoot intent, ensure top controller validation chunk AND top screen chunk are included!
+        if ($intent === 'error_troubleshoot') {
+            $topController = $scored->firstWhere('source_type', 'controller');
+            if ($topController) {
+                $selected->push($topController);
+                $seenTitles[$topController->title] = true;
+                if ($topController->url) {
+                    $seenUrls[$topController->url] = true;
+                }
+            }
+            $topDoc = $scored->firstWhere('source_type', 'documentation');
+            if ($topDoc && !isset($seenTitles[$topDoc->title])) {
+                $selected->push($topDoc);
+                $seenTitles[$topDoc->title] = true;
+            }
+        }
+
+        // If controller_logic intent, ensure the top controller chunk is included first
+        if ($intent === 'controller_logic') {
+            $topController = $scored->firstWhere('source_type', 'controller');
+            if ($topController) {
+                $selected->push($topController);
+                $seenTitles[$topController->title] = true;
+                if ($topController->url) {
+                    $seenUrls[$topController->url] = true;
+                }
             }
         }
 

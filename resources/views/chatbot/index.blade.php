@@ -1943,6 +1943,7 @@
                 setLoading(true);
 
                 // Prepare request payload with recent history, session id, and image data
+                const recentHistory = Array.isArray(conversationHistory) ? conversationHistory.slice(-12) : [];
                 const payload = {
                     session_id: session.id,
                     chat_title: session.title,
@@ -1952,7 +1953,7 @@
                     image: attachedImage ? attachedImage.base64 : null,
                     image_name: attachedImage ? attachedImage.name : null,
                     image_text: attachedImage ? attachedImage.ocrText : null,
-                    history: conversationHistory
+                    history: recentHistory
                 };
 
                 $.ajax({
@@ -2009,7 +2010,7 @@
                             };
                             session.messages.push(aiMsgRecord);
 
-                            // Update in-memory conversation history for LLM
+                            // Update in-memory conversation history for LLM (bounded to last 24 items to prevent memory bloat)
                             conversationHistory.push({
                                 role: 'user',
                                 content: isTranslated ? translatedMsg : finalPrompt
@@ -2019,6 +2020,7 @@
                                 content: response.english_message || aiReply
                             });
 
+                            conversationHistory = conversationHistory.slice(-24);
                             session.conversationHistory = [...conversationHistory];
                             session.updatedAt = Date.now();
                             safeSaveSessions();
