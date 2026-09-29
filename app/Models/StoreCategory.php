@@ -18,6 +18,11 @@ class StoreCategory extends Model
         'status',
         'created_by',
     ];
+    public function brands()
+    {
+        return $this->belongsToMany(Brand::class, 'brand_store_categories', 'store_category_id', 'brand_id')->withTimestamps();
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'Active');

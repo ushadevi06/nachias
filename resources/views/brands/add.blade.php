@@ -41,6 +41,23 @@
                                 </div>
                                 <div class="col-md-6 col-xl-12">
                                     <div class="form-floating form-floating-outline">
+                                        <select name="store_category_ids[]" id="store_category_ids" class="select2 form-select @error('store_category_ids') is-invalid @enderror"
+                                            data-placeholder="Select Store Categories" multiple>
+                                            @foreach($storeCategories as $cat)
+                                                <option value="{{ $cat->id }}"
+                                                    {{ in_array($cat->id, old('store_category_ids', $selectedCategoryIds ?? [])) ? 'selected' : '' }}>
+                                                    {{ $cat->category_name }}{{ $cat->code ? ' (' . $cat->code . ')' : '' }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <label for="store_category_ids">Store Categories <span class="text-danger">*</span></label>
+                                    </div>
+                                    @error('store_category_ids')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-12">
+                                    <div class="form-floating form-floating-outline">
                                         <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
                                             data-placeholder="Select Status">
                                             <option value="">Select Status</option>

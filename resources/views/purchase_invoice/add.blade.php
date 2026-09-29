@@ -21,7 +21,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('invoice_no') is-invalid @enderror" id="invoice_no" placeholder="Enter Invoice No" name="invoice_no" value="{{ old('invoice_no', $invoice->invoice_no ?? $nextInvoiceNumber ?? '') }}" {{ isset($invoice) ? 'readonly' : '' }}>
+                                    <input type="text" class="form-control @error('invoice_no') is-invalid @enderror" id="invoice_no" placeholder="Enter Invoice No" name="invoice_no" value="{{ old('invoice_no', $invoice->invoice_no ?? $nextInvoiceNumber ?? '') }}" >
                                     <label for="invoice_no">Invoice No. <span class="text-danger">*</span></label>
                                 </div>
                                 @error('invoice_no')

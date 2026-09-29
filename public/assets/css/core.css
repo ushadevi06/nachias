@@ -34549,6 +34549,18 @@ body:not(.modal-open) .layout-content-navbar .layout-navbar {
     color: #ffffff;
 }
 
+.btn-pdf {
+    box-shadow: none !important;
+    border: 1px solid transparent;
+    color: #e53935;
+    padding: 7px 8px;
+}
+
+.btn-pdf:hover {
+    background-color: #e53935;
+    color: #ffffff;
+}
+
 .btn-cancel {
     box-shadow: none !important;
     border: 1px solid transparent;

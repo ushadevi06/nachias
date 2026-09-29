@@ -48,22 +48,6 @@
                             </h5>
                         </div>
                         <div class="col-md-6 text-md-end">
-                            {{-- <div class="btn-group me-2">
-                                <button type="button" class="btn btn-sm btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="ri ri-printer-line me-1"></i> Bulk Print
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <a class="dropdown-item" href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?bulk_print=1&format=tag" target="_blank">
-                                            <i class="ri ri-price-tag-3-line me-2"></i> Price Tag
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?bulk_print=1&format=sticker" target="_blank">
-                                            <i class="ri ri-sticky-note-line me-2"></i> Price Sticker
-                                        </a>
-                                    </li>
-                                </ul>
                             @php
                                 $matArt = (!empty($issueItem->fabricDetail?->fg_art_no) && !in_array(strtolower(trim($issueItem->fabricDetail->fg_art_no)), ['null', 'undefined', 'nan', ''])) 
                                     ? $issueItem->fabricDetail->fg_art_no 
@@ -71,8 +55,7 @@
                                         ? $issueItem->fabricDetail->art_no 
                                         : ($issueItem->stockEntryItem?->art_no ?? ($issueItem->rawMaterial?->code ?? '-')));
                             @endphp
-                            <span class="badge bg-label-info px-3 py-2 me-2">ART: {{ $matArt }}</span>
-                            {{-- <span class="badge bg-label-secondary px-3 py-2">COLOR: {{ $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-') }}</span> --}}
+                            <span class="badge bg-light text-dark border px-3 py-2 me-2 fw-bold" style="font-size: 15px !important; color: #000000 !important;">ART: {{ $matArt }}</span>
                         </div>
                     </div>
                 </div>

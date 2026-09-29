@@ -42,7 +42,7 @@
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Invoice / Stock No.</div>
-                            <div class="fw-bold text-dark">{{ (($debitNote->debit_note_type ?? '') == 'stock' || $debitNote->stock_entry_id) ? ($debitNote->stockEntry->stock_entry_no ?? ('STK-' . $debitNote->stock_entry_id)) : 	($debitNote->purchaseInvoice->invoice_no ?? '-') }}</div>
+                            <div class="fw-bold text-dark">{{ (($debitNote->debit_note_type ?? '') == 'stock') ? ($debitNote->stockEntry ? ($debitNote->stockEntry->stock_entry_no ?: ('STK-' . $debitNote->stock_entry_id)) : 'Stock') : ($debitNote->purchaseInvoice->invoice_no ?? '-') }}</div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>

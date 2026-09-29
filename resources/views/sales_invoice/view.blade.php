@@ -7,6 +7,9 @@
             <div class="table-header-box">
                 <h4>Sales Invoices</h4>
                 <div>
+                    <a class="btn btn-outline-info me-2" href="{{ url('old_sales_invoices') }}">
+                        <i class="menu-icon icon-base ri ri-archive-line"></i> Old Invoices Archive
+                    </a>
                     @if(auth()->id() == 1 || auth()->user()->can('view sales-invoice-report'))
                     <a class="btn btn-outline-success me-2" href="{{ url('sales_invoices/report') }}">
                         <i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Report & Export

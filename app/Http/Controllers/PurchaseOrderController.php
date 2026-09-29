@@ -562,7 +562,7 @@ class PurchaseOrderController extends Controller
         $uoms = Uom::active()->orderBy('id','desc')->get();
         $colors = Color::active()->orderBy('id','desc')->get();
         $styles = Style::active()->orderBy('id','desc')->get();
-        $brands = Brand::active()->orderBy('id','desc')->get();
+        $brands = Brand::with('storeCategories')->active()->orderBy('id','desc')->get();
         $fabricSizes = FabricSize::active()->orderBy('id','desc')->get();
         $fabricTypes = FabricType::active()->orderBy('id','desc')->get();
 

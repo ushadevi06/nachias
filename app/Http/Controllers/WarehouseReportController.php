@@ -3452,7 +3452,7 @@ class WarehouseReportController extends Controller
                 'stock_entry_items.finished_item_code',
                 'stock_entry_items.size',
                 'stock_entry_items.sleeve_type',
-                'styles.style_name',
+                DB::raw('MAX(styles.style_name) as style_name'),
                 DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as current_stock')
             )
             ->where('stock_entry_items.stock_type', 'finished_goods')
@@ -3481,8 +3481,7 @@ class WarehouseReportController extends Controller
             'stock_entry_items.art_no',
             'stock_entry_items.finished_item_code',
             'stock_entry_items.size',
-            'stock_entry_items.sleeve_type',
-            'styles.style_name'
+            'stock_entry_items.sleeve_type'
         )->get();
 
         $inwardQuery = DB::table('stock_entry_items')

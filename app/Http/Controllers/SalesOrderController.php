@@ -951,20 +951,22 @@ class SalesOrderController extends Controller
                     $sizeStock[$si->size] = ($sizeStock[$si->size] ?? 0) + (float)$si->balance;
                 }
             }
+            $itemPrice = \App\Http\Controllers\SalesInvoiceController::getActiveItemPrice($target->finished_item_code, $target->art_no, $target->size);
+            $priceFromMaster = $itemPrice ? true : false;
+            $finalMrp = $itemPrice ? (float)$itemPrice->selling_price : 0;
+            $finalPrice = $itemPrice ? (float)$itemPrice->unit_price : 0;
+
             $sizePrices = [];
             foreach (['36', '38', '40', '42', '44', '46', '48', '50'] as $sz) {
                 $priceRec = \App\Http\Controllers\SalesInvoiceController::getActiveItemPrice($target->finished_item_code, $target->art_no, $sz);
 
                 $sizePrices[$sz] = [
-                    'mrp' => $priceRec ? $priceRec->selling_price : 0,
-                    'price' => $priceRec ? $priceRec->unit_price : 0,
+                    'mrp' => $priceRec ? (float)$priceRec->selling_price : 0,
+                    'price' => $priceRec ? (float)$priceRec->unit_price : 0,
+                    'is_price_from_master' => $priceRec ? true : false,
                 ];
             }
 
-            $itemPrice = \App\Http\Controllers\SalesInvoiceController::getActiveItemPrice($target->finished_item_code, $target->art_no, $target->size);
-
-            $finalMrp = $itemPrice ? $itemPrice->selling_price : ($item ? $item->mrp : $target->price);
-            $finalPrice = $itemPrice ? $itemPrice->unit_price : $target->price;
             //05-08
             $api_color = 'A';
             if ($target->art_no) {
@@ -989,6 +991,8 @@ class SalesOrderController extends Controller
                 'art_no' => $target->art_no,
                 'price' => $finalPrice,
                 'mrp' => $finalMrp,
+                'is_price_from_master' => $priceFromMaster,
+                'price_converted_from_mrp' => !$priceFromMaster,
                 'size_prices' => $sizePrices,
                 'uom_id' => $target->uom_id,
                 'sleeve_type' => $target->sleeve_type,
@@ -1043,28 +1047,10 @@ class SalesOrderController extends Controller
                 $label .= ' [OUT OF STOCK]';
             }
             
-            $itemPrice = DB::table('item_prices')
-                ->where('finished_item_code', $item->finished_item_code)
-                ->where('art_no', $item->art_no)
-                ->where('size', $item->size)
-                ->where('status', 'Active')
-                ->whereNull('deleted_at')
-                ->whereDate('effective_from', '<=', now())
-                ->orderBy('effective_from', 'desc')
-                ->orderBy('id', 'desc')
-                ->first();
+            $itemPrice = DB::table('item_prices')->where('finished_item_code', $item->finished_item_code)->where('art_no', $item->art_no)->where('size', $item->size)->where('status', 'Active')->whereNull('deleted_at')->whereDate('effective_from', '<=', now())->orderBy('effective_from', 'desc')->orderBy('id', 'desc')->first();
 
             if (!$itemPrice) {
-                $itemPrice = DB::table('item_prices')
-                    ->where('finished_item_code', $item->finished_item_code)
-                    ->where('art_no', $item->art_no)
-                    ->whereNull('size')
-                    ->where('status', 'Active')
-                    ->whereNull('deleted_at')
-                    ->whereDate('effective_from', '<=', now())
-                    ->orderBy('effective_from', 'desc')
-                    ->orderBy('id', 'desc')
-                    ->first();
+                $itemPrice = DB::table('item_prices')->where('finished_item_code', $item->finished_item_code)->where('art_no', $item->art_no)->whereNull('size')->where('status', 'Active')->whereNull('deleted_at')->whereDate('effective_from', '<=', now())->orderBy('effective_from', 'desc')->orderBy('id', 'desc')->first();
             }
 
             $finalPrice = $itemPrice ? $itemPrice->unit_price : 0;

@@ -161,7 +161,7 @@ class DebitNoteController extends Controller
                 'debit_note_date' => 'required',
                 'debit_note_type' => 'required|in:purchase_invoice,stock',
                 'purchase_invoice_id' => 'required_if:debit_note_type,purchase_invoice|nullable',
-                'stock_entry_id' => 'required_if:debit_note_type,stock|nullable',
+                'stock_entry_id' => 'nullable',
                 'supplier_id' => 'required_if:debit_note_type,purchase_invoice|nullable|exists:suppliers,id',
                 'reason' => 'nullable|string|min:5|max:255',
                 'items' => 'required|array|min:1',
@@ -233,6 +233,24 @@ class DebitNoteController extends Controller
 
             if ($taxableAmountCalculated < 0) {
                 return back()->withInput()->withErrors(['discount_percent' => 'Discount cannot exceed the subtotal amount.']);
+            }
+
+            $taxErrors = [];
+            if (($request->other_state ?? 'N') === 'Y') {
+                if (floatval($request->igst_percent ?? 0) <= 0) {
+                    $taxErrors['igst_percent'] = 'IGST percentage must be greater than 0.';
+                }
+            } else {
+                if (floatval($request->cgst_percent ?? 0) <= 0) {
+                    $taxErrors['cgst_percent'] = 'CGST percentage must be greater than 0.';
+                }
+                if (floatval($request->sgst_percent ?? 0) <= 0) {
+                    $taxErrors['sgst_percent'] = 'SGST percentage must be greater than 0.';
+                }
+            }
+
+            if (!empty($taxErrors)) {
+                return back()->withInput()->withErrors($taxErrors);
             }
 
             $itemErrors = [];
@@ -473,7 +491,6 @@ class DebitNoteController extends Controller
     }
 
 
-
 	public function getPurchaseInvoices()
     {
         $purchaseInvoices = PurchaseInvoice::with(['supplier', 'items'])
@@ -564,6 +581,112 @@ class DebitNoteController extends Controller
             'sgst_percent' => $purchaseInvoice->sgst_percent ?? 0,
             'discount_percent' => $purchaseInvoice->discount_percent ?? 0,
         ]);
+    }
+
+    public function searchStockItems(Request $request)
+    {
+        $term = trim($request->get('term', $request->get('q', '')));
+
+        $query = \App\Models\StockEntryItem::with([
+            'rawMaterial.storeCategory',
+            'rawMaterial.uom',
+            'item',
+            'uom',
+            'stockEntry.grnEntry.supplier',
+            'stockEntry.grnEntry.purchaseInvoice'
+        ])
+        ->where(function ($q) {
+            $q->whereNotNull('raw_material_id')
+              ->orWhereNotNull('item_id');
+        })
+        ->whereHas('stockEntry', function ($q) {
+            $q->whereNull('deleted_at');
+        });
+
+        if (!empty($term)) {
+            $query->where(function ($q) use ($term) {
+                $q->where('art_no', 'like', "%{$term}%")
+                  ->orWhere('finished_item_code', 'like', "%{$term}%")
+                  ->orWhere('sku', 'like', "%{$term}%")
+                  ->orWhere('barcode', 'like', "%{$term}%")
+                  ->orWhereHas('rawMaterial', function ($rm) use ($term) {
+                    $rm->where('name', 'like', "%{$term}%")->orWhere('code', 'like', "%{$term}%");
+                  })
+                  ->orWhereHas('item', function ($it) use ($term) {
+                    $it->where('name', 'like', "%{$term}%")->orWhere('code', 'like', "%{$term}%")->orWhere('design_art_no', 'like', "%{$term}%");
+                  })
+                  ->orWhereHas('stockEntry', function ($stk) use ($term) {
+                      $stk->where('stock_entry_no', 'like', "%{$term}%");
+                  });
+            });
+        }
+
+        $items = $query->orderBy('id', 'desc')->limit(30)->get();
+
+        $results = [];
+        foreach ($items as $item) {
+            $rejectedQty = floatval(($item->qty_rejected ?? 0) > 0 ? $item->qty_rejected : ($item->qty_in > 0 ? $item->qty_in : $item->qty_out));
+            $alreadyDebited = floatval(DebitNoteItem::where('stock_entry_item_id', $item->id)
+                ->whereHas('debitNote', function ($q) {
+                    $q->where('status', '!=', 'Cancelled');
+                })->sum('quantity'));
+            $availableQty = max(0, $rejectedQty - $alreadyDebited);
+
+            if ($availableQty <= 0) {
+                continue;
+            }
+
+            $rawMatName = $item->rawMaterial ? $item->rawMaterial->name : ($item->item ? $item->item->name : '-');
+            $artNo = $item->art_no ?: ($item->item?->design_art_no ?: '-');
+            $finishedGoodsName = $item->finished_item_code ?: ($item->item?->name ?: '-');
+            $uomCode = $item->uom ? $item->uom->uom_code : ($item->rawMaterial?->uom?->uom_code ?? '-');
+            $uomId = $item->uom_id ?: ($item->rawMaterial?->uom_id ?: ($item->item?->uom_id ?? null));
+            $rate = floatval($item->price ?? 0);
+            $stockEntryNo = $item->stockEntry?->stock_entry_no ?: ('STK-' . $item->stock_entry_id);
+
+            $supplier = $item->stockEntry?->grnEntry?->supplier ?? null;
+            $purchaseInvoice = $item->stockEntry?->grnEntry?->purchaseInvoice ?? null;
+            $supplierId = $supplier ? $supplier->id : ($purchaseInvoice ? $purchaseInvoice->supplier_id : '');
+            $supplierName = $supplier ? ($supplier->name . ($supplier->code ? ' - ' . $supplier->code : '')) : ($purchaseInvoice && $purchaseInvoice->supplier ? $purchaseInvoice->supplier->name . ($purchaseInvoice->supplier->code ? ' - ' . $purchaseInvoice->supplier->code : '') : '');
+
+            $label = $rawMatName;
+            if ($artNo && $artNo !== '-') {
+                $label .= ' (Art No: ' . $artNo . ')';
+            }
+            if ($finishedGoodsName && $finishedGoodsName !== '-' && $finishedGoodsName !== $rawMatName) {
+                $label .= ' - ' . $finishedGoodsName;
+            }
+            if ($item->sku) {
+                $label .= ' | SKU: ' . $item->sku;
+            }
+            $label .= ' | Stock: ' . number_format($availableQty, 2) . ' ' . $uomCode;
+
+            $results[] = [
+                'id' => $item->id,
+                'stock_entry_item_id' => $item->id,
+                'stock_entry_id' => $item->stock_entry_id,
+                'stock_entry_no' => $stockEntryNo,
+                'raw_material_id' => $item->raw_material_id,
+                'raw_material_name' => $rawMatName,
+                'art_no' => $artNo,
+                'supplier_design_name' => $finishedGoodsName,
+                'sku' => $item->sku,
+                'uom_id' => $uomId,
+                'uom_code' => $uomCode,
+                'quantity' => $availableQty,
+                'max_quantity' => $availableQty,
+                'balance' => $availableQty,
+                'rate' => $rate,
+                'price' => $rate,
+                'amount' => round($availableQty * $rate, 2),
+                'supplier_id' => $supplierId,
+                'supplier_name' => $supplierName,
+                'label' => $label,
+                'value' => $rawMatName . ($artNo != '-' ? ' (' . $artNo . ')' : '')
+            ];
+        }
+
+        return response()->json($results);
     }
 
     public function view($id)

@@ -20,6 +20,11 @@ class Brand extends Model
 
     protected $dates = ['deleted_at'];
 
+    public function storeCategories()
+    {
+        return $this->belongsToMany(StoreCategory::class, 'brand_store_categories', 'brand_id', 'store_category_id')->withTimestamps();
+    }
+
     public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by');

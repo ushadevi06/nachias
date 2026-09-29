@@ -26,6 +26,7 @@
                                     <th>#</th>
                                     <th>Brand Name</th>
                                     <th>Code</th>
+                                    <th>Store Category</th>
                                     <th>Created By</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -62,6 +63,9 @@
                 },
                 {
                     data: 'code'
+                },
+                {
+                    data: 'store_category'
                 },
                 {
                     data: 'created_by'

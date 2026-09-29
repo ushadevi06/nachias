@@ -397,7 +397,7 @@ class SalesInvoiceController extends Controller
                 $request->merge(['inv_no' => SalesInvoice::formatDbInvNo($request->inv_no)]);
             }
 
-            $request->validate([
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
                 'brand_id' => 'required|exists:brands,id',
                 'inv_no' => ['required', 'string', 'min:1', 'max:16', 'regex:/^[a-zA-Z1-9][a-zA-Z0-9\/\-]*$/', 'unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'inv_date' => 'required|date_format:d-m-Y',
@@ -411,7 +411,7 @@ class SalesInvoiceController extends Controller
                 'items' => 'required|array|min:1',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'required|numeric|min:0.01',
-                'items.*.mrp' => 'required|numeric|min:0',
+                'items.*.mrp' => 'required|numeric|min:0.01',
                 'no_of_box' => 'nullable|integer|min:1',
                 'cgst_percent' => 'nullable|numeric|min:0|max:100',
                 'cgst_amount' => 'nullable|numeric|min:0',
@@ -452,17 +452,33 @@ class SalesInvoiceController extends Controller
                 'discount_percent.min' => 'Discount percentage cannot be negative.',
                 'box_discount_amount.min' => 'Box discount cannot be negative.',
                 'items.*.rate.min' => 'Price must be greater than 0.00.',
-                '*.min'           => 'This field must be at least :min characters.',
-                '*.max'           => 'This field must be at most :max characters.',
+                'items.*.mrp.min' => 'MRP must be greater than 0.00.',
                 'items.*.quantity.required' => 'Quantity is required.',
                 'items.*.quantity.numeric'  => 'Quantity must be a valid number.',
                 'items.*.quantity.min'      => 'Quantity must be greater than 0.00.',
                 'items.*.rate.required'     => 'Price is required.',
                 'items.*.rate.numeric'      => 'Price must be a valid number.',
-                'items.*.rate.min'          => 'Price must be greater than 0.00.',
-                'items.*.mrp.min'           => 'MRP cannot be negative.',
-                'extra_input' => 'nullable|min:3|max:100',
+                '*.min'           => 'This field must be at least :min characters.',
+                '*.max'           => 'This field must be at most :max characters.',
             ]);
+
+            $validator->after(function ($validator) use ($request) {
+                if (is_array($request->items)) {
+                    foreach ($request->items as $index => $item) {
+                        $mrp = floatval($item['mrp'] ?? 0);
+                        $rate = floatval($item['rate'] ?? 0);
+                        $artNo = $item['art_no'] ?? '-';
+                        if ($mrp > 0 && abs($mrp - $rate) < 0.001) {
+                            $validator->errors()->add("items.{$index}.rate", "MRP and Price cannot be the same (Art No: {$artNo}).");
+                            $validator->errors()->add("items.{$index}.mrp", "MRP and Price cannot be the same (Art No: {$artNo}).");
+                        }
+                    }
+                }
+            });
+
+            if ($validator->fails()) {
+                return redirect()->back()->withErrors($validator)->withInput();
+            }
 
             try {
                 $this->validateStockAvailability($request->items, $id);
@@ -1031,12 +1047,17 @@ class SalesInvoiceController extends Controller
                         $artNo = $stockEntryItem->art_no;
                     }
 
+                    $priceFromMaster = false;
+                    $finalMrp = 0;
+                    $finalRate = 0;
+
                     if ($finishedItemCode && $artNo) {
                         $sizeName = $item->size ? $item->size->size : ($item->size_id ?: null);
                         $itemPrice = self::getActiveItemPrice($finishedItemCode, $artNo, $sizeName);
                         if ($itemPrice) {
-                            $finalMrp = $itemPrice->selling_price;
-                            $finalRate = $itemPrice->unit_price;
+                            $finalMrp = (float)$itemPrice->selling_price;
+                            $finalRate = (float)$itemPrice->unit_price;
+                            $priceFromMaster = true;
                         }
                     }
 
@@ -1054,6 +1075,8 @@ class SalesInvoiceController extends Controller
                         'mrp' => $finalMrp,
                         'amount' => (float)$finalRate * $pendingQty,
                         'art_no' => $artNo,
+                        'is_price_from_master' => $priceFromMaster,
+                        'price_converted_from_mrp' => !$priceFromMaster,
                         'hsn_sac' => $item->hsn_sac ?? null,
                         'sku' => $item->sku,
                         'size_id' => $item->size_id,
@@ -1186,7 +1209,6 @@ class SalesInvoiceController extends Controller
             $itemName = '';
             $sleeveType = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
 
-            // Resolve Stock Entry Item dynamically if not set
             $stockEntryItem = $item->stockEntryItem;
             if (!$stockEntryItem && $item->sku) {
                 $stockEntryItem = $prefetchedStockEntryItems->first(function ($se) use ($item) {
@@ -1277,12 +1299,17 @@ class SalesInvoiceController extends Controller
                 $artNo = $stockEntryItem->art_no;
             }
 
+            $priceFromMaster = false;
+            $finalMrp = 0;
+            $finalRate = 0;
+
             if ($finishedItemCode && $artNo) {
                 $sizeName = $item->size ? $item->size->size : ($item->size_id ?: null);
                 $itemPrice = self::getActiveItemPrice($finishedItemCode, $artNo, $sizeName);
                 if ($itemPrice) {
-                    $finalMrp = $itemPrice->selling_price;
-                    $finalRate = $itemPrice->unit_price;
+                    $finalMrp = (float)$itemPrice->selling_price;
+                    $finalRate = (float)$itemPrice->unit_price;
+                    $priceFromMaster = true;
                 }
             }
 
@@ -1300,6 +1327,8 @@ class SalesInvoiceController extends Controller
                 'mrp' => $finalMrp,
                 'amount' => (float)$finalRate * $item->qty,
                 'art_no' => $artNo,
+                'is_price_from_master' => $priceFromMaster,
+                'price_converted_from_mrp' => !$priceFromMaster,
                 'hsn_sac' => $item->hsn_sac ?? null,
                 'sku' => $item->sku,
                 'size_id' => $item->size_id,

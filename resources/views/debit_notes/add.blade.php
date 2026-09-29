@@ -54,34 +54,20 @@
                                 $currentType = old('debit_note_type', $debitNote->debit_note_type ?? 'purchase_invoice');
                                 $selectName = $currentType == 'stock' ? 'stock_entry_id' : 'purchase_invoice_id';
                             @endphp
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="document_select_col" style="{{ $currentType == 'stock' ? 'display: none;' : '' }}">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="document_select_id" name="{{ $selectName }}" class="form-select select2" data-placeholder="Select Document" {{ isset($debitNote) ? 'disabled' : '' }}>
-                                        <option value="">{{ $currentType == 'stock' ? 'Select Stock Entry' : 'Select Purchase Invoice' }}</option>
-                                        @if($currentType == 'stock')
-                                            @foreach($stockEntries as $entry)
-                                                @php
-                                                    $supplierName = $entry->grnEntry?->supplier?->name ?? '';
-                                                    $supplierCode = $entry->grnEntry?->supplier?->code ?? '';
-                                                    $supplierText = $supplierName ? " ($supplierName" . ($supplierCode ? " - $supplierCode" : "") . ")" : "";
-                                                    $entryNo = $entry->stock_entry_no ?: ('STK-' . $entry->id);
-                                                @endphp
-                                                <option value="{{ $entry->id }}" {{ (old('stock_entry_id', $debitNote->stock_entry_id ?? '') == $entry->id) ? 'selected' : '' }}>
-                                                    {{ $entryNo }}{{ $supplierText }}
-                                                </option>
-                                            @endforeach
-                                        @else
-                                            @foreach($purchaseInvoices as $invoice)
-                                                <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>
-                                                    {{ $invoice->invoice_no }} ({{ $invoice->supplier->name ?? '' }} - {{ $invoice->supplier->code ?? '' }})
-                                                </option>
-                                            @endforeach
-                                        @endif
+                                    <select id="document_select_id" name="{{ $selectName }}" class="form-select select2" data-placeholder="Select Purchase Invoice" {{ isset($debitNote) ? 'disabled' : '' }}>
+                                        <option value="">Select Purchase Invoice</option>
+                                        @foreach($purchaseInvoices as $invoice)
+                                            <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>
+                                                {{ $invoice->invoice_no }} ({{ $invoice->supplier->name ?? '' }} - {{ $invoice->supplier->code ?? '' }})
+                                            </option>
+                                        @endforeach
                                     </select>
                                     @if(isset($debitNote))
                                         <input type="hidden" name="{{ $selectName }}" value="{{ $debitNote->debit_note_type == 'stock' ? $debitNote->stock_entry_id : $debitNote->purchase_invoice_id }}">
                                     @endif
-                                    <label for="document_select_id" id="document_select_label">{{ $currentType == 'stock' ? 'Select Stock Entry' : 'Select Purchase Invoice' }} <span class="text-danger">*</span></label>
+                                    <label for="document_select_id" id="document_select_label">Select Purchase Invoice <span class="text-danger">*</span></label>
                                 </div>
                                 @error('purchase_invoice_id') <div class="text-danger">{{ $message }}</div> @enderror
                                 @error('stock_entry_id') <div class="text-danger">{{ $message }}</div> @enderror
@@ -130,20 +116,31 @@
                 </div>
 
                 <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Item Details</h5>
+                    </div>
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
-                            <h4 class="mb-0">Item Details</h4>
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="form-check m-0">
-                                    <input type="checkbox" id="select_all_items" class="form-check-input me-1">
-                                    <label for="select_all_items" class="form-check-label fw-bold small text-dark">Select All</label>
+                        <!-- Sales Order Style Search (visible when Debit Note Against = Stock) -->
+                        <div class="row mb-4" id="stock_item_search_container" style="{{ $currentType == 'stock' ? '' : 'display: none;' }}">
+                            <div class="col-md-6">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" id="global_item_search" class="form-control border-primary" placeholder="Search Raw Materials, Art No" autocomplete="off" style="border-width: 2px;">
+                                    <label for="global_item_search" class="text-primary fw-bold">SEARCH RAW MATERIALS / ART NO</label>
                                 </div>
-                                <div class="input-group input-group-sm" style="width: 280px;">
+                                <small class="text-muted"><i class="ri ri-information-line me-1"></i> Search Raw Materials or Art No to quickly add items.</small>
+                            </div>
+                        </div>
+
+                        <!-- Purchase Invoice items filter (visible when Debit Note Against = Purchase Invoice) -->
+                        <div class="row mb-3" id="pi_item_search_container" style="{{ $currentType == 'stock' ? 'display: none;' : '' }}">
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm">
                                     <span class="input-group-text bg-white"><i class="ri ri-search-line"></i></span>
-                                    <input type="text" id="item_search_input" class="form-control" placeholder="Search items (Art No, Name...)">
+                                    <input type="text" id="item_search_input" class="form-control" placeholder="Search items in table (Art No, Name...)">
                                 </div>
                             </div>
                         </div>
+
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle" id="items_table">
                                 <thead>
@@ -153,9 +150,11 @@
                                         <th>Art No</th>
                                         <th>Supplier Design Name</th>
                                         <th style="width: 90px;">UOM</th>
+                                        <th style="width: 120px;">Available Qty</th>
                                         <th style="width: 140px;">Quantity</th>
                                         <th style="width: 120px;">Rate</th>
                                         <th style="width: 140px;">Amount</th>
+                                        <th style="width: 60px;" class="text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="items_tbody">
@@ -172,7 +171,7 @@
                                                     $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->sum('qty_rejected');
                                                     $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $invItemId)
                                                         ->when(isset($debitNote), function ($q) use ($debitNote) {
-                                                            $q->where('debit_note_id', '!=', $debitNote->id);
+                                                             $q->where('debit_note_id', '!=', $debitNote->id);
                                                         })->sum('quantity');
                                                     $maxQty = max(0, $rejectedQty - $alreadyDebited);
 
@@ -186,7 +185,7 @@
                                                     $rejectedQty = floatval(($dbStockItem->qty_rejected ?? 0) > 0 ? $dbStockItem->qty_rejected : ($dbStockItem->qty_in > 0 ? $dbStockItem->qty_in : $dbStockItem->qty_out));
                                                     $alreadyDebited = \App\Models\DebitNoteItem::where('stock_entry_item_id', $stkItemId)
                                                         ->when(isset($debitNote), function ($q) use ($debitNote) {
-                                                            $q->where('debit_note_id', '!=', $debitNote->id);
+                                                             $q->where('debit_note_id', '!=', $debitNote->id);
                                                         })->sum('quantity');
                                                     $maxQty = max(0, $rejectedQty - $alreadyDebited);
                                                     $artNo = $dbStockItem->art_no ?? '-';
@@ -194,43 +193,49 @@
                                                 }
                                             @endphp
                                              <tr class="item-row">
-                                                  <td>
-                                                      <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
-                                                      @if($invItemId)
-                                                          <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $invItemId }}">
-                                                      @endif
-                                                      @if($stkItemId)
-                                                          <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" value="{{ $stkItemId }}">
-                                                      @endif
-                                                      <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
-                                                  </td>
-                                                  <td>
-                                                      <span class="fw-bold">{{ \App\Models\RawMaterial::find($item['raw_material_id'])?->name ?? '-' }}</span>
-                                                  </td>
-                                                  <td>
-                                                      {{ $artNo }}
-                                                  </td>
-                                                  <td>
-                                                      {{ $supplierDesignName }}
-                                                  </td>
-                                                 <td>
-                                                     <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
-                                                     {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
-                                                 </td>
-                                                 <td>
-                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item['quantity'] ?? 0 }}" 							step="0.01" data-max="{{ $maxQty }}">
-                                                     @error('items.'.$index.'.quantity')
+                                                <td>
+                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
+                                                    @if($invItemId)
+                                                        <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $invItemId }}">
+                                                    @endif
+                                                    @if($stkItemId)
+                                                        <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" value="{{ $stkItemId }}">
+                                                    @endif                  
+                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
+                                                </td>
+                                                <td>
+                                                    <span class="fw-bold">{{ \App\Models\RawMaterial::find($item['raw_material_id'])?->name ?? '-' }}</span>
+                                                </td>
+                                                <td>
+                                                    {{ $artNo }}
+                                                </td>
+                                                <td>
+                                                    {{ $supplierDesignName }}
+                                                </td>
+                                                <td>
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
+                                                    {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
+                                                </td>
+                                                <td>
+                                                    <span class="fw-medium text-dark">{{ number_format($maxQty, 2) }}</span>
+                                                </td>
+                                                <td>
+                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item['quantity'] ?? 0 }}" 							step="0.01" data-max="{{ $maxQty }}">
+                                                    @error('items.'.$index.'.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
-                                                     @enderror
-                                                     <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
+                                                    @enderror
+                                                    <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
                                                  </td>
 
-                                                 <td>
-                                                     <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item['rate'] ?? 0 }}" step="0.01" readonly>
-                                                 </td>
+                                                <td>
+                                                    <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item['rate'] ?? 0 }}" step="0.01" readonly>
+                                                </td>
 
-                                                 <td>
-                                                     <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ number_format($item['amount'] ?? 0, 2, '.', '') }}" step="0.01" readonly>
+                                                <td>
+                                                    <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ number_format($item['amount'] ?? 0, 2, '.', '') }}" step="0.01" readonly>
+                                                </td>
+                                                 <td class="text-center">
+                                                     <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Remove"><i class="ri ri-delete-bin-line"></i></button>
                                                  </td>
                                              </tr>
                                          @endforeach
@@ -242,21 +247,21 @@
                                                  $artNo = '-';
 
                                                  if ($item->purchase_invoice_item_id) {
-                                                     $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
-                                                     $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
-                                                     $maxQty = max(0, $rejectedQty - $alreadyDebited);
-                                                     $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
-                                                     $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
-                                                     $supplierDesignName = $poItem->supplier_design_name ?? '-';
-                                                     $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
-                                                     $artNo = $grnItem->art_no ?? '-';
+                                                    $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
+                                                    $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
+                                                    $maxQty = max(0, $rejectedQty - $alreadyDebited);
+                                                    $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
+                                                    $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                                                    $supplierDesignName = $poItem->supplier_design_name ?? '-';
+                                                    $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
+                                                    $artNo = $grnItem->art_no ?? '-';
                                                  } elseif ($item->stock_entry_item_id) {
-                                                     $dbStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
-                                                     $rejectedQty = floatval(($dbStockItem->qty_rejected ?? 0) > 0 ? $dbStockItem->qty_rejected : ($dbStockItem->qty_in > 0 ? $dbStockItem->qty_in : $dbStockItem->qty_out));
-                                                     $alreadyDebited = \App\Models\DebitNoteItem::where('stock_entry_item_id', $item->stock_entry_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
-                                                     $maxQty = max(0, $rejectedQty - $alreadyDebited);
-                                                     $artNo = $dbStockItem->art_no ?? '-';
-                                                     $supplierDesignName = '-';
+                                                    $dbStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
+                                                    $rejectedQty = floatval(($dbStockItem->qty_rejected ?? 0) > 0 ? $dbStockItem->qty_rejected : ($dbStockItem->qty_in > 0 ? $dbStockItem->qty_in : $dbStockItem->qty_out));
+                                                    $alreadyDebited = \App\Models\DebitNoteItem::where('stock_entry_item_id', $item->stock_entry_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
+                                                    $maxQty = max(0, $rejectedQty - $alreadyDebited);
+                                                    $artNo = $dbStockItem->art_no ?? '-';
+                                                    $supplierDesignName = '-';
                                                  }
                                              @endphp
                                              <tr class="item-row">
@@ -284,6 +289,9 @@
                                                      {{ $item->uom->uom_code ?? '-' }}
                                                  </td>
                                                  <td>
+                                                     <span class="fw-medium text-dark">{{ number_format($maxQty, 2) }}</span>
+                                                 </td>
+                                                 <td>
                                                      <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ $item->quantity }}" 							step="0.01" data-max="{{ $maxQty }}">
                                                      @error('items.'.$index.'.quantity')
                                                          <div class="text-danger small mt-1">{{ $message }}</div>
@@ -296,13 +304,16 @@
                                                  <td>
                                                      <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ number_format($item->amount, 2, '.', '') }}" step="0.01" readonly>
                                                  </td>
+                                                 <td class="text-center">
+                                                     <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Remove"><i class="ri ri-delete-bin-line"></i></button>
+                                                 </td>
                                              </tr>
                                          @endforeach
-                                    @else
-                                        <tr>
-                                            <td colspan="8" class="text-center">No items added yet.</td>
-                                        </tr>
-                                     @endif
+                                     @else
+                                         <tr>
+                                             <td colspan="10" class="text-center">No items added yet.</td>
+                                         </tr>
+                                      @endif
                                 </tbody>
                             </table>
                         </div>
@@ -482,13 +493,13 @@
                                     <h5 class="mb-0">Tax Summary</h5>
                                     <div class="d-flex gap-3 align-items-center">
                                         <label class="small mb-0">Other State?</label>
-                                        <div class="d-flex gap-3">
+                                        <div class="d-flex gap-3" id="other_state_container">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }} onclick="return false;">
+                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }}>
                                                 <label class="form-check-label small" for="other_state_yes">Yes</label>
                                             </div>
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }} onclick="return false;">
+                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }}>
                                                 <label class="form-check-label small" for="other_state_no">No</label>
                                             </div>
                                         </div>
@@ -768,16 +779,186 @@
             });
         }
 
+        function initStockItemAutocomplete($el) {
+            if (!$el || !$el.length) return;
+            $el.autocomplete({
+                source: function(request, response) {
+                    let codeToSearch = request.term ? request.term.trim() : '';
+                    if (codeToSearch) {
+                        codeToSearch = codeToSearch.split('|')[0].trim();
+                    }
+                    $.getJSON("{{ url('debit_notes/search-stock-items') }}", {
+                        term: codeToSearch
+                    }, function(data) {
+                        const results = Array.isArray(data) ? data : [];
+                        if (request.term && results.length === 0) {
+                            response([{
+                                label: 'Raw Material not found',
+                                value: '',
+                                noResult: true
+                            }]);
+                            return;
+                        }
+                        response(results);
+                    });
+                },
+                minLength: 1,
+                focus: function(event, ui) {
+                    event.preventDefault();
+                    $(this).val(ui.item.label);
+                },
+                select: function(event, ui) {
+                    event.preventDefault();
+                    if (ui.item && ui.item.noResult) {
+                        return false;
+                    }
+                    if (ui.item) {
+                        handleStockItemSelection(ui.item);
+                        $(this).val('').focus();
+                    }
+                    return false;
+                }
+            }).autocomplete("instance")._renderItem = function(ul, item) {
+                if (item.noResult) {
+                    return $("<li>")
+                        .append(`<div class="ui-menu-item-wrapper text-danger fw-bold p-2">Raw Material not found</div>`)
+                        .appendTo(ul);
+                }
+
+                let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
+                return $("<li>")
+                    .append(`<div class="ui-menu-item-wrapper p-2 border-bottom">
+                        <span class="search-item-title fw-bold text-dark d-block">${item.label}</span>
+                        <span class="search-item-balance text-success small fw-semibold">Stock: ${parseFloat(item.balance || item.quantity || 0).toFixed(2)} ${item.uom_code || ''}</span>
+                        <div class="search-item-info text-muted small">
+                            Art No: ${item.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(item.price || item.rate || 0).toFixed(2)}
+                        </div>
+                    </div>`)
+                    .appendTo(ul);
+            };
+        }
+
+        initStockItemAutocomplete($('#global_item_search'));
+
+        $('#global_item_search').on('keydown', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                let val = $(this).val();
+                if (val) {
+                    let codeToSearch = val.split('|')[0].trim();
+                    $.getJSON("{{ url('debit_notes/search-stock-items') }}", { term: codeToSearch }, function(data) {
+                        if (Array.isArray(data) && data.length > 0) {
+                            handleStockItemSelection(data[0]);
+                            $('#global_item_search').val('').focus();
+                        } else {
+                            Swal.fire({ icon: 'warning', title: 'Not Found', text: 'Item not found in stock.', timer: 2000, showConfirmButton: false });
+                        }
+                    });
+                }
+            }
+        });
+
+        function handleStockItemSelection(item) {
+            if (!item) return;
+
+            // Check if row already exists in table
+            let existingRow = $('#items_tbody tr.item-row').filter(function() {
+                return $(this).find('input[name*="[stock_entry_item_id]"]').val() == item.stock_entry_item_id;
+            });
+
+            if (existingRow.length > 0) {
+                let $qty = existingRow.find('.item-qty');
+                let newQty = parseFloat($qty.val()) + 1;
+                let maxQty = parseFloat(existingRow.find('.item-qty').attr('data-max')) || item.max_quantity;
+                if (newQty > maxQty) {
+                    Swal.fire({ icon: 'warning', title: 'Stock Limit', text: 'Only ' + maxQty + ' in stock.', timer: 2000, showConfirmButton: false });
+                } else {
+                    $qty.val(newQty).trigger('input');
+                }
+                existingRow.find('.item-checkbox').prop('checked', true);
+                calculateTotals();
+                return;
+            }
+
+            // Remove placeholder row if present
+            if ($('#items_tbody tr.item-row').length === 0) {
+                $('#items_tbody').empty();
+            }
+
+            let index = $('#items_tbody tr.item-row').length;
+
+            if (item.supplier_id && !$('#supplier_id_hidden').val()) {
+                $('#supplier_id_hidden').val(item.supplier_id);
+                $('#supplier_name').val(item.supplier_name);
+                $('#supplier_col').show();
+            }
+
+            let initialQty = Math.min(1, parseFloat(item.max_quantity) || 1);
+            let itemRate = parseFloat(item.rate || item.price || 0);
+            let initialAmount = (initialQty * itemRate).toFixed(2);
+
+            let rowHtml = `
+                <tr class="item-row">
+                    <td class="text-center">
+                        <input type="checkbox" name="items[${index}][selected]" value="1" class="form-check-input item-checkbox" checked>
+                        <input type="hidden" name="items[${index}][stock_entry_item_id]" value="${item.stock_entry_item_id}">
+                        <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id || ''}">
+                    </td>
+                    <td>
+                        <span class="fw-bold">${item.raw_material_name}</span>
+                    </td>
+                    <td>${item.art_no || '-'}</td>
+                    <td>${item.supplier_design_name || '-'}</td>
+                    <td>
+                        <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id || ''}">
+                        ${item.uom_code || '-'}
+                    </td>
+                    <td>
+                        <span class="fw-medium text-dark">${parseFloat(item.max_quantity || item.balance || 0).toFixed(2)}</span>
+                    </td>
+                    <td>
+                        <input type="number" name="items[${index}][quantity]" class="form-control item-qty" value="${initialQty}" step="0.01" min="0.01" data-max="${item.max_quantity}">
+                        <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
+                    </td>
+                    <td>
+                        <input type="number" name="items[${index}][rate]" class="form-control item-rate" value="${itemRate.toFixed(2)}" step="0.01" readonly>
+                    </td>
+                    <td>
+                        <input type="number" name="items[${index}][amount]" class="form-control item-amount" value="${initialAmount}" step="0.01" readonly>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Remove"><i class="ri ri-delete-bin-line"></i></button>
+                    </td>
+                </tr>
+            `;
+
+            $('#items_tbody').append(rowHtml);
+            calculateTotals();
+        }
+
+        $(document).on('click', '.remove-item-btn', function () {
+            $(this).closest('tr').remove();
+            if ($('#items_tbody tr.item-row').length === 0) {
+                $('#items_tbody').html('<tr><td colspan="10" class="text-center">No items added yet.</td></tr>');
+            }
+            calculateTotals();
+        });
+
         $('input[name="debit_note_type"]').on('change', function () {
             let type = $(this).val();
             let $select = $('#document_select_id');
 
             if (type === 'stock') {
-                $('#document_select_label').html('Select Stock Entry <span class="text-danger">*</span>');
-                $select.attr('name', 'stock_entry_id');
+                $('#document_select_col').hide();
+                $('#stock_item_search_container').show();
+                $('#pi_item_search_container').hide();
+                $('#global_item_search').val('').focus();
             } else {
+                $('#document_select_col').show();
                 $('#document_select_label').html('Select Purchase Invoice <span class="text-danger">*</span>');
                 $select.attr('name', 'purchase_invoice_id');
+                $('#stock_item_search_container').hide();
+                $('#pi_item_search_container').show();
             }
 
             $('#supplier_name').val('');
@@ -785,9 +966,8 @@
             $('#supplier_col').hide();
 			
             $('#item_search_input').val('');
-            $('#select_all_items').prop('checked', false);
 			
-            $('#items_tbody').html('<tr><td colspan="8" class="text-center">No items added yet.</td></tr>');
+            $('#items_tbody').html('<tr><td colspan="10" class="text-center">No items added yet.</td></tr>');
 			
             $('#added_charges_list').empty();
             $('#charges_table').addClass('d-none');
@@ -803,31 +983,34 @@
             $('#round_off_add').prop('checked', true);
 			
             $('#other_state_no').prop('checked', true);
+            let defaultCgst = parseFloat("{{ $web_settings->cgst ?? 9 }}") || 9;
+            let defaultSgst = parseFloat("{{ $web_settings->sgst ?? 9 }}") || 9;
+            $('#cgst_percent').val(defaultCgst);
+            $('#sgst_percent').val(defaultSgst);
             $('#igst_percent').val(0);
-            $('#cgst_percent').val(0);
-            $('#sgst_percent').val(0);
             toggleTaxDivs();
+            updateOtherStateReadonlyState();
 			
             calculateTotals();
 
-            let url = type === 'stock' ? "{{ url('debit_notes/get-stock-entries') }}" : "{{ url('debit_notes/get-purchase-invoices') }}";
-
-            $.get(url, function (res) {
-                let list = res.entries || res.invoices || res;
-                if ($select.hasClass('select2-hidden-accessible')) {
-                    $select.select2('destroy');
-                }
-                $select.empty();
-                $select.append('<option value="">' + (type === 'stock' ? 'Select Stock Entry' : 'Select Purchase Invoice') + '</option>');
-                if (Array.isArray(list)) {
-                    $.each(list, function (i, doc) {
-                        $select.append('<option value="' + doc.id + '">' + doc.text + '</option>');
+            if (type === 'purchase_invoice') {
+                $.get("{{ url('debit_notes/get-purchase-invoices') }}", function (res) {
+                    let list = res.invoices || res;
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
+                    }
+                    $select.empty();
+                    $select.append('<option value="">Select Purchase Invoice</option>');
+                    if (Array.isArray(list)) {
+                        $.each(list, function (i, doc) {
+                            $select.append('<option value="' + doc.id + '">' + doc.text + '</option>');
+                        });
+                    }
+                    $select.select2({
+                        dropdownParent: $select.parent()
                     });
-                }
-                $select.select2({
-                    dropdownParent: $select.parent()
                 });
-            });
+            }
         });
 
         $(document).on('change', '#document_select_id', function () {
@@ -835,12 +1018,9 @@
             let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
 
             $('#item_search_input').val('');
-            $('#select_all_items').prop('checked', false);
 
             if (docId) {
-                let fetchUrl = type === 'stock'
-                    ? "{{ url('debit_notes/get-stock-details') }}/" + docId
-                    : "{{ url('debit_notes/get-invoice-details') }}/" + docId;
+                let fetchUrl = "{{ url('debit_notes/get-invoice-details') }}/" + docId;
 
                 $.get(fetchUrl, function (res) {
                     if (res.success) {
@@ -866,18 +1046,14 @@
                         tbody.empty();
 
                         if (!res.items || res.items.length === 0) {
-                            tbody.append('<tr><td colspan="8" class="text-center">No items available for Debit Note.</td></tr>');
+                            tbody.append('<tr><td colspan="10" class="text-center">No items available for Debit Note.</td></tr>');
                         } else {
                             res.items.forEach((item, index) => {
-                                let itemHiddenId = type === 'stock'
-                                    ? `<input type="hidden" name="items[${index}][stock_entry_item_id]" value="${item.id}">`
-                                    : `<input type="hidden" name="items[${index}][purchase_invoice_item_id]" value="${item.id}">`;
-
                                 tbody.append(`
                                     <tr class="item-row">
                                         <td class="text-center">
-                                            <input type="checkbox" name="items[${index}][selected]" value="1" class="form-check-input item-checkbox">
-                                            ${itemHiddenId}
+                                            <input type="checkbox" name="items[${index}][selected]" value="1" class="form-check-input item-checkbox" checked>
+                                            <input type="hidden" name="items[${index}][purchase_invoice_item_id]" value="${item.id}">
                                             <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
                                         </td>
                                         <td>
@@ -890,6 +1066,9 @@
                                             ${item.uom_code}
                                         </td>
                                         <td>
+                                            <span class="fw-medium text-dark">${parseFloat(item.max_quantity || 0).toFixed(2)}</span>
+                                        </td>
+                                        <td>
                                             <input type="number" name="items[${index}][quantity]" class="form-control item-qty" value="${item.quantity}" step="0.01" data-max="${item.max_quantity}">
                                             <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
                                         </td>
@@ -899,21 +1078,22 @@
                                         <td>
                                             <input type="number" name="items[${index}][amount]" class="form-control item-amount" value="${parseFloat(item.amount).toFixed(2)}" step="0.01" readonly>
                                         </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn" title="Remove"><i class="ri ri-delete-bin-line"></i></button>
+                                        </td>
                                     </tr>
                                 `);
                             });
                         }
                         calculateTotals();
-                        updateSelectAllState();
                     }
                 });
             } else {
                 $('#supplier_name').val('');
                 $('#supplier_id_hidden').val('');
                 $('#supplier_col').hide();
-                $('#items_tbody').html('<tr><td colspan="8" class="text-center">No items added yet.</td></tr>');
+                $('#items_tbody').html('<tr><td colspan="10" class="text-center">No items added yet.</td></tr>');
                 calculateTotals();
-                updateSelectAllState();
             }
         });
     
@@ -927,13 +1107,6 @@
                     $(this).hide();
                 }
             });
-            updateSelectAllState();
-        });
-
-        $(document).on('change', '#select_all_items', function () {
-            let isChecked = $(this).is(':checked');
-            $('#items_tbody tr.item-row:visible').find('.item-checkbox').prop('checked', isChecked);
-            calculateTotals();
         });
 
         function updateSupplierVisibility() {
@@ -947,25 +1120,55 @@
         }
         updateSupplierVisibility();
 
-        function updateSelectAllState() {
-            let $visibleRows = $('#items_tbody tr.item-row:visible');
-            let totalVisible = $visibleRows.length;
-            let checkedVisible = $visibleRows.find('.item-checkbox:checked').length;
-            $('#select_all_items').prop('checked', totalVisible > 0 && totalVisible === checkedVisible);
+        function updateOtherStateReadonlyState() {
+            let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
+            if (type === 'stock') {
+                $('#other_state_container').css({
+                    'pointer-events': 'auto',
+                    'opacity': '1',
+                    'cursor': 'pointer'
+                });
+                $('input[name="other_state"]').css('cursor', 'pointer');
+            } else {
+                $('#other_state_container').css({
+                    'pointer-events': 'none',
+                    'opacity': '0.7',
+                    'cursor': 'not-allowed'
+                });
+                $('input[name="other_state"]').css('cursor', 'not-allowed');
+            }
         }
 
+        $('input[name="other_state"]').on('click', function (e) {
+            let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
+            if (type !== 'stock') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
         $('input[name="other_state"]').on('change', function () {
+            let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
+            if (type !== 'stock') {
+                return;
+            }
             if ($(this).val() === 'Y') {
-                if (parseFloat($('#igst_percent').val()) == 0) {
-                    $('#igst_percent').val("{{ $web_settings->igst }}");
+                let defaultIgst = parseFloat("{{ $web_settings->igst ?? 18 }}") || 18;
+                if (parseFloat($('#igst_percent').val()) === 0 || !$('#igst_percent').val()) {
+                    $('#igst_percent').val(defaultIgst);
                 }
+                $('#cgst_percent').val(0);
+                $('#sgst_percent').val(0);
             } else {
-                if (parseFloat($('#cgst_percent').val()) == 0) {
-                    $('#cgst_percent').val("{{ $web_settings->cgst }}");
+                let defaultCgst = parseFloat("{{ $web_settings->cgst ?? 9 }}") || 9;
+                let defaultSgst = parseFloat("{{ $web_settings->sgst ?? 9 }}") || 9;
+                if (parseFloat($('#cgst_percent').val()) === 0 || !$('#cgst_percent').val()) {
+                    $('#cgst_percent').val(defaultCgst);
                 }
-                if (parseFloat($('#sgst_percent').val()) == 0) {
-                    $('#sgst_percent').val("{{ $web_settings->sgst }}");
+                if (parseFloat($('#sgst_percent').val()) === 0 || !$('#sgst_percent').val()) {
+                    $('#sgst_percent').val(defaultSgst);
                 }
+                $('#igst_percent').val(0);
             }
             toggleTaxDivs();
             calculateTotals();
@@ -990,13 +1193,11 @@
                 row.find('.item-amount').val((qty * rate).toFixed(2));
             }
             calculateTotals();
-            updateSelectAllState();
         });
 
 
         $(document).on('change', '.item-checkbox, input[name="round_off_type"]', function () {
             calculateTotals();
-            updateSelectAllState();
         });
         
         $(document).on('input', '#round_off', function () {
@@ -1266,6 +1467,50 @@
                 }
                 return false;
             }
+
+            let otherStateVal = $('input[name="other_state"]:checked').val() || 'N';
+            if (otherStateVal === 'Y') {
+                let igstVal = parseFloat($('#igst_percent').val()) || 0;
+                if (igstVal <= 0) {
+                    e.preventDefault();
+                    resetBtn();
+                    $('#igst_percent').focus().addClass('is-invalid');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Validation Error',
+                            text: 'IGST percentage must be greater than 0.',
+                            confirmButtonColor: '#8c57ff'
+                        });
+                    } else {
+                        alert('IGST percentage must be greater than 0.');
+                    }
+                    return false;
+                }
+            } else {
+                let cgstVal = parseFloat($('#cgst_percent').val()) || 0;
+                let sgstVal = parseFloat($('#sgst_percent').val()) || 0;
+                if (cgstVal <= 0 || sgstVal <= 0) {
+                    e.preventDefault();
+                    resetBtn();
+                    if (cgstVal <= 0) {
+                        $('#cgst_percent').focus().addClass('is-invalid');
+                    } else {
+                        $('#sgst_percent').focus().addClass('is-invalid');
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Validation Error',
+                            text: 'CGST and SGST percentage must be greater than 0.',
+                            confirmButtonColor: '#8c57ff'
+                        });
+                    } else {
+                        alert('CGST and SGST percentage must be greater than 0.');
+                    }
+                    return false;
+                }
+            }
         });
         $(document).on('keypress', '.item-qty, #discount_percent, #cgst_percent, #sgst_percent, #igst_percent', function (e) {
             if (e.which === 45 || e.which === 43) {
@@ -1273,8 +1518,51 @@
             }
         });
         toggleTaxDivs();
-        updateSelectAllState();
+
+        // Initial setup for Debit Note type
+        let initialDebitNoteType = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
+        if (initialDebitNoteType === 'stock') {
+            $('#document_select_col').hide();
+            $('#stock_item_search_container').show();
+            $('#pi_item_search_container').hide();
+        } else {
+            $('#document_select_col').show();
+            $('#stock_item_search_container').hide();
+            $('#pi_item_search_container').show();
+        }
+        updateOtherStateReadonlyState();
     });
 </script>
 
+<style>
+    .ui-autocomplete {
+        z-index: 10000 !important;
+        max-height: 320px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 8px;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+        border: 1px solid #e0e2ef;
+        background-color: #ffffff;
+        padding: 0;
+    }
+    .ui-menu-item {
+        border-bottom: 1px solid #f0f1f8;
+        cursor: pointer;
+    }
+    .ui-menu-item:last-child {
+        border-bottom: none;
+    }
+    .ui-menu-item .ui-menu-item-wrapper {
+        padding: 10px 14px !important;
+        transition: all 0.15s ease-in-out;
+    }
+    .ui-menu-item .ui-menu-item-wrapper.ui-state-active,
+    .ui-menu-item .ui-menu-item-wrapper:hover {
+        background-color: #f4f5fb !important;
+        color: #696cff !important;
+        border: none !important;
+        margin: 0 !important;
+    }
+</style>
 @endsection

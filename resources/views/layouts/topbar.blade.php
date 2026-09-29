@@ -27,7 +27,7 @@ $isSuper = $user->id == 1;
                             class="nav-item navbar-dropdown dropdown-user dropdown d-flex align-items-center gap-2 text-black">
                             <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);"
                                 data-bs-toggle="dropdown">
-                                <div class="avatar avatar-online">
+                                <div class="avatar avatar-online" style="width: 38px; height: 38px; position: relative;">
                                     @php
                                         $user = auth()->user();
                                         $profileImagePath = $user->profile_image
@@ -37,7 +37,7 @@ $isSuper = $user->id == 1;
                                             ? url('uploads/employee/' . $user->id . '/' . $user->profile_image)
                                             : url('assets/images/user.jpg');
                                     @endphp
-                                    <img src="{{ $profileImageUrl }}" alt="alt" class="rounded-circle">
+                                    <img src="{{ $profileImageUrl }}" alt="avatar" class="rounded-circle" style="width: 38px; height: 38px; object-fit: cover; border-radius: 50%;">
                                 </div>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
@@ -45,9 +45,9 @@ $isSuper = $user->id == 1;
                                     <a class="dropdown-item" href="javascript:void(0);">
                                         <div class="d-flex align-items-center">
                                             <div class="flex-shrink-0 me-2">
-                                                <div class="avatar avatar-online">
-                                                    <img src="{{ $profileImageUrl }}" alt="alt"
-                                                        class="w-px-40 h-auto rounded-circle">
+                                                <div class="avatar avatar-online" style="width: 40px; height: 40px; position: relative;">
+                                                    <img src="{{ $profileImageUrl }}" alt="avatar"
+                                                        class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%;">
                                                 </div>
                                             </div>
                                             <div class="flex-grow-1">

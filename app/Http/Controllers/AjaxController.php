@@ -18,6 +18,7 @@ use App\Models\ServiceProvider;
 use App\Models\Zone;
 use App\Models\SalesAgent;
 use App\Models\StockEntryItem;
+use App\Models\Brand;
 
 class AjaxController extends Controller
 {
@@ -82,6 +83,21 @@ class AjaxController extends Controller
         }
         $materials = RawMaterial::where('store_category_id', $categoryId)->whereNull('deleted_at')->select('id', 'name', 'code', 'uom_id')->orderBy('id', 'desc')->get();
         return response()->json(['materials' => $materials]);
+    }
+
+    public function getBrandsByCategory($categoryId)
+    {
+        if (!$categoryId) {
+            return response()->json(['brands' => []], 400);
+        }
+        $brands = Brand::active()
+            ->whereHas('storeCategories', function ($q) use ($categoryId) {
+                $q->where('store_categories.id', $categoryId);
+            })
+            ->select('id', 'brand_name', 'code')
+            ->orderBy('id', 'desc')
+            ->get();
+        return response()->json(['brands' => $brands]);
     }
     public function getEmployeesByPlant($plantId = null, $stageId = null)
     {

@@ -36,6 +36,7 @@ use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockConsumableReturnController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\SalesInvoiceController;
+use App\Http\Controllers\OldSalesInvoiceController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\JobCardEntryController;
 use App\Http\Controllers\ProductionController;
@@ -201,6 +202,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/raw-materials-by-category/{categoryId}', [AjaxController::class, 'getRawMaterialsByCategory']);
     Route::get('/get_charges', [AjaxController::class, 'getCharges']);
     Route::get('get-materials-by-category/{category_id}', [AjaxController::class, 'getMaterialsByCategory']);
+    Route::get('get-brands-by-category/{category_id}', [AjaxController::class, 'getBrandsByCategory']);
     Route::get('ajax/search_raw_materials', [AjaxController::class, 'searchRawMaterials']);
     Route::get('get-employees-by-plant/{plantId?}/{stageId?}', [AjaxController::class, 'getEmployeesByPlant']);
 
@@ -597,6 +599,14 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('sales_invoices/cancel-ewaybill/{id}', [SalesInvoiceController::class, 'cancelEWayBill']);
     Route::get('sales_invoices/recreate/{id}', [SalesInvoiceController::class, 'recreate']);
 
+    /* Old Sales Invoices (Archive) */
+    Route::get('old_sales_invoices', [OldSalesInvoiceController::class, 'index']);
+    Route::post('old_sales_invoices/import', [OldSalesInvoiceController::class, 'import']);
+    Route::get('old_sales_invoices/view/{id}', [OldSalesInvoiceController::class, 'view']);
+    Route::get('old_sales_invoices/pdf/{id}', [OldSalesInvoiceController::class, 'downloadPdf']);
+    Route::get('old_sales_invoices/bulk-zip', [OldSalesInvoiceController::class, 'downloadBulkZip']);
+    Route::get('old_sales_invoices/delete/{id}', [OldSalesInvoiceController::class, 'destroy']);
+
     /* Credit Notes */
     Route::get('credit_notes', [CreditNoteController::class, 'index']);
     Route::match(['GET', 'POST'], 'credit_notes/add/{id?}', [CreditNoteController::class, 'add']);
@@ -618,6 +628,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('debit_notes/delete/{id}', [DebitNoteController::class, 'destroy']);
     Route::get('debit_notes/get-invoice-details/{id}', [DebitNoteController::class, 'getInvoiceDetails']);
     Route::get('debit_notes/get-stock-details/{id}', [DebitNoteController::class, 'getStockEntryDetails']);
+    Route::get('debit_notes/search-stock-items', [DebitNoteController::class, 'searchStockItems']);
     Route::get('debit_notes/get-stock-entries', [DebitNoteController::class, 'getStockEntries']);
     Route::get('debit_notes/get-purchase-invoices', [DebitNoteController::class, 'getPurchaseInvoices']);
     Route::get('debit_notes/get-supplier-invoices/{id}', [DebitNoteController::class, 'getSupplierInvoices']);

@@ -22,6 +22,7 @@
 
     <!-- Core JS -->
     <script src="{{ url('assets/js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ url('assets/js/jquery-ui.min.js') }}"></script>
     <script src="{{ url('assets/js/moment.min.js') }}"></script>
     <script src="{{ url('assets/js/helpers.js') }}"></script>
     <script src="{{ url('assets/js/bootstrap.js') }}"></script>

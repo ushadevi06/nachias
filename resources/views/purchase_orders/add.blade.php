@@ -186,10 +186,20 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" {{ $index > 0 ? 'disabled' : '' }} data-							placeholder="Select Brand">
+                                                    @php
+                                                        $rowCatId = $item['store_category_id'] ?? null;
+                                                        $rowBrands = $rowCatId ? $brands->filter(fn($b) => $b->storeCategories->contains('id', $rowCatId)) : $brands;
+                                                        if (isset($item['brand_id']) && $item['brand_id']) {
+                                                            $selBrand = $brands->firstWhere('id', $item['brand_id']);
+                                                            if ($selBrand && !$rowBrands->contains('id', $selBrand->id)) {
+                                                                $rowBrands = $rowBrands->push($selBrand);
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" {{ $index > 0 ? 'disabled' : '' }} data-placeholder="Select Brand">
                                                         <option value="">Select Brand</option>
-                                                        @foreach($brands as $brand)
-                                                            <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}({{ $brand->code }})</option>
+                                                        @foreach($rowBrands as $brand)
+                                                            <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
                                                         @endforeach
                                                     </select>
                                                     <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand_hidden" value="{{ $item['brand_id'] ?? '' }}" {{ $index == 0 ? 'disabled' : '' }}>
@@ -370,9 +380,19 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" {{ $index > 0 ? 'disabled' : '' }} data-							placeholder="Select Brand">
+                                                    @php
+                                                        $rowCatId = $item->store_category_id ?? null;
+                                                        $rowBrands = $rowCatId ? $brands->filter(fn($b) => $b->storeCategories->contains('id', $rowCatId)) : $brands;
+                                                        if ($item->brand_id) {
+                                                            $selBrand = $brands->firstWhere('id', $item->brand_id);
+                                                            if ($selBrand && !$rowBrands->contains('id', $selBrand->id)) {
+                                                                $rowBrands = $rowBrands->push($selBrand);
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    <select class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" {{ $index > 0 ? 'disabled' : '' }} data-placeholder="Select Brand">
                                                         <option value="">Select Brand</option>
-                                                        @foreach($brands as $brand)
+                                                        @foreach($rowBrands as $brand)
                                                             <option value="{{ $brand->id }}" {{ ($item->brand_id ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})
                                                             </option>
                                                         @endforeach
@@ -559,10 +579,14 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                           <td>
+                                            <td>
+                                                @php
+                                                    $defaultCatId = old('store_type_id', $purchaseOrder->store_type_id ?? '');
+                                                    $defaultBrands = $defaultCatId ? $brands->filter(fn($b) => $b->storeCategories->contains('id', $defaultCatId)) : $brands;
+                                                @endphp
                                                 <select class="select2 form-select brand" name="items[0][brand_id]" data-placeholder="Select Brand">
                                                     <option value="">Select Brand</option>
-                                                    @foreach($brands as $brand)
+                                                    @foreach($defaultBrands as $brand)
                                                         <option value="{{ $brand->id }}">{{ $brand->brand_name }} ({{ $brand->code }})</option>
                                                     @endforeach
                                                 </select>
@@ -1121,6 +1145,8 @@
                 let row = $(this).closest('tr');
                 let materialSelect = row.find('.material');
                 let currentMaterialId = materialSelect.val();
+                let brandSelect = row.find('.brand');
+                let currentBrandId = brandSelect.val() || row.find('.brand_hidden').val();
 
                 if (materialSelect.hasClass("select2-hidden-accessible")) {
                     materialSelect.select2('destroy');
@@ -1128,10 +1154,21 @@
 
                 materialSelect.empty().append('<option value="">Select Raw Material</option>');
 
+                if (brandSelect.hasClass("select2-hidden-accessible")) {
+                    brandSelect.select2('destroy');
+                }
+
+                brandSelect.empty().append('<option value="">Select Brand</option>');
+
                 if (!category_id) {
                     materialSelect.select2({
                         dropdownParent: materialSelect.parent(),
                         placeholder: materialSelect.data('placeholder'),
+                        width: '100%'
+                    });
+                    brandSelect.select2({
+                        dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
+                        placeholder: brandSelect.data('placeholder'),
                         width: '100%'
                     });
                     return;
@@ -1170,6 +1207,55 @@
                     error: function () {
                         materialSelect.html('<option value="">Select Raw Material</option>').select2({
                             dropdownParent: materialSelect.parent(),
+                            width: '100%'
+                        });
+                    }
+                });
+
+                $.ajax({
+                    url: APP_URL + '/get-brands-by-category/' + category_id,
+                    type: 'GET',
+                    success: function (response) {
+                        let brandsHtml = '<option value="">Select Brand</option>';
+                        let matchedBrand = false;
+                        if (response.brands?.length) {
+                            response.brands.forEach(b => {
+                                let isSelected = (currentBrandId == b.id);
+                                if (isSelected) matchedBrand = true;
+                                brandsHtml += `<option value="${b.id}" ${isSelected ? 'selected' : ''}>${b.brand_name} (${b.code})</option>`;
+                            });
+                        } else {
+                            brandsHtml += '<option value="">No brands found</option>';
+                        }
+
+                        brandSelect.html(brandsHtml);
+                        brandSelect.select2({
+                            dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
+                            placeholder: brandSelect.data('placeholder'),
+                            width: '100%'
+                        });
+
+                        if (matchedBrand) {
+                            brandSelect.val(currentBrandId);
+                            row.find('.brand_hidden').val(currentBrandId);
+                        } else {
+                            brandSelect.val('');
+                            row.find('.brand_hidden').val('');
+                        }
+
+                        if (row.is(':first-child')) {
+                            let firstVal = brandSelect.val();
+                            $('#item-rows tbody tr:first .brand_hidden').val(firstVal);
+                            $('#item-rows tbody tr:not(:first)').each(function () {
+                                $(this).find('.brand').html(brandsHtml);
+                                $(this).find('.brand').val(firstVal).trigger('change.select2');
+                                $(this).find('.brand_hidden').val(firstVal);
+                            });
+                        }
+                    },
+                    error: function () {
+                        brandSelect.html('<option value="">Select Brand</option>').select2({
+                            dropdownParent: brandSelect.closest('.card-body').length ? brandSelect.closest('.card-body') : $('body'),
                             width: '100%'
                         });
                     }

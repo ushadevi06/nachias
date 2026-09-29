@@ -613,7 +613,7 @@
                                                             <input type="number" min="0" step="any"
                                                                 class="form-control mrp"
                                                                 name="items[{{ $index }}][mrp]"
-                                                                value="{{ $row->mrp ?? '' }}" placeholder="MRP">
+                                                                value="{{ $row->mrp ?? '' }}" placeholder="MRP" readonly>
                                                             <label>MRP</label>
                                                         </div>
                                                     </td>
@@ -622,7 +622,7 @@
                                                             <input type="number" min="0" step="any"
                                                                 class="form-control rate"
                                                                 name="items[{{ $index }}][rate]"
-                                                                value="{{ $row->rate ?? '' }}" placeholder="Price">
+                                                                value="{{ $row->rate ?? '' }}" placeholder="Price" readonly>
                                                             <label>Price *</label>
                                                         </div>
                                                         @error("items.$index.rate")
@@ -642,9 +642,7 @@
                                                         @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
                                                             <span class="text-muted">-</span>
                                                         @else
-                                                            <button type="button"
-                                                                class="btn btn-sm btn-danger remove-item"><i
-                                                                    class="ri ri-delete-bin-line"></i></button>
+                                                            <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
                                                         @endif
                                                     </td>
                                                 </tr>
@@ -672,21 +670,14 @@
                                     <div class="col-md-6 text-center">
                                         <div class="input-group mb-2 mx-auto">
                                             <div class="form-floating form-floating-outline flex-grow-1">
-                                                <input type="text" id="open_order_barcode_scanner"
-                                                    class="form-control border-primary" placeholder="Scan Barcode"
-                                                    autocomplete="off"
-                                                    style="border-width: 2px; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0;">
-                                                <label for="open_order_barcode_scanner" class="text-primary fw-bold">SCAN
-                                                    BARCODE</label>
+                                                <input type="text" id="open_order_barcode_scanner" class="form-control border-primary" placeholder="Scan Barcode" autocomplete="off" style="border-width: 2px; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0;">
+                                                <label for="open_order_barcode_scanner" class="text-primary fw-bold">SCAN BARCODE</label>
                                             </div>
-                                            <button class="btn btn-outline-primary px-4" type="button"
-                                                id="btn_open_order_camera_scan"
-                                                style="border-width: 2px; border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                            <button class="btn btn-outline-primary px-4" type="button" id="btn_open_order_camera_scan" style="border-width: 2px; border-top-left-radius: 0; border-bottom-left-radius: 0;">
                                                 <i class="ri ri-camera-line me-1"></i> CAMERA
                                             </button>
                                         </div>
-                                        <div id="open_order_reader" class="rounded overflow-hidden mb-3 mx-auto"
-                                            style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
+                                        <div id="open_order_reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
                                         <div id="open_order_scan_alert" class="alert alert-danger mt-3 mx-auto"
                                             style="display: none; max-width: 500px; text-align: left;">
                                             <span id="open_order_scan_msg"></span>
@@ -744,116 +735,68 @@
                                                 <tr class="item-row">
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text" class="form-control"
-                                                                value="{{ $displayName }}" readonly tabindex="-1">
+                                                            <input type="text" class="form-control" value="{{ $displayName }}" readonly tabindex="-1">
                                                             <label>Stock Item*</label>
                                                         </div>
-                                                        <input type="hidden" class="invoice-item-db-id"
-                                                            name="items[{{ $index }}][id]"
-                                                            value="{{ $row->id ?? '' }}">
-                                                        <input type="hidden"
-                                                            name="items[{{ $index }}][stock_entry_item_id]"
-                                                            class="stock-entry-item-id"
-                                                            value="{{ $row->stock_entry_item_id ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][item_id]"
-                                                            value="{{ $row->item_id ?? '' }}">
-                                                        <input type="hidden"
-                                                            name="items[{{ $index }}][brand_cat_id]"
-                                                            value="{{ $row->brand_cat_id ?? '' }}">
-                                                        <input type="hidden"
-                                                            name="items[{{ $index }}][is_extra]" value="1">
+                                                        <input type="hidden" class="invoice-item-db-id" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $row->item_id ?? '' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $row->brand_cat_id ?? '' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][is_extra]" value="1">
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text" name="items[{{ $index }}][sku]"
-                                                                class="form-control sku-input"
-                                                                value="{{ $row->sku ?? '' }}" readonly tabindex="-1">
+                                                            <input type="text" name="items[{{ $index }}][sku]" class="form-control sku-input" value="{{ $row->sku ?? '' }}" readonly tabindex="-1">
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text"
-                                                                name="items[{{ $index }}][api_color]"
-                                                                class="form-control"
-                                                                value="{{ !empty($row->api_color) ? $row->api_color : $row->color_name ?? '' }}">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][color_id]"
-                                                                class="color-id-input"
-                                                                value="{{ $row->color_id ?? '' }}">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][color_name]"
-                                                                value="{{ $row->color_name ?? '' }}">
+                                                            <input type="text" name="items[{{ $index }}][api_color]" class="form-control" value="{{ !empty($row->api_color) ? $row->api_color : $row->color_name ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id-input" value="{{ $row->color_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][color_name]" value="{{ $row->color_name ?? '' }}">
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text"
-                                                                name="items[{{ $index }}][sleeve_type]"
-                                                                class="form-control"
-                                                                value="{{ $row->sleeve_type ?? '' }}" readonly
-                                                                tabindex="-1">
+                                                            <input type="text" name="items[{{ $index }}][sleeve_type]" class="form-control" value="{{ $row->sleeve_type ?? '' }}" readonly tabindex="-1">
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text"
-                                                                name="items[{{ $index }}][art_no]"
-                                                                class="form-control art-no-input"
-                                                                value="{{ $row->art_no ?? '' }}" readonly
-                                                                tabindex="-1">
+                                                            <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input" value="{{ $row->art_no ?? '' }}" readonly tabindex="-1">
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text" class="form-control"
-                                                                value="{{ !empty($row->uom_code) ? $row->uom_code : 'PCS' }}"
-                                                                readonly tabindex="-1">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][uom_id]"
-                                                                value="{{ !empty($row->uom_id) ? $row->uom_id : 'PCS' }}">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][uom_code]"
-                                                                value="{{ !empty($row->uom_code) ? $row->uom_code : 'PCS' }}">
+                                                            <input type="text" class="form-control" value="{{ !empty($row->uom_code) ? $row->uom_code : 'PCS' }}" readonly tabindex="-1">
+                                                            <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ !empty($row->uom_id) ? $row->uom_id : 'PCS' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ !empty($row->uom_code) ? $row->uom_code : 'PCS' }}">
                                                             <label>UOM</label>
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text"
-                                                                name="items[{{ $index }}][size_name]"
-                                                                class="form-control size-input"
-                                                                value="{{ $row->size_name ?? '' }}" readonly
-                                                                tabindex="-1">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][size]"
-                                                                value="{{ $row->size_name ?? '' }}">
+                                                            <input type="text" name="items[{{ $index }}][size_name]" class="form-control size-input" value="{{ $row->size_name ?? '' }}" readonly tabindex="-1">
+                                                            <input type="hidden" name="items[{{ $index }}][size]" value="{{ $row->size_name ?? '' }}">
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="number"
-                                                                name="items[{{ $index }}][quantity]"
-                                                                class="form-control qty-input open-qty @error('items.'.$index.'.quantity') is-invalid @enderror"
-                                                                value="{{ old('items.'.$index.'.quantity', $row->quantity ?? '') }}"
-                                                                data-original-qty="{{ $row->quantity ?? 0 }}"
-                                                                min="0">
+                                                            <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty @error('items.'.$index.'.quantity') is-invalid @enderror" value="{{ old('items.'.$index.'.quantity', $row->quantity ?? '') }}" data-original-qty="{{ $row->quantity ?? 0 }}" min="0">
                                                         </div>
                                                         @error('items.'.$index.'.quantity')
                                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                                         @enderror
                                                         <div class="stock-info-wrapper mt-1">
-                                                            <small class="stock-label text-muted">Stock: <span
-                                                                    class="available-stock-display">{{ number_format(max(0, $row->stock_qty ?? 0), 2) }}</span></small>
-                                                            <div class="text-danger small stock-error-msg"
-                                                                style="display: none; font-weight: 500;">Exceeds stock!
-                                                            </div>
+                                                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format(max(0, $row->stock_qty ?? 0), 2) }}</span></small>
+                                                            <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
                                                             <input type="number" name="items[{{ $index }}][mrp]"
                                                                 class="form-control mrp-input"
-                                                                value="{{ $row->mrp ?? '' }}" min="0">
+                                                                value="{{ $row->mrp ?? '' }}" min="0" readonly>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -862,7 +805,7 @@
                                                                 name="items[{{ $index }}][rate]"
                                                                 class="form-control rate-input open-rate"
                                                                 value="{{ $row->rate ?? '' }}" step="0.01"
-                                                                min="0">
+                                                                min="0" readonly>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -943,15 +886,9 @@
                                                     class="form-select select2 @error('payment_mode') is-invalid @enderror"
                                                     data-placeholder="Select Payment Mode">
                                                     <option value="">Select Payment Mode</option>
-                                                    <option value="Cash"
-                                                        {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Cash' ? 'selected' : '' }}>
-                                                        Cash</option>
-                                                    <option value="Bank (Cheque)"
-                                                        {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Bank (Cheque)' ? 'selected' : '' }}>
-                                                        Bank (Cheque)</option>
-                                                    <option value="Online (UPI)"
-                                                        {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Online (UPI)' ? 'selected' : '' }}>
-                                                        Online (UPI)</option>
+                                                    <option value="Cash" {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Cash' ? 'selected' : '' }}>Cash</option>
+                                                    <option value="Bank (Cheque)" {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Bank (Cheque)' ? 'selected' : '' }}>Bank (Cheque)</option>
+                                                    <option value="Online (UPI)" {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Online (UPI)' ? 'selected' : '' }}>Online (UPI)</option>
                                                 </select>
                                                 <label for="payment_mode">Payment Mode</label>
                                                 @error('payment_mode')
@@ -1930,6 +1867,21 @@
                 if (qty === null) {
                     qty = matchedItem.qty ? matchedItem.qty : 1;
                 }
+
+                var isMissingPrice = (matchedItem.is_price_from_master === false || matchedItem.price_converted_from_mrp);
+                var itemMrp = parseFloat(matchedItem.mrp || 0);
+                var itemRate = parseFloat(matchedItem.rate || 0);
+
+                if (isMissingPrice) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Item Price Missing',
+                        text: `Art No '${matchedItem.art_no || ''}' does not exist in Item Prices table. Please add this Art No in Item Prices first.`,
+                    });
+                    $('#barcode_scanner').val('').focus();
+                    return;
+                }
+
                 var existingRow = null;
                 $('#item-rows .item-row').each(function() {
                     if ($(this).find('.sku').val() == (matchedItem.sku || '') &&
@@ -2013,19 +1965,19 @@
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="number" step="any" class="form-control mrp" name="items[${index}][mrp]" value="${matchedItem.mrp || 0}">
+                            <input type="number" step="any" class="form-control mrp" name="items[${index}][mrp]" value="${itemMrp}" readonly>
                             <label>MRP</label>
                         </div>
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="number" step="any" class="form-control rate" name="items[${index}][rate]" value="${matchedItem.rate || 0}">
+                            <input type="number" step="any" class="form-control rate" name="items[${index}][rate]" value="${itemRate}" readonly>
                             <label>Price *</label>
                         </div>
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="text" class="form-control amount" name="items[${index}][amount]" value="${(qty * (matchedItem.rate || matchedItem.mrp || 0)).toFixed(2)}" readonly>
+                            <input type="text" class="form-control amount" name="items[${index}][amount]" value="${(qty * itemRate).toFixed(2)}" readonly>
                             <label>Amount *</label>
                         </div>
                     </td>
@@ -2698,6 +2650,28 @@
                     }
                 });
 
+                // Validate MRP and Price cannot be the same
+                if (!hasError) {
+                    $('#item-rows .item-row, #open-order-item-rows .item-row').each(function() {
+                        var row = $(this);
+                        var mrpVal = parseFloat(row.find('.mrp, .mrp-input').val()) || 0;
+                        var rateVal = parseFloat(row.find('.rate, .rate-input').val()) || 0;
+                        var artNo = row.find('.art-no, .art-no-input').val() || row.find('.art-no-text').text().trim() || '-';
+
+                        if (mrpVal > 0 && Math.abs(mrpVal - rateVal) < 0.001) {
+                            hasError = true;
+                            row.find('.rate, .rate-input').addClass('is-invalid');
+                            row.find('.mrp, .mrp-input').addClass('is-invalid');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Invalid Price & MRP',
+                                text: `MRP and Price cannot be the same (Art No: ${artNo}).`,
+                            });
+                            return false;
+                        }
+                    });
+                }
+
                 if (hasError) {
                     e.preventDefault();
                     return false;
@@ -3147,6 +3121,17 @@
             if (res.item_name) displayName += ' - ' + res.item_name; */
             let displayName = res.brand_name ? res.brand_name + ' ' : (res.finished_item_code || res.sku || '');
 
+            let isMissingPrice = (res.is_price_from_master === false || res.price_converted_from_mrp);
+            if (isMissingPrice) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Item Price Missing',
+                    text: `Art No '${res.art_no || ''}' does not exist in Item Prices table. Please add this Art No in Item Prices first.`,
+                });
+                $('#open_order_barcode_scanner').val('').focus();
+                return;
+            }
+
             let mrp = parseFloat(res.mrp || 0).toFixed(2);
             let price = parseFloat(res.price || 0).toFixed(2);
             let qty = 1;
@@ -3215,12 +3200,12 @@
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[open_${index}][mrp]" class="form-control mrp-input" value="${mrp}" min="0" tabindex="-1">
+                        <input type="number" name="items[open_${index}][mrp]" class="form-control mrp-input" value="${mrp}" min="0" tabindex="-1" readonly>
                     </div>
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[open_${index}][rate]" class="form-control rate-input open-rate" value="${price}" step="0.01" min="0">
+                        <input type="number" name="items[open_${index}][rate]" class="form-control rate-input open-rate" value="${price}" step="0.01" min="0" readonly>
                     </div>
                 </td>
                 <td>

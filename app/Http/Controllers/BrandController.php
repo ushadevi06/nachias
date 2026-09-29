@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Brand;
+use App\Models\StoreCategory;
 use App\Models\PurchaseOrderItem;
 use App\Models\JobCardEntry;
 use App\Models\Item;
@@ -16,7 +17,7 @@ class BrandController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $brands = Brand::latest()->get();
+            $brands = Brand::with('storeCategories')->latest()->get();
             $data = [];
             $count = 1;
             foreach ($brands as $brand) {
@@ -43,10 +44,16 @@ class BrandController extends Controller
                     </button>';
                 }
                 $action .= '</div>';
+
+                $catBadges = $brand->storeCategories->map(function ($cat) {
+                    return '<span class="badge bg-label-primary me-1 mb-1">' . e($cat->category_name . ($cat->code ? ' (' . $cat->code . ')' : '')) . '</span>';
+                })->implode('');
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'brand_name' => $brand->brand_name,
                     'code' => $brand->code,
+                    'store_category' => $catBadges ?: '-',
                     'created_by' => createdByName($brand->created_by),
                     'status' => $status,
                     'action' => $action,
@@ -69,11 +76,14 @@ class BrandController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        $brand = $id ? Brand::findOrFail($id) : null;
+        $brand = $id ? Brand::with('storeCategories')->findOrFail($id) : null;
         $hasInvoices = false;
         if ($brand) {
             $hasInvoices = \App\Models\SalesInvoice::where('brand_id', $brand->id)->exists();
         }
+
+        $storeCategories = StoreCategory::active()->orderBy('id','desc')->get();
+        $selectedCategoryIds = $brand ? $brand->storeCategories->pluck('id')->toArray() : [];
 
         if ($request->isMethod('post')) {
             if ($hasInvoices && $brand) {
@@ -97,10 +107,13 @@ class BrandController extends Controller
                     'regex:/^(?!0+$).*$/',
                     'unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
+                'store_category_ids' => 'required|array|min:1',
+                'store_category_ids.*' => 'exists:store_categories,id',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
+                'store_category_ids.required' => 'Please select at least one Store Category.',
                 '*.unique' => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
                 'code.regex' => 'Code cannot be 0',
@@ -112,24 +125,25 @@ class BrandController extends Controller
                 'brand_name' => $request->brand_name,
                 'code' => $hasInvoices && $brand ? $brand->code : $request->code,
                 'status' => $request->status,
-                'created_by' => auth()->id() ?? 1,
             ];
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 $oldData = $brand->toArray();
                 $brand->update($data);
+                $brand->storeCategories()->sync($request->store_category_ids);
                 $newData = $brand->fresh()->toArray();
                 addLog('update', 'Brand', 'brands', $id, $oldData, $newData);
                 return redirect('brands')->with('success', 'Brand updated successfully');
             }
             else {
-                $data['created_by'] = auth()->id();
+                $data['created_by'] = auth()->id() ?? 1;
                 $created = Brand::create($data);
+                $created->storeCategories()->sync($request->store_category_ids);
                 addLog('create', 'Brand', 'brands', $created->id, null, $created->toArray());
                 return redirect('brands')->with('success', 'Brand added successfully');
             }
         }
-        return view('brands.add', compact('brand', 'hasInvoices'));
+        return view('brands.add', compact('brand', 'hasInvoices', 'storeCategories', 'selectedCategoryIds'));
     }
 
     public function destroy($id)
