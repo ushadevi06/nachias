@@ -170,20 +170,22 @@
                     ) : null;
 
                     $uom = $storeUom;
-                    //$style = $matchingPOItem?->style?->style_name ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->style_name ?? '';
-                    $style = '';
+                    $styleObj = null;
                     if ($detail->art_no) {
                         $stockEntryItem = \App\Models\StockEntryItem::with('style')->where('art_no', $detail->art_no)->whereNotNull('style_id')->first();
-                        $style = $stockEntryItem?->style?->code ?? ''; 
+                        $styleObj = $stockEntryItem?->style; 
                     }
-                    if (!$style) {
-                       $style = $matchingPOItem?->style?->code ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->code ?? '';
+                    if (!$styleObj) {
+                        $styleObj = $matchingPOItem?->style ?? $allPOItems?->whereNotNull('style_id')->first()?->style;
                     }
+
+                    $styleCode = $styleObj?->code ?? '';
+                    $styleName = $styleObj?->style_name ?? ($styleCode ?: '');
 
                     $brandCode = $jobCard->brand->code ?? '';
                     $brandName = $jobCard->brand->brand_name ?? '';
                     $artNo = $detail->art_no;
-                    $displayStyle = $style ?: $artNo;
+                    $displayStyle = $styleCode ?: $artNo;
 
                     $hasValue = function($prefix) use ($detail) {
                         return $detail->quantities->where('qty_' . $prefix, '>', 0)->count() > 0;
@@ -201,7 +203,7 @@
                     if ($hasValue('fs')) {
                         $fullSleeveRows[] = [
                             'item_no' => $isCanvas ? $detail->art_no : trim($brandCode . '-' . $displayStyle . '-F/S', '-'),
-                            'description' => $isCanvas ? ($artMaterialMap[$artNo] ?? $detail->item_name ?: 'CANVAS ACCESSORIES') : trim($brandName . ' ' . $style . ' F/S'),
+                            'description' => $isCanvas ? ($artMaterialMap[$artNo] ?? $detail->item_name ?: 'CANVAS ACCESSORIES') : trim($brandName . ' ' . ($styleName ?: $styleCode) . ' F/S'),
                             'uom' => $uom,
                             'art' => $artNo,
                             'sizes' => $getSizesArray('fs')
@@ -211,7 +213,7 @@
                     if ($hasValue('hs')) {
                         $halfSleeveRows[] = [
                             'item_no' => trim($brandCode . '-' . $displayStyle . '-H/S', '-'),
-                            'description' => trim($brandName . ' ' . $style . ' H/S'),
+                            'description' => trim($brandName . ' ' . ($styleName ?: $styleCode) . ' H/S'),
                             'uom' => $uom,
                             'art' => $artNo,
                             'sizes' => $getSizesArray('hs')

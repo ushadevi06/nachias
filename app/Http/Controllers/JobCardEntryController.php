@@ -146,8 +146,7 @@ class JobCardEntryController extends Controller
                     $action .= '<a href="' . url('job_card_entries/view/' . $jc->id) . '" class="dropdown-item"><i class="icon-base ri ri-eye-line me-2"></i>View</a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('issue-item job-card')) {
-                    $issueBadge = ($jc->additional_qty > 0) ? ' <span class="badge bg-warning text-dark rounded-pill ms-auto" style="font-size: 10px;">+' . $jc->additional_qty . ' extra</span>' : '';
-                    $action .= '<a href="' . url('job_card_entries/view-item/' . $jc->id) . '" class="dropdown-item d-flex align-items-center justify-content-between"><span class="d-flex align-items-center"><i class="icon-base ri ri-list-check-2 me-2"></i>Issue Item</span>' . $issueBadge . '</a>';
+                    $action .= '<a href="' . url('job_card_entries/view-item/' . $jc->id) . '" class="dropdown-item"><i class="icon-base ri ri-list-check-2 me-2"></i>Issue Item</a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('issue-item job-card') || auth()->user()->can('edit job-card')) {
                     if ($displayStatus !== 'Completed') {
@@ -4172,50 +4171,57 @@ class JobCardEntryController extends Controller
                 $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
             }
 
-            $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
-                ->where('art_no', $artNo)
-                ->where('size', $selectedSize)
-                ->where(function($q) use ($jobCard, $selectedSleeve) {
-                    if ($jobCard->item) {
-                        $q->where('finished_item_code', $jobCard->item->code)
-                          ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
-                              $subQuery->select('finished_item_code')
-                                       ->from('stock_entry_items')
-                                       ->where('item_id', $jobCard->item->id)
-                                       ->whereNull('deleted_at');
-                          });
-                    } else if ($selectedSleeve && $selectedSleeve !== 'All Sleeves') {
-                        if ($selectedSleeve == 'F/S') {
-                            $q->where('finished_item_code', 'like', '%-FS%');
-                        } elseif ($selectedSleeve == 'H/S') {
-                            $q->where('finished_item_code', 'like', '%-HS%');
+            $priceRecord = null;
+            if ($artNo && $artNo !== '-') {
+                $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+                    ->where(function($q) use ($artNo) {
+                        $q->where('art_no', $artNo)
+                          ->orWhereRaw("REPLACE(art_no, ' ', '') = ?", [str_replace(' ', '', $artNo)]);
+                    })
+                    ->where(function($q) use ($jobCard, $selectedSleeve) {
+                        if ($jobCard->item) {
+                            $q->where('finished_item_code', $jobCard->item->code)
+                              ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
+                                  $subQuery->select('finished_item_code')
+                                           ->from('stock_entry_items')
+                                           ->where('item_id', $jobCard->item->id)
+                                           ->whereNull('deleted_at');
+                              });
+                        } else if ($selectedSleeve && $selectedSleeve !== 'All Sleeves') {
+                            if ($selectedSleeve == 'F/S') {
+                                $q->where(function($sub) {
+                                    $sub->where('finished_item_code', 'like', '%-FS%')
+                                        ->orWhere('finished_item_code', 'like', '%-F/S%');
+                                });
+                            } elseif ($selectedSleeve == 'H/S') {
+                                $q->where(function($sub) {
+                                    $sub->where('finished_item_code', 'like', '%-HS%')
+                                        ->orWhere('finished_item_code', 'like', '%-H/S%');
+                                });
+                            }
                         }
-                    }
-                })
-                ->whereDate('effective_from', '<=', now())
-                ->orderBy('effective_from', 'desc')
-                ->orderBy('id', 'desc')
-                ->first();
-
-            if (!$priceRecord) {
-                $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
-                    ->where('art_no', $artNo)
-                    ->where('size', $selectedSize)
+                    })
                     ->whereDate('effective_from', '<=', now())
+                    ->orderByRaw("CASE WHEN size = ? THEN 0 WHEN size IS NULL THEN 1 ELSE 2 END", [$selectedSize])
                     ->orderBy('effective_from', 'desc')
                     ->orderBy('id', 'desc')
                     ->first();
+
+                if (!$priceRecord) {
+                    $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+                        ->where(function($q) use ($artNo) {
+                            $q->where('art_no', $artNo)
+                              ->orWhereRaw("REPLACE(art_no, ' ', '') = ?", [str_replace(' ', '', $artNo)]);
+                        })
+                        ->whereDate('effective_from', '<=', now())
+                        ->orderByRaw("CASE WHEN size = ? THEN 0 WHEN size IS NULL THEN 1 ELSE 2 END", [$selectedSize])
+                        ->orderBy('effective_from', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->first();
+                }
             }
 
-            if (!$priceRecord) {
-                $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
-                    ->where('art_no', $artNo)
-                    ->whereDate('effective_from', '<=', now())
-                    ->orderBy('effective_from', 'desc')
-                    ->orderBy('id', 'desc')
-                    ->first();
-            }
-            $mrpPrice = $priceRecord ? $priceRecord->selling_price : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
+            $mrpPrice = $priceRecord ? ($priceRecord->mrp > 0 ? $priceRecord->mrp : $priceRecord->selling_price) : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
 
             $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');
             $customItemName = trim("$brandName $styleName $sleeveShort");
@@ -4321,34 +4327,57 @@ class JobCardEntryController extends Controller
 
         $artNo = $isValidArt($artNo) ? $artNo : '-';
 
-        $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
-            ->where('art_no', $artNo)
-            ->when(is_numeric($selectedSize), function($q) use ($selectedSize) {
-                $q->where('size', $selectedSize);
-            })
-            ->where(function($q) use ($jobCard, $selectedSleeve) {
-                if ($jobCard->item) {
-                    $q->where('finished_item_code', $jobCard->item->code)
-                      ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
-                          $subQuery->select('finished_item_code')
-                                   ->from('stock_entry_items')
-                                   ->where('item_id', $jobCard->item->id)
-                                   ->whereNull('deleted_at');
-                      });
-                } else if ($selectedSleeve && $selectedSleeve !== 'All Sleeves') {
-                    if ($selectedSleeve == 'F/S') {
-                        $q->where('finished_item_code', 'like', '%-FS%');
-                    } elseif ($selectedSleeve == 'H/S') {
-                        $q->where('finished_item_code', 'like', '%-HS%');
+        $priceRecord = null;
+        if ($artNo && $artNo !== '-') {
+            $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+                ->where(function($q) use ($artNo) {
+                    $q->where('art_no', $artNo)
+                      ->orWhereRaw("REPLACE(art_no, ' ', '') = ?", [str_replace(' ', '', $artNo)]);
+                })
+                ->where(function($q) use ($jobCard, $selectedSleeve) {
+                    if ($jobCard->item) {
+                        $q->where('finished_item_code', $jobCard->item->code)
+                          ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
+                              $subQuery->select('finished_item_code')
+                                       ->from('stock_entry_items')
+                                       ->where('item_id', $jobCard->item->id)
+                                       ->whereNull('deleted_at');
+                          });
+                    } else if ($selectedSleeve && $selectedSleeve !== 'All Sleeves') {
+                        if ($selectedSleeve == 'F/S') {
+                            $q->where(function($sub) {
+                                $sub->where('finished_item_code', 'like', '%-FS%')
+                                    ->orWhere('finished_item_code', 'like', '%-F/S%');
+                            });
+                        } elseif ($selectedSleeve == 'H/S') {
+                            $q->where(function($sub) {
+                                $sub->where('finished_item_code', 'like', '%-HS%')
+                                    ->orWhere('finished_item_code', 'like', '%-H/S%');
+                            });
+                        }
                     }
-                }
-            })
-            ->whereDate('effective_from', '<=', now())
-            ->orderBy('effective_from', 'desc')
-            ->orderBy('id', 'desc')
-            ->first();
+                })
+                ->whereDate('effective_from', '<=', now())
+                ->orderByRaw("CASE WHEN size = ? THEN 0 WHEN size IS NULL THEN 1 ELSE 2 END", [$selectedSize])
+                ->orderBy('effective_from', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
 
-        $mrpPrice = $priceRecord ? $priceRecord->selling_price : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
+            if (!$priceRecord) {
+                $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+                    ->where(function($q) use ($artNo) {
+                        $q->where('art_no', $artNo)
+                          ->orWhereRaw("REPLACE(art_no, ' ', '') = ?", [str_replace(' ', '', $artNo)]);
+                    })
+                    ->whereDate('effective_from', '<=', now())
+                    ->orderByRaw("CASE WHEN size = ? THEN 0 WHEN size IS NULL THEN 1 ELSE 2 END", [$selectedSize])
+                    ->orderBy('effective_from', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+            }
+        }
+
+        $mrpPrice = $priceRecord ? ($priceRecord->mrp > 0 ? $priceRecord->mrp : $priceRecord->selling_price) : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
 
         $labelData = [
             'id' => $id,

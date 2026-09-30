@@ -72,6 +72,21 @@
                                 @error('purchase_invoice_id') <div class="text-danger">{{ $message }}</div> @enderror
                                 @error('stock_entry_id') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
+
+                            <div class="col-md-4" id="stock_supplier_select_col" style="{{ $currentType == 'stock' ? '' : 'display: none;' }}">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="stock_supplier_select_id" class="form-select select2" data-placeholder="Select Supplier" {{ isset($debitNote) ? 'disabled' : '' }}>
+                                        <option value="">Select Supplier</option>
+                                        @foreach($suppliers as $supplier)
+                                            <option value="{{ $supplier->id }}" {{ (old('supplier_id', $debitNote->supplier_id ?? '') == $supplier->id) ? 'selected' : '' }}>
+                                                {{ $supplier->name }} {{ $supplier->code ? ' - ' . $supplier->code : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="stock_supplier_select_id">Select Supplier <span class="text-danger">*</span></label>
+                                </div>
+                                @error('supplier_id') <div class="text-danger">{{ $message }}</div> @enderror
+                            </div>
                             @php
                                 $initialSupplierId = old('supplier_id', $debitNote->supplier_id ?? '');
                                 $initialSupplierName = '';
@@ -83,7 +98,7 @@
                                 } elseif (isset($debitNote) && $debitNote->supplier) {
                                     $initialSupplierName = $debitNote->supplier->name . ($debitNote->supplier->code ? ' - ' . $debitNote->supplier->code : '');
                                 }
-                                $showSupplierCol = !empty($initialSupplierId) && !empty($initialSupplierName) && trim($initialSupplierName) !== '-';
+                                $showSupplierCol = ($currentType != 'stock') && !empty($initialSupplierId) && !empty($initialSupplierName) && trim($initialSupplierName) !== '-';
                             @endphp
                             <div class="col-md-4" id="supplier_col" style="{{ $showSupplierCol ? '' : 'display: none;' }}">
                                 <div class="form-floating form-floating-outline">
@@ -493,13 +508,14 @@
                                     <h5 class="mb-0">Tax Summary</h5>
                                     <div class="d-flex gap-3 align-items-center">
                                         <label class="small mb-0">Other State?</label>
+                                        <input type="hidden" id="other_state_hidden" name="other_state" value="{{ old('other_state', $debitNote->other_state ?? 'N') }}">
                                         <div class="d-flex gap-3" id="other_state_container">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }} {{ ($currentType != 'stock') ? 'disabled' : '' }}>
                                                 <label class="form-check-label small" for="other_state_yes">Yes</label>
                                             </div>
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }} {{ ($currentType != 'stock') ? 'disabled' : '' }}>
                                                 <label class="form-check-label small" for="other_state_no">No</label>
                                             </div>
                                         </div>
@@ -783,17 +799,27 @@
             if (!$el || !$el.length) return;
             $el.autocomplete({
                 source: function(request, response) {
+                    let selectedSuppId = $('#supplier_id_hidden').val() || $('#stock_supplier_select_id').val();
+                    if (!selectedSuppId) {
+                        response([{
+                            label: 'Please select a Supplier first',
+                            value: '',
+                            noResult: true
+                        }]);
+                        return;
+                    }
                     let codeToSearch = request.term ? request.term.trim() : '';
                     if (codeToSearch) {
                         codeToSearch = codeToSearch.split('|')[0].trim();
                     }
                     $.getJSON("{{ url('debit_notes/search-stock-items') }}", {
-                        term: codeToSearch
+                        term: codeToSearch,
+                        supplier_id: selectedSuppId
                     }, function(data) {
                         const results = Array.isArray(data) ? data : [];
                         if (request.term && results.length === 0) {
                             response([{
-                                label: 'Raw Material not found',
+                                label: 'Raw Material not found for selected Supplier',
                                 value: '',
                                 noResult: true
                             }]);
@@ -821,7 +847,7 @@
             }).autocomplete("instance")._renderItem = function(ul, item) {
                 if (item.noResult) {
                     return $("<li>")
-                        .append(`<div class="ui-menu-item-wrapper text-danger fw-bold p-2">Raw Material not found</div>`)
+                        .append(`<div class="ui-menu-item-wrapper text-danger fw-bold p-2">${item.label}</div>`)
                         .appendTo(ul);
                 }
 
@@ -840,21 +866,23 @@
 
         initStockItemAutocomplete($('#global_item_search'));
 
-        $('#global_item_search').on('keydown', function(e) {
-            if (e.which === 13) {
-                e.preventDefault();
-                let val = $(this).val();
-                if (val) {
-                    let codeToSearch = val.split('|')[0].trim();
-                    $.getJSON("{{ url('debit_notes/search-stock-items') }}", { term: codeToSearch }, function(data) {
-                        if (Array.isArray(data) && data.length > 0) {
-                            handleStockItemSelection(data[0]);
-                            $('#global_item_search').val('').focus();
-                        } else {
-                            Swal.fire({ icon: 'warning', title: 'Not Found', text: 'Item not found in stock.', timer: 2000, showConfirmButton: false });
-                        }
-                    });
+        $('#global_item_search').on('focus keydown', function(e) {
+            let selectedSuppId = $('#supplier_id_hidden').val() || $('#stock_supplier_select_id').val();
+            if (!selectedSuppId && $('input[name="debit_note_type"]:checked').val() === 'stock') {
+                if (e.type === 'keydown' && e.which === 13) {
+                    e.preventDefault();
                 }
+                if (e.type === 'focus') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Select Supplier First',
+                        text: 'Please select a Supplier before searching stock items.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    $('#stock_supplier_select_id').select2('open');
+                }
+                return false;
             }
         });
 
@@ -940,6 +968,12 @@
             $(this).closest('tr').remove();
             if ($('#items_tbody tr.item-row').length === 0) {
                 $('#items_tbody').html('<tr><td colspan="10" class="text-center">No items added yet.</td></tr>');
+                let type = $('input[name="debit_note_type"]:checked').val();
+                if (type !== 'stock') {
+                    $('#supplier_name').val('');
+                    $('#supplier_id_hidden').val('');
+                    $('#supplier_col').hide();
+                }
             }
             calculateTotals();
         });
@@ -950,11 +984,15 @@
 
             if (type === 'stock') {
                 $('#document_select_col').hide();
+                $('#stock_supplier_select_col').show();
                 $('#stock_item_search_container').show();
                 $('#pi_item_search_container').hide();
-                $('#global_item_search').val('').focus();
+                $('#stock_supplier_select_id').val('').trigger('change');
+                $('#global_item_search').val('');
             } else {
                 $('#document_select_col').show();
+                $('#stock_supplier_select_col').hide();
+                $('#stock_supplier_select_id').val('').trigger('change');
                 $('#document_select_label').html('Select Purchase Invoice <span class="text-danger">*</span>');
                 $select.attr('name', 'purchase_invoice_id');
                 $('#stock_item_search_container').hide();
@@ -968,6 +1006,7 @@
             $('#item_search_input').val('');
 			
             $('#items_tbody').html('<tr><td colspan="10" class="text-center">No items added yet.</td></tr>');
+
 			
             $('#added_charges_list').empty();
             $('#charges_table').addClass('d-none');
@@ -1013,6 +1052,21 @@
             }
         });
 
+        $(document).on('change', '#stock_supplier_select_id', function () {
+            let type = $('input[name="debit_note_type"]:checked').val();
+            if (type === 'stock') {
+                let suppId = $(this).val();
+                $('#supplier_id_hidden').val(suppId);
+                $('#items_tbody').html('<tr><td colspan="10" class="text-center">No items added yet.</td></tr>');
+                calculateTotals();
+                if (suppId) {
+                    setTimeout(function() {
+                        $('#global_item_search').focus();
+                    }, 100);
+                }
+            }
+        });
+
         $(document).on('change', '#document_select_id', function () {
             let docId = $(this).val();
             let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
@@ -1034,13 +1088,21 @@
                             $('#supplier_col').hide();
                         }
 
-                        $('input[name="other_state"][value="' + res.other_state + '"]').prop('checked', true);
+                        if (res.other_state === 'Y') {
+                            $('#other_state_yes').prop('checked', true);
+                            $('#other_state_no').prop('checked', false);
+                        } else {
+                            $('#other_state_no').prop('checked', true);
+                            $('#other_state_yes').prop('checked', false);
+                        }
+                        $('#other_state_hidden').val(res.other_state);
                         $('#igst_percent').val(res.igst_percent);
                         $('#cgst_percent').val(res.cgst_percent);
                         $('#sgst_percent').val(res.sgst_percent);
                         $('#discount_percent').val(res.discount_percent || 0);
 
                         toggleTaxDivs();
+                        updateOtherStateReadonlyState();
 
                         let tbody = $('#items_tbody');
                         tbody.empty();
@@ -1122,24 +1184,18 @@
 
         function updateOtherStateReadonlyState() {
             let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
-            if (type === 'stock') {
-                $('#other_state_container').css({
-                    'pointer-events': 'auto',
-                    'opacity': '1',
-                    'cursor': 'pointer'
-                });
-                $('input[name="other_state"]').css('cursor', 'pointer');
-            } else {
-                $('#other_state_container').css({
-                    'pointer-events': 'none',
-                    'opacity': '0.7',
-                    'cursor': 'not-allowed'
-                });
-                $('input[name="other_state"]').css('cursor', 'not-allowed');
-            }
+            let isStock = (type === 'stock');
+            $('#other_state_yes, #other_state_no').prop('disabled', !isStock);
+            $('#other_state_container').css({
+                'pointer-events': isStock ? 'auto' : 'none',
+                'opacity': isStock ? '1' : '0.7',
+                'cursor': isStock ? 'not-allowed' : 'not-allowed'
+            });
+            let val = $('#other_state_yes').is(':checked') ? 'Y' : 'N';
+            $('#other_state_hidden').val(val);
         }
 
-        $('input[name="other_state"]').on('click', function (e) {
+        $(document).on('click', '#other_state_yes, #other_state_no', function (e) {
             let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
             if (type !== 'stock') {
                 e.preventDefault();
@@ -1147,12 +1203,14 @@
             }
         });
 
-        $('input[name="other_state"]').on('change', function () {
+        $(document).on('change', '#other_state_yes, #other_state_no', function () {
             let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
             if (type !== 'stock') {
-                return;
+                return false;
             }
-            if ($(this).val() === 'Y') {
+            let val = $(this).val();
+            $('#other_state_hidden').val(val);
+            if (val === 'Y') {
                 let defaultIgst = parseFloat("{{ $web_settings->igst ?? 18 }}") || 18;
                 if (parseFloat($('#igst_percent').val()) === 0 || !$('#igst_percent').val()) {
                     $('#igst_percent').val(defaultIgst);

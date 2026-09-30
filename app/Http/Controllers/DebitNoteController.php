@@ -162,7 +162,7 @@ class DebitNoteController extends Controller
                 'debit_note_type' => 'required|in:purchase_invoice,stock',
                 'purchase_invoice_id' => 'required_if:debit_note_type,purchase_invoice|nullable',
                 'stock_entry_id' => 'nullable',
-                'supplier_id' => 'required_if:debit_note_type,purchase_invoice|nullable|exists:suppliers,id',
+                'supplier_id' => 'required|exists:suppliers,id',
                 'reason' => 'nullable|string|min:5|max:255',
                 'items' => 'required|array|min:1',
                 'items.*.quantity' => 'required_if:items.*.selected,1|numeric|gt:0',
@@ -458,7 +458,9 @@ class DebitNoteController extends Controller
             }
         }
 
-        return view('debit_notes.add', compact('debitNote', 'purchaseInvoices', 'nextDebitNoteNo', 'stockEntries', 'charges'));
+        $suppliers = Supplier::where('status', 'Active')->orderBy('id', 'desc')->get();
+
+        return view('debit_notes.add', compact('debitNote', 'purchaseInvoices', 'nextDebitNoteNo', 'stockEntries', 'charges', 'suppliers'));
     }
     
     public function getStockEntries()
@@ -602,6 +604,18 @@ class DebitNoteController extends Controller
         ->whereHas('stockEntry', function ($q) {
             $q->whereNull('deleted_at');
         });
+
+        if ($request->has('supplier_id') && !empty($request->supplier_id)) {
+            $supplierId = $request->supplier_id;
+            $query->where(function ($sq) use ($supplierId) {
+                $sq->whereHas('stockEntry.grnEntry', function ($q) use ($supplierId) {
+                    $q->where('supplier_id', $supplierId)
+                      ->orWhereHas('purchaseInvoice', function ($pi) use ($supplierId) {
+                          $pi->where('supplier_id', $supplierId);
+                      });
+                });
+            });
+        }
 
         if (!empty($term)) {
             $query->where(function ($q) use ($term) {

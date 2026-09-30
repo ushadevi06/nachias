@@ -33,6 +33,7 @@ class OldSalesInvoice extends Model
         'cgst_amount',
         'sgst_amount',
         'igst_amount',
+        'courier_charges',
         'round_off',
         'total_amount',
         'created_by',
@@ -47,6 +48,7 @@ class OldSalesInvoice extends Model
         'cgst_amount' => 'decimal:2',
         'sgst_amount' => 'decimal:2',
         'igst_amount' => 'decimal:2',
+        'courier_charges' => 'decimal:2',
         'round_off' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];

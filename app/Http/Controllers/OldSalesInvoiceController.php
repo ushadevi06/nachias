@@ -220,8 +220,14 @@ class OldSalesInvoiceController extends Controller
                         'ack_no' => trim((string)($row['K'] ?? '')),
                         'ack_date' => trim((string)($row['L'] ?? '')),
                         'total_amount' => floatval(str_replace(',', '', (string)($row['M'] ?? 0))),
+                        'courier_charges' => 0,
                         'items' => [],
                     ];
+                }
+
+                $freightAmt = floatval(str_replace(',', '', (string)($row['AG'] ?? 0)));
+                if ($freightAmt > ($groupedInvoices[$docNo]['courier_charges'] ?? 0)) {
+                    $groupedInvoices[$docNo]['courier_charges'] = $freightAmt;
                 }
 
                 $sNo = intval($row['A'] ?? (count($groupedInvoices[$docNo]['items']) + 1));
@@ -400,7 +406,8 @@ class OldSalesInvoiceController extends Controller
                     $sgstAmt = round($taxableTotal * 0.025, 2);
                 }
 
-                $calculatedGrandTotal = $taxableTotal + $cgstAmt + $sgstAmt + $igstAmt;
+                $courierCharges = $invData['courier_charges'] ?? 0;
+                $calculatedGrandTotal = $taxableTotal + $cgstAmt + $sgstAmt + $igstAmt + $courierCharges;
                 $roundOff = 0;
                 if ($invData['total_amount'] > 0) {
                     $roundOff = round($invData['total_amount'] - $calculatedGrandTotal, 2);
@@ -432,6 +439,7 @@ class OldSalesInvoiceController extends Controller
                         'cgst_amount' => $cgstAmt,
                         'sgst_amount' => $sgstAmt,
                         'igst_amount' => $igstAmt,
+                        'courier_charges' => $courierCharges,
                         'round_off' => $roundOff,
                         'total_amount' => $finalGrandTotal,
                         'created_by' => auth()->id(),

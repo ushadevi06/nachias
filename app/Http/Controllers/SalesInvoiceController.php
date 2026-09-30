@@ -768,7 +768,20 @@ class SalesInvoiceController extends Controller
         $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
 
-        $brands = \App\Models\Brand::active()->orderBy('id', 'desc')->get();
+        $brands = \App\Models\Brand::active()
+            ->where(function ($query) use ($invoice) {
+                $query->whereHas('storeCategories', function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->where('category_name', 'like', '%finished goods%')
+                            ->orWhere('code', 'like', '%fgs%');
+                    });
+                });
+                if ($invoice && $invoice->brand_id) {
+                    $query->orWhere('id', $invoice->brand_id);
+                }
+            })
+            ->orderBy('brand_name', 'asc')
+            ->get();
         $transportModes = \App\Models\TransportMode::where('status', 'Active')->orderBy('id', 'desc')->get();
 
         if ($invoice) {

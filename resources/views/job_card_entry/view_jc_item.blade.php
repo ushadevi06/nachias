@@ -194,19 +194,22 @@
                                                     ?: $allPOItems->first()
                                                 ) : null;
 
-                                                $style = '';
+                                                $styleObj = null;
                                                 if ($item->art_no) {
                                                     $stockEntryItem = \App\Models\StockEntryItem::with('style')->where('art_no', $item->art_no)->whereNotNull('style_id')->first();
-                                                    $style = $stockEntryItem?->style?->code ?? ''; 
+                                                    $styleObj = $stockEntryItem?->style; 
                                                 }
-                                                if (!$style) {
-                                                    $style = $matchingPOItem?->style?->code ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->code ?? '';
+                                                if (!$styleObj) {
+                                                    $styleObj = $matchingPOItem?->style ?? $allPOItems?->whereNotNull('style_id')->first()?->style;
                                                 }
+
+                                                $styleCode = $styleObj?->code ?? '';
+                                                $styleName = $styleObj?->style_name ?? ($styleCode ?: '');
 
                                                 $brandCode = $jobCard->brand->code ?? '';
                                                 $brandName = $jobCard->brand->brand_name ?? '';
                                                 $artNo = $item->art_no;
-                                                $displayStyle = $style ?: $artNo;
+                                                $displayStyle = $styleCode ?: $artNo;
 
                                                 $hasFs = $item->quantities->where('qty_fs', '>', 0)->count() > 0;
                                                 $hasHs = $item->quantities->where('qty_hs', '>', 0)->count() > 0;
@@ -216,15 +219,15 @@
 
                                                 if ($isCanvas) {
                                                     $displayItems[] = trim($brandCode . '-' . $displayStyle, '-');
-                                                    $displayDescriptions[] = trim($brandName . ' ' . $style);
+                                                    $displayDescriptions[] = trim($brandName . ' ' . ($styleName ?: $styleCode));
                                                 } else {
                                                     if ($hasFs) {
                                                         $displayItems[] = trim($brandCode . '-' . $displayStyle . '-F/S', '-');
-                                                        $displayDescriptions[] = trim($brandName . ' ' . $style . ' F/S');
+                                                        $displayDescriptions[] = trim($brandName . ' ' . ($styleName ?: $styleCode) . ' F/S');
                                                     }
                                                     if ($hasHs) {
                                                         $displayItems[] = trim($brandCode . '-' . $displayStyle . '-H/S', '-');
-                                                        $displayDescriptions[] = trim($brandName . ' ' . $style . ' H/S');
+                                                        $displayDescriptions[] = trim($brandName . ' ' . ($styleName ?: $styleCode) . ' H/S');
                                                     }
                                                 }
 

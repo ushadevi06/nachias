@@ -310,6 +310,7 @@ $summaryLines = 1;
 if ($invoice->discount_amount > 0) $summaryLines++;
 $summaryLines++; // Taxable Value
 $summaryLines += ($invoice->igst_amount > 0 ? 1 : 2); // CGST+SGST or IGST
+if (!empty($invoice->courier_charges) && $invoice->courier_charges > 0) $summaryLines++;
 $summaryLines++; // Round Off
 $footerHeight += $summaryLines * 16;
 $footerHeight += 25; // Grand total
@@ -729,6 +730,9 @@ $transportName = $invoice->vehicle_no ?: ($invoice->customer?->transport_name ??
                                                 <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">OUTPUT IGST</td></tr>
                                             @endif
                                         @endif
+                                        @if(isset($invoice->courier_charges) && $invoice->courier_charges > 0)
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Courier Charge</td></tr>
+                                        @endif
                                         @if($showGrandTotal)
                                             <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Round Off</td></tr>
                                         @endif
@@ -750,6 +754,9 @@ $transportName = $invoice->vehicle_no ?: ($invoice->customer?->transport_name ??
                                             @else
                                                 <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst_amount, 2) }}</td></tr>
                                             @endif
+                                        @endif
+                                        @if(isset($invoice->courier_charges) && $invoice->courier_charges > 0)
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->courier_charges, 2) }}</td></tr>
                                         @endif
                                         @if($showGrandTotal)
                                             <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ ($invoice->round_off < 0 ? ' - ' : '') . number_format(abs($invoice->round_off), 2) }}</td></tr>

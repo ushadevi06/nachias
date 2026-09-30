@@ -350,7 +350,7 @@
 
                                         <div class="d-flex justify-content-between mb-2">
                                             <label class="detail-title">Courier Charge:</label>
-                                            <div class="text-muted">₹0.00</div>
+                                            <div class="text-muted">₹{{ number_format($invoice->courier_charges ?? 0, 2) }}</div>
                                         </div>
 
                                         <div class="d-flex justify-content-between mb-2">

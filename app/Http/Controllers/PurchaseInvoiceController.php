@@ -128,7 +128,7 @@ class PurchaseInvoiceController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'invoice_no' => $invoice->invoice_no,
-                    'po_number' => $invoice->purchaseOrder ? $invoice->purchaseOrder->po_number : '-',
+                    'po_number' => $invoice->po_number_display,
                     'invoice_date' => $invoice->invoice_date->format('d-m-Y'),
                     'supplier_name' => $invoice->supplier ? $invoice->supplier->name . ' <a href="' . url('suppliers/view_details/' . $invoice->supplier->id) . '" target="_blank"><span class="mini-title">(' . $invoice->supplier->code . ')</span></a>' : '-',
                     'destination' => $invoice->destination ?? '-',
@@ -430,7 +430,15 @@ class PurchaseInvoiceController extends Controller
 
             DB::beginTransaction();
             try {
-                $firstPoId = is_array($request->purchase_order_id) && count($request->purchase_order_id) > 0 ? $request->purchase_order_id[0] : null;
+                $poIdsArr = is_array($request->purchase_order_id) ? array_filter($request->purchase_order_id) : ($request->purchase_order_id ? [$request->purchase_order_id] : []);
+                $firstPoId = count($poIdsArr) > 0 ? $poIdsArr[0] : null;
+                $poRef = $request->po_reference;
+                if (!empty($poIdsArr)) {
+                    $poNums = \App\Models\PurchaseOrder::whereIn('id', $poIdsArr)->pluck('po_number')->toArray();
+                    if (!empty($poNums)) {
+                        $poRef = implode(', ', $poNums);
+                    }
+                }
 
                 $invoiceData = [
                     'invoice_no' => $request->invoice_no,
@@ -438,7 +446,7 @@ class PurchaseInvoiceController extends Controller
                     'purchase_order_id' => $firstPoId,
                     'purchase_order_no' => $request->purchase_order_no,
                     'supplier_id' => $request->supplier_id,
-                    'po_reference' => $request->po_reference,
+                    'po_reference' => $poRef,
                     'transport' => $request->transport,
                     'destination' => $request->destination,
                     'lr_no' => $request->lr_no,
@@ -942,6 +950,7 @@ class PurchaseInvoiceController extends Controller
  public function getPurchaseOrderDetailsMulti(Request $request)
     {
         $poIds = $request->po_ids ?? [];
+        $invoiceId = $request->invoice_id;
         if (empty($poIds)) {
             return response()->json(['success' => false, 'message' => 'No Purchase Orders provided.']);
         }
@@ -967,10 +976,22 @@ class PurchaseInvoiceController extends Controller
 
         foreach ($purchaseOrders as $purchaseOrder) {
             $poNumbers[] = $purchaseOrder->po_number;
-            $items = $purchaseOrder->items->map(function ($item) use ($purchaseOrder) {
-                $alreadyInvoicedQty = PurchaseInvoiceItem::where('purchase_order_item_id', $item->id)->sum('quantity');
+            $items = $purchaseOrder->items->map(function ($item) use ($purchaseOrder, $invoiceId) {
+                $alreadyInvoicedQty = PurchaseInvoiceItem::where('purchase_order_item_id', $item->id)
+                    ->when($invoiceId, function ($query) use ($invoiceId) {
+                        return $query->where('purchase_invoice_id', '!=', $invoiceId);
+                    })
+                    ->sum('quantity');
                 $balanceQty = round($item->quantity - $alreadyInvoicedQty, 3);
                 if ($balanceQty <= 0) return null;
+
+                $existingInvItem = $invoiceId ? PurchaseInvoiceItem::where('purchase_invoice_id', $invoiceId)->where('purchase_order_item_id', $item->id)->first() : null;
+
+                $hsnCode = $existingInvItem->hsn_code 
+                    ?? PurchaseInvoiceItem::where('purchase_order_item_id', $item->id)->whereNotNull('hsn_code')->where('hsn_code', '!=', '')->latest()->value('hsn_code')
+                    ?? $item->hsn_code 
+                    ?? $item->rawMaterial->hsn_code 
+                    ?? '';
 
                 return [
                     'id' => $item->id,
@@ -979,28 +1000,28 @@ class PurchaseInvoiceController extends Controller
                     'raw_material_id' => $item->raw_material_id,
                     'raw_material_name' => $item->rawMaterial->name,
                     'art_no' => $item->supplier_design_name,
-                    'hsn_code' => $item->rawMaterial->hsn_code ?? '',
-                    'brand_id' => $item->brand_id,
+                    'hsn_code' => $hsnCode,
+                    'brand_id' => $existingInvItem->brand_id ?? $item->brand_id,
                     'brand_name' => $item->brand->brand_name ?? '-',
-                    'fabric_width_id' => $item->fabric_width_id,
+                    'fabric_width_id' => $existingInvItem->fabric_width_id ?? $item->fabric_width_id,
                     'fabric_width' => $item->fabricWidth->width ?? '-',
-                    'fabric_type_id' => $item->fabric_type_id,
+                    'fabric_type_id' => $existingInvItem->fabric_type_id ?? $item->fabric_type_id,
                     'fabric_type_name' => $item->fabricType->fabric_type ?? '-',
-                    'quantity' => $balanceQty,
+                    'quantity' => ($existingInvItem && $existingInvItem->quantity > 0) ? $existingInvItem->quantity : $balanceQty,
                     'qty_ordered' => $item->quantity,
                     'qty_invoiced' => $alreadyInvoicedQty,
                     'balance_qty' => $balanceQty,
                     'uom_id' => $item->uom_id,
                     'uom_code' => $item->uom->uom_code,
-                    'rate' => $item->rate,
+                    'rate' => $existingInvItem->rate ?? $item->rate,
                     'amount' => $item->amount,
-                    'cgst_percent' => $item->cgst_percent ?? $purchaseOrder->cgst_percent ?? 0,
-                    'cgst_amount' => $item->cgst_amount ?? 0,
-                    'sgst_percent' => $item->sgst_percent ?? $purchaseOrder->sgst_percent ?? 0,
-                    'sgst_amount' => $item->sgst_amount ?? 0,
-                    'igst_percent' => $item->igst_percent ?? $purchaseOrder->igst_percent ?? 0,
-                    'igst_amount' => $item->igst_amount ?? 0,
-                    'po_number' => $purchaseOrder->po_number // add PO number for display
+                    'cgst_percent' => $existingInvItem->cgst_percent ?? $item->cgst_percent ?? $purchaseOrder->cgst_percent ?? 0,
+                    'cgst_amount' => $existingInvItem->cgst_amount ?? $item->cgst_amount ?? 0,
+                    'sgst_percent' => $existingInvItem->sgst_percent ?? $item->sgst_percent ?? $purchaseOrder->sgst_percent ?? 0,
+                    'sgst_amount' => $existingInvItem->sgst_amount ?? $item->sgst_amount ?? 0,
+                    'igst_percent' => $existingInvItem->igst_percent ?? $item->igst_percent ?? $purchaseOrder->igst_percent ?? 0,
+                    'igst_amount' => $existingInvItem->igst_amount ?? $item->igst_amount ?? 0,
+                    'po_number' => $purchaseOrder->po_number
                 ];
             })->filter();
 
