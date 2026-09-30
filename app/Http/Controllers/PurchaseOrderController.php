@@ -630,7 +630,6 @@ class PurchaseOrderController extends Controller
 
         $setting = Setting::first();
         $totalInWords = numberToWords($purchaseOrder->total_amount);
-        
         $pdf = Pdf::loadView('purchase_orders.purchase_order_pdf', compact('purchaseOrder', 'setting', 'totalInWords'));
         return $pdf->stream('PO-' . $purchaseOrder->po_number . '.pdf');
     }

@@ -399,12 +399,18 @@
                                                 <div class="text-muted">₹{{ number_format($invoice->pre_gst_charges, 2) }}</div>
                                             </div>
                                             @endif --}}
+                                            @if(($invoice->other_charges ?? 0) > 0)
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <label class="detail-title">Courier Charge:</label>
+                                                <div class="text-muted">₹{{ number_format($invoice->other_charges, 2) }}</div>
+                                            </div>
+                                            @endif
                                             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                                                <label class="detail-title">Total:</label>
+                                                <label class="detail-title">Total (Before Tax):</label>
                                                 <div class="text-muted fw-bold">
                                                     @if($invoice->total < 0)
                                                         <span class="text-danger">₹0.00</span>
-                                                        <div class="small text-danger mt-1"><i class="ri-error-warning-line"></i> Negative net amount</div>
+                                                        <div class="small text-danger mt-1"><i class="ri ri-error-warning-line"></i> Negative net amount</div>
                                                     @else
                                                         ₹{{ number_format($invoice->total, 2) }}
                                                     @endif
@@ -436,11 +442,6 @@
                                                 <label class="detail-title">Tax Amount:</label>
                                                 <div class="text-muted fw-bold">
                                                     ₹{{ number_format($invoice->tax_amount, 2) }}</div>
-                                            </div>
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Courier Charge:</label>
-                                                <div class="text-muted">₹{{ number_format($invoice->other_charges, 2) }}
-                                                </div>
                                             </div>
                                             {{-- @if($invoice->post_gst_charges > 0)
                                             <div class="d-flex justify-content-between mb-2">

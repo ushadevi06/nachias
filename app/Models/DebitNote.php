@@ -80,4 +80,13 @@ class DebitNote extends Model
     {
         return $this->belongsTo(StockEntry::class);
     }
+
+    public function getResolvedStockEntryAttribute()
+    {
+        if ($this->stockEntry) {
+            return $this->stockEntry;
+        }
+        $firstItem = $this->items()->whereNotNull('stock_entry_item_id')->with('stockEntryItem.stockEntry')->first();
+        return $firstItem?->stockEntryItem?->stockEntry;
+    }
 }

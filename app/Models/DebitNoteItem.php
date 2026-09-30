@@ -40,4 +40,9 @@ class DebitNoteItem extends Model
     {
         return $this->belongsTo(Uom::class);
     }
+
+    public function stockEntryItem()
+    {
+        return $this->belongsTo(StockEntryItem::class);
+    }
 }

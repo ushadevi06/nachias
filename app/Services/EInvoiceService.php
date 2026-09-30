@@ -210,7 +210,6 @@ class EInvoiceService
             'total_discount' => (float) number_format($totalDiscountVal, 2, '.', ''),
             'payload' => $payload
         ]);
-
         $authData = $this->authenticate($setting);
         if (!$authData['success']) {
             return $authData;

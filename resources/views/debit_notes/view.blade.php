@@ -38,7 +38,7 @@
                         </div>
                     </div>
 
-                    <div class="card-datatable">
+                    <div class="card-datatable table-responsive">
                         <table class="datatables-debit-notes table nowrap w-100" id="debit_notes_table">
                             <thead>
                                 <tr>
@@ -47,6 +47,10 @@
                                     <th>Date</th>
                                     <th>Invoice / Stock No.</th>
                                     <th>Supplier Name</th>
+                                    <th>Total Qty</th>
+                                    <th>Subtotal</th>
+                                    <th>Discount Amount</th>
+                                    <th>Taxable Value</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -84,6 +88,10 @@
                 { data: 'debit_note_date', name: 'debit_note_date' },
                 { data: 'purchase_invoice_no', name: 'purchase_invoice_no' },
                 { data: 'supplier_name', name: 'supplier_name' },
+                { data: 'total_qty', name: 'total_qty' },
+                { data: 'sub_total', name: 'sub_total' },
+                { data: 'discount_amount', name: 'discount_amount' },
+                { data: 'taxable_value', name: 'taxable_value' },
                 { data: 'grand_total', name: 'grand_total' },
                 { data: 'status', name: 'status' },
                 { data: 'action', name: 'action', orderable: false, searchable: false }

@@ -643,6 +643,9 @@ if ($showPrice) $colsAfterQty++;
                                         @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount</td></tr>
                                         @endif
+                                        @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Courier Charge</td></tr>
+                                        @endif
                                         @if($showSubTotal)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Taxable Value</td></tr>
                                         @endif
@@ -654,9 +657,6 @@ if ($showPrice) $colsAfterQty++;
                                             <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">OUTPUT IGST</td></tr>
                                             @endif
                                         @endif
-                                        @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Other Charges</td></tr>
-                                        @endif
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Round Off</td></tr>
                                     </table>
                                 </td>
@@ -666,8 +666,11 @@ if ($showPrice) $colsAfterQty++;
                                         @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
                                         @endif
+                                        @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->other_charges, 2) }}</td></tr>
+                                        @endif
                                         @if($showSubTotal)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td></tr>
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->total > 0 ? $invoice->total : ($invoice->sub_total - ($invoice->discount ?? 0) + ($invoice->other_charges ?? 0)), 2) }}</td></tr>
                                         @endif
                                         @if($showTax)
                                             @if(!$invoice->other_state)
@@ -676,9 +679,6 @@ if ($showPrice) $colsAfterQty++;
                                             @else
                                             <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst, 2) }}</td></tr>
                                             @endif
-                                        @endif
-                                        @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->other_charges, 2) }}</td></tr>
                                         @endif
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ (in_array(strtolower($invoice->round_off_type ?? ''), ['less', 'minus']) ? ' - ' : '') . number_format($invoice->round_off ?? 0, 2) }}</td></tr>
                                     </table>

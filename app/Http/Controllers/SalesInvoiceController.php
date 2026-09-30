@@ -180,13 +180,11 @@ class SalesInvoiceController extends Controller
             $filteredRecords = $query->count();
             
             $overallSubTotal = (float)$query->sum('sub_total');
-            $overallDiscount = (float)$query->sum('discount');
-            $overallTaxable = $overallSubTotal - $overallDiscount;
+            $overallOtherCharges = (float)$query->sum('other_charges');
+            $overallTaxable = $overallSubTotal - $overallDiscount + $overallOtherCharges;
             $overallGrandTotal = (float)$query->sum('grand_total');
 
-            $overallTotalQty = (float)(clone $query)
-                ->join('sales_invoice_items', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
-                ->sum('sales_invoice_items.quantity');
+            $overallTotalQty = (float)(clone $query)->join('sales_invoice_items', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')->sum('sales_invoice_items.quantity');
 
             if ($request->has('start') && $request->has('length') && $request->length != '-1') {
                 $query->skip($request->start)->take($request->length);
@@ -276,8 +274,8 @@ class SalesInvoiceController extends Controller
                     'raw_sub_total' => $inv->sub_total,
                     'discount' => '₹' . number_format($inv->discount ?? 0, 2),
                     'raw_discount' => $inv->discount ?? 0,
-                    'taxable_value' => '₹' . number_format($inv->sub_total - ($inv->discount ?? 0), 2),
-                    'raw_taxable_value' => $inv->sub_total - ($inv->discount ?? 0),
+                    'taxable_value' => '₹' . number_format($inv->total > 0 ? $inv->total : ($inv->sub_total - ($inv->discount ?? 0) + ($inv->other_charges ?? 0)), 2),
+                    'raw_taxable_value' => $inv->total > 0 ? $inv->total : ($inv->sub_total - ($inv->discount ?? 0) + ($inv->other_charges ?? 0)),
                     'grand_total' => '₹' . number_format($inv->grand_total, 2),
                     'raw_grand_total' => $inv->grand_total,
                     'status' => $statusDropdown,
@@ -496,7 +494,7 @@ class SalesInvoiceController extends Controller
                     'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'sales_discount', 'box_discount_amount', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
-                    'other_charges','round_off_type', 'round_off',
+                    'other_charges', 'round_off_type', 'round_off',
                     'grand_total', 'due_amount'
                 ]);
                 if ($request->tran_doc_date) {
@@ -580,23 +578,22 @@ class SalesInvoiceController extends Controller
                 // $preGstCharges = (float)($request->pre_gst_charges ?? 0);
                 // $calculatedTotal = $calculatedSubTotal - $calculatedDiscount + $preGstCharges;
                 $calculatedTotal = $calculatedSubTotal - $calculatedDiscount;
+                $otherCharges = (float)($request->other_charges ?? 0);
+                $taxableAmount = $calculatedTotal + $otherCharges;
+
                 $cgst = 0; $sgst = 0; $igst = 0;
                 if ($request->other_state == 'yes') {
                     $igstPercent = (float)($request->igst_percent ?? 0);
-                    $igst = ($calculatedTotal * $igstPercent) / 100;
+                    $igst = ($taxableAmount * $igstPercent) / 100;
                 } else {
                     $cgstPercent = (float)($request->cgst_percent ?? 0);
                     $sgstPercent = (float)($request->sgst_percent ?? 0);
-                    $cgst = ($calculatedTotal * $cgstPercent) / 100;
-                    $sgst = ($calculatedTotal * $sgstPercent) / 100;
+                    $cgst = ($taxableAmount * $cgstPercent) / 100;
+                    $sgst = ($taxableAmount * $sgstPercent) / 100;
                 }
                 $calculatedTaxAmount = $cgst + $sgst + $igst;
-
-                $otherCharges = (float)($request->other_charges ?? 0);
-                // $postGstCharges = (float)($request->post_gst_charges ?? 0);
                 
-                // $totalBeforeRoundOff = $calculatedTotal + $calculatedTaxAmount + $otherCharges + $postGstCharges;
-                $totalBeforeRoundOff = $calculatedTotal + $calculatedTaxAmount + $otherCharges ;
+                $totalBeforeRoundOff = $taxableAmount + $calculatedTaxAmount;
                 $calculatedGrandTotal = round($totalBeforeRoundOff);
                 $calculatedRoundOff = abs($calculatedGrandTotal - $totalBeforeRoundOff);
                 $calculatedRoundOffType = ($calculatedGrandTotal >= $totalBeforeRoundOff) ? 'Add' : 'Less';
@@ -606,11 +603,12 @@ class SalesInvoiceController extends Controller
                 $invoiceData['sales_discount'] = $salesDiscPercent;
                 $invoiceData['discount_percent'] = $salesDiscPercent;
                 $invoiceData['discount'] = $calculatedDiscount;
-                $invoiceData['total'] = $calculatedTotal;
+                $invoiceData['total'] = $taxableAmount;
                 $invoiceData['cgst'] = $cgst;
                 $invoiceData['sgst'] = $sgst;
                 $invoiceData['igst'] = $igst;
                 $invoiceData['tax_amount'] = $calculatedTaxAmount;
+                $invoiceData['other_charges'] = $otherCharges;
                 $invoiceData['round_off'] = $calculatedRoundOff;
                 $invoiceData['round_off_type'] = $calculatedRoundOffType;
                 $invoiceData['grand_total'] = $calculatedGrandTotal;
@@ -1494,6 +1492,26 @@ class SalesInvoiceController extends Controller
             $summary['igst_amount'] = ($summary['taxable_value'] * $summary['igst_rate']) / 100;
         }
 
+        if (($invoice->other_charges ?? 0) > 0) {
+            $courierHsn = '9968';
+            $courierAmt = (float)$invoice->other_charges;
+            $isOtherState = (bool)($invoice->other_state ?? false);
+            $cgstRate = (float)($invoice->cgst_percent ?? 0);
+            $sgstRate = (float)($invoice->sgst_percent ?? 0);
+            $igstRate = (float)($invoice->igst_percent ?? 0);
+            
+            $taxSummary[$courierHsn] = [
+                'hsn' => $courierHsn,
+                'taxable_value' => $courierAmt,
+                'cgst_rate' => $isOtherState ? 0 : $cgstRate,
+                'cgst_amount' => $isOtherState ? 0 : ($courierAmt * $cgstRate) / 100,
+                'sgst_rate' => $isOtherState ? 0 : $sgstRate,
+                'sgst_amount' => $isOtherState ? 0 : ($courierAmt * $sgstRate) / 100,
+                'igst_rate' => $isOtherState ? $igstRate : 0,
+                'igst_amount' => $isOtherState ? ($courierAmt * $igstRate) / 100 : 0,
+            ];
+        }
+
         $totalInWords = numberToWords($invoice->grand_total);
         $totalTaxInWords = numberToWords($invoice->tax_amount);
 
@@ -1544,6 +1562,26 @@ class SalesInvoiceController extends Controller
             $summary['cgst_amount'] = ($summary['taxable_value'] * $summary['cgst_rate']) / 100;
             $summary['sgst_amount'] = ($summary['taxable_value'] * $summary['sgst_rate']) / 100;
             $summary['igst_amount'] = ($summary['taxable_value'] * $summary['igst_rate']) / 100;
+        }
+
+        if (($invoice->other_charges ?? 0) > 0) {
+            $courierHsn = '9968';
+            $courierAmt = (float)$invoice->other_charges;
+            $isOtherState = (bool)($invoice->other_state ?? false);
+            $cgstRate = (float)($invoice->cgst_percent ?? 0);
+            $sgstRate = (float)($invoice->sgst_percent ?? 0);
+            $igstRate = (float)($invoice->igst_percent ?? 0);
+            
+            $taxSummary[$courierHsn] = [
+                'hsn' => $courierHsn,
+                'taxable_value' => $courierAmt,
+                'cgst_rate' => $isOtherState ? 0 : $cgstRate,
+                'cgst_amount' => $isOtherState ? 0 : ($courierAmt * $cgstRate) / 100,
+                'sgst_rate' => $isOtherState ? 0 : $sgstRate,
+                'sgst_amount' => $isOtherState ? 0 : ($courierAmt * $sgstRate) / 100,
+                'igst_rate' => $isOtherState ? $igstRate : 0,
+                'igst_amount' => $isOtherState ? ($courierAmt * $igstRate) / 100 : 0,
+            ];
         }
 
         $totalInWords = numberToWords($invoice->grand_total);

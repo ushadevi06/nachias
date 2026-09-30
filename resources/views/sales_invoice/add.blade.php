@@ -1225,6 +1225,11 @@
                                             <input type="hidden" name="discount_percent" id="discount_percent"
                                                 value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                         </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="text-secondary fw-medium">Courier Charge:</span>
+                                            <span class="fw-bold mb-0"
+                                                id="other_charges_val">₹{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
+                                        </div>
                                         <div class="d-flex justify-content-between align-items-center mb-3"
                                             style="display: none !important;">
                                             <span class="text-secondary fw-medium">Pre-GST Charges:</span>
@@ -1338,11 +1343,6 @@
                                                 id="tax_amount_val">{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}</span>
                                             <input type="hidden" name="tax_amount" id="tax_amount"
                                                 value="{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}">
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <span class="text-secondary fw-medium">Courier Charge:</span>
-                                            <span class="fw-bold mb-0"
-                                                id="other_charges_val">{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mb-3"
                                             style="display: none !important;">
@@ -1749,8 +1749,7 @@
                                         .toFixed(2));
                                 }
                                 if (data.courier_charge !== undefined) {
-                                    $('#other_charges_val').text(parseFloat(data.courier_charge)
-                                        .toFixed(2));
+                                    $('#other_charges_val').text('₹' + parseFloat(data.courier_charge).toFixed(2));
                                     $('#other_charges').val(parseFloat(data.courier_charge)
                                         .toFixed(2));
                                 }
@@ -2362,18 +2361,21 @@
                 $('#discount_val').text('- ₹' + discount.toFixed(2));
                 $('#discount').val(discount.toFixed(2));
 
-                var total = subTotal - discount;
+                var otherCharges = parseFloat($('#other_charges').val()) || 0;
+                $('#other_charges_val').text('₹' + otherCharges.toFixed(2));
 
-                if (total <= 0 && subTotal > 0 && discount > 0) {
+                var total = (subTotal - discount) + otherCharges;
+
+                if (total <= 0 && (subTotal > 0 || otherCharges > 0) && discount > 0) {
                     let warningText = '';
                     if (total < 0) {
                         warningText = 'Net Amount is negative (₹' + total.toFixed(2) + '). Discount (₹' + discount
-                            .toFixed(2) + ') exceeds Sub Total. Showing 0.00.';
+                            .toFixed(2) + ') exceeds Sub Total + Courier Charge. Showing 0.00.';
                         $('#total_val').addClass('text-danger fw-bold');
                         $('button[type="submit"]').prop('disabled', true);
                     } else {
                         warningText = 'Net Amount is 0.00. Discount (₹' + discount.toFixed(2) +
-                            ') equals Sub Total. Tax and Grand Total will be 0.00.';
+                            ') equals Sub Total + Courier Charge. Tax and Grand Total will be 0.00.';
                         $('#total_val').removeClass('text-danger fw-bold');
                         $('button[type="submit"]').prop('disabled', false);
                     }
@@ -2424,10 +2426,7 @@
                 $('#tax_amount_val').text(taxAmount.toFixed(2));
                 $('#tax_amount').val(taxAmount.toFixed(2));
 
-                var otherCharges = parseFloat($('#other_charges').val()) || 0;
-                $('#other_charges_val').text(otherCharges.toFixed(2));
-
-                var totalBeforeRoundOff = total + taxAmount + otherCharges;
+                var totalBeforeRoundOff = total + taxAmount;
                 $('#total_before_round_off').val(totalBeforeRoundOff.toFixed(2));
 
                 var nearestWhole = Math.round(totalBeforeRoundOff);

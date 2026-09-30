@@ -118,13 +118,84 @@
 <body>
 @php
   $allItems = $debitNote->items;
-  $chunkSize = 12;
-  $chunks = $allItems->count() > 0 ? $allItems->chunk($chunkSize) : collect([collect()]);
+
+  $preGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Pre-GST')->sum('charge_amount') : 0;
+  $postGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Post-GST')->sum('charge_amount') : 0;
+
+  $extraSummaryLines = 0;
+  if ($preGstCharges > 0) $extraSummaryLines++;
+  if (($debitNote->discount_percent ?? 0) > 0) $extraSummaryLines++;
+  if ($preGstCharges > 0 || ($debitNote->discount_percent ?? 0) > 0) $extraSummaryLines++;
+  if ($postGstCharges > 0) $extraSummaryLines++;
+  if ($debitNote->round_off != 0) $extraSummaryLines++;
+  if (!empty($debitNote->remarks)) $extraSummaryLines += max(1, (int)ceil(strlen($debitNote->remarks) / 55));
+
+  $wordsLen = strlen(numberToWords($debitNote->grand_total ?? 0));
+  if ($wordsLen > 55) $extraSummaryLines += (int)ceil($wordsLen / 55) - 1;
+
+  $supplier = $debitNote->supplier ?? $debitNote->stockEntry?->grnEntry?->supplier;
+  $suppAddrParts = $supplier ? array_filter([
+      $supplier->address_line_1, $supplier->address_line_2, $supplier->address_line_3,
+      $supplier->city?->city_name, $supplier->state?->state_name
+  ]) : [];
+  $suppAddrLen = strlen(implode(' ', $suppAddrParts));
+  if ($suppAddrLen > 65) {
+      $extraSummaryLines += (int)ceil($suppAddrLen / 65) - 1;
+  }
+
+  $rowsOnLastPage = max(1, 16 - $extraSummaryLines);
+  $rowsOnFullPage = 25;
+
+  $pages = [];
+  $remaining = collect($allItems);
+
+  if ($remaining->count() === 0) {
+      $pages[] = [
+          'items' => collect(),
+          'fillerRows' => $rowsOnLastPage
+      ];
+  } elseif ($remaining->count() <= $rowsOnLastPage) {
+      $pages[] = [
+          'items' => $remaining,
+          'fillerRows' => max(0, $rowsOnLastPage - $remaining->count())
+      ];
+  } else {
+      while ($remaining->count() > 0) {
+          $remCount = $remaining->count();
+          if ($remCount <= $rowsOnLastPage) {
+              $pages[] = [
+                  'items' => $remaining,
+                  'fillerRows' => max(0, $rowsOnLastPage - $remCount)
+              ];
+              break;
+          }
+          if ($remCount <= $rowsOnFullPage + $rowsOnLastPage) {
+              $take = min($rowsOnFullPage, $remCount - 1);
+              if ($remCount - $take > $rowsOnLastPage) {
+                  $take = $remCount - $rowsOnLastPage;
+              }
+          } else {
+              $take = $rowsOnFullPage;
+          }
+          $pages[] = [
+              'items' => $remaining->take($take),
+              'fillerRows' => 0
+          ];
+          $remaining = $remaining->slice($take)->values();
+      }
+  }
+
+  $totalPages = count($pages);
   $overallIndex = 0;
 @endphp
 
-@foreach($chunks as $chunkIndex => $chunk)
-  <div class="page-wrapper" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
+@foreach($pages as $pageIndex => $pageData)
+  @php
+    $chunk = $pageData['items'];
+    $fillerRows = $pageData['fillerRows'];
+    $isLastPage = ($pageIndex === $totalPages - 1);
+  @endphp
+  <div class="page-wrapper" style="{{ !$isLastPage ? 'page-break-after: always;' : '' }}">
     <!-- HEADER SECTION -->
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #000; border-collapse:collapse;">
       <tr>
@@ -277,7 +348,7 @@
 
               if ($item->purchase_invoice_item_id) {
                 $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem', 'purchaseInvoice'])->find($item->purchase_invoice_item_id);
-                $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where		('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
+                $poItem = $dbInvItem->purchaseOrderItem ?? ($dbInvItem?->purchaseInvoice?->purchase_order_id ? \App\Models\PurchaseOrderItem::where('purchase_order_id', $dbInvItem->purchaseInvoice->purchase_order_id)->where('raw_material_id', $dbInvItem->raw_material_id)->first() : null);
                 $supplierDesignName = $poItem->supplier_design_name ?? '-';
                 $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
                 $artNo = $grnItem->art_no ?? '-';
@@ -305,23 +376,20 @@
             </tr>
           @endforeach
 
-          @php
-            $targetRows = $loop->last ? 5 : 15;
-          @endphp
-          @for($i = count($chunk); $i < $targetRows; $i++)
+          @for($i = 0; $i < $fillerRows; $i++)
             <tr>
-              <td style="height:25px; border-right:1px solid #000;"></td>
-              <td style="border-right:1px solid #000;"></td>
-              <td style="border-right:1px solid #000;"></td>
-              <td style="border-right:1px solid #000;"></td>
-              <td style="border-right:1px solid #000;"></td>
-              <td style="border-right:1px solid #000;"></td>
-              <td style="border-right:1px solid #000;"></td>
-              <td></td>
+              <td style="height:22px; border-right:1px solid #000;">&nbsp;</td>
+              <td style="border-right:1px solid #000;">&nbsp;</td>
+              <td style="border-right:1px solid #000;">&nbsp;</td>
+              <td style="border-right:1px solid #000;">&nbsp;</td>
+              <td style="border-right:1px solid #000;">&nbsp;</td>
+              <td style="border-right:1px solid #000;">&nbsp;</td>
+              <td style="border-right:1px solid #000;">&nbsp;</td>
+              <td>&nbsp;</td>
             </tr>
           @endfor
 
-          @if($loop->last)
+          @if($isLastPage)
             @php
               $preGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Pre-GST')->sum('charge_amount') : 0;
               $postGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Post-GST')->sum('charge_amount') : 0;
@@ -434,7 +502,7 @@
           @else
             <tr style="border-top:1px solid #000;">
               <td colspan="8" style="padding:10px; text-align:right; font-weight:bold; font-size:11px;">
-                Continue to Page No. {{ $chunkIndex + 2 }}
+                Continue to Page No. {{ $pageIndex + 2 }}
               </td>
             </tr>
           @endif
@@ -446,7 +514,6 @@
 
   <div style="margin-top:20px; font-size:8px; text-align:center; color:#666;">
     This is a computer generated document.
-  </div>
   </div>
 
   @if(isset($is_print) && $is_print)

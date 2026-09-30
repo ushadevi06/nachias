@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use App\Models\Setting;
 use App\Models\Charge;
 use App\Models\DebitNoteCharge;
+use App\Models\StockEntryItem;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,7 @@ class DebitNoteController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = DebitNote::with(['supplier', 'purchaseInvoice'])
+            $query = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.stockEntryItem.stockEntry'])
                 ->orderBy('id', 'desc');
 
             if (!empty($request->supplier_id)) {
@@ -38,6 +39,9 @@ class DebitNoteController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('debit_note_no', 'like', "%{$search}%")
                         ->orWhereRaw("DATE_FORMAT(debit_note_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                        ->orWhere('sub_total', 'like', "%{$search}%")
+                        ->orWhere('discount_amount', 'like', "%{$search}%")
+                        ->orWhere('taxable_amount', 'like', "%{$search}%")
                         ->orWhere('grand_total', 'like', "%{$search}%")
                         ->orWhereHas('purchaseInvoice', function ($q2) use ($search) {
                             $q2->where('invoice_no', 'like', "%{$search}%");
@@ -104,10 +108,12 @@ class DebitNoteController extends Controller
 
                 $docNo = '-';
                 if (($note->debit_note_type ?? '') == 'stock' || $note->stock_entry_id) {
-                    $docNo = $note->stockEntry->stock_entry_no ?? ('STK-' . $note->stock_entry_id);
+                    $docNo = $note->resolved_stock_entry->stock_entry_no ?? ($note->stock_entry_id ? 'STK-' . $note->stock_entry_id : '-');
                 } else if ($note->purchaseInvoice) {
                     $docNo = $note->purchaseInvoice->invoice_no;
                 }
+
+                $totalQty = $note->items ? $note->items->sum('quantity') : 0;
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -115,6 +121,10 @@ class DebitNoteController extends Controller
                     'debit_note_date' => $note->debit_note_date->format('d-m-Y'),
                     'purchase_invoice_no' => $docNo,
                     'supplier_name' => $note->supplier ? $note->supplier->name : '-',
+                    'total_qty' => number_format($totalQty, 2),
+                    'sub_total' => '₹' . number_format($note->sub_total ?? 0, 2),
+                    'discount_amount' => '₹' . number_format($note->discount_amount ?? 0, 2),
+                    'taxable_value' => '₹' . number_format($note->taxable_amount ?? 0, 2),
                     'grand_total' => '₹' . number_format($note->grand_total, 2),
                     'status' => $status,
                     'action' => $action,
@@ -283,17 +293,16 @@ class DebitNoteController extends Controller
                         } elseif (!empty($item['stock_entry_item_id'])) {
                             $dbStockItem = \App\Models\StockEntryItem::find($item['stock_entry_item_id']);
                             if ($dbStockItem) {
-                                $rejectedQty = floatval(($dbStockItem->qty_rejected ?? 0) > 0 ? $dbStockItem->qty_rejected : ($dbStockItem->qty_in > 0 ? $dbStockItem->qty_in : $dbStockItem->qty_out));
-                                $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('stock_entry_item_id', $item['stock_entry_item_id'])
-                                    ->whereHas('debitNote', function ($q) {
-                                        $q->where('status', '!=', 'Cancelled');
-                                    });
-                                if ($id) {
-                                    $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
+                                $currentStock = floatval($dbStockItem->qty_in - $dbStockItem->qty_out);
+                                // If editing an already approved DN, add back this DN's existing item qty to available
+                                if ($id && $debitNote && $debitNote->status === 'Approved') {
+                                    $existingItemQty = floatval(\App\Models\DebitNoteItem::where('debit_note_id', $id)
+                                        ->where('stock_entry_item_id', $item['stock_entry_item_id'])
+                                        ->value('quantity') ?? 0);
+                                    $currentStock += $existingItemQty;
                                 }
-                                $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
 
-                                $availableQty = max(0, $rejectedQty - $alreadyDebited);
+                                $availableQty = max(0, $currentStock);
                                 if ($availableQty > 0 && $qty > $availableQty) {
                                     $itemErrors["items.$index.quantity"] = "Quantity exceeds available stock quantity ($availableQty).";
                                 }
@@ -332,12 +341,31 @@ class DebitNoteController extends Controller
         
                 $debitNoteType = $request->debit_note_type ?? 'purchase_invoice';
 
+                $stockEntryId = $debitNoteType == 'stock' ? $request->stock_entry_id : null;
+                if ($debitNoteType == 'stock' && empty($stockEntryId) && $request->has('items') && is_array($request->items)) {
+                    foreach ($request->items as $itm) {
+                        if (!empty($itm['stock_entry_id'])) {
+                            $stockEntryId = $itm['stock_entry_id'];
+                            break;
+                        }
+                        if (!empty($itm['stock_entry_item_id'])) {
+                            $stkItem = StockEntryItem::find($itm['stock_entry_item_id']);
+                            if ($stkItem && $stkItem->stock_entry_id) {
+                                $stockEntryId = $stkItem->stock_entry_id;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                $newStatus = $request->status ?? 'Draft';
+
                 $debitNoteData = [
                     'debit_note_no' => $request->debit_note_no,
                     'debit_note_date' => Carbon::parse($request->debit_note_date)->format('Y-m-d'),
                     'debit_note_type' => $debitNoteType,
                     'purchase_invoice_id' => $debitNoteType == 'purchase_invoice' ? $request->purchase_invoice_id : null,
-                    'stock_entry_id' => $debitNoteType == 'stock' ? $request->stock_entry_id : null,
+                    'stock_entry_id' => $stockEntryId,
                     'supplier_id' => $request->supplier_id ?: null,
                     'reason' => $request->reason,
                     'other_state' => $request->other_state ?? 'N',
@@ -355,10 +383,20 @@ class DebitNoteController extends Controller
                     'grand_total' => $request->grand_total,
                     'remarks' => $request->remarks,
                     'reference_document' => $referenceDocument,
-                    'status' => $request->status ?? 'Draft',
+                    'status' => $newStatus,
                 ];
 
                 if ($id) {
+                    // If previously approved, revert old stock deductions first
+                    if ($debitNote->status === 'Approved') {
+                        foreach ($debitNote->items as $oldItem) {
+                            if (!empty($oldItem->stock_entry_item_id)) {
+                                StockEntryItem::where('id', $oldItem->stock_entry_item_id)
+                                    ->decrement('qty_out', (float)$oldItem->quantity);
+                            }
+                        }
+                    }
+
                     $debitNote->update($debitNoteData);
                     DebitNoteItem::where('debit_note_id', $id)->delete();
                     DebitNoteCharge::where('debit_note_id', $id)->delete();
@@ -371,19 +409,26 @@ class DebitNoteController extends Controller
                     addLog('create', 'Debit Note', 'debit_notes', $debitNote->id, null, $debitNoteData);
                 }
 
-
                 foreach ($request->items as $item) {
                     if (isset($item['selected']) && $item['selected'] == '1') {
+                        $stkEntryItemId = $item['stock_entry_item_id'] ?? null;
+                        $itemQty = floatval($item['quantity'] ?? 0);
+
                         DebitNoteItem::create([
                             'debit_note_id' => $debitNote->id,
                             'purchase_invoice_item_id' => $item['purchase_invoice_item_id'] ?? null,
-                            'stock_entry_item_id' => $item['stock_entry_item_id'] ?? null,
+                            'stock_entry_item_id' => $stkEntryItemId,
                             'raw_material_id' => $item['raw_material_id'],
-                            'quantity' => $item['quantity'],
+                            'quantity' => $itemQty,
                             'uom_id' => $item['uom_id'],
                             'rate' => $item['rate'],
                             'amount' => $item['amount'],
                         ]);
+
+                        // Deduct stock if Debit Note is Approved
+                        if ($newStatus === 'Approved' && !empty($stkEntryItemId) && $itemQty > 0) {
+                            StockEntryItem::where('id', $stkEntryItemId)->increment('qty_out', $itemQty);
+                        }
                     }
                 }
 
@@ -543,12 +588,7 @@ class DebitNoteController extends Controller
         $purchaseInvoice = $stockEntry->grnEntry?->purchaseInvoice ?? null;
 
         $items = collect($stockEntry->stockEntryItems)->map(function ($item) {
-            $rejectedQty = floatval(($item->qty_rejected ?? 0) > 0 ? $item->qty_rejected : ($item->qty_in > 0 ? $item->qty_in : $item->qty_out));
-            $alreadyDebited = floatval(\App\Models\DebitNoteItem::where('stock_entry_item_id', $item->id)
-                ->whereHas('debitNote', function ($q) {
-                    $q->where('status', '!=', 'Cancelled');
-                })->sum('quantity'));
-            $availableQty = max(0, $rejectedQty - $alreadyDebited);
+            $availableQty = max(0, floatval($item->qty_in - $item->qty_out));
             $rate = floatval($item->price ?? 0);
             $categoryName = $item->rawMaterial?->storeCategory?->store_category_name ?? '-';
             $artNo = $item->art_no ?? '-';
@@ -639,12 +679,8 @@ class DebitNoteController extends Controller
 
         $results = [];
         foreach ($items as $item) {
-            $rejectedQty = floatval(($item->qty_rejected ?? 0) > 0 ? $item->qty_rejected : ($item->qty_in > 0 ? $item->qty_in : $item->qty_out));
-            $alreadyDebited = floatval(DebitNoteItem::where('stock_entry_item_id', $item->id)
-                ->whereHas('debitNote', function ($q) {
-                    $q->where('status', '!=', 'Cancelled');
-                })->sum('quantity'));
-            $availableQty = max(0, $rejectedQty - $alreadyDebited);
+            $currentStock = floatval($item->qty_in - $item->qty_out);
+            $availableQty = max(0, $currentStock);
 
             if ($availableQty <= 0) {
                 continue;
@@ -717,7 +753,14 @@ class DebitNoteController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete debit-note')) {
             return unauthorizedRedirect();
         }
-        $debitNote = DebitNote::findOrFail($id);
+        $debitNote = DebitNote::with('items')->findOrFail($id);
+        if ($debitNote->status === 'Approved') {
+            foreach ($debitNote->items as $itm) {
+                if (!empty($itm->stock_entry_item_id) && $itm->quantity > 0) {
+                    StockEntryItem::where('id', $itm->stock_entry_item_id)->decrement('qty_out', (float)$itm->quantity);
+                }
+            }
+        }
         $debitNote->delete();
         return redirect('debit_notes')->with('success', 'Debit Note deleted successfully');
     }
@@ -763,6 +806,10 @@ class DebitNoteController extends Controller
             'success' => true,
             'supplier_id' => $invoice->supplier_id,
             'supplier_name' => $invoice->supplier ? $invoice->supplier->name . ($invoice->supplier->code ? ' - ' . $invoice->supplier->code : '') : '-',
+            'supplier_state_id' => $invoice->supplier?->state_id,
+            'supplier_igst' => $invoice->supplier?->igst_percent,
+            'supplier_cgst' => $invoice->supplier?->cgst_percent,
+            'supplier_sgst' => $invoice->supplier?->sgst_percent,
             'invoice_date' => $invoice->invoice_date->format('Y-m-d'),
             'items' => $items,
             'other_state' => $invoice->other_state ? 'Y' : 'N',
@@ -800,9 +847,27 @@ class DebitNoteController extends Controller
     }
     public function updateStatus(Request $request, $id)
     {
-        $debitNote = DebitNote::findOrFail($id);
+        $debitNote = DebitNote::with('items')->findOrFail($id);
         $oldData = $debitNote->toArray();
-        $debitNote->status = $request->status;
+        $oldStatus = $debitNote->status;
+        $newStatus = $request->status;
+
+        // Stock qty_out handling on status change
+        if ($oldStatus !== 'Approved' && $newStatus === 'Approved') {
+            foreach ($debitNote->items as $itm) {
+                if (!empty($itm->stock_entry_item_id) && $itm->quantity > 0) {
+                    StockEntryItem::where('id', $itm->stock_entry_item_id)->increment('qty_out', (float)$itm->quantity);
+                }
+            }
+        } elseif ($oldStatus === 'Approved' && $newStatus !== 'Approved') {
+            foreach ($debitNote->items as $itm) {
+                if (!empty($itm->stock_entry_item_id) && $itm->quantity > 0) {
+                    StockEntryItem::where('id', $itm->stock_entry_item_id)->decrement('qty_out', (float)$itm->quantity);
+                }
+            }
+        }
+
+        $debitNote->status = $newStatus;
         $debitNote->save();
         $newData = $debitNote->toArray();
         addLog('update_status', 'Debit Note Status', 'debit_notes', $id, $oldData, $newData);

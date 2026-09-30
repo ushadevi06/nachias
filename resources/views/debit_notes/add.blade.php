@@ -78,7 +78,12 @@
                                     <select id="stock_supplier_select_id" class="form-select select2" data-placeholder="Select Supplier" {{ isset($debitNote) ? 'disabled' : '' }}>
                                         <option value="">Select Supplier</option>
                                         @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}" {{ (old('supplier_id', $debitNote->supplier_id ?? '') == $supplier->id) ? 'selected' : '' }}>
+                                            <option value="{{ $supplier->id }}" 
+                                                data-state-id="{{ $supplier->state_id }}" 
+                                                data-igst="{{ $supplier->igst_percent ?? 0 }}" 
+                                                data-cgst="{{ $supplier->cgst_percent ?? 0 }}" 
+                                                data-sgst="{{ $supplier->sgst_percent ?? 0 }}" 
+                                                {{ (old('supplier_id', $debitNote->supplier_id ?? '') == $supplier->id) ? 'selected' : '' }}>
                                                 {{ $supplier->name }} {{ $supplier->code ? ' - ' . $supplier->code : '' }}
                                             </option>
                                         @endforeach
@@ -511,11 +516,11 @@
                                         <input type="hidden" id="other_state_hidden" name="other_state" value="{{ old('other_state', $debitNote->other_state ?? 'N') }}">
                                         <div class="d-flex gap-3" id="other_state_container">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }} {{ ($currentType != 'stock') ? 'disabled' : '' }}>
+                                                <input class="form-check-input" type="radio" name="other_state_radio" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }} {{ ($currentType != 'stock') ? 'disabled' : '' }}>
                                                 <label class="form-check-label small" for="other_state_yes">Yes</label>
                                             </div>
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }} {{ ($currentType != 'stock') ? 'disabled' : '' }}>
+                                                <input class="form-check-input" type="radio" name="other_state_radio" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }} {{ ($currentType != 'stock') ? 'disabled' : '' }}>
                                                 <label class="form-check-label small" for="other_state_no">No</label>
                                             </div>
                                         </div>
@@ -664,6 +669,7 @@
         </div>
     </div>
 </div>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script>
     let taxInfo = {
         other_state: 'N',
@@ -796,7 +802,7 @@
         }
 
         function initStockItemAutocomplete($el) {
-            if (!$el || !$el.length) return;
+            if (!$el || !$el.length || typeof $el.autocomplete !== 'function') return;
             $el.autocomplete({
                 source: function(request, response) {
                     let selectedSuppId = $('#supplier_id_hidden').val() || $('#stock_supplier_select_id').val();
@@ -915,10 +921,15 @@
 
             let index = $('#items_tbody tr.item-row').length;
 
+            let currentDebitType = $('input[name="debit_note_type"]:checked').val();
             if (item.supplier_id && !$('#supplier_id_hidden').val()) {
                 $('#supplier_id_hidden').val(item.supplier_id);
                 $('#supplier_name').val(item.supplier_name);
-                $('#supplier_col').show();
+                if (currentDebitType !== 'stock') {
+                    $('#supplier_col').show();
+                }
+            } else if (currentDebitType === 'stock') {
+                $('#supplier_col').hide();
             }
 
             let initialQty = Math.min(1, parseFloat(item.max_quantity) || 1);
@@ -930,6 +941,7 @@
                     <td class="text-center">
                         <input type="checkbox" name="items[${index}][selected]" value="1" class="form-check-input item-checkbox" checked>
                         <input type="hidden" name="items[${index}][stock_entry_item_id]" value="${item.stock_entry_item_id}">
+                        <input type="hidden" name="items[${index}][stock_entry_id]" value="${item.stock_entry_id || ''}">
                         <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id || ''}">
                     </td>
                     <td>
@@ -1058,6 +1070,41 @@
                 let suppId = $(this).val();
                 $('#supplier_id_hidden').val(suppId);
                 $('#items_tbody').html('<tr><td colspan="10" class="text-center">No items added yet.</td></tr>');
+
+                let selected = $(this).find(':selected');
+                let supplierStateId = selected.data('state-id');
+                let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+
+                let supplierIgst = parseFloat(selected.data('igst')) || 0;
+                let supplierCgst = parseFloat(selected.data('cgst')) || 0;
+                let supplierSgst = parseFloat(selected.data('sgst')) || 0;
+
+                if (supplierStateId && companyStateId) {
+                    if (supplierStateId == companyStateId) {
+                        $('#other_state_no').prop('checked', true);
+                        $('#other_state_yes').prop('checked', false);
+                        $('#other_state_hidden').val('N');
+
+                        let cgst = supplierCgst > 0 ? supplierCgst : (parseFloat("{{ $web_settings->cgst ?? 9 }}") || 9);
+                        let sgst = supplierSgst > 0 ? supplierSgst : (parseFloat("{{ $web_settings->sgst ?? 9 }}") || 9);
+
+                        $('#cgst_percent').val(cgst);
+                        $('#sgst_percent').val(sgst);
+                        $('#igst_percent').val(0);
+                    } else {
+                        $('#other_state_yes').prop('checked', true);
+                        $('#other_state_no').prop('checked', false);
+                        $('#other_state_hidden').val('Y');
+
+                        let igst = supplierIgst > 0 ? supplierIgst : (parseFloat("{{ $web_settings->igst ?? 18 }}") || 18);
+
+                        $('#igst_percent').val(igst);
+                        $('#cgst_percent').val(0);
+                        $('#sgst_percent').val(0);
+                    }
+                    toggleTaxDivs();
+                }
+
                 calculateTotals();
                 if (suppId) {
                     setTimeout(function() {
@@ -1088,17 +1135,35 @@
                             $('#supplier_col').hide();
                         }
 
-                        if (res.other_state === 'Y') {
+                        let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+                        let isOtherState = false;
+                        if (res.supplier_state_id && companyStateId) {
+                            isOtherState = (res.supplier_state_id != companyStateId);
+                        } else {
+                            isOtherState = (res.other_state === 'Y');
+                        }
+
+                        if (isOtherState) {
                             $('#other_state_yes').prop('checked', true);
                             $('#other_state_no').prop('checked', false);
+                            $('#other_state_hidden').val('Y');
+
+                            let igst = (parseFloat(res.igst_percent) > 0) ? res.igst_percent : ((parseFloat(res.supplier_igst) > 0) ? res.supplier_igst : (parseFloat("{{ $web_settings->igst ?? 18 }}") || 18));
+                            $('#igst_percent').val(igst);
+                            $('#cgst_percent').val(0);
+                            $('#sgst_percent').val(0);
                         } else {
                             $('#other_state_no').prop('checked', true);
                             $('#other_state_yes').prop('checked', false);
+                            $('#other_state_hidden').val('N');
+
+                            let cgst = (parseFloat(res.cgst_percent) > 0) ? res.cgst_percent : ((parseFloat(res.supplier_cgst) > 0) ? res.supplier_cgst : (parseFloat("{{ $web_settings->cgst ?? 9 }}") || 9));
+                            let sgst = (parseFloat(res.sgst_percent) > 0) ? res.sgst_percent : ((parseFloat(res.supplier_sgst) > 0) ? res.supplier_sgst : (parseFloat("{{ $web_settings->sgst ?? 9 }}") || 9));
+                            $('#cgst_percent').val(cgst);
+                            $('#sgst_percent').val(sgst);
+                            $('#igst_percent').val(0);
                         }
-                        $('#other_state_hidden').val(res.other_state);
-                        $('#igst_percent').val(res.igst_percent);
-                        $('#cgst_percent').val(res.cgst_percent);
-                        $('#sgst_percent').val(res.sgst_percent);
+
                         $('#discount_percent').val(res.discount_percent || 0);
 
                         toggleTaxDivs();
@@ -1172,9 +1237,10 @@
         });
 
         function updateSupplierVisibility() {
+            let currentType = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
             let suppId = $('#supplier_id_hidden').val();
             let suppName = $('#supplier_name').val();
-            if (suppId && suppName && suppName.trim() !== '' && suppName.trim() !== '-') {
+            if (currentType !== 'stock' && suppId && suppName && suppName.trim() !== '' && suppName.trim() !== '-') {
                 $('#supplier_col').show();
             } else {
                 $('#supplier_col').hide();
@@ -1189,7 +1255,7 @@
             $('#other_state_container').css({
                 'pointer-events': isStock ? 'auto' : 'none',
                 'opacity': isStock ? '1' : '0.7',
-                'cursor': isStock ? 'not-allowed' : 'not-allowed'
+                'cursor': isStock ? 'auto' : 'not-allowed'
             });
             let val = $('#other_state_yes').is(':checked') ? 'Y' : 'N';
             $('#other_state_hidden').val(val);
@@ -1203,29 +1269,29 @@
             }
         });
 
-        $(document).on('change', '#other_state_yes, #other_state_no', function () {
+        $(document).on('change', 'input[name="other_state_radio"], #other_state_yes, #other_state_no', function () {
             let type = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
             if (type !== 'stock') {
                 return false;
             }
             let val = $(this).val();
             $('#other_state_hidden').val(val);
+
+            let selected = $('#stock_supplier_select_id').find(':selected');
+            let supplierIgst = parseFloat(selected.data('igst')) || 0;
+            let supplierCgst = parseFloat(selected.data('cgst')) || 0;
+            let supplierSgst = parseFloat(selected.data('sgst')) || 0;
+
             if (val === 'Y') {
-                let defaultIgst = parseFloat("{{ $web_settings->igst ?? 18 }}") || 18;
-                if (parseFloat($('#igst_percent').val()) === 0 || !$('#igst_percent').val()) {
-                    $('#igst_percent').val(defaultIgst);
-                }
+                let defaultIgst = supplierIgst > 0 ? supplierIgst : (parseFloat("{{ $web_settings->igst ?? 18 }}") || 18);
+                $('#igst_percent').val(defaultIgst);
                 $('#cgst_percent').val(0);
                 $('#sgst_percent').val(0);
             } else {
-                let defaultCgst = parseFloat("{{ $web_settings->cgst ?? 9 }}") || 9;
-                let defaultSgst = parseFloat("{{ $web_settings->sgst ?? 9 }}") || 9;
-                if (parseFloat($('#cgst_percent').val()) === 0 || !$('#cgst_percent').val()) {
-                    $('#cgst_percent').val(defaultCgst);
-                }
-                if (parseFloat($('#sgst_percent').val()) === 0 || !$('#sgst_percent').val()) {
-                    $('#sgst_percent').val(defaultSgst);
-                }
+                let defaultCgst = supplierCgst > 0 ? supplierCgst : (parseFloat("{{ $web_settings->cgst ?? 9 }}") || 9);
+                let defaultSgst = supplierSgst > 0 ? supplierSgst : (parseFloat("{{ $web_settings->sgst ?? 9 }}") || 9);
+                $('#cgst_percent').val(defaultCgst);
+                $('#sgst_percent').val(defaultSgst);
                 $('#igst_percent').val(0);
             }
             toggleTaxDivs();
@@ -1233,7 +1299,7 @@
         });
 
         function toggleTaxDivs() {
-            let otherState = $('input[name="other_state"]:checked').val();
+            let otherState = $('#other_state_yes').is(':checked') ? 'Y' : ($('#other_state_hidden').val() || 'N');
             if (otherState === 'Y') {
                 $('#igst_div').show();
                 $('#cgst_sgst_div').hide();
@@ -1323,7 +1389,7 @@
                 $('#post_gst_charges_div').hide();
             }
 
-            let otherState = $('input[name="other_state"]:checked').val();
+            let otherState = $('#other_state_yes').is(':checked') ? 'Y' : ($('#other_state_hidden').val() || 'N');
             let taxAmount = 0;
 
             if (otherState === 'Y') {
@@ -1417,8 +1483,9 @@
             calculateTotals();
         @endif
 
-        if (!$('input[name="other_state"]:checked').length) {
+        if (!$('#other_state_yes').is(':checked') && !$('#other_state_no').is(':checked')) {
             $('#other_state_no').prop('checked', true);
+            $('#other_state_hidden').val('N');
         }
         
         function validateItemQty($input) {
@@ -1526,7 +1593,7 @@
                 return false;
             }
 
-            let otherStateVal = $('input[name="other_state"]:checked').val() || 'N';
+            let otherStateVal = $('#other_state_yes').is(':checked') ? 'Y' : ($('#other_state_hidden').val() || 'N');
             if (otherStateVal === 'Y') {
                 let igstVal = parseFloat($('#igst_percent').val()) || 0;
                 if (igstVal <= 0) {
@@ -1581,13 +1648,17 @@
         let initialDebitNoteType = $('input[name="debit_note_type"]:checked').val() || 'purchase_invoice';
         if (initialDebitNoteType === 'stock') {
             $('#document_select_col').hide();
+            $('#stock_supplier_select_col').show();
+            $('#supplier_col').hide();
             $('#stock_item_search_container').show();
             $('#pi_item_search_container').hide();
         } else {
             $('#document_select_col').show();
+            $('#stock_supplier_select_col').hide();
             $('#stock_item_search_container').hide();
             $('#pi_item_search_container').show();
         }
+        updateSupplierVisibility();
         updateOtherStateReadonlyState();
     });
 </script>
