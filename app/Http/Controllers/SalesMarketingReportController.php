@@ -412,6 +412,17 @@ class SalesMarketingReportController extends Controller
                     if ($toDate) $countQuery->where('inv_date', '<=', $toDate);
                     if ($customerId) $countQuery->where('customer_id', $customerId);
                     if ($agentId) $countQuery->where('agent_id', $agentId);
+                    if ($request->filled('invoice_status')) {
+                        $invStatus = trim((string)$request->invoice_status);
+                        if ($invStatus === 'Cancelled') {
+                            $countQuery->where(function($q) {
+                                $q->where('invoice_status', 'Cancelled')
+                                  ->orWhereRaw('LOWER(einvoice_status) = ?', ['cancelled']);
+                            });
+                        } else {
+                            $countQuery->where('invoice_status', $invStatus);
+                        }
+                    }
                     $einvoiceStatus = strtolower(trim((string)$request->einvoice_status));
                     if ($einvoiceStatus === 'generated') {
                         $countQuery->whereRaw('LOWER(einvoice_status) = ?', ['generated']);

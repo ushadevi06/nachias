@@ -67,6 +67,17 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-12 col-md-2 col-xl-1" id="invoice_status_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted">Invoice Status</label>
+                    <select class="form-select select2" name="invoice_status" id="invoice_status_filter" data-placeholder="All Status">
+                        <option value="">All</option>
+                        <option value="Draft" {{ request('invoice_status') == 'Draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="Unpaid/Credit" {{ request('invoice_status') == 'Unpaid/Credit' ? 'selected' : '' }}>Unpaid/Credit</option>
+                        <option value="Paid" {{ request('invoice_status') == 'Paid' ? 'selected' : '' }}>Paid</option>
+                        <option value="Partially Paid" {{ request('invoice_status') == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
+                        <option value="Cancelled" {{ request('invoice_status') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-2 col-xl-1" id="einvoice_status_filter_col" style="display: none;">
                     <label class="form-label small fw-bold text-muted">E-Invoice</label>
                     <select class="form-select select2" name="einvoice_status" id="einvoice_status_filter" data-placeholder="All Status">
@@ -791,6 +802,7 @@ $(document).ready(function() {
                     d.customer_id = $('select[name="customer_id"]').val();
                     d.agent_id = $('select[name="agent_id"]').val();
                     d.einvoice_status = $('select[name="einvoice_status"]').val();
+                    d.invoice_status = $('select[name="invoice_status"]').val();
                 }
             },
             drawCallback: function() {
@@ -805,9 +817,16 @@ $(document).ready(function() {
     }
 
     function updateFilterVisibility(reportType) {
-        if (reportType === 'sales-gst-report' || reportType === 'sales-report' || reportType === 'invoice-report') {
+        if (reportType === 'sales-gst-report' || reportType === 'sales-report') {
+            $('#invoice_status_filter_col').show();
+            $('#einvoice_status_filter_col').show();
+        } else if (reportType === 'invoice-report') {
+            $('#invoice_status_filter_col').hide();
+            $('select[name="invoice_status"]').val('').trigger('change.select2');
             $('#einvoice_status_filter_col').show();
         } else {
+            $('#invoice_status_filter_col').hide();
+            $('select[name="invoice_status"]').val('').trigger('change.select2');
             $('#einvoice_status_filter_col').hide();
             $('select[name="einvoice_status"]').val('').trigger('change.select2');
         }
@@ -1180,6 +1199,7 @@ $(document).ready(function() {
         $('.end_date').val('');
         $('select[name="customer_id"]').val('').trigger('change');
         $('select[name="agent_id"]').val('').trigger('change');
+        $('select[name="invoice_status"]').val('').trigger('change');
         $('select[name="einvoice_status"]').val('').trigger('change');
         $('#salesMarketingReportForm').trigger('submit');
     });
