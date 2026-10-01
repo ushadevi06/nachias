@@ -71,6 +71,10 @@
                             <i class="ri ri-file-copy-line"></i> Recreate Invoice
                         </a>
                         @endif
+                        @elseif($invoice->invoice_status === 'Cancelled')
+                        <button type="button" class="btn btn-danger text-white" disabled>
+                            <i class="ri ri-close-circle-line"></i> Invoice Cancelled
+                        </button>
                         @elseif($invoice->irn)
                             @php
                                 $ackDateTime = $invoice->ack_date ? \Carbon\Carbon::parse($invoice->ack_date) : null;

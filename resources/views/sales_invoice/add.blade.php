@@ -871,6 +871,9 @@
                                                     <option value="Partially Paid"
                                                         {{ $currentInvStatus == 'Partially Paid' ? 'selected' : '' }}>
                                                         Partially Paid</option>
+                                                    <option value="Cancelled"
+                                                        {{ $currentInvStatus == 'Cancelled' ? 'selected' : '' }}>
+                                                        Cancelled</option>
                                                 </select>
                                                 <label for="invoice_status">Invoice Status <span
                                                         class="text-danger">*</span></label>
@@ -1383,7 +1386,6 @@
                                             <input type="hidden" name="grand_total" id="grand_total"
                                                 value="{{ old('grand_total', isset($invoice) ? number_format($invoice->grand_total, 2, '.', '') : '0.00') }}">
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
@@ -1809,13 +1811,22 @@
                 ).trim().toLowerCase();
             }
 
-            function toggleFilterEmptyRow($tbody, visibleCount, colspan) {
+            function getRowSku($row) {
+                return String(
+                    $row.find('.sku-input').val() ||
+                    $row.find('.sku-text').text() ||
+                    $row.find('input[name*="[sku]"]').val() ||
+                    ''
+                ).trim().toLowerCase();
+            }
+
+            function toggleFilterEmptyRow($tbody, visibleCount, colspan, isFiltering) {
                 let $emptyRow = $tbody.find('.art-no-filter-empty-row');
-                if (visibleCount === 0) {
+                if (isFiltering && visibleCount === 0) {
                     if (!$emptyRow.length) {
                         $tbody.append(
-                            `<tr class="art-no-filter-empty-row"><td colspan="${colspan}" class="text-center text-muted">No matching items found</td></tr>`
-                            );
+                            `<tr class="art-no-filter-empty-row"><td colspan="${colspan}" class="text-center text-muted py-3">No matching items found</td></tr>`
+                        );
                     }
                 } else {
                     $emptyRow.remove();
@@ -1824,36 +1835,37 @@
 
             function applyArtNoFilter() {
                 let term = ($('#art_no_filter').val() || '').trim().toLowerCase();
+                let isFiltering = term.length > 0;
 
                 let $itemRows = $('#item-rows .item-row');
                 let itemVisibleCount = 0;
                 $itemRows.each(function() {
                     let $row = $(this);
-                    let matches = !term || getRowArtNo($row).includes(term) || getRowSize($row)
-                        .includes(term);
+                    let matches = !isFiltering || getRowArtNo($row).includes(term) || getRowSize($row).includes(term) || getRowSku($row).includes(term);
                     $row.toggle(matches);
                     if (matches) {
                         itemVisibleCount++;
                     }
                 });
-                toggleFilterEmptyRow($('#item-rows'), itemVisibleCount, 11);
+                toggleFilterEmptyRow($('#item-rows tbody').length ? $('#item-rows tbody') : $('#item-rows'), itemVisibleCount, 11, isFiltering);
             }
 
             function applyOpenOrderArtNoFilter() {
                 let term = ($('#open_order_art_no_filter').val() || '').trim().toLowerCase();
-                let $openOrderBody = $('#open-order-item-rows tbody');
+                let isFiltering = term.length > 0;
+
+                let $openOrderBody = $('#open-order-item-rows tbody').length ? $('#open-order-item-rows tbody') : $('#open-order-item-rows');
                 let $openRows = $openOrderBody.find('.item-row');
                 let openVisibleCount = 0;
                 $openRows.each(function() {
                     let $row = $(this);
-                    let matches = !term || getRowArtNo($row).includes(term) || getRowSize($row)
-                        .includes(term);
+                    let matches = !isFiltering || getRowArtNo($row).includes(term) || getRowSize($row).includes(term) || getRowSku($row).includes(term);
                     $row.toggle(matches);
                     if (matches) {
                         openVisibleCount++;
                     }
                 });
-                toggleFilterEmptyRow($openOrderBody, openVisibleCount, 12);
+                toggleFilterEmptyRow($openOrderBody, openVisibleCount, 12, isFiltering);
             }
 
             function addInvoiceItem(matchedItem, qty = null, maxQty = null) {
@@ -2594,81 +2606,82 @@
                     }).appendTo('#top-pdf-fields-container');
                 });
                 let hasError = false;
+                let isCancelled = ($('#invoice_status').val() === 'Cancelled');
 
-                // Validate regular items
-                $('#item-rows .item-row').each(function() {
-                    var row = $(this);
-                    var qtyInput = row.find('.qty');
-                    if (qtyInput.length === 0) return;
-                    var qty = parseFloat(qtyInput.val()) || 0;
-                    var maxAttr = qtyInput.attr('data-max');
-                    var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
-                    var stockAttr = qtyInput.attr('data-stock');
-                    var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(
-                        stockAttr) : NaN;
-                    var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
-                    var maxAllowedStock = !isNaN(stock) ? Math.max(stock, originalQty) : NaN;
-                    var errorDiv = row.find('.qty-error');
-
-                    var isExistingItem = row.find('.invoice-item-db-id').length > 0 && row.find(
-                        '.invoice-item-db-id').val() !== '';
-
-                    if (!isNaN(max) && qty > max) {
-                        errorDiv.text('Exceeds ordered qty (' + max + ')').show();
-                        qtyInput.addClass('is-invalid');
-                        hasError = true;
-                        // } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) { // old line
-                    } else if (!isNaN(maxAllowedStock) && qty > maxAllowedStock) { // new line
-                        errorDiv.text('Exceeds stock!').show();
-                        qtyInput.addClass('is-invalid');
-                        hasError = true;
-                    } else {
-                        errorDiv.hide();
-                        qtyInput.removeClass('is-invalid');
-                    }
-                });
-
-                // Validate open order items
-                $('#open-order-item-rows .item-row').each(function() {
-                    var row = $(this);
-                    var qtyInput = row.find('.open-qty');
-                    if (qtyInput.length === 0) return;
-                    var qty = parseFloat(qtyInput.val()) || 0;
-                    var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
-                    var available = parseFloat(row.find('.available-stock-display').text()) || 0;
-                    var maxAllowedStock = Math.max(available, originalQty);
-
-                    // if (qty > available) { // old line
-                    if (qty > maxAllowedStock) { // new line
-                        qtyInput.addClass('is-invalid');
-                        row.find('.stock-error-msg').show();
-                        hasError = true;
-                    } else {
-                        qtyInput.removeClass('is-invalid');
-                        row.find('.stock-error-msg').hide();
-                    }
-                });
-
-                // Validate MRP and Price cannot be the same
-                if (!hasError) {
-                    $('#item-rows .item-row, #open-order-item-rows .item-row').each(function() {
+                if (!isCancelled) {
+                    // Validate regular items
+                    $('#item-rows .item-row').each(function() {
                         var row = $(this);
-                        var mrpVal = parseFloat(row.find('.mrp, .mrp-input').val()) || 0;
-                        var rateVal = parseFloat(row.find('.rate, .rate-input').val()) || 0;
-                        var artNo = row.find('.art-no, .art-no-input').val() || row.find('.art-no-text').text().trim() || '-';
+                        var qtyInput = row.find('.qty');
+                        if (qtyInput.length === 0) return;
+                        var qty = parseFloat(qtyInput.val()) || 0;
+                        var maxAttr = qtyInput.attr('data-max');
+                        var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
+                        var stockAttr = qtyInput.attr('data-stock');
+                        var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(
+                            stockAttr) : NaN;
+                        var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
+                        var maxAllowedStock = !isNaN(stock) ? Math.max(stock, originalQty) : NaN;
+                        var errorDiv = row.find('.qty-error');
 
-                        if (mrpVal > 0 && Math.abs(mrpVal - rateVal) < 0.001) {
+                        var isExistingItem = row.find('.invoice-item-db-id').length > 0 && row.find(
+                            '.invoice-item-db-id').val() !== '';
+
+                        if (!isNaN(max) && qty > max) {
+                            errorDiv.text('Exceeds ordered qty (' + max + ')').show();
+                            qtyInput.addClass('is-invalid');
                             hasError = true;
-                            row.find('.rate, .rate-input').addClass('is-invalid');
-                            row.find('.mrp, .mrp-input').addClass('is-invalid');
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Invalid Price & MRP',
-                                text: `MRP and Price cannot be the same (Art No: ${artNo}).`,
-                            });
-                            return false;
+                        } else if (!isNaN(maxAllowedStock) && qty > maxAllowedStock) {
+                            errorDiv.text('Exceeds stock!').show();
+                            qtyInput.addClass('is-invalid');
+                            hasError = true;
+                        } else {
+                            errorDiv.hide();
+                            qtyInput.removeClass('is-invalid');
                         }
                     });
+
+                    // Validate open order items
+                    $('#open-order-item-rows .item-row').each(function() {
+                        var row = $(this);
+                        var qtyInput = row.find('.open-qty');
+                        if (qtyInput.length === 0) return;
+                        var qty = parseFloat(qtyInput.val()) || 0;
+                        var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
+                        var available = parseFloat(row.find('.available-stock-display').text()) || 0;
+                        var maxAllowedStock = Math.max(available, originalQty);
+
+                        if (qty > maxAllowedStock) {
+                            qtyInput.addClass('is-invalid');
+                            row.find('.stock-error-msg').show();
+                            hasError = true;
+                        } else {
+                            qtyInput.removeClass('is-invalid');
+                            row.find('.stock-error-msg').hide();
+                        }
+                    });
+
+                    // Validate MRP and Price cannot be the same
+                    if (!hasError) {
+                        $('#item-rows .item-row, #open-order-item-rows .item-row').each(function() {
+                            var row = $(this);
+                            var mrpVal = parseFloat(row.find('.mrp, .mrp-input').val()) || 0;
+                            var rateVal = parseFloat(row.find('.rate, .rate-input').val()) || 0;
+                            var artNo = row.find('.art-no, .art-no-input').val() || row.find('.art-no-text').text().trim() || '-';
+
+                            if (mrpVal > 0 && Math.abs(mrpVal - rateVal) < 0.001) {
+                                hasError = true;
+                                row.find('.rate, .rate-input').addClass('is-invalid');
+                                row.find('.mrp, .mrp-input').addClass('is-invalid');
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Invalid Price & MRP',
+                                    text: `MRP and Price cannot be the same (Art No: ${artNo}).`,
+                                });
+                                return false;
+                            }
+                        });
+                    }
                 }
 
                 if (hasError) {
@@ -3469,12 +3482,12 @@
 
                 // Hide item deletion and addition buttons
                 $('#btn_add_extra_item, #open_camera, #open_order_camera, .remove-item').hide();
-
-                // Re-enable disabled elements right before form submit so Laravel receives all values and validation passes
-                $('form.common-form').on('submit', function() {
-                    $(this).find('select, input, textarea').prop('disabled', false);
-                });
             }
+
+            // Global form submit validation
+            $('form.common-form').on('submit', function() {
+                $(this).find('select, input, textarea').prop('disabled', false);
+            });
         });
     </script>
 @endsection

@@ -41,6 +41,10 @@
                             <div class="fw-bold text-dark">{{ $debitNote->debit_note_date->format('d M, Y') }}</div>
                         </div>
                         <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Reference No</div>
+                            <div class="fw-bold text-dark">{{ $debitNote->reference_no ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Invoice / Stock No.</div>
                             <div class="fw-bold text-dark">{{ (($debitNote->debit_note_type ?? '') == 'stock') ? ($debitNote->stockEntry ? ($debitNote->stockEntry->stock_entry_no ?: ('STK-' . $debitNote->stock_entry_id)) : 'Stock') : ($debitNote->purchaseInvoice->invoice_no ?? '-') }}</div>
                         </div>
@@ -269,7 +273,16 @@
                                 <span class="fw-bold">₹{{ number_format($debitNote->sub_total, 2) }}</span>
                             </div>
 
-                            @if($preGstCharges > 0)
+                            @if($debitNote->charges && $debitNote->charges->count() > 0)
+                                @foreach($debitNote->charges->where('tax_type', 'Pre-GST') as $ch)
+                                    @if($ch->charge_amount > 0)
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span class="text-muted fw-medium">{{ $ch->charge_name }}</span>
+                                        <span class="fw-bold">₹{{ number_format($ch->charge_amount, 2) }}</span>
+                                    </div>
+                                    @endif
+                                @endforeach
+                            @elseif($preGstCharges > 0)
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-muted fw-medium">Pre-GST Charges</span>
                                 <span class="fw-bold">₹{{ number_format($preGstCharges, 2) }}</span>
@@ -311,7 +324,16 @@
                                 <span class="fw-bold">₹{{ number_format($debitNote->tax_amount, 2) }}</span>
                             </div>
 
-                            @if($postGstCharges > 0)
+                            @if($debitNote->charges && $debitNote->charges->count() > 0)
+                                @foreach($debitNote->charges->where('tax_type', 'Post-GST') as $ch)
+                                    @if($ch->charge_amount > 0)
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span class="text-muted fw-medium">{{ $ch->charge_name }}</span>
+                                        <span class="fw-bold">₹{{ number_format($ch->charge_amount, 2) }}</span>
+                                    </div>
+                                    @endif
+                                @endforeach
+                            @elseif($postGstCharges > 0)
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-muted fw-medium">Post-GST Charges</span>
                                 <span class="fw-bold">₹{{ number_format($postGstCharges, 2) }}</span>

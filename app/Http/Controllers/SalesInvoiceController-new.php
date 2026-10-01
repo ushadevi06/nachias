@@ -196,7 +196,7 @@ class SalesInvoiceController extends Controller
         if ($id) {
             $existingInvoice = SalesInvoice::findOrFail($id);
             if ($existingInvoice->einvoice_status === 'cancelled' || $existingInvoice->invoice_status === 'Cancelled') {
-                return redirect()->route('sales_invoices.index')->with('error', 'Cannot edit a cancelled invoice.');
+                return redirect('sales_invoices')->with('error', 'Cannot edit a cancelled invoice.');
             }
         }
 

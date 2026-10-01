@@ -159,10 +159,11 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
 
         $isFirstRow = ($this->lastInvoiceId !== $inv->id);
         $this->lastInvoiceId = $inv->id;
+        $isCancelled = ($inv->invoice_status === 'Cancelled' || $inv->einvoice_status === 'cancelled');
 
         return [
             $this->count,
-            $inv->inv_no,
+            $isCancelled ? $inv->inv_no . ' (CANCELLED)' : $inv->inv_no,
             $inv->inv_date ? $inv->inv_date->format('d-m-Y') : '',
             $customer ? $customer->name : '',
             $customer ? $customer->gst_no : '',

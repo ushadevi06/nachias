@@ -34,6 +34,9 @@ class EmployeeController extends Controller
             if (!empty($request->role)) {
                 $query->where('role_id', $request->role);
             }
+            if (!empty($request->type)) {
+                $query->where('type', $request->type);
+            }
             $employees = $query->orderBy('id', 'desc')->get();
             $stages = OperationStage::pluck('operation_stage_name', 'id')->toArray();
             $data = [];
@@ -63,6 +66,7 @@ class EmployeeController extends Controller
                     }
                 }
                 $operationStageText = !empty($stageNames) ? implode(', ', $stageNames) : '-';
+                $typeBadge = '<span class="badge ' . (($emp->type ?? 'On Roll') === 'Off Roll' ? 'bg-label-warning' : 'bg-label-info') . '">' . ($emp->type ?? 'On Roll') . '</span>';
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -70,6 +74,7 @@ class EmployeeController extends Controller
                     'image'       => '<img src="' . $image . '" class="rounded-circle" width="50">',
                     'role'        => $emp->role->name ?? '-',
                     'department'  => $emp->department->department ?? '-',
+                    'type'        => $typeBadge,
                     'service_provider' => $emp->serviceProvider->name ?? '-',
                     'operation_stage' => $operationStageText,
                     'contact_info' => ' 
@@ -153,6 +158,7 @@ class EmployeeController extends Controller
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'status' => 'required|in:Active,Inactive',
+                'type' => 'required|in:On Roll,Off Roll',
                 'father_name' => [
                     'nullable',
                     'string',
@@ -317,6 +323,7 @@ class EmployeeController extends Controller
                 'role_id' => $request->role_id,
                 'blood_group_id' => $request->blood_group_id,
                 'status' => $request->status,
+                'type' => $request->type ?? 'On Roll',
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
                 'date_of_joining' => $dateOfJoining,

@@ -104,7 +104,14 @@ class SalesInvoiceController extends Controller
             }
 
             if ($request->status) {
-                $query->where('invoice_status', $request->status);
+                if ($request->status === 'Cancelled') {
+                    $query->where(function($q) {
+                        $q->where('invoice_status', 'Cancelled')
+                          ->orWhere('einvoice_status', 'cancelled');
+                    });
+                } else {
+                    $query->where('invoice_status', $request->status);
+                }
             }
 
             if ($request->inv_date_range) {
@@ -180,6 +187,7 @@ class SalesInvoiceController extends Controller
             $filteredRecords = $query->count();
             
             $overallSubTotal = (float)$query->sum('sub_total');
+            $overallDiscount = (float)$query->sum('discount');
             $overallOtherCharges = (float)$query->sum('other_charges');
             $overallTaxable = $overallSubTotal - $overallDiscount + $overallOtherCharges;
             $overallGrandTotal = (float)$query->sum('grand_total');
@@ -196,13 +204,15 @@ class SalesInvoiceController extends Controller
 
             foreach ($invoices as $inv) {
                 $statusOptions = '';
-                $allStatuses = ['Draft', 'Unpaid/Credit', 'Partially Paid', 'Paid'];
+                $allStatuses = ['Draft', 'Unpaid/Credit', 'Partially Paid', 'Paid', 'Cancelled'];
                 $currentStatus = $inv->invoice_status;
 
                 foreach ($allStatuses as $status) {
                     $selected = ($currentStatus === $status) ? 'selected' : '';
                     $disabled = '';
-                    if ($currentStatus === 'Draft') {
+                    if ($currentStatus === 'Cancelled') {
+                        $disabled = ($status !== 'Cancelled') ? 'disabled' : '';
+                    } elseif ($currentStatus === 'Draft') {
                         $disabled = '';
                     } elseif ($currentStatus === 'Unpaid/Credit' && $status === 'Draft') {
                         $disabled = 'disabled';
@@ -223,6 +233,8 @@ class SalesInvoiceController extends Controller
                 <div class="status_msg_' . $inv->id . ' mt-1" style="font-size:10px;"></div>';
 
                 $eInvoiceBtn = '';
+                $isCancelled = ($inv->invoice_status === 'Cancelled' || $inv->einvoice_status === 'cancelled');
+
                 if ($inv->einvoice_status === 'cancelled') {
                     $eInvoiceBtn = '<button type="button" class="btn btn-warning" title="E-Invoice Cancelled" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;" disabled><i class="ri ri-close-circle-line"></i> Cancelled</button>';
                     
@@ -237,6 +249,8 @@ class SalesInvoiceController extends Controller
                     if (!$recreatedInvoice) {
                         $eInvoiceBtn .= '<a href="' . url('sales_invoices/recreate/' . $inv->id) . '" class="btn btn-outline-primary" title="Recreate / Copy to New Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-file-copy-line"></i></a>';
                     }
+                } elseif ($inv->invoice_status === 'Cancelled') {
+                    $eInvoiceBtn = '';
                 } elseif ($inv->irn) {
                     $ackDateTime = $inv->ack_date ? \Carbon\Carbon::parse($inv->ack_date) : null;
                     $isExpired = $ackDateTime ? $ackDateTime->diffInHours(now()) >= 24 : false;
@@ -247,11 +261,10 @@ class SalesInvoiceController extends Controller
                     }
                 } else {
                     $eInvoiceBtn = '<button type="button" class="btn btn-info einvoice-generate-btn" data-id="' . $inv->id . '" title="Generate E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
-                    /* $eInvoiceBtn .= '<button type="button" class="btn btn-primary einvoice-get-irn-btn" data-id="' . $inv->id . '" title="Get / Sync IRN from TaxPro" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-refresh-line"></i></button>'; */
                 }
 
                 $editBtn = '';
-                if ($inv->einvoice_status !== 'cancelled') {
+                if (!$isCancelled) {
                     $editBtn = '<a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
@@ -264,7 +277,7 @@ class SalesInvoiceController extends Controller
                 $data[] = [
                     'id' => $inv->id,
                     'DT_RowIndex' => $count++,
-                    'inv_no' => $inv->inv_no . ($inv->irn && $inv->einvoice_status !== 'cancelled' ? '<br><span class="badge bg-label-success text-dark mt-1" style="font-size:10px;"><i class="ri ri-checkbox-circle-line align-middle me-1"></i> E-invoice Generated</span>' : ''),
+                    'inv_no' => $inv->inv_no . ($isCancelled ? '<br><span class="badge bg-danger mt-1" style="font-size:10px;"><i class="ri ri-close-circle-line align-middle me-1"></i> Cancelled</span>' : ($inv->irn && $inv->einvoice_status !== 'cancelled' ? '<br><span class="badge bg-label-success text-dark mt-1" style="font-size:10px;"><i class="ri ri-checkbox-circle-line align-middle me-1"></i> E-invoice Generated</span>' : '')),
                     'inv_date' => $inv->inv_date->format('d-m-Y'),
                     'customer_name' => ($inv->customer ? $inv->customer->name : 'N/A') . ($inv->customer ? ' <span  class="mini-title">(' . $inv->customer->code . ')</span>' : ''),
                     'so_no' => ($inv->salesOrder ? $inv->salesOrder->so_no : 'N/A') . ($inv->salesOrder && $inv->salesOrder->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $inv->salesOrder->order_no . '</span>' : ''),
@@ -344,7 +357,7 @@ class SalesInvoiceController extends Controller
         if ($id) {
             $existingInvoice = SalesInvoice::findOrFail($id);
             if ($existingInvoice->einvoice_status === 'cancelled' || $existingInvoice->invoice_status === 'Cancelled') {
-                return redirect()->route('sales_invoices.index')->with('error', 'Cannot edit a cancelled invoice.');
+                return redirect('sales_invoices')->with('error', 'Cannot edit a cancelled invoice.');
             }
         }
 
@@ -395,7 +408,9 @@ class SalesInvoiceController extends Controller
                 $request->merge(['inv_no' => SalesInvoice::formatDbInvNo($request->inv_no)]);
             }
 
-            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            $isCancelled = ($request->invoice_status === 'Cancelled');
+
+            $rules = [
                 'brand_id' => 'required|exists:brands,id',
                 'inv_no' => ['required', 'string', 'min:1', 'max:16', 'regex:/^[a-zA-Z1-9][a-zA-Z0-9\/\-]*$/', 'unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'inv_date' => 'required|date_format:d-m-Y',
@@ -404,12 +419,8 @@ class SalesInvoiceController extends Controller
                 'customer_id' => 'required|exists:customers,id',
                 'delivery_address' => 'required|min:3|max:255|regex:/^[^<>]*$/',
                 'remarks' => 'nullable|min:3|max:255|regex:/^[^<>]*$/',
-                'invoice_status' => 'required|in:Draft,Unpaid/Credit,Paid,Partially Paid',
+                'invoice_status' => 'required|in:Draft,Unpaid/Credit,Paid,Partially Paid,Cancelled',
                 'payment_mode' => 'nullable',
-                'items' => 'required|array|min:1',
-                'items.*.quantity' => 'required|numeric|min:0.01',
-                'items.*.rate' => 'required|numeric|min:0.01',
-                'items.*.mrp' => 'required|numeric|min:0.01',
                 'no_of_box' => 'nullable|integer|min:1',
                 'cgst_percent' => 'nullable|numeric|min:0|max:100',
                 'cgst_amount' => 'nullable|numeric|min:0',
@@ -417,7 +428,7 @@ class SalesInvoiceController extends Controller
                 'sgst_amount' => 'nullable|numeric|min:0',
                 'igst_percent' => 'nullable|numeric|min:0|max:100',
                 'igst_amount' => 'nullable|numeric|min:0',
-                'hsn_sac' => 'required|string|max:50',
+                'hsn_sac' => $isCancelled ? 'nullable|string|max:50' : 'required|string|max:50',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
                 'box_discount_amount' => 'nullable|numeric|min:0',
@@ -429,8 +440,21 @@ class SalesInvoiceController extends Controller
                 'vehicle_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
                 'tran_doc_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
                 'lr_no' => ['nullable', 'string', 'max:100', 'not_regex:/^0+$/'],
-                'tran_doc_date' => 'nullable|date_format:d-m-Y',
-            ], [
+            ];
+
+            if ($isCancelled) {
+                $rules['items'] = 'nullable|array';
+                $rules['items.*.quantity'] = 'nullable|numeric';
+                $rules['items.*.rate'] = 'nullable|numeric';
+                $rules['items.*.mrp'] = 'nullable|numeric';
+            } else {
+                $rules['items'] = 'required|array|min:1';
+                $rules['items.*.quantity'] = 'required|numeric|min:0.01';
+                $rules['items.*.rate'] = 'required|numeric|min:0.01';
+                $rules['items.*.mrp'] = 'required|numeric|min:0.01';
+            }
+
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, [
                 '*.required'      => 'This field is required.',
                 '*.unique'        => 'This field already exists.',
                 '*.exists'        => 'Selected value is invalid.',
@@ -448,7 +472,8 @@ class SalesInvoiceController extends Controller
                 'sales_discount.min'   => 'Sales discount percentage cannot be negative.',
                 'discount_percent.max' => 'Discount percentage cannot exceed 100%.',
                 'discount_percent.min' => 'Discount percentage cannot be negative.',
-                'box_discount_amount.min' => 'Box discount cannot be negative.',
+                'items.required'            => 'At least one item is required to save the invoice.',
+                'items.min'                 => 'At least one item is required to save the invoice.',
                 'items.*.rate.min' => 'Price must be greater than 0.00.',
                 'items.*.mrp.min' => 'MRP must be greater than 0.00.',
                 'items.*.quantity.required' => 'Quantity is required.',
@@ -460,8 +485,8 @@ class SalesInvoiceController extends Controller
                 '*.max'           => 'This field must be at most :max characters.',
             ]);
 
-            $validator->after(function ($validator) use ($request) {
-                if (is_array($request->items)) {
+            $validator->after(function ($validator) use ($request, $isCancelled) {
+                if (!$isCancelled && is_array($request->items)) {
                     foreach ($request->items as $index => $item) {
                         $mrp = floatval($item['mrp'] ?? 0);
                         $rate = floatval($item['rate'] ?? 0);
@@ -475,13 +500,19 @@ class SalesInvoiceController extends Controller
             });
 
             if ($validator->fails()) {
-                return redirect()->back()->withErrors($validator)->withInput();
+                $redirect = redirect()->back()->withErrors($validator)->withInput();
+                if ($validator->errors()->has('items')) {
+                    $redirect->with('stock_alert', 'At least one item is required to save the invoice. If you want to cancel this invoice, please change Status to Cancelled.');
+                }
+                return $redirect;
             }
 
-            try {
-                $this->validateStockAvailability($request->items, $id);
-            } catch (\Exception $e) {
-                return back()->withInput()->with('stock_alert', $e->getMessage());
+            if (!$isCancelled && !empty($request->items)) {
+                try {
+                    $this->validateStockAvailability($request->items, $id);
+                } catch (\Exception $e) {
+                    return back()->withInput()->with('stock_alert', $e->getMessage());
+                }
             }
 
             DB::beginTransaction();
@@ -552,9 +583,10 @@ class SalesInvoiceController extends Controller
                     $invoiceData['attachment_file'] = $fileName;
                 }
                 //new 
+                $submittedItems = $request->items ?? [];
                 $calculatedSubTotal = 0;
                 $calculatedTotalQty = 0;
-                foreach ($request->items as $item) {
+                foreach ($submittedItems as $item) {
                     $qty = (float)($item['quantity'] ?? 0);
                     $mrp = (float)($item['mrp'] ?? 0);
                     $rate = (float)($item['rate'] ?? 0);
@@ -630,7 +662,7 @@ class SalesInvoiceController extends Controller
                     $invoice->update($invoiceData);             
                           
                     
-                    $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
+                    $itemIds = collect($submittedItems)->pluck('id')->filter()->toArray();
                     $deletedItems = $invoice->items()->whereNotIn('id', $itemIds)->get();
                     foreach ($deletedItems as $dItem) {
                         $this->sequentialStockRevert($dItem, $dItem->quantity);
@@ -645,7 +677,7 @@ class SalesInvoiceController extends Controller
                     $invoice = SalesInvoice::create($invoiceData);
                 }
                 $invoiceId = $invoice->id;
-                foreach ($request->items as $item) {
+                foreach ($submittedItems as $item) {
                     $isExtra = !empty($item['is_extra']);
 
                     $apiColor = $item['api_color'] ?? null;
@@ -723,7 +755,11 @@ class SalesInvoiceController extends Controller
                     );
                 }
                 
-                $this->adjustStock($invoiceId, false, $oldQuantities ?? []);
+                if ($invoice->invoice_status === 'Cancelled') {
+                    $this->adjustStock($invoiceId, true);
+                } else {
+                    $this->adjustStock($invoiceId, false, $oldQuantities ?? []);
+                }
 
                 $invoice->load(['items', 'customer.city', 'customer.place']);
                 $totalPcs = (int) $invoice->items->sum('quantity');
@@ -1405,6 +1441,13 @@ class SalesInvoiceController extends Controller
         $newStatus = $request->status;
         $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
 
+        if ($oldStatus === 'Cancelled' && $newStatus !== 'Cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot change status of a cancelled invoice.',
+            ], 422);
+        }
+
         if ($newStatus === 'Paid') {
             $totalPaid = DB::table('payments')->where('reference_id', $id)->where('reference_type', 'Customer Collection')->whereNull('deleted_at')->sum('amount');
 
@@ -1423,11 +1466,8 @@ class SalesInvoiceController extends Controller
         $newData = $invoice->fresh()->toArray();
         addLog('update_status', 'Sales Invoice Status', 'sales_invoices', $id, $oldData, $newData);
 
-        $wasActive = in_array($oldStatus, $activeStatuses);
-        $isNowActive = in_array($newStatus, $activeStatuses);
-
-        if (!$wasActive && $isNowActive) {
-        } elseif ($wasActive && !$isNowActive) {
+        if ($oldStatus !== 'Cancelled' && $newStatus === 'Cancelled') {
+            $this->adjustStock($id, true);
         }
 
         return response()->json(['success' => true, 'message' => 'Status updated successfully']);
@@ -2094,8 +2134,8 @@ class SalesInvoiceController extends Controller
             return response()->json(['success' => false, 'message' => 'Invoice is already dispatched and locked.'], 400);
         }
         
-        if (strtolower($invoice->einvoice_status) === 'cancelled') {
-            return response()->json(['success' => false, 'message' => 'E-Invoice is cancelled. Scanning is not allowed.'], 400);
+        if (strtolower($invoice->einvoice_status) === 'cancelled' || $invoice->invoice_status === 'Cancelled') {
+            return response()->json(['success' => false, 'message' => 'Invoice is cancelled. Scanning is not allowed.'], 400);
         }
 
         $items = $request->input('items', []);
@@ -2117,8 +2157,8 @@ class SalesInvoiceController extends Controller
     public function completeDispatch($id)
     {
         $invoice = SalesInvoice::findOrFail($id);
-        if (strtolower($invoice->einvoice_status) === 'cancelled') {
-            return response()->json(['success' => false, 'message' => 'Cannot dispatch a cancelled e-invoice.'], 400);
+        if (strtolower($invoice->einvoice_status) === 'cancelled' || $invoice->invoice_status === 'Cancelled') {
+            return response()->json(['success' => false, 'message' => 'Cannot dispatch a cancelled invoice.'], 400);
         }
         $totalScanned = SalesInvoiceItem::where('sales_invoice_id', $id)->sum('scanned_qty');
         if ($totalScanned <= 0) {
@@ -2611,9 +2651,11 @@ class SalesInvoiceController extends Controller
             $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
         }
 
+        $stockQuery->orderByRaw('CASE WHEN id = ' . (int)($item->stock_entry_item_id ?: 0) . ' THEN 0 ELSE 1 END');
         $availableItems = $stockQuery->orderByRaw('(qty_in - qty_out) DESC')->orderBy('id', 'asc')->get();
         $remaining = (float)$quantityToDeduct;
 
+        $firstDeductedId = null;
         foreach ($availableItems as $stItem) {
             if ($remaining <= 0) break;
             
@@ -2623,7 +2665,14 @@ class SalesInvoiceController extends Controller
                 $deduct = min($balance, $remaining);
                 $stItem->increment('qty_out', $deduct);
                 $remaining -= $deduct;
+                if (!$firstDeductedId) {
+                    $firstDeductedId = $stItem->id;
+                }
             }
+        }
+
+        if ($firstDeductedId && $item->stock_entry_item_id != $firstDeductedId) {
+            $item->update(['stock_entry_item_id' => $firstDeductedId]);
         }
 
         if ($remaining > 0) {
@@ -2659,6 +2708,10 @@ class SalesInvoiceController extends Controller
             $stockQuery->where('size', $item->size);
         }
 
+        if (!empty($item->art_no)) {
+            $stockQuery->where('art_no', $item->art_no);
+        }
+
         if (!empty($item->sleeve_type)) {
             $sleeveUpper = strtoupper(trim($item->sleeve_type));
             if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
@@ -2671,6 +2724,7 @@ class SalesInvoiceController extends Controller
             $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
         }
 
+        $stockQuery->orderByRaw('CASE WHEN id = ' . (int)($item->stock_entry_item_id ?: 0) . ' THEN 0 ELSE 1 END');
         $deductedItems = $stockQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
         $remaining = (float)$quantityToRevert;
 
@@ -2684,7 +2738,11 @@ class SalesInvoiceController extends Controller
         }
 
         if ($remaining > 0 && $item->stock_entry_item_id) {
-            StockEntryItem::where('id', $item->stock_entry_item_id)->decrement('qty_out', $remaining);
+            $fallbackItem = StockEntryItem::find($item->stock_entry_item_id);
+            if ($fallbackItem && $fallbackItem->qty_out > 0) {
+                $dec = min((float)$fallbackItem->qty_out, $remaining);
+                $fallbackItem->decrement('qty_out', $dec);
+            }
         }
     }
 
@@ -2781,10 +2839,16 @@ class SalesInvoiceController extends Controller
             $count = $request->has('start') ? $request->start + 1 : 1;
 
             foreach ($invoices as $inv) {
+                $isCancelled = ($inv->invoice_status === 'Cancelled' || $inv->einvoice_status === 'cancelled');
+                $invNoDisplay = $inv->inv_no;
+                if ($isCancelled) {
+                    $invNoDisplay .= '<br><span class="badge bg-danger" style="font-size:10px;"><i class="ri ri-close-circle-line me-1"></i> Cancelled</span>';
+                }
+
                 $data[] = [
                     'id' => $inv->id,
                     'DT_RowIndex' => $count++,
-                    'inv_no' => $inv->inv_no,
+                    'inv_no' => $invNoDisplay,
                     'inv_date' => $inv->inv_date ? $inv->inv_date->format('d-m-Y') : 'N/A',
                     'customer_name' => $inv->customer ? $inv->customer->name : 'N/A',
                     'brand_name' => $inv->brand ? $inv->brand->brand_name : 'N/A',

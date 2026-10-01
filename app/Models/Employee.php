@@ -25,6 +25,7 @@ class Employee extends Authenticatable
         'profile_image',
         'password',
         'status',
+        'type',
         'country',
         'state_id',
         'city_id',

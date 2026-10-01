@@ -49,6 +49,7 @@
                                     <option value="Unpaid/Credit">Unpaid/Credit</option>
                                     <option value="Paid">Paid</option>
                                     <option value="Partially Paid">Partially Paid</option>
+                                    <option value="Cancelled">Cancelled</option>
                                 </select>
                             </div>
                             <div class="col-md-4 col-lg-3">

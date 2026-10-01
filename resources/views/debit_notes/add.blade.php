@@ -31,6 +31,13 @@
                                 @error('debit_note_date') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" id="reference_no" name="reference_no" class="form-control" placeholder="Enter Reference No" value="{{ old('reference_no', $debitNote->reference_no ?? '') }}">
+                                    <label for="reference_no">Reference No</label>
+                                </div>
+                                @error('reference_no') <div class="text-danger">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="col-md-4">
                                 <div class="card p-2 border shadow-none bg-light h-100 d-flex justify-content-center">
                                     <label class="form-label text-dark fw-semibold small mb-1">Debit Note Against <span class="text-danger">*</span></label>
                                     <div class="d-flex gap-4 align-items-center">
@@ -116,7 +123,7 @@
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" id="reason" name="reason" class="form-control" placeholder="Enter Reason" value="{{ old('reason', $debitNote->reason ?? '') }}">
-                                    <label for="reason">Reason for Debit Note</label>
+                                    <label for="reason">Reason for Debit Note <span class="text-danger">*</span></label>
                                 </div>
                                 @error('reason') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
@@ -541,12 +548,23 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex justify-content-between mb-3" id="pre_gst_charges_div" style="{{ $preGstTotal > 0 ? '' : 'display: none;' }}">
-                                    <label class="text-muted">Pre-GST Charges:</label>
-                                    <div class="text-end">
-                                        <input type="hidden" id="pre_gst_total" name="pre_gst_total" value="{{ $preGstTotal }}">
-                                        <span id="pre_gst_total_display" class="fw-bold">₹{{ number_format($preGstTotal, 2) }}</span>
-                                    </div>
+                                <div id="pre_gst_charges_container">
+                                    <input type="hidden" id="pre_gst_total" name="pre_gst_total" value="{{ $preGstTotal }}">
+                                    @foreach($chargesToLoop as $charge)
+                                        @php
+                                            $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
+                                            $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+                                            $taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
+                                        @endphp
+                                        @if($taxType === 'Pre-GST' && $chargeAmount > 0)
+                                            <div class="d-flex justify-content-between mb-3">
+                                                <label class="text-muted">{{ $chargeName }}:</label>
+                                                <div class="text-end">
+                                                    <span class="fw-bold">₹{{ number_format($chargeAmount, 2) }}</span>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -622,12 +640,23 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex justify-content-between mb-3" id="post_gst_charges_div" style="{{ $postGstTotal > 0 ? '' : 'display: none;' }}">
-                                    <label class="text-muted">Post-GST Charges:</label>
-                                    <div class="text-end">
-                                        <input type="hidden" id="post_gst_total" name="post_gst_total" value="{{ $postGstTotal }}">
-                                        <span id="post_gst_total_display" class="fw-bold">₹{{ number_format($postGstTotal, 2) }}</span>
-                                    </div>
+                                <div id="post_gst_charges_container">
+                                    <input type="hidden" id="post_gst_total" name="post_gst_total" value="{{ $postGstTotal }}">
+                                    @foreach($chargesToLoop as $charge)
+                                        @php
+                                            $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
+                                            $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+                                            $taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
+                                        @endphp
+                                        @if($taxType === 'Post-GST' && $chargeAmount > 0)
+                                            <div class="d-flex justify-content-between mb-3">
+                                                <label class="text-muted">{{ $chargeName }}:</label>
+                                                <div class="text-end">
+                                                    <span class="fw-bold">₹{{ number_format($chargeAmount, 2) }}</span>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1341,24 +1370,35 @@
 
             let preGstTotal = 0;
             let postGstTotal = 0;
+            let preGstRowsHtml = '';
+            let postGstRowsHtml = '';
+
             $('#added_charges_list tr').each(function () {
+                let name = $(this).find('input[name="charges[name][]"]').val() || $(this).find('td:first').contents().filter(function() { return this.nodeType === 3; }).text().trim();
                 let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
                 let taxType = $(this).find('input[name="charges[tax_type][]"]').val();
-                if (taxType === 'Pre-GST') {
-                    preGstTotal += amount;
-                } else {
-                    postGstTotal += amount;
+
+                if (amount > 0) {
+                    let formattedAmt = amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    let rowHtml = `<div class="d-flex justify-content-between mb-3">
+                        <label class="text-muted">${name}:</label>
+                        <div class="text-end">
+                            <span class="fw-bold">₹${formattedAmt}</span>
+                        </div>
+                    </div>`;
+
+                    if (taxType === 'Pre-GST') {
+                        preGstTotal += amount;
+                        preGstRowsHtml += rowHtml;
+                    } else {
+                        postGstTotal += amount;
+                        postGstRowsHtml += rowHtml;
+                    }
                 }
             });
 
-            $('#pre_gst_total').val(preGstTotal.toFixed(2));
-            $('#pre_gst_total_display').text('₹' + preGstTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-            if (preGstTotal > 0) {
-                $('#pre_gst_charges_div').show();
-            } else {
-                $('#pre_gst_charges_div').hide();
-            }
-
+            $('#pre_gst_charges_container').html('<input type="hidden" id="pre_gst_total" name="pre_gst_total" value="' + preGstTotal.toFixed(2) + '">' + preGstRowsHtml);
+            $('#post_gst_charges_container').html('<input type="hidden" id="post_gst_total" name="post_gst_total" value="' + postGstTotal.toFixed(2) + '">' + postGstRowsHtml);
 
             let discountPercent = parseFloat($('#discount_percent').val()) || 0;
             let discountAmount = (subTotal + preGstTotal) * (discountPercent / 100);
@@ -1379,14 +1419,6 @@
                 $('#taxable_amount_display').addClass('text-danger');
             } else {
                 $('#taxable_amount_display').removeClass('text-danger');
-            }
-
-            $('#post_gst_total').val(postGstTotal.toFixed(2));
-            $('#post_gst_total_display').text('₹' + postGstTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-            if (postGstTotal > 0) {
-                $('#post_gst_charges_div').show();
-            } else {
-                $('#post_gst_charges_div').hide();
             }
 
             let otherState = $('#other_state_yes').is(':checked') ? 'Y' : ($('#other_state_hidden').val() || 'N');

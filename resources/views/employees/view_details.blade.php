@@ -20,6 +20,7 @@
                             <p class="text-muted mb-2"><i class="ri ri-id-card-line"></i> {{ $employee->emp_id }} | <span class="badge bg-label-primary">{{ $employee->role->name ?? '-' }}</span> | <span class="badge bg-label-info"><i class="ri ri-computer-line"></i> {{ $employee->devices ? $employee->devices->device_name : '' }}</span></p>
                             <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-sm-start">
                                 <span class="badge {{ $employee->status == 'Active' ? 'bg-success' : 'bg-danger' }}">{{ $employee->status }}</span>
+                                <span class="badge {{ ($employee->type ?? 'On Roll') === 'Off Roll' ? 'bg-warning text-dark' : 'bg-primary' }}">{{ $employee->type ?? 'On Roll' }}</span>
                                 <span class="badge bg-info"><i class="ri ri-briefcase-line"></i> {{ $employee->department->department ?? '-' }}</span>
                             </div>
                         </div>
@@ -70,6 +71,10 @@
                                 <li class="mb-3">
                                     <span class="fw-bold d-block text-muted small text-uppercase">Father's Phone</span>
                                     <span>{{ $employee->father_phone ?? '-' }}</span>
+                                </li>
+                                <li class="mb-3">
+                                    <span class="fw-bold d-block text-muted small text-uppercase">Employee Type</span>
+                                    <span class="badge {{ ($employee->type ?? 'On Roll') === 'Off Roll' ? 'bg-label-warning' : 'bg-label-info' }}">{{ $employee->type ?? 'On Roll' }}</span>
                                 </li>
                                 <li class="mb-3">
                                     <span class="fw-bold d-block text-muted small text-uppercase">Service Provider</span>

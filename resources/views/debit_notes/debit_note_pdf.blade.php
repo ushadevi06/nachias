@@ -254,6 +254,7 @@
             <tr>
               <td width="50%" style="border-right: 1px solid #000;">
                 Debit Note No: <strong>{{ $debitNote->debit_note_no }}</strong><br>
+                Reference No: <strong>{{ $debitNote->reference_no ?? '-' }}</strong><br>
                 @if(($debitNote->debit_note_type ?? '') == 'stock' || $debitNote->stock_entry_id)
                   Reference Stock Entry: <strong>{{ $debitNote->stockEntry->stock_entry_no ?? ('STK-' . $debitNote->stock_entry_id) }}</strong><br>
                 @else
@@ -403,7 +404,16 @@
               </td>
             </tr>
 
-            @if($preGstCharges > 0)
+            @if($debitNote->charges && $debitNote->charges->count() > 0)
+              @foreach($debitNote->charges->where('tax_type', 'Pre-GST') as $ch)
+                @if($ch->charge_amount > 0)
+                  <tr>
+                    <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">{{ $ch->charge_name }}</td>
+                    <td colspan="2" style="text-align:right; padding:4px;">{{ number_format($ch->charge_amount, 2) }}</td>
+                  </tr>
+                @endif
+              @endforeach
+            @elseif($preGstCharges > 0)
               <tr>
                 <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">Pre-GST Charges</td>
                 <td colspan="2" style="text-align:right; padding:4px;">{{ number_format($preGstCharges, 2) }}</td>
@@ -449,7 +459,16 @@
               </tr>
             @endif
 
-            @if($postGstCharges > 0)
+            @if($debitNote->charges && $debitNote->charges->count() > 0)
+              @foreach($debitNote->charges->where('tax_type', 'Post-GST') as $ch)
+                @if($ch->charge_amount > 0)
+                  <tr>
+                    <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">{{ $ch->charge_name }}</td>
+                    <td colspan="2" style="text-align:right; padding:4px;">{{ number_format($ch->charge_amount, 2) }}</td>
+                  </tr>
+                @endif
+              @endforeach
+            @elseif($postGstCharges > 0)
               <tr>
                 <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">Post-GST Charges</td>
                 <td colspan="2" style="text-align:right; padding:4px;">{{ number_format($postGstCharges, 2) }}</td>

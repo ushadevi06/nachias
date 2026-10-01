@@ -5,33 +5,24 @@
     <meta charset="utf-8">
     <title>Purchase Order - {{ $purchaseOrder->po_number }}</title>
     <style>
-        @font-face {
-            font-family: "dejavusans-regular";
-            src: url("{{ asset('assets/fonts/DejaVuSans.ttf') }}");
-        }
-        @font-face {
-            font-family: "dejavusans-bold";
-            src: url("{{ asset('assets/fonts/DejaVuSans-Bold.ttf') }}");
-        }
-
         @page {
             size: A4 portrait;
-            margin: 6mm 7mm 5mm 7mm;
+            margin: 20px 10px 15px 10px;
         }
 
         body {
-            font-family: 'dejavusans-regular', sans-serif;
-            font-size: 9.5px;
-            color: #222;
+            font-family: 'Helvetica', Arial, sans-serif;
+            font-size: 11px;
+            color: #000000;
             margin: 0;
             padding: 0;
-            line-height: 1.15;
+            line-height: 1.2;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         strong, .bold, th {
-            font-family: 'dejavusans-bold', sans-serif;
+            font-weight: bold;
         }
 
         .container {
@@ -46,7 +37,16 @@
 
         .header-table td {
             border: none;
-            padding: 0;
+            padding: 0px 4px;
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: bold;
+            margin-top: 0px;
+            margin-bottom: 2px;
+            text-align: center;
+            color: #000000;
         }
 
         .details-box {
@@ -58,8 +58,8 @@
 
         .details-box td {
             vertical-align: top;
-            font-size: 9.5px;
-            line-height: 1.2;
+            font-size: 12px;
+            line-height: 1.25;
             border: none;
             padding: 0;
         }
@@ -73,10 +73,11 @@
 
         .details-inner-table td {
             border: none !important;
-            padding: 1px 0 !important;
+            padding: 1px 2px !important;
             vertical-align: top;
-            font-size: 9.5px;
-            line-height: 1.2;
+            font-size: 12px;
+            line-height: 1.25;
+            color: #000000;
         }
 
         .item-table {
@@ -88,12 +89,13 @@
         }
 
         .item-table th {
-            background-color: #f2f2f2;
+            background-color: #a3a3a3;
             text-align: center;
             font-weight: bold;
             border: 1px solid #000;
             padding: 3px 2px;
-            font-size: 9px;
+            font-size: 8.5px;
+            color: #000000;
         }
 
         .item-table tbody td {
@@ -101,10 +103,11 @@
             border-right: 1px solid #000;
             border-top: none;
             border-bottom: none;
-            padding: 1px 2.5px;
+            padding: 1px 2px;
             vertical-align: middle;
-            font-size: 9.5px;
+            font-size: 8.5px;
             height: 46px;
+            color: #000000;
         }
 
         .item-row {
@@ -135,7 +138,9 @@
             border-left: 1px solid #000;
             border-right: 1px solid #000;
             height: auto;
-            padding: 3px 3px;
+            padding: 3px 2px;
+            font-size: 8.5px;
+            color: #000000;
         }
 
         .summary-box-table {
@@ -159,11 +164,12 @@
 
         .summary-inner-table td {
             border: none !important;
-            padding: 1.5px 3px !important;
-            font-size: 9.5px !important;
-            line-height: 1.2 !important;
+            padding: 2px 4px !important;
+            font-size: 11.5px !important;
+            line-height: 1.35 !important;
             height: auto !important;
             vertical-align: middle;
+            color: #000000;
         }
 
         .no-border th,
@@ -187,13 +193,6 @@
 
         .no-wrap {
             white-space: nowrap !important;
-        }
-
-        .header-title {
-            font-size: 13px;
-            font-weight: bold;
-            margin: 2px 0 3px 0;
-            text-align: center;
         }
 
         .img-container {
@@ -232,7 +231,7 @@
         );
         $isFabricStore = !$isAccessoriesStore;
         $isOtherState = ($purchaseOrder->other_state ?? '') === 'yes';
-        $totalCols = $isFabricStore ? 14 : ($isOtherState ? 12 : 14);
+        $totalCols = $isFabricStore ? 14 : ($isOtherState ? 11 : 13);
 
         $rowHeight = 46;
 
@@ -244,7 +243,7 @@
         $extraAddrLines = max(0, $addrLineCount - 1) + (strlen($addrText) > 45 ? (int)floor(strlen($addrText) / 45) : 0);
         
         $thHeight = ($isAccessoriesStore && !$isOtherState) ? 28 : 22;
-        $headerHeight = 140 + ($extraAddrLines * 11) + $thHeight;
+        $headerHeight = 175 + ($extraAddrLines * 12) + $thHeight;
 
         // Summary lines count
         $summaryLines = 3; // Total Qty, Sub Total, Taxable Amount
@@ -272,9 +271,9 @@
         $paymentTermsLen = strlen($purchaseOrder->payment_terms ?? '');
         $paymentLines = !empty($purchaseOrder->payment_terms) ? max(1, (int)ceil($paymentTermsLen / 35)) : 0;
 
-        $summaryBoxHeight = max(22 * $summaryLines * 0.75 + 10, 42 + ($remarksLines * 12));
-        $signatoryHeight = 65 + (max(0, $paymentLines - 1) * 12);
-        $footerHeight = 20 + $summaryBoxHeight + $signatoryHeight + 10;
+        $summaryBoxHeight = max(24 * $summaryLines * 0.85 + 15, 50 + ($remarksLines * 15));
+        $signatoryHeight = 75 + (max(0, $paymentLines - 1) * 14);
+        $footerHeight = 20 + $summaryBoxHeight + $signatoryHeight + 15;
 
         $continueNoteHeight = 22;
 
@@ -330,6 +329,22 @@
 
         $totalPages = count($pages);
         $globalIndex = 0;
+
+        $logoBase64 = '';
+        if (isset($setting) && !empty($setting->logo)) {
+            $uploadedLogoPath = public_path('uploads/logo/' . $setting->logo);
+            if (file_exists($uploadedLogoPath)) {
+                $logoData = file_get_contents($uploadedLogoPath);
+                $logoBase64 = 'data:image/' . pathinfo($uploadedLogoPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($logoData);
+            }
+        }
+        if (!$logoBase64) {
+            $defaultLogo = public_path('assets/images/jc_logo.png');
+            if (file_exists($defaultLogo)) {
+                $logoData = file_get_contents($defaultLogo);
+                $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+            }
+        }
     @endphp
 
     @foreach($pages as $pageIndex => $pageData)
@@ -343,30 +358,42 @@
         <!-- 1. Company Header Table -->
         <table class="header-table" style="width: 100%; border: none; margin-bottom: 2px;">
             <tr>
-                <td style="width: 20%; vertical-align: middle; padding: 0;">
-                    @php
-                        $logoPath = '';
-                        if (isset($setting) && !empty($setting->logo)) {
-                            if (isset($is_print) && $is_print) {
-                                $logoPath = url('uploads/logo/' . $setting->logo);
-                            } else {
-                                $logoPath = public_path('uploads/logo/' . $setting->logo);
-                            }
-                        }
-                        if (empty($logoPath) || (!isset($is_print) && !file_exists($logoPath))) {
-                            $logoPath = isset($is_print) && $is_print ? url('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png');
-                        }
-                    @endphp
-                    <img src="{{ $logoPath }}" style="width: 120px;">
+                <td width="70%">
+                    <table style="border: none;">
+                        <tr>
+                            <td style="border: none; vertical-align: top; width: 30%;">
+                                @if($logoBase64)
+                                    <img src="{{ $logoBase64 }}" style="width: 220px;">
+                                @else
+                                    <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 220px;">
+                                @endif
+                            </td>
+                            <td style="border: none; vertical-align: top; padding-left: 15px; width: 75%;">
+                                <div style="font-size: 12px; line-height: 1.3; color: #000;">
+                                    {{ $setting->address }} 
+                                    <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 12px;">
+                                        <tr>
+                                            <td style="border: none; padding: 0; width: 45px;">Mobile</td>
+                                            <td style="border: none; padding: 0; width: 10px;">:</td>
+                                            <td style="border: none; padding: 0;">{!! implode(', ', array_map('trim', explode(',', $setting->toll_free_no ?? ''))) !!}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border: none; padding: 0;">Email</td>
+                                            <td style="border: none; padding: 0;">:</td>
+                                            <td style="border: none; padding: 0; white-space: nowrap;">{!! implode(', ', array_map('trim', explode(',', $setting->email ?? ''))) !!}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="border: none; padding: 0;">GSTIN</td>
+                                            <td style="border: none; padding: 0;">:</td>
+                                            <td style="border: none; padding: 0;">{{ $setting->gst_no ?? '' }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="width: 80%; vertical-align: middle; padding-left: 8px; font-size: 8.5px; line-height: 1.25;">
-                    <div>{{ $setting->address }}</div>
-                    <div style="margin-top: 1px;">
-                        <strong>Mobile:</strong> {!! implode(', ', array_map('trim', explode(',', $setting->toll_free_no ?? ''))) !!} &nbsp;|&nbsp; 
-                        <strong>Email:</strong> {!! implode(', ', array_map('trim', explode(',', $setting->email ?? ''))) !!} &nbsp;|&nbsp; 
-                        <strong>GSTIN:</strong> {{ $setting->gst_no ?? '' }}
-                    </div>
-                </td>
+                <td width="30%">&nbsp;</td>
             </tr>
         </table>
 
@@ -376,11 +403,11 @@
         <!-- 3. Supplier & PO Details Box -->
         <table class="details-box">
             <tr>
-                <td style="width: 55%; border-right: 1px solid #000; padding: 3px 5px; vertical-align: top;">
+                <td style="width: 55%; border-right: 1px solid #000; padding: 2px 4px; vertical-align: top;">
                     <table class="details-inner-table">
                         <tr>
-                            <td style="width: 20%;">Supplier</td>
-                            <td style="width: 3%;">:</td>
+                            <td style="width: 22%;">Supplier</td>
+                            <td style="width: 4%;">:</td>
                             <td><strong>{{ $purchaseOrder->supplier->name ?? '-' }}</strong></td>
                         </tr>
                         <tr>
@@ -418,12 +445,12 @@
                         </tr>
                     </table>
                 </td>
-                <td style="width: 45%; padding: 3px 5px; vertical-align: top;">
+                <td style="width: 45%; padding: 2px 4px; vertical-align: top;">
                     <table class="details-inner-table">
                         <tr>
-                            <td style="width: 28%;">PO No.</td>
-                            <td style="width: 3%;">:</td>
-                            <td style="width: 69%;"><strong>{{ $purchaseOrder->po_number }}</strong></td>
+                            <td style="width: 30%;">PO No.</td>
+                            <td style="width: 4%;">:</td>
+                            <td style="width: 66%;"><strong>{{ $purchaseOrder->po_number }}</strong></td>
                         </tr>
                         <tr>
                             <td>PO Date</td>
@@ -448,7 +475,7 @@
                         <tr>
                             <td>Agent</td>
                             <td>:</td>
-                            <td>{{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}</td>
+                            <td>{{ $purchaseOrder->agent->name ?? ($purchaseOrder->purchaseCommissionAgent->name ?? '-') }}</td>
                         </tr>
                     </table>
                 </td>
@@ -460,48 +487,46 @@
             <thead>
                 <tr>
                     @if($isFabricStore)
-                        <th width="3%">S.No</th>
-                        <th width="6.5%">Store Category</th>
-                        <th width="7%">Brand</th>
+                        <th width="3.5%">S.No</th>
+                        <th width="7.5%">Store Category</th>
+                        <th width="7.5%">Brand</th>
                         <th width="10%">Raw Material</th>
-                        <th width="8.5%">Style</th>
+                        <th width="7.5%">Style</th>
                         <th width="5%">Fabric Width</th>
                         <th width="6.5%">Fabric Type</th>
                         <th width="7.5%">Supplier Design</th>
                         <th width="6%">Color</th>
-                        <th width="4%">UOM</th>
-                        <th width="7%">Quantity</th>
-                        <th width="6.5%">Rate</th>
-                        <th width="8.5%">Amount</th>
-                        <th width="14%">Image</th>
+                        <th width="3.5%">UOM</th>
+                        <th width="7.5%">Quantity</th>
+                        <th width="6%">Rate</th>
+                        <th width="11%">Amount</th>
+                        <th width="10.5%">Image</th>
                     @elseif($isOtherState)
-                        <th width="3.5%">S.No</th>
-                        <th width="8%">Store Category</th>
-                        <th width="8%">Brand</th>
-                        <th width="14%">Raw Material</th>
-                        <th width="9.5%">Supplier Design</th>
-                        <th width="5%">UOM</th>
-                        <th width="8%">Quantity</th>
-                        <th width="7.5%">Rate</th>
-                        <th width="6.5%">IGST %</th>
-                        <th width="8.5%">IGST Amt</th>
-                        <th width="9.5%">Amount</th>
-                        <th width="12%">Image</th>
-                    @else
-                        <th width="3.5%">S.No</th>
-                        <th width="7%">Store Category</th>
-                        <th width="7%">Brand</th>
-                        <th width="10.5%">Raw Material</th>
-                        <th width="8%">Supplier Design</th>
+                        <th width="4%">S.No</th>
+                        <th width="12%">Store Category</th>
+                        <th width="13%">Brand</th>
+                        <th width="19%">Raw Material</th>
                         <th width="4.5%">UOM</th>
-                        <th width="7%">Quantity</th>
+                        <th width="9%">Quantity</th>
                         <th width="6.5%">Rate</th>
-                        <th width="5.5%">CGST %</th>
-                        <th width="7%">CGST Amt</th>
-                        <th width="5.5%">SGST %</th>
-                        <th width="7%">SGST Amt</th>
-                        <th width="7.5%">Amount</th>
-                        <th width="12%">Image</th>
+                        <th width="5%">IGST %</th>
+                        <th width="9%">IGST Amt</th>
+                        <th width="13%">Amount</th>
+                        <th width="5%">Image</th>
+                    @else
+                        <th width="4%">S.No</th>
+                        <th width="11%">Store Category</th>
+                        <th width="12%">Brand</th>
+                        <th width="17%">Raw Material</th>
+                        <th width="4%">UOM</th>
+                        <th width="8.5%">Quantity</th>
+                        <th width="5.5%">Rate</th>
+                        <th width="4.5%">CGST %</th>
+                        <th width="8%">CGST Amt</th>
+                        <th width="4.5%">SGST %</th>
+                        <th width="8%">SGST Amt</th>
+                        <th width="12%">Amount</th>
+                        <th width="5.5%">Image</th>
                     @endif
                 </tr>
             </thead>
@@ -547,8 +572,6 @@
                         <td class="text-center">{{ $item->fabricType->fabric_type ?? '-' }}</td>
                         <td class="text-center bold">{{ $item->supplier_design_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
-                    @else
-                        <td class="text-center bold">{{ $item->supplier_design_name ?? '-' }}</td>
                     @endif
 
                     <td class="text-center no-wrap">{{ $item->uom->uom_code ?? '-' }}</td>
@@ -611,7 +634,7 @@
                         </td>
                         <td></td>
                     @elseif($isOtherState)
-                        <td colspan="6" class="text-right bold">Total</td>
+                        <td colspan="5" class="text-right bold">Total</td>
                         <td class="text-center bold no-wrap">
                             {{ number_format($purchaseOrder->total_qty, 2) }}
                         </td>
@@ -625,7 +648,7 @@
                         </td>
                         <td></td>
                     @else
-                        <td colspan="6" class="text-right bold">Total</td>
+                        <td colspan="5" class="text-right bold">Total</td>
                         <td class="text-center bold no-wrap">
                             {{ number_format($purchaseOrder->total_qty, 2) }}
                         </td>
@@ -652,15 +675,15 @@
         @if($isLastPage)
         <table class="summary-box-table">
             <tr>
-                <td style="width: 60%; vertical-align: top; border-right: 1px solid #000; padding: 4px 5px; font-size: 8.5px; border-top: none; border-bottom: none; border-left: none;">
+                <td style="width: 55%; vertical-align: top; border-right: 1px solid #000; padding: 4px 6px; font-size: 11.5px; line-height: 1.35; color: #000; border-top: none; border-bottom: none; border-left: none;">
                     <div>Amount in Words: <strong>{{ strtoupper($totalInWords) }}</strong></div>
                     @if(isset($purchaseOrder->remarks) && $purchaseOrder->remarks != '')
-                    <div style="margin-top: 4px;">
+                    <div style="margin-top: 6px;">
                         <strong>Remarks:</strong> {{ $purchaseOrder->remarks }}
                     </div>
                     @endif
                 </td>
-                <td style="width: 40%; vertical-align: top; padding: 0; border: none;">
+                <td style="width: 45%; vertical-align: top; padding: 0; border: none;">
                     <table class="summary-inner-table">
                         <tr>
                             <td class="text-left">Total Qty:</td>
@@ -727,7 +750,7 @@
                             <td class="text-left">Round Off ({{ $purchaseOrder->round_off_type }}):</td>
                             <td class="text-right">{{ $purchaseOrder->round_off_type == 'Less' ? '-' : '+' }}{{ number_format($purchaseOrder->round_off, 2) }}</td>
                         </tr>
-                        <tr style="font-weight: bold;">
+                        <tr style="font-weight: bold; font-size: 12px;">
                             <td class="text-left" style="border-top: 1px solid #000 !important;">Grand Total:</td>
                             <td class="text-right" style="border-top: 1px solid #000 !important;">{{ number_format($purchaseOrder->total_amount, 2) }}</td>
                         </tr>
@@ -739,20 +762,20 @@
 
         <!-- 6. Payment Terms & Signatory (Last Page) -->
         @if($isLastPage)
-        <table class="no-border" style="margin-top: 4px; width: 100%;">
+        <table class="no-border" style="margin-top: 6px; width: 100%;">
             <tr>
-                <td width="50%">
+                <td width="55%" style="vertical-align: top;">
                     @if(isset($purchaseOrder->payment_terms) && $purchaseOrder->payment_terms != '')
-                    <div style="font-size: 8px;">
+                    <div style="font-size: 11px; line-height: 1.3; color: #000;">
                         <strong>Payment Terms:</strong><br>
                         {{ $purchaseOrder->payment_terms }}
                     </div>
                     @endif
                 </td>
-                <td width="50%" class="text-right">
-                    <div style="border: 1px solid #000; border-radius: 2px; text-align: center; height: 55px; width: 170px; display: inline-block;">
-                        <div style="padding-top: 3px; font-size: 8px;">For NACHIAS FASHION PVT.LTD.</div>
-                        <div style="margin-top: 26px; font-size: 8px; border-top: 1px dotted #000;">
+                <td width="45%" class="text-right" style="vertical-align: top;">
+                    <div style="border: 1px solid #000; border-radius: 2px; text-align: center; height: 65px; width: 190px; display: inline-block;">
+                        <div style="padding-top: 4px; font-size: 10.5px; font-weight: bold;">For NACHIAS FASHION PVT.LTD.</div>
+                        <div style="margin-top: 32px; font-size: 10px; border-top: 1px dotted #000;">
                             Authorised Signatory
                         </div>
                     </div>

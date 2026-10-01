@@ -12,6 +12,7 @@ class DebitNote extends Model
 
     protected $fillable = [
         'debit_note_no',
+        'reference_no',
         'debit_note_date',
         'debit_note_type',
         'purchase_invoice_id',

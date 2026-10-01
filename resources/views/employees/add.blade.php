@@ -34,6 +34,19 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
+                                        <select id="type" name="type" class="form-select select2 @error('type') is-invalid @enderror" data-placeholder="Select Type">
+                                            <option value="">Select Type</option>
+                                            <option value="On Roll" {{ old('type', $employee->type ?? 'On Roll') == 'On Roll' ? 'selected' : '' }}>On Roll</option>
+                                            <option value="Off Roll" {{ old('type', $employee->type ?? '') == 'Off Roll' ? 'selected' : '' }}>Off Roll</option>
+                                        </select>
+                                        <label for="type">Type <span class="text-danger">*</span></label>
+                                    </div>
+                                    @error('type')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
                                         <select id="service_provider_id" name="service_provider_id" class="form-select select2 @error('service_provider_id') is-invalid @enderror" data-placeholder="Select Service Provider">
                                             <option value="">Select Service Provider</option>
                                             @foreach($serviceProviders as $provider)

@@ -38,6 +38,7 @@ class DebitNoteController extends Controller
                 $search = $request->input('search')['value'];
                 $query->where(function ($q) use ($search) {
                     $q->where('debit_note_no', 'like', "%{$search}%")
+                        ->orWhere('reference_no', 'like', "%{$search}%")
                         ->orWhereRaw("DATE_FORMAT(debit_note_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                         ->orWhere('sub_total', 'like', "%{$search}%")
                         ->orWhere('discount_amount', 'like', "%{$search}%")
@@ -168,12 +169,13 @@ class DebitNoteController extends Controller
 
             $rules = [
                 'debit_note_no' => [($id ? 'nullable' : 'required'), 'string', 'max:50', 'not_regex:/^0+$/', 'unique:debit_notes,debit_note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
+                'reference_no' => 'nullable|string|max:100',
                 'debit_note_date' => 'required',
                 'debit_note_type' => 'required|in:purchase_invoice,stock',
                 'purchase_invoice_id' => 'required_if:debit_note_type,purchase_invoice|nullable',
                 'stock_entry_id' => 'nullable',
                 'supplier_id' => 'required|exists:suppliers,id',
-                'reason' => 'nullable|string|min:5|max:255',
+                'reason' => 'required|string|min:5|max:255',
                 'items' => 'required|array|min:1',
                 'items.*.quantity' => 'required_if:items.*.selected,1|numeric|gt:0',
                 'sub_total' => 'required|numeric|min:0',
@@ -362,6 +364,7 @@ class DebitNoteController extends Controller
 
                 $debitNoteData = [
                     'debit_note_no' => $request->debit_note_no,
+                    'reference_no' => $request->reference_no,
                     'debit_note_date' => Carbon::parse($request->debit_note_date)->format('Y-m-d'),
                     'debit_note_type' => $debitNoteType,
                     'purchase_invoice_id' => $debitNoteType == 'purchase_invoice' ? $request->purchase_invoice_id : null,
@@ -744,7 +747,7 @@ class DebitNoteController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details debit-notes')) {
             return unauthorizedRedirect();
         }
-        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
         return view('debit_notes.view_details', compact('debitNote'));
     }
 
@@ -882,7 +885,7 @@ class DebitNoteController extends Controller
             return unauthorizedRedirect();
         }
 
-        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
         $setting = Setting::first();
 
         $totalInWords = numberToWords($debitNote->grand_total);
@@ -896,7 +899,7 @@ class DebitNoteController extends Controller
             return unauthorizedRedirect();
         }
 
-        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'stockEntry', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
         $setting = Setting::first();
 
         $totalInWords = numberToWords($debitNote->grand_total);

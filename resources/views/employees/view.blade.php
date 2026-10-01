@@ -50,7 +50,15 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
+                                <select id="type" class="form-select select2" data-placeholder="Select Type">
+                                    <option value="">Select Type</option>
+                                    <option value="On Roll">On Roll</option>
+                                    <option value="Off Roll">Off Roll</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
                                 <button type="button" class="btn btn-primary" id="filter-btn">
                                     Filter
                                 </button>
@@ -70,6 +78,7 @@
                                     <th>Image</th>
                                     <th>Role</th>
                                     <th>Department</th>
+                                    <th>Type</th>
                                     <th>Service Provider</th>
                                     <th>Operation Stage</th>
                                     <th>Contact Info</th>
@@ -158,6 +167,7 @@
                 data: function(d) {
                     d.department = $('#department').val();
                     d.role = $('#role').val();
+                    d.type = $('#type').val();
                 }
             },
             columns: [{
@@ -178,6 +188,9 @@
                 },
                 {
                     data: 'department'
+                },
+                {
+                    data: 'type'
                 },
                 {
                     data: 'service_provider'
@@ -207,6 +220,7 @@
         $('#reset-btn').on('click', function() {
             $('#department').val('').trigger('change');
             $('#role').val('').trigger('change');
+            $('#type').val('').trigger('change');
             table.ajax.reload();
         });
     });

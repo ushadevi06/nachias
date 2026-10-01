@@ -123,8 +123,49 @@ class EInvoiceService
             ];
         }
 
+        $courierChargeVal = (float) ($invoice->other_charges ?? 0.00);
+        if ($courierChargeVal > 0) {
+            if ($isInterState) {
+                $cTaxRate = (float) ($invoice->igst_percent ?? 0);
+                $cIgstAmt = (float) number_format(($courierChargeVal * $cTaxRate) / 100, 2, '.', '');
+                $cCgstAmt = 0.00;
+                $cSgstAmt = 0.00;
+            } else {
+                $cTaxRate = (float) ($invoice->cgst_percent ?? 0) + (float) ($invoice->sgst_percent ?? 0);
+                $cCgstAmt = (float) number_format(($courierChargeVal * (float) ($invoice->cgst_percent ?? 0)) / 100, 2, '.', '');
+                $cSgstAmt = (float) number_format(($courierChargeVal * (float) ($invoice->sgst_percent ?? 0)) / 100, 2, '.', '');
+                $cIgstAmt = 0.00;
+            }
+            $cTotItemVal = (float) number_format($courierChargeVal + $cCgstAmt + $cSgstAmt + $cIgstAmt, 2, '.', '');
+
+            $itemList[] = [
+                "SlNo" => (string) $slNo++,
+                "PrdDesc" => "COURIER CHARGES",
+                "IsServc" => "Y",
+                "HsnCd" => "996812",
+                "Qty" => 1.00,
+                "Unit" => "OTH",
+                "UnitPrice" => (float) number_format($courierChargeVal, 2, '.', ''),
+                "TotAmt" => (float) number_format($courierChargeVal, 2, '.', ''),
+                "Discount" => 0.00,
+                "AssAmt" => (float) number_format($courierChargeVal, 2, '.', ''),
+                "GstRt" => (float) number_format($cTaxRate, 2, '.', ''),
+                "IgstAmt" => $cIgstAmt,
+                "CgstAmt" => $cCgstAmt,
+                "SgstAmt" => $cSgstAmt,
+                "TotItemVal" => $cTotItemVal,
+            ];
+
+            $totalAssVal += $courierChargeVal;
+            $totalCgstVal += $cCgstAmt;
+            $totalSgstVal += $cSgstAmt;
+            $totalIgstVal += $cIgstAmt;
+            $othChrg = 0.00;
+        } else {
+            $othChrg = 0.00;
+        }
+
         $grandTotal = round((float) ($invoice->grand_total ?? 0), 2);
-        $othChrg = (float) number_format((float) ($invoice->other_charges ?? 0.00), 2, '.', '');
         $expectedTot = round($totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg, 2);
         
         // Dynamically calculate round-off to absorb item-level tax rounding differences

@@ -441,12 +441,18 @@ class CreditNoteController extends Controller
                 ->where(function($q) {
                     $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
                 })
+                ->where(function($q) {
+                    $q->whereNull('invoice_status')->orWhere('invoice_status', '!=', 'Cancelled');
+                })
                 ->latest()->get();
             $creditNoteCharges = $creditNote->charges;
         } elseif (old('customer_id') && old('sales_invoice_ids')) {
             $salesInvoices = SalesInvoice::where('customer_id', old('customer_id'))
                 ->where(function($q) {
                     $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+                })
+                ->where(function($q) {
+                    $q->whereNull('invoice_status')->orWhere('invoice_status', '!=', 'Cancelled');
                 })
                 ->latest()->get();
         }
@@ -610,6 +616,9 @@ class CreditNoteController extends Controller
         $invoices = SalesInvoice::where('customer_id', $customerId)
             ->where(function($q) {
                 $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+            })
+            ->where(function($q) {
+                $q->whereNull('invoice_status')->orWhere('invoice_status', '!=', 'Cancelled');
             })
             ->orderBy('id', 'desc')
             ->get(['id', 'inv_no', 'inv_date']);
