@@ -1822,11 +1822,11 @@
                             </div>
                         </div>
 
-                        <!-- Drilldown Detail Container -->
-                        <div id="supplierDrilldownContainer" class="card border-0 shadow-sm mb-5" style="display: none;">
+                        <!-- Drilldown: Supplier Orders Container -->
+                        <div id="supplierOrdersDrilldownContainer" class="card border-0 shadow-sm mb-5" style="display: none;">
                             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-bold text-dark" id="supplierDrilldownTitle">
-                                    <i class="ri ri-file-list-3-line me-2 text-primary"></i>Supplier Details
+                                <h6 class="mb-0 fw-bold text-dark" id="supplierOrdersDrilldownTitle">
+                                    <i class="ri ri-file-list-3-line me-2 text-primary"></i>Purchase Orders
                                 </h6>
                                 <button type="button" class="btn btn-sm btn-outline-secondary"
                                     onclick="showSupplierMainLevel()">
@@ -1835,12 +1835,66 @@
                             </div>
                             <div class="card-body p-3">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0 w-100" id="supplierDrilldownTable">
-                                        <thead class="bg-light" id="supplierDrilldownThead">
+                                    <table class="table table-hover align-middle mb-0 w-100" id="supplierOrdersDrilldownTable">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th style="width: 45px;">#</th>
+                                                <th>PO NO</th>
+                                                <th>PO DATE</th>
+                                                <th>DUE DATE</th>
+                                                <th class="text-end">TOTAL QTY</th>
+                                                <th class="text-end">TOTAL AMOUNT</th>
+                                                <th class="text-center">DELIVERY STATUS</th>
+                                            </tr>
                                         </thead>
-                                        <tbody id="supplierDrilldownTbody" class="small">
+                                        <tbody class="small">
                                         </tbody>
-                                        <tfoot class="bg-light fw-bold" id="supplierDrilldownTfoot">
+                                        <tfoot class="bg-light fw-bold">
+                                            <tr>
+                                                <td colspan="4" class="text-end">TOTAL:</td>
+                                                <td class="text-end text-dark" id="drillFootQty">0.00</td>
+                                                <td class="text-end text-primary" id="drillFootAmount">₹0.00</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Drilldown: Supplier Debit Notes Container -->
+                        <div id="supplierDebitNotesDrilldownContainer" class="card border-0 shadow-sm mb-5" style="display: none;">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold text-dark" id="supplierDebitNotesDrilldownTitle">
+                                    <i class="ri ri-file-shield-2-line me-2 text-danger"></i>Debit Notes (Returns)
+                                </h6>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="showSupplierMainLevel()">
+                                    <i class="ri ri-arrow-left-line me-1"></i>Back to List
+                                </button>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0 w-100" id="supplierDebitNotesDrilldownTable">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th style="width: 45px;">#</th>
+                                                <th>DEBIT NOTE NO</th>
+                                                <th>DATE</th>
+                                                <th>REF INVOICE</th>
+                                                <th class="text-end">GRAND TOTAL</th>
+                                                <th class="text-center">STATUS</th>
+                                                <th>REMARKS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="small">
+                                        </tbody>
+                                        <tfoot class="bg-light fw-bold">
+                                            <tr>
+                                                <td colspan="4" class="text-end">TOTAL:</td>
+                                                <td class="text-end text-danger" id="drillFootGrandTotal">₹0.00</td>
+                                                <td colspan="2"></td>
+                                            </tr>
                                         </tfoot>
                                     </table>
                                 </div>
@@ -2598,45 +2652,28 @@
 
             window.showSupplierMainLevel = function () {
                 document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'none', 'important');
-                document.getElementById('supplierDrilldownContainer').style.display = 'none';
+                const ordersBox = document.getElementById('supplierOrdersDrilldownContainer');
+                if (ordersBox) ordersBox.style.display = 'none';
+                const dnBox = document.getElementById('supplierDebitNotesDrilldownContainer');
+                if (dnBox) dnBox.style.display = 'none';
                 document.getElementById('supplierPerformanceContainer').style.display = 'block';
             };
 
             // Reusable Supplier Orders Drilldown Function (DataTables Server-Side AJAX)
             window.triggerSupplierOrdersDrilldown = function (supplierId, supplierName) {
                 document.getElementById('supplierPerformanceContainer').style.display = 'none';
+                const dnBox = document.getElementById('supplierDebitNotesDrilldownContainer');
+                if (dnBox) dnBox.style.display = 'none';
                 document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'flex', 'important');
                 document.getElementById('supplierBreadcrumbName').textContent = supplierName + ' (Orders)';
-                document.getElementById('supplierDrilldownTitle').innerHTML = '<i class="ri-file-list-3-line me-2 text-primary"></i>' + supplierName + ' - Purchase Orders';
-                document.getElementById('supplierDrilldownContainer').style.display = 'block';
+                document.getElementById('supplierOrdersDrilldownTitle').innerHTML = '<i class="ri-file-list-3-line me-2 text-primary"></i>' + supplierName + ' - Purchase Orders';
+                document.getElementById('supplierOrdersDrilldownContainer').style.display = 'block';
 
-                if ($.fn.DataTable.isDataTable('#supplierDrilldownTable')) {
-                    $('#supplierDrilldownTable').DataTable().destroy();
-                    $('#supplierDrilldownTable tbody').empty();
+                if ($.fn.DataTable.isDataTable('#supplierOrdersDrilldownTable')) {
+                    $('#supplierOrdersDrilldownTable').DataTable().destroy();
                 }
 
-                $('#supplierDrilldownThead').html(`
-                    <tr>
-                        <th style="width: 45px;">#</th>
-                        <th>PO NO</th>
-                        <th>PO DATE</th>
-                        <th>DUE DATE</th>
-                        <th class="text-end">TOTAL QTY</th>
-                        <th class="text-end">TOTAL AMOUNT</th>
-                        <th class="text-center">DELIVERY STATUS</th>
-                    </tr>
-                `);
-
-                $('#supplierDrilldownTfoot').html(`
-                    <tr>
-                        <td colspan="4" class="text-end">TOTAL:</td>
-                        <td class="text-end text-dark" id="drillFootQty">0.00</td>
-                        <td class="text-end text-primary" id="drillFootAmount">₹0.00</td>
-                        <td></td>
-                    </tr>
-                `);
-
-                $('#supplierDrilldownTable').DataTable({
+                $('#supplierOrdersDrilldownTable').DataTable({
                     processing: true,
                     serverSide: true,
                     pageLength: 10,
@@ -2677,37 +2714,18 @@
 
             window.triggerSupplierDebitNotesDrilldown = function (supplierId, supplierName) {
                 document.getElementById('supplierPerformanceContainer').style.display = 'none';
+                const ordersBox = document.getElementById('supplierOrdersDrilldownContainer');
+                if (ordersBox) ordersBox.style.display = 'none';
                 document.getElementById('supplierBreadcrumbs').style.setProperty('display', 'flex', 'important');
                 document.getElementById('supplierBreadcrumbName').textContent = supplierName + ' (Debit Notes)';
-                document.getElementById('supplierDrilldownTitle').innerHTML = '<i class="ri-file-shield-2-line me-2 text-danger"></i>' + supplierName + ' - Debit Notes (Returns)';
-                document.getElementById('supplierDrilldownContainer').style.display = 'block';
+                document.getElementById('supplierDebitNotesDrilldownTitle').innerHTML = '<i class="ri-file-shield-2-line me-2 text-danger"></i>' + supplierName + ' - Debit Notes (Returns)';
+                document.getElementById('supplierDebitNotesDrilldownContainer').style.display = 'block';
 
-                if ($.fn.DataTable.isDataTable('#supplierDrilldownTable')) {
-                    $('#supplierDrilldownTable').DataTable().destroy();
-                    $('#supplierDrilldownTable tbody').empty();
+                if ($.fn.DataTable.isDataTable('#supplierDebitNotesDrilldownTable')) {
+                    $('#supplierDebitNotesDrilldownTable').DataTable().destroy();
                 }
 
-                $('#supplierDrilldownThead').html(`
-                    <tr>
-                        <th style="width: 45px;">#</th>
-                        <th>DEBIT NOTE NO</th>
-                        <th>DATE</th>
-                        <th>REF INVOICE</th>
-                        <th class="text-end">GRAND TOTAL</th>
-                        <th class="text-center">STATUS</th>
-                        <th>REMARKS</th>
-                    </tr>
-                `);
-
-                $('#supplierDrilldownTfoot').html(`
-                    <tr>
-                        <td colspan="4" class="text-end">TOTAL:</td>
-                        <td class="text-end text-danger" id="drillFootGrandTotal">₹0.00</td>
-                        <td colspan="2"></td>
-                    </tr>
-                `);
-
-                $('#supplierDrilldownTable').DataTable({
+                $('#supplierDebitNotesDrilldownTable').DataTable({
                     processing: true,
                     serverSide: true,
                     pageLength: 10,

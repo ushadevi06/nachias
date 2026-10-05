@@ -483,6 +483,21 @@ class JobCardEntryController extends Controller
 
             DB::beginTransaction();
             try {
+                $existingAddQty = 0;
+                $existingAddFs = 0;
+                $existingAddHs = 0;
+                if ($id) {
+                    $existingJc = JobCardEntry::find($id);
+                    if ($existingJc) {
+                        $existingAddQty = (float) ($existingJc->additional_qty ?? 0);
+                        $existingAddFs = (float) $existingJc->fabricDetails()->where('is_additional', 1)->sum('fs_qty');
+                        $existingAddHs = (float) $existingJc->fabricDetails()->where('is_additional', 1)->sum('hs_qty');
+                    }
+                }
+
+                $baseFs = (float) ($request->total_qty_fs ?? 0);
+                $baseHs = (float) ($request->total_qty_hs ?? 0);
+
                 $data = [
                     'job_card_no' => $request->job_card_no,
                     'reference_no' => $request->reference_no,
@@ -508,9 +523,9 @@ class JobCardEntryController extends Controller
                     'cuff_type_id' => $request->cuff_type_id,
                     'pocket_type_id' => $request->pocket_type_id,
                     'bottom_cut_id' => $request->bottom_cut_id,
-                    'total_qty_fs' => $request->total_qty_fs ?? 0,
-                    'total_qty_hs' => $request->total_qty_hs ?? 0,
-                    'grand_total_qty' => ($request->total_qty_fs ?? 0) + ($request->total_qty_hs ?? 0),
+                    'total_qty_fs' => $baseFs + $existingAddFs,
+                    'total_qty_hs' => $baseHs + $existingAddHs,
+                    'grand_total_qty' => $baseFs + $baseHs + $existingAddQty,
                     'process_group_id' => $request->process_group_id,
                     'size_ratio_id' => $request->size_ratio_id,
                     'ex_1_label' => $request->ex_1_label,
@@ -1664,7 +1679,15 @@ class JobCardEntryController extends Controller
             $sizes = $jobCard->cuttingSizeRatios->pluck('size')->unique()->toArray();
         }
         if (empty($sizes)) {
-            $sizes = ['36', '38', '40', '42', '44', '46'];
+            $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
+        }
+        if (!empty($sizes)) {
+            usort($sizes, function($a, $b) {
+                if (is_numeric($a) && is_numeric($b)) {
+                    return (float)$a <=> (float)$b;
+                }
+                return strnatcasecmp($a, $b);
+            });
         }
 
         $additionalBatches = $jobCard->fabricDetails->where('is_additional', 1)->values();
@@ -1961,6 +1984,14 @@ class JobCardEntryController extends Controller
         if (empty($sizes)) {
             $sizes = ['36', '38', '40', '42', '44', '46'];
         }
+        if (!empty($sizes)) {
+            usort($sizes, function($a, $b) {
+                if (is_numeric($a) && is_numeric($b)) {
+                    return (float)$a <=> (float)$b;
+                }
+                return strnatcasecmp($a, $b);
+            });
+        }
 
         return view('job_card_entry.additional_qty_view', compact(
             'jobCard',
@@ -2234,6 +2265,24 @@ class JobCardEntryController extends Controller
             $newFs = intval($jobCard->total_qty_fs ?? 0) + $totalGrandExtraFs;
             $newHs = intval($jobCard->total_qty_hs ?? 0) + $totalGrandExtraHs;
             $newAdditionalQty = intval($jobCard->additional_qty ?? 0) + $totalGrandExtraQty;
+
+            // Sync issue items (JobCardIssueItem) to reflect total fabric meters and total produced pieces
+            foreach ($validFabrics as $fData) {
+                $fArt = $fData['art_no'];
+                $allArtFabrics = $jobCard->fabricDetails()->where('art_no', $fArt)->get();
+                $totArtMtr = $allArtFabrics->sum('mtr');
+                $totArtQty = $allArtFabrics->flatMap->quantities->sum('total_qty');
+
+                $issueItem = JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                    ->whereIn('job_card_article_matrix_id', $allArtFabrics->pluck('id'))
+                    ->first();
+                if ($issueItem) {
+                    $issueItem->update([
+                        'qty_issue' => $totArtMtr,
+                        'produced_qty' => $totArtQty > 0 ? $totArtQty : $newGrandTotal,
+                    ]);
+                }
+            }
 
             $totalMtrAll = $jobCard->fabricDetails()->sum('mtr');
             $newAverage = ($newGrandTotal > 0) ? round($totalMtrAll / $newGrandTotal, 3) : ($jobCard->average ?? 0);
@@ -2618,11 +2667,17 @@ class JobCardEntryController extends Controller
                 }
 
                 // Auto-update Issue Item (JobCardIssueItem) if already created
-                $issueItem = JobCardIssueItem::where('job_card_article_matrix_id', $fabDetail->id)->first();
+                $allArtFabrics = $jobCard->fabricDetails()->where('art_no', $artNo)->get();
+                $totArtMtr = $allArtFabrics->sum('mtr');
+                $totArtQty = $allArtFabrics->flatMap->quantities->sum('total_qty');
+
+                $issueItem = JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                    ->whereIn('job_card_article_matrix_id', $allArtFabrics->pluck('id'))
+                    ->first();
                 if ($issueItem) {
                     $issueItem->update([
-                        'qty_issue' => $fData['calc_mtr'],
-                        'produced_qty' => $fData['calc_total_qty'],
+                        'qty_issue' => $totArtMtr,
+                        'produced_qty' => $totArtQty > 0 ? $totArtQty : $jobCard->grand_total_qty,
                     ]);
                 }
             }
@@ -3371,6 +3426,7 @@ class JobCardEntryController extends Controller
         $artCategoryMap = $maps['artCategoryMap'];
 
         $artTotalMap = [];
+        $artMtrMap = [];
         foreach ($jobCard->fabricDetails as $detail) {
             $trimmedArtNo = trim($detail->art_no ?? '');
 
@@ -3381,16 +3437,29 @@ class JobCardEntryController extends Controller
             $total = $detail->quantities->sum('total_qty');
             if (!isset($artTotalMap[$trimmedArtNo])) {
                 $artTotalMap[$trimmedArtNo] = 0;
+                $artMtrMap[$trimmedArtNo] = 0;
             }
             $artTotalMap[$trimmedArtNo] += $total;
+            $artMtrMap[$trimmedArtNo] += floatval($detail->mtr);
         }
 
-        $issueItems = $jobCard->issueItems->filter(function ($item) use ($artCategoryMap) {
+        $filteredIssueItems = $jobCard->issueItems->filter(function ($item) use ($artCategoryMap) {
             $artNo = trim($item->fabricDetail->art_no ?? '');
             return ($item->rawMaterial?->store_category_id == 1) || (($artCategoryMap[$artNo] ?? 1) == 1);
-        })->groupBy(function ($item) {
+        });
+
+        $issueItemsGrouped = $filteredIssueItems->groupBy(function ($item) {
             return trim($item->fabricDetail->art_no ?? ($item->rawMaterial?->code ?? 'N/A'));
-        })->map(function ($items, $artNo) use ($artTotalMap, $jobCard) {
+        });
+
+        $allFabricArtNos = array_unique(array_merge(
+            array_keys($artTotalMap),
+            $issueItemsGrouped->keys()->toArray()
+        ));
+
+        $issueItems = collect($allFabricArtNos)->map(function ($artNo) use ($issueItemsGrouped, $artTotalMap, $artMtrMap, $jobCard) {
+            $items = $issueItemsGrouped->get($artNo) ?? collect();
+
             $stockUnitPrice = $items->map(function ($item) {
                 return $item->stockEntryItem->price ?? null;
             })->filter(function ($price) {
@@ -3434,15 +3503,23 @@ class JobCardEntryController extends Controller
                 return $item->fabricDetail && $item->fabricDetail->fabricSize ? $item->fabricDetail->fabricSize->width : null;
             })->filter()->first();
 
+            $producedQty = ($artTotalMap[trim($artNo)] ?? 0) > 0 ? $artTotalMap[trim($artNo)] : ($jobCard->grand_total_qty ?? $items->max('produced_qty'));
+            $allocatedMtr = $artMtrMap[trim($artNo)] ?? 0;
+            $qtyIssue = $items->isNotEmpty() ? max($items->sum('qty_issue'), $allocatedMtr) : $allocatedMtr;
+            $qtyUsed = $items->sum('qty_used');
+            $qtyWastage = $items->sum('qty_wastage');
+            $qtyAdjusted = $items->sum('qty_adjusted');
+            $balance = ($qtyIssue + $qtyAdjusted) - $qtyUsed - $qtyWastage;
+
             return (object) [
                 'art_no' => $artNo,
                 'raw_material_id' => $items->pluck('raw_material_id')->filter()->first(),
-                'produced_qty' => $artTotalMap[trim($artNo)] ?? $items->max('produced_qty'),
-                'qty_issue' => $items->sum('qty_issue'),
-                'qty_wastage' => $items->sum('qty_wastage'),
-                'qty_used' => $items->sum('qty_used'),
-                'qty_adjusted' => $items->sum('qty_adjusted'),
-                'balance' => $items->sum('balance'),
+                'produced_qty' => $producedQty,
+                'qty_issue' => $qtyIssue,
+                'qty_wastage' => $qtyWastage,
+                'qty_used' => $qtyUsed,
+                'qty_adjusted' => $qtyAdjusted,
+                'balance' => $balance,
                 'unit_price' => $finalPrice,
                 'size_label' => $sizeLabel,
                 'width' => $width,
@@ -3906,37 +3983,52 @@ class JobCardEntryController extends Controller
         ])->findOrFail($id);
 
         $totalProduced = (float) ($jobCard->grand_total_qty ?? 0);
-        $totalFabricCost = 0;
-        $fabricIssueItems = $jobCard->issueItems->filter(fn($i) => ($i->rawMaterial?->store_category_id == 1));
+        $additionalQty = floatval($jobCard->additional_qty ?? 0);
+        $baseQty = max(0, $totalProduced - $additionalQty);
 
-        if ($fabricIssueItems->count() > 0) {
-            $totalFabricCost = $fabricIssueItems->sum(function($i) use ($totalProduced) {
-                $qtyPerPc = $totalProduced > 0 ? ($i->qty_used + $i->qty_wastage) / $totalProduced : 0;
-                $costPerPc = round($qtyPerPc * ($i->stockEntryItem->price ?? 0), 2);
-                return $costPerPc * $totalProduced;
+        $maps = $this->getJobCardMaps($jobCard);
+        $artCategoryMap = $maps['artCategoryMap'];
+
+        // 1. Fabric Cost (Base + Additional Batches)
+        $totalFabricCost = 0;
+        $fabricArtGroups = $jobCard->fabricDetails->groupBy('art_no');
+
+        foreach ($fabricArtGroups as $artNo => $fabrics) {
+            $catId = $artCategoryMap[$artNo] ?? 1;
+            if ($catId != 1) continue;
+
+            $totalArtMtr = $fabrics->sum('mtr');
+            $issueItem = $jobCard->issueItems->first(function($i) use ($fabrics) {
+                return $fabrics->pluck('id')->contains($i->job_card_article_matrix_id);
             });
-        } else {
-            foreach ($jobCard->fabricDetails as $fd) {
-                if ($fd->store_category_id == 1) {
-                    $latestPrice = StockEntryItem::where('art_no', $fd->art_no)
-                        ->where('price', '>', 0)
-                        ->latest()
-                        ->value('price') ?? 0;
-                    $totalFabricCost += ($fd->mtr * $latestPrice);
-                }
+
+            $unitPrice = 0;
+            if ($issueItem && $issueItem->unit_price > 0) {
+                $unitPrice = floatval($issueItem->unit_price);
+            } elseif ($issueItem && $issueItem->stockEntryItem && $issueItem->stockEntryItem->price > 0) {
+                $unitPrice = floatval($issueItem->stockEntryItem->price);
+            } else {
+                $unitPrice = StockEntryItem::where('art_no', $artNo)->where('price', '>', 0)->latest()->value('price') ?? 0;
             }
+
+            $usedMtr = $issueItem ? (floatval($issueItem->qty_used) + floatval($issueItem->qty_wastage)) : 0;
+            $effectiveMtr = ($usedMtr > 0) ? $usedMtr : $totalArtMtr;
+            $totalFabricCost += ($effectiveMtr * $unitPrice);
         }
 
+        // 2. Accessory Cost
         $totalAccessoryCost = 0;
         $accessoryIssueItems = $jobCard->issueItems->filter(fn($i) => ($i->rawMaterial?->store_category_id != 1));
 
         if ($accessoryIssueItems->count() > 0) {
             $totalAccessoryCost = $accessoryIssueItems->sum(function($i) use ($totalProduced) {
                 $qtyPerPc = $totalProduced > 0 ? ($i->qty_used + $i->qty_wastage) / $totalProduced : 0;
-                $costPerPc = round($qtyPerPc * ($i->stockEntryItem->price ?? 0), 2);
+                $costPerPc = round($qtyPerPc * ($i->stockEntryItem->price ?? ($i->unit_price ?? 0)), 2);
                 return $costPerPc * $totalProduced;
             });
         }
+
+        // 3. Process Cost (All production stages)
         $totalProcessCost = $jobCard->operations->sum(function ($op) use ($totalProduced) {
             if ($op->total_cost > 0)
                 return $op->total_cost;
@@ -3947,6 +4039,8 @@ class JobCardEntryController extends Controller
 
         $analysis = [
             'total_produced' => $totalProduced,
+            'base_qty' => $baseQty,
+            'additional_qty' => $additionalQty,
             'fabric' => [
                 'total' => $totalFabricCost,
                 'avg' => $totalProduced > 0 ? $totalFabricCost / $totalProduced : 0
@@ -4110,24 +4204,39 @@ class JobCardEntryController extends Controller
         $styleCode = $style->code ?? '';
 
         $records = [];
-        if ($request->bulk_print == 1 && $issueItem->fabricDetail && $issueItem->fabricDetail->quantities->count() > 0) {
-            foreach ($issueItem->fabricDetail->quantities as $mq) {
-                if ($mq->qty_fs > 0) {
-                    $records[] = ['size' => $mq->size, 'sleeve' => 'F/S', 'qty' => $mq->qty_fs];
+        $artNoToMatch = trim($artNo !== '-' ? $artNo : ($issueItem->fabricDetail->art_no ?? ''));
+        $matchingFabricDetails = $jobCard->fabricDetails->filter(function($fd) use ($artNoToMatch) {
+            return empty($artNoToMatch) || trim($fd->art_no) === $artNoToMatch || trim($fd->fg_art_no) === $artNoToMatch;
+        });
+        if ($matchingFabricDetails->isEmpty()) {
+            $matchingFabricDetails = $jobCard->fabricDetails;
+        }
+
+        $allMatrixQuantities = JobCardMatrixQuantity::whereIn('job_card_fabric_detail_id', $matchingFabricDetails->pluck('id'))->get();
+        $groupedSizes = $allMatrixQuantities->groupBy('size');
+
+        if ($request->bulk_print == 1 && $allMatrixQuantities->count() > 0) {
+            foreach ($groupedSizes as $sz => $mql) {
+                $totFs = $mql->sum('qty_fs');
+                $totHs = $mql->sum('qty_hs');
+                if ($totFs > 0) {
+                    $records[] = ['size' => $sz, 'sleeve' => 'F/S', 'qty' => $totFs];
                 }
-                if ($mq->qty_hs > 0) {
-                    $records[] = ['size' => $mq->size, 'sleeve' => 'H/S', 'qty' => $mq->qty_hs];
+                if ($totHs > 0) {
+                    $records[] = ['size' => $sz, 'sleeve' => 'H/S', 'qty' => $totHs];
                 }
             }
         } else {
             $qty = $issueItem->qty_used;
-            if ($request->size && $request->sleeve && $issueItem->fabricDetail) {
-                $matrixQty = $issueItem->fabricDetail->quantities->where('size', $request->size)->first();
-                if ($matrixQty) {
-                    if ($request->sleeve == 'F/S') {
-                        $qty = $matrixQty->qty_fs > 0 ? $matrixQty->qty_fs : $qty;
-                    } elseif ($request->sleeve == 'H/S') {
-                        $qty = $matrixQty->qty_hs > 0 ? $matrixQty->qty_hs : $qty;
+            if ($request->size && $request->sleeve && $allMatrixQuantities->count() > 0) {
+                $sizeGroup = $groupedSizes->get($request->size);
+                if ($sizeGroup) {
+                    if ($request->sleeve == 'F/S' || $request->sleeve == 'Full Sleeve') {
+                        $totFs = $sizeGroup->sum('qty_fs');
+                        $qty = $totFs > 0 ? $totFs : $qty;
+                    } elseif ($request->sleeve == 'H/S' || $request->sleeve == 'Half Sleeve') {
+                        $totHs = $sizeGroup->sum('qty_hs');
+                        $qty = $totHs > 0 ? $totHs : $qty;
                     }
                 }
             }
@@ -4423,23 +4532,35 @@ class JobCardEntryController extends Controller
 
         $fabrics = [];
         foreach ($allIssueItems as $issueItem) {
-            
             $fabricRecords = [];
 
-            if ($issueItem->fabricDetail && $issueItem->fabricDetail->quantities->count() > 0) {
-                foreach ($issueItem->fabricDetail->quantities as $mq) {
-                    if ($mq->qty_fs > 0) {
+            $artNoToMatch = trim($issueItem->fabricDetail->art_no ?? ($issueItem->stockEntryItem?->art_no ?? ($issueItem->rawMaterial->code ?? '')));
+            $matchingFabricDetails = $jobCard->fabricDetails->filter(function($fd) use ($artNoToMatch) {
+                return empty($artNoToMatch) || trim($fd->art_no) === $artNoToMatch || trim($fd->fg_art_no) === $artNoToMatch;
+            });
+            if ($matchingFabricDetails->isEmpty()) {
+                $matchingFabricDetails = $jobCard->fabricDetails;
+            }
+
+            $allMatrixQuantities = JobCardMatrixQuantity::whereIn('job_card_fabric_detail_id', $matchingFabricDetails->pluck('id'))->get();
+            $groupedSizes = $allMatrixQuantities->groupBy('size');
+
+            if ($allMatrixQuantities->count() > 0) {
+                foreach ($groupedSizes as $sz => $mql) {
+                    $totFs = $mql->sum('qty_fs');
+                    $totHs = $mql->sum('qty_hs');
+                    if ($totFs > 0) {
                         $fabricRecords[] = [
-                            'size' => $mq->size,
+                            'size' => $sz,
                             'sleeve' => 'F/S',
-                            'qty' => $mq->qty_fs
+                            'qty' => $totFs
                         ];
                     }
-                    if ($mq->qty_hs > 0) {
+                    if ($totHs > 0) {
                         $fabricRecords[] = [
-                            'size' => $mq->size,
+                            'size' => $sz,
                             'sleeve' => 'H/S',
-                            'qty' => $mq->qty_hs
+                            'qty' => $totHs
                         ];
                     }
                 }

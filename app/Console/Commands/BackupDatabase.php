@@ -66,9 +66,25 @@ class BackupDatabase extends Command
 
             if ($returnVar === 0) {
                 $size = filesize($path . $filename);
+                $location = 'Local';
+
+                // Check and upload to Google Drive if configured
+                $driveService = new \App\Services\GoogleDriveBackupService();
+                if ($driveService->isConfigured()) {
+                    $this->info('Uploading backup to Google Drive...');
+                    $driveRes = $driveService->uploadBackup($path . $filename, $filename);
+                    if ($driveRes['success']) {
+                        $location = 'Local & Google Drive';
+                        $this->info('Successfully uploaded to Google Drive! File ID: ' . ($driveRes['file_id'] ?? 'N/A'));
+                    } else {
+                        $this->warn('Google Drive upload warning: ' . ($driveRes['message'] ?? 'Unknown error'));
+                    }
+                }
+
                 $backup->update([
                     'status' => 'Success',
                     'file_size' => $this->formatSize($size),
+                    'location' => $location,
                 ]);
                 $this->info('Backup generated successfully: ' . $filename);
             } else {

@@ -19,7 +19,19 @@
                         </div>
                         <h6 class="mb-0">Production Volume</h6>
                     </div>
-                    <h4 class="mb-0">{{ number_format($analysis['total_produced'], 0) }} <small class="text-muted">Pcs</small></h4>
+                    <div class="d-flex align-items-baseline justify-content-between flex-wrap gap-1">
+                        <h4 class="mb-0">{{ number_format($analysis['total_produced'], 0) }} <small class="text-muted fs-6">Pcs</small></h4>
+                        @if(($analysis['additional_qty'] ?? 0) > 0)
+                        <span class="badge bg-label-warning text-dark border border-warning px-2 py-1" style="font-size: 11px;">
+                            <i class="ri ri-add-line"></i> Extra: +{{ number_format($analysis['additional_qty'], 0) }} pcs
+                        </span>
+                        @endif
+                    </div>
+                    @if(($analysis['additional_qty'] ?? 0) > 0)
+                    <div class="small text-muted mt-1">
+                        Base: {{ number_format($analysis['base_qty'] ?? 0, 0) }} pcs &bull; Extra: {{ number_format($analysis['additional_qty'], 0) }} pcs
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>

@@ -1883,11 +1883,8 @@
                 var itemMrp = parseFloat(matchedItem.mrp || 0);
                 var itemRate = parseFloat(matchedItem.rate || 0);
 
-                if (itemMrp > 0) {
-                    var calculatedRate = Math.round((itemMrp / 1.5) * 100) / 100;
-                    if (itemRate <= 0 || Math.abs(itemRate - calculatedRate) > 0.01) {
-                        itemRate = calculatedRate;
-                    }
+                if (itemRate <= 0 && itemMrp > 0) {
+                    itemRate = Math.round((itemMrp / 1.5) * 100) / 100;
                 }
 
                 if (isMissingPrice) {
@@ -3153,11 +3150,8 @@
 
             let mrpVal = parseFloat(res.mrp || 0);
             let priceVal = parseFloat(res.price || 0);
-            if (mrpVal > 0) {
-                let calculatedPrice = Math.round((mrpVal / 1.5) * 100) / 100;
-                if (priceVal <= 0 || Math.abs(priceVal - calculatedPrice) > 0.01) {
-                    priceVal = calculatedPrice;
-                }
+            if (priceVal <= 0 && mrpVal > 0) {
+                priceVal = Math.round((mrpVal / 1.5) * 100) / 100;
             }
             let mrp = mrpVal.toFixed(2);
             let price = priceVal.toFixed(2);

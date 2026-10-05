@@ -92,7 +92,15 @@
 
         if (empty($allSizes)) {
             $allSizes = $jobCard->cuttingSizeRatios->pluck('size')->unique()->toArray();
-            sort($allSizes, SORT_NUMERIC);
+        }
+
+        if (!empty($allSizes)) {
+            usort($allSizes, function($a, $b) {
+                if (is_numeric($a) && is_numeric($b)) {
+                    return (float)$a <=> (float)$b;
+                }
+                return strnatcasecmp($a, $b);
+            });
         }
 
         $activeFs = [];
@@ -104,9 +112,23 @@
                 $activeHs[] = $ratio->size;
         }
         $activeFs = array_values(array_unique($activeFs));
-        sort($activeFs, SORT_NUMERIC);
+        if (!empty($activeFs)) {
+            usort($activeFs, function($a, $b) {
+                if (is_numeric($a) && is_numeric($b)) {
+                    return (float)$a <=> (float)$b;
+                }
+                return strnatcasecmp($a, $b);
+            });
+        }
         $activeHs = array_values(array_unique($activeHs));
-        sort($activeHs, SORT_NUMERIC);
+        if (!empty($activeHs)) {
+            usort($activeHs, function($a, $b) {
+                if (is_numeric($a) && is_numeric($b)) {
+                    return (float)$a <=> (float)$b;
+                }
+                return strnatcasecmp($a, $b);
+            });
+        }
 
         if (empty($activeFs) && empty($activeHs)) {
             $activeFs = $allSizes;

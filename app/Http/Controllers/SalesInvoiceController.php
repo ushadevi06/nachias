@@ -93,11 +93,8 @@ class SalesInvoiceController extends Controller
 
         $best = $sorted->first();
         if ($best) {
-            if (floatval($best->selling_price) > 0) {
-                $calculatedUnitPrice = round(floatval($best->selling_price) / 1.5, 2);
-                if (floatval($best->unit_price) <= 0 || abs(floatval($best->unit_price) - $calculatedUnitPrice) > 0.01) {
-                    $best->unit_price = $calculatedUnitPrice;
-                }
+            if (floatval($best->unit_price) <= 0 && floatval($best->selling_price) > 0) {
+                $best->unit_price = round(floatval($best->selling_price) / 1.5, 2);
             }
         }
 

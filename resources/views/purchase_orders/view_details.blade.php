@@ -128,7 +128,10 @@
                                     <th class="text-center text-uppercase small fw-bold">UOM</th>
                                     <th class="text-center text-uppercase small fw-bold">Qty</th>
                                     <th class="text-end text-uppercase small fw-bold">Rate</th>
-                                    @php $isAccessories = $purchaseOrder->storeType && strtolower($purchaseOrder->storeType->store_type_name) == 'accessories'; $isOtherState = $purchaseOrder->other_state == 'yes'; @endphp
+                                    @php 
+                                        $isAccessories = $purchaseOrder->storeType && strtolower($purchaseOrder->storeType->store_type_name) == 'accessories'; 
+                                        $isOtherState = (bool)($purchaseOrder->other_state ?? false) || in_array(strtolower((string)($purchaseOrder->other_state ?? '')), ['yes', 'y', '1', 'true'], true) || ($purchaseOrder->items->sum('igst_amount') > 0); 
+                                    @endphp
                                     @if($isAccessories)
                                         @if($isOtherState)
                                             <th class="text-end text-uppercase small fw-bold">IGST %</th>

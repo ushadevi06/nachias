@@ -154,13 +154,38 @@
                         @endphp --}}
                         {{-- F/S Tab --}}
                         @php
-                            $mainItems = [];
+                            $mainItemGroups = [];
                             $accItems = [];
                             foreach($jobCard->fabricDetails as $item) {
-                                if (!empty($item->is_additional)) continue;
                                 $catId = $artCategoryMap[$item->art_no] ?? 1;
-                                if($catId == 1) $mainItems[] = $item;
-                                else $accItems[] = $item;
+                                if($catId == 1) {
+                                    $artKey = trim($item->art_no);
+                                    if (!isset($mainItemGroups[$artKey])) {
+                                        $mainItemGroups[$artKey] = [
+                                            'primaryItem' => $item,
+                                            'items' => [],
+                                            'total_mtr' => 0,
+                                            'total_produced_qty' => 0,
+                                            'has_additional' => false,
+                                            'additional_batch_count' => 0,
+                                            'all_quantities' => collect(),
+                                        ];
+                                    }
+                                    if (empty($item->is_additional)) {
+                                        $mainItemGroups[$artKey]['primaryItem'] = $item;
+                                    } else {
+                                        $mainItemGroups[$artKey]['has_additional'] = true;
+                                        $mainItemGroups[$artKey]['additional_batch_count']++;
+                                    }
+                                    $mainItemGroups[$artKey]['items'][] = $item;
+                                    $mainItemGroups[$artKey]['total_mtr'] += floatval($item->mtr);
+                                    $mainItemGroups[$artKey]['total_produced_qty'] += $item->quantities->sum('total_qty');
+                                    $mainItemGroups[$artKey]['all_quantities'] = $mainItemGroups[$artKey]['all_quantities']->concat($item->quantities);
+                                } else {
+                                    if (empty($item->is_additional)) {
+                                        $accItems[] = $item;
+                                    }
+                                }
                             }
                         @endphp
                         <div class="tab-pane fade show active" id="main-consumption-content" role="tabpanel">
@@ -173,15 +198,26 @@
                                     </thead>
                                     <tbody>
                                         @php $lineNum = 1; @endphp
-                                        @foreach($mainItems as $item)
+                                        @foreach($mainItemGroups as $artKey => $group)
                                             @php
+                                                $item = $group['primaryItem'];
                                                 $materialName = $artMaterialMap[$item->art_no] ?? $item->art_no;
                                                 $locationName = $artLocationMap[$item->art_no] ?? '-';
                                                 $poItem = $jobCard->purchaseOrder?->items?->where('art_no', $item->art_no)->first();
                                                 $uomName = ($poItem && $poItem->uom) ? $poItem->uom->uom_code : (($poItem && $poItem->rawMaterial && $poItem->rawMaterial->uom) ? $poItem->rawMaterial->uom->uom_code : ($artUomMap[$item->art_no] ?? '-'));
-                                                $total_qty = $item->quantities->sum('total_qty'); 
+                                                $total_qty = $group['total_produced_qty']; 
                                                 $produced_qty = $total_qty; 
+                                                $total_mtr = $group['total_mtr'];
+
                                                 $savedItem = $issueItemMap[$item->id] ?? null;
+                                                if (!$savedItem) {
+                                                    foreach($group['items'] as $gi) {
+                                                        if (isset($issueItemMap[$gi->id])) {
+                                                            $savedItem = $issueItemMap[$gi->id];
+                                                            break;
+                                                        }
+                                                    }
+                                                }
                                                 
                                                 $allPOItems = $jobCard->purchaseOrder?->items;
                                                 if (!$allPOItems && $item->art_no) {
@@ -211,8 +247,8 @@
                                                 $artNo = $item->art_no;
                                                 $displayStyle = $styleCode ?: $artNo;
 
-                                                $hasFs = $item->quantities->where('qty_fs', '>', 0)->count() > 0;
-                                                $hasHs = $item->quantities->where('qty_hs', '>', 0)->count() > 0;
+                                                $hasFs = $group['all_quantities']->where('qty_fs', '>', 0)->count() > 0;
+                                                $hasHs = $group['all_quantities']->where('qty_hs', '>', 0)->count() > 0;
 
                                                 $displayItems = [];
                                                 $displayDescriptions = [];
@@ -240,6 +276,12 @@
                                                     $itemDescription = implode('<br>', $displayDescriptions);
                                                     $itemDisplayNamePlain = implode(' / ', $displayItems);
                                                 }
+
+                                                $issue = $total_mtr > 0 ? $total_mtr : floatval($savedItem->qty_issue ?? 0);
+                                                $used = floatval($savedItem->qty_used ?? 0);
+                                                $wastage = floatval($savedItem->qty_wastage ?? 0);
+                                                $adjusted = floatval($savedItem->qty_adjusted ?? 0);
+                                                $remaining = ($issue + $adjusted) - $used - $wastage;
                                             @endphp
                                             <tr data-line="{{ $lineNum }}">
                                                 <td>
@@ -248,7 +290,7 @@
                                                         data-item="{{ $itemDisplayNamePlain }}" 
                                                         data-art="{{ $item->art_no }}" 
                                                         data-uom="{{ $uomName }}" 
-                                                        data-qty-issue="{{ number_format(floatval($savedItem->qty_issue ?? $item->mtr), 2, '.', '') }}" 
+                                                        data-qty-issue="{{ number_format($issue, 2, '.', '') }}" 
                                                         data-matrix-id="{{ $item->id }}" 
                                                         data-qty-adjusted="{{ $savedItem->qty_adjusted ?? '0.00' }}" 
                                                         data-qty-wastage="{{ $savedItem->qty_wastage ?? '0.00' }}" 
@@ -277,26 +319,19 @@
                                                 <td>{{ $locationName }}</td>
                                                 <td class="fw-bold">
                                                     {{ $item->art_no }}
-                                                    @if($item->is_additional)
-                                                        <span class="badge bg-warning text-dark ms-1" style="font-size: 10px;">Extra Batch</span>
+                                                    @if($group['has_additional'])
+                                                        <span class="badge bg-warning text-dark ms-1" style="font-size: 10px;" title="Includes Base + {{ $group['additional_batch_count'] }} Extra Batch(es)">+{{ $group['additional_batch_count'] }} Extra Batch</span>
                                                     @endif
                                                     @if($item->stockEntry)
                                                         <br><small class="text-info">{{ $item->stockEntry->stock_entry_no }}</small>
                                                     @endif
                                                 </td>
                                                 <td>1</td><td>{{ $uomName }}</td>
-                                                <td><p class="mb-0 col-qty-issue text-end">{{ number_format(floatval($savedItem->qty_issue ?? $item->mtr), 2, '.', '') }}</p></td>
-                                                <td><p class="mb-0 col-qty-wastage text-end">{{ number_format(floatval($savedItem->qty_wastage ?? 0), 2, '.', '') }}</p></td>
-                                                <td><p class="mb-0 col-qty-used text-end">{{ number_format(floatval($savedItem->qty_used ?? 0), 2, '.', '') }}</p></td>
-                                                <td><p class="mb-0 col-qty-adjusted text-end">{{ number_format(floatval($savedItem->qty_adjusted ?? 0), 2, '.', '') }}</p></td>
+                                                <td><p class="mb-0 col-qty-issue text-end">{{ number_format($issue, 2, '.', '') }}</p></td>
+                                                <td><p class="mb-0 col-qty-wastage text-end">{{ number_format($wastage, 2, '.', '') }}</p></td>
+                                                <td><p class="mb-0 col-qty-used text-end">{{ number_format($used, 2, '.', '') }}</p></td>
+                                                <td><p class="mb-0 col-qty-adjusted text-end">{{ number_format($adjusted, 2, '.', '') }}</p></td>
                                                 <td><p class="mb-0 col-produced-qty text-end">{{ $produced_qty }}</p></td>
-                                                @php
-                                                    $issue = floatval($savedItem->qty_issue ?? $item->mtr);
-                                                    $used = floatval($savedItem->qty_used ?? 0);
-                                                    $wastage = floatval($savedItem->qty_wastage ?? 0);
-                                                    $adjusted = floatval($savedItem->qty_adjusted ?? 0);
-                                                    $remaining = ($issue + $adjusted) - $used - $wastage;
-                                                @endphp
                                                 <td><p class="mb-0 col-qty-remaining text-end text-success fw-bold">{{ number_format($remaining, 2, '.', '') }}</p></td>
                                                 <td><p class="mb-0 col-unit-price text-end">{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : (isset($artPriceMap[$item->art_no]) ? number_format($artPriceMap[$item->art_no], 2, '.', '') : '0.00') }}</p></td>
                                                 <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
@@ -479,8 +514,8 @@
                             </div>
                             <div class="col-md-3" id="modal_wastage_wrapper">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" id="modal_qty_wastage" class="form-control fw-bold text-danger" placeholder="Wastage">
-                                    <label>Wastage</label>
+                                    <input type="number" step="0.01" id="modal_qty_wastage" class="form-control fw-bold text-danger" placeholder="Wastage" min="0" required>
+                                    <label>Wastage *</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -576,7 +611,7 @@ $(document).ready(function() {
         $('#modal_qty_issue').val(parseFloat(qtyIssue).toFixed(2));
         
         $('#modal_qty_adjusted').val(parseFloat(qtyAdjusted).toFixed(2));
-        $('#modal_qty_wastage').val(parseFloat(qtyWastage).toFixed(2));
+        $('#modal_qty_wastage').val(parseFloat(qtyWastage) > 0 ? parseFloat(qtyWastage).toFixed(2) : '');
         $('#modal_qty_used').val(parseFloat(qtyUsed).toFixed(2));
         $('#modal_produced_qty').val(parseFloat(producedQty).toFixed(2));
         
@@ -619,10 +654,7 @@ $(document).ready(function() {
         
         $('#std-cons-warning').remove();
         $('#qty-issued-warning').remove();
-        $('#qty-used-required-warning').remove();
         $('#modal-ajax-error').remove();
-        $('#modal_qty_used').removeClass('is-invalid');
-        $('#modal_qty_used').removeClass('is-invalid');
 
         if (qtyUsed > qtyIssue) {
             $('#modal_qty_used').addClass('is-invalid');
@@ -640,39 +672,17 @@ $(document).ready(function() {
         }
     }
 
-    /* $('#modal_qty_issue').css('cursor', 'pointer').attr('title', 'Click to calculate based on sleeve meter');
-    $('#modal_qty_issue').on('click', function() {
-        const sleeveType = $('#modal_sleeve_type').val();
-        const producedQty = parseFloat($('#modal_produced_qty').val()) || 0;
-        
-        if (sleeveType === 'Full Sleeve' && fsMeter > 0) {
-            const calculatedQty = fsMeter * producedQty;
-            $(this).val(calculatedQty.toFixed(2));
-            calculateAll('all');
-            
-            Swal.fire({
-                icon: 'info',
-                title: 'Calculated',
-                text: 'Issue Qty calculated: ' + fsMeter + ' (Meter) x ' + producedQty + ' (Qty) = ' + calculatedQty.toFixed(2),
-                timer: 2000,
-                showConfirmButton: false
-            });
-        } else if (sleeveType === 'Half Sleeve' && hsMeter > 0) {
-            const calculatedQty = hsMeter * producedQty;
-            $(this).val(calculatedQty.toFixed(2));
-            calculateAll('all');
-
-            Swal.fire({
-                icon: 'info',
-                title: 'Calculated',
-                text: 'Issue Qty calculated: ' + hsMeter + ' (Meter) x ' + producedQty + ' (Qty) = ' + calculatedQty.toFixed(2),
-                timer: 2000,
-                showConfirmButton: false
-            });
+    $('#modal_qty_used, #modal_qty_issue, #modal_qty_adjusted, #modal_qty_wastage, #modal_unit_price').on('input', function() {
+        if ($(this).attr('id') === 'modal_qty_wastage' && $(this).val().trim() !== '' && parseFloat($(this).val()) > 0) {
+            $('#modal_qty_wastage').removeClass('is-invalid');
+            $('#qty-wastage-required-warning').remove();
         }
-    }); */
-
-    $('#modal_qty_used, #modal_qty_issue, #modal_qty_adjusted, #modal_qty_wastage, #modal_unit_price').on('input', function() { calculateAll(); });
+        if ($(this).attr('id') === 'modal_qty_used' && $(this).val().trim() !== '' && parseFloat($(this).val()) > 0) {
+            $('#modal_qty_used').removeClass('is-invalid');
+            $('#qty-used-required-warning').remove();
+        }
+        calculateAll();
+    });
 
     $('#updateItemData').on('click', function() {
         $('#modal-ajax-error').remove();
@@ -683,29 +693,43 @@ $(document).ready(function() {
             const use = $('#modal_qty_used').val();
             const pro = $('#modal_produced_qty').val();
 
+            $('#modal_qty_used, #modal_qty_wastage').removeClass('is-invalid');
+            $('#qty-used-required-warning, #qty-wastage-required-warning').remove();
+
             if (use.trim() === '' || parseFloat(use) <= 0) {
                 $('#modal_qty_used').addClass('is-invalid');
-                $('#qty-used-required-warning').remove();
                 $('#modal_qty_used').after(`<div id="qty-used-required-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">Qty used is required</div>`);
                 return false;
             }
 
+            const $btnRef = $('.edit-item-btn').filter(function() { return $(this).attr('data-matrix-id') == matrixId; });
+            const itemCategory = $btnRef.attr('data-category') || 'fabric';
+            if (itemCategory !== 'accessory' && $('#modal_wastage_wrapper').is(':visible')) {
+                if (was === null || was === undefined || was.trim() === '' || isNaN(parseFloat(was)) || parseFloat(was) <= 0) {
+                    $('#modal_qty_wastage').addClass('is-invalid');
+                    $('#modal_qty_wastage').after(`<div id="qty-wastage-required-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">This field is required</div>`);
+                    $('#modal_qty_wastage').focus();
+                    return false;
+                }
+            }
+
             const qtyIssue = parseFloat($('#modal_qty_issue').val()) || 0;
-            if (parseFloat(use) > qtyIssue) {
+            const qtyAdjustedVal = parseFloat(adj) || 0;
+            const wastageVal = parseFloat(was) || 0;
+            if ((parseFloat(use) + wastageVal) > (qtyIssue + qtyAdjustedVal)) {
                 $('#modal_qty_used').addClass('is-invalid');
                 if ($('#qty-issued-warning').length === 0) {
-                    $('#modal_qty_used').after(`<div id="qty-issued-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">limit exceds</div>`);
+                    $('#modal_qty_used').after(`<div id="qty-issued-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">limit exceeds</div>`);
                 }
                 Swal.fire({
                     icon: 'warning',
                     title: 'Limit Exceeded',
-                    text: 'Used quantity cannot be greater than issued quantity.',
+                    text: 'Total (Used + Wastage) quantity cannot be greater than issued + adjusted quantity.',
                     confirmButtonColor: '#6200ee'
                 });
                 return false;
             }
 
-            const $btnRef = $('.edit-item-btn').filter(function() { return $(this).attr('data-matrix-id') == matrixId; });
             const calcQty = parseFloat($btnRef.attr('data-calc-qty')) || 0;
 
             if (calcQty > 0 && parseFloat(use) > (calcQty + 0.001)) {

@@ -119,6 +119,15 @@
         } else {
             $sizes = $jobCard->fabricDetails->pluck('quantities')->flatten()->pluck('size')->unique()->values()->toArray();
         }
+
+        if (!empty($sizes)) {
+            usort($sizes, function($a, $b) {
+                if (is_numeric($a) && is_numeric($b)) {
+                    return (float)$a <=> (float)$b;
+                }
+                return strnatcasecmp($a, $b);
+            });
+        }
     @endphp
 
     <table class="data-table">

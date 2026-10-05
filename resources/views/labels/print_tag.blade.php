@@ -150,7 +150,7 @@
         
         .tag-qr-section {
             position: absolute;
-            right: 3.3mm;
+            right: 1.3mm;
             top: 8mm;
             display: flex;
             flex-direction: column;
@@ -163,7 +163,7 @@
         
         .lot-vertical {
             position: absolute;
-            right: -0.5mm;
+            right: -1.5mm;
             top: 5mm;
             writing-mode: vertical-rl;
             transform: rotate(180deg);

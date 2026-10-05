@@ -9,6 +9,14 @@
         }
 
         $allSizes = $sizes ?? ['36', '38', '40', '42', '44', '46'];
+        if (!empty($allSizes) && is_array($allSizes)) {
+            usort($allSizes, function($a, $b) {
+                if (is_numeric($a) && is_numeric($b)) {
+                    return (float)$a <=> (float)$b;
+                }
+                return strnatcasecmp($a, $b);
+            });
+        }
         $currentAdditional = intval($jobCard->additional_qty ?? 0);
         $initialPlanned = max(0, intval($jobCard->grand_total_qty) - $currentAdditional);
     @endphp

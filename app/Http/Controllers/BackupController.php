@@ -125,11 +125,24 @@ class BackupController extends Controller
 
             if ($returnVar === 0) {
                 $size = filesize($path . $filename);
+                $location = 'Local';
+
+                $driveService = new \App\Services\GoogleDriveBackupService();
+                $driveMsg = '';
+                if ($driveService->isConfigured()) {
+                    $driveRes = $driveService->uploadBackup($path . $filename, $filename);
+                    if ($driveRes['success']) {
+                        $location = 'Local & Google Drive';
+                        $driveMsg = ' and uploaded to Google Drive';
+                    }
+                }
+
                 $backup->update([
                     'status' => 'Success',
                     'file_size' => $this->formatSize($size),
+                    'location' => $location,
                 ]);
-                return response()->json(['status' => 'success', 'message' => 'Backup generated successfully.']);
+                return response()->json(['status' => 'success', 'message' => "Backup generated successfully{$driveMsg}."]);
             } else {
                 $errorMessage = implode("\n", $output);
                 Log::error("Backup failed. Return var: $returnVar. Output: " . $errorMessage);

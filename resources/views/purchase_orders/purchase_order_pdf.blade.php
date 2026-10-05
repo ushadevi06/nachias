@@ -230,7 +230,10 @@
             || $purchaseOrder->store_type_id == 2
         );
         $isFabricStore = !$isAccessoriesStore;
-        $isOtherState = ($purchaseOrder->other_state ?? '') === 'yes';
+        $isOtherState = (bool)($purchaseOrder->other_state ?? false)
+            || in_array(strtolower((string)($purchaseOrder->other_state ?? '')), ['yes', 'y', '1', 'true'], true)
+            || ($purchaseOrder->items->sum('igst_amount') > 0)
+            || ($purchaseOrder->items->sum('igst_percent') > 0);
         $totalCols = $isFabricStore ? 14 : ($isOtherState ? 11 : 13);
 
         $rowHeight = 46;

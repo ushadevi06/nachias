@@ -121,63 +121,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
     Route::match(['get', 'post'], 'logout', [AuthController::class, 'logout']);
 
-    Route::get('/fix-finished-goods-brand-mismatches', function () {
-        $brands = DB::table('brands')
-            ->whereNotNull('code')
-            ->where('code', '!=', '')
-            ->orderByRaw('LENGTH(code) DESC')
-            ->get();
-
-        $items = DB::table('stock_entry_items')
-            ->where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at')
-            ->whereNotNull('art_no')
-            ->where('art_no', '!=', '')
-            ->select('id', 'art_no', 'brand_id')
-            ->get();
-
-        $updatedCount = 0;
-        $details = [];
-
-        DB::transaction(function () use ($items, $brands, &$updatedCount, &$details) {
-            foreach ($items as $item) {
-                $art = strtoupper(trim($item->art_no));
-                $matchedBrand = null;
-                foreach ($brands as $b) {
-                    if (str_starts_with($art, strtoupper($b->code))) {
-                        $matchedBrand = $b;
-                        break;
-                    }
-                }
-                if ($matchedBrand && $item->brand_id != $matchedBrand->id) {
-                    DB::table('stock_entry_items')->where('id', $item->id)->update(['brand_id' => $matchedBrand->id]);
-                    $updatedCount++;
-                    $details[$matchedBrand->brand_name] = ($details[$matchedBrand->brand_name] ?? 0) + 1;
-                }
-            }
-
-            // Also ensure CRYSTAL style is set to WHITE (style_id = 7)
-            $whiteStyle = DB::table('styles')->where('style_name', 'WHITE')->orWhere('code', 'WHT')->first();
-            if ($whiteStyle) {
-                $crystalUpdated = DB::table('stock_entry_items')
-                    ->where('art_no', 'CRYSTAL')
-                    ->where(function($q) use ($whiteStyle) {
-                        $q->whereNull('style_id')->orWhere('style_id', '!=', $whiteStyle->id);
-                    })
-                    ->update(['style_id' => $whiteStyle->id]);
-                if ($crystalUpdated > 0) {
-                    $details['CRYSTAL_STYLE_TO_WHITE'] = $crystalUpdated;
-                }
-            }
-        });
-
-        return response()->json([
-            'status' => 'success',
-            'message' => "Successfully updated items to their correct brand_id and styles.",
-            'updated_count' => $updatedCount,
-            'breakdown' => $details
-        ]);
-    });
 
     /* Chatbot */
     Route::get('/chatbot', [ChatbotController::class, 'index'])->name('chatbot.index');

@@ -157,24 +157,71 @@ class OrderaxeService
             }
 
             $customerData = $orderData['retailer'] ?? [];
-            $referenceId = $customerData['reference_id'] ?? null;
+            $referenceId = trim($customerData['reference_id'] ?? '');
+            $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? '');
+            $cityName = trim($customerData['alias']['address']['city'] ?? '');
+            $gstTin = trim($customerData['gst_tin'] ?? ($customerData['org']['gst_tin'] ?? ''));
             $customer = null;
 
+            // 1. Match by Reference ID / Customer Code
             if (!empty($referenceId)) {
                 $customer = Customer::where('code', $referenceId)->first();
             }
 
-            if (!$customer) {
-                $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? 'Unknown Orderaxe Customer');
+            // 2. Match by Customer Name + City / Branch
+            if (!$customer && !empty($customerName)) {
                 $cleanedCustomerName = trim(preg_replace('/\s*\(.*\)/', '', $customerName));
-                $customer = Customer::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cleanedCustomerName) . '%'])->first();
+                
+                if (!empty($cityName)) {
+                    $trimmedCity = preg_replace('/(thram|tram)$/i', '', $cityName);
+                    $customer = Customer::where(function($q) use ($cleanedCustomerName) {
+                        $q->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cleanedCustomerName) . '%']);
+                    })->where(function($q) use ($cityName, $trimmedCity) {
+                        $q->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cityName) . '%'])
+                          ->orWhereRaw('LOWER(name) LIKE ?', ['%' . strtolower($trimmedCity) . '%'])
+                          ->orWhereHas('city', function($cq) use ($cityName, $trimmedCity) {
+                              $cq->whereRaw('LOWER(city_name) LIKE ?', ['%' . strtolower($cityName) . '%'])
+                                ->orWhereRaw('LOWER(city_name) LIKE ?', ['%' . strtolower($trimmedCity) . '%']);
+                          });
+                    })->first();
+                }
+
+                // 3. Match by GSTIN + City
+                if (!$customer && !empty($gstTin)) {
+                    if (!empty($cityName)) {
+                        $trimmedCity = preg_replace('/(thram|tram)$/i', '', $cityName);
+                        $customer = Customer::where('gst_no', $gstTin)
+                            ->where(function($q) use ($cityName, $trimmedCity) {
+                                $q->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cityName) . '%'])
+                                  ->orWhereRaw('LOWER(name) LIKE ?', ['%' . strtolower($trimmedCity) . '%'])
+                                  ->orWhereHas('city', function($cq) use ($cityName, $trimmedCity) {
+                                      $cq->whereRaw('LOWER(city_name) LIKE ?', ['%' . strtolower($cityName) . '%'])
+                                        ->orWhereRaw('LOWER(city_name) LIKE ?', ['%' . strtolower($trimmedCity) . '%']);
+                                  });
+                            })->first();
+                    }
+                    if (!$customer) {
+                        $customer = Customer::where('gst_no', $gstTin)->first();
+                    }
+                }
+
+                // 4. Exact Name Match
+                if (!$customer) {
+                    $customer = Customer::whereRaw('LOWER(name) = ?', [strtolower($cleanedCustomerName)])->first();
+                }
+
+                // 5. Fallback Partial Name Match
+                if (!$customer) {
+                    $customer = Customer::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cleanedCustomerName) . '%'])->first();
+                }
             }
 
             if (!$customer) {
-                $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? 'Unknown Orderaxe Customer');
+                $displayName = $customerName ?: 'Unknown Orderaxe Customer';
                 Log::warning('Orderaxe Sync: Customer not found. Skipping order.', [
-                    'customer_name' => $customerName,
+                    'customer_name' => $displayName,
                     'reference_id' => $referenceId,
+                    'city' => $cityName,
                     'order_no' => $orderNo
                 ]);
                 return 'skipped';
