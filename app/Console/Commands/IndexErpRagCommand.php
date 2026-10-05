@@ -39,7 +39,6 @@ class IndexErpRagCommand extends Command
             [
                 ['Laravel Code (Menus & Routes)', $stats['menus_and_routes']],
                 ['Laravel Controllers (Codebase & Business Logic)', $stats['controllers']],
-                ['Documentation (Nachias Documentation.docx)', $stats['documentation_docx']],
                 ['Documentation (Nachias Documentation.md)', $stats['documentation_md']],
                 ['Database Schema (nachias.sql)', $stats['sql_tables']],
                 ['Field & Select Box Data Lineages', $stats['field_data_sources']],
