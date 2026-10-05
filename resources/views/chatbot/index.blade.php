@@ -382,6 +382,33 @@
             width: 6px;
         }
 
+        .erp-chat-table {
+            font-size: 12.5px;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 6px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .erp-chat-table th {
+            background-color: #f4f5fa !important;
+            color: #4b465c;
+            font-weight: 600;
+            border-bottom: 2px solid #dbdade !important;
+            padding: 8px 10px;
+        }
+
+        .erp-chat-table td {
+            padding: 8px 10px;
+            vertical-align: top;
+            border-color: #ebecef !important;
+        }
+
+        .erp-chat-table tr:hover td {
+            background-color: #faf9fd;
+        }
+
         .chat-messages-container::-webkit-scrollbar-thumb {
             background-color: #d1d5db;
             border-radius: 3px;
@@ -1304,14 +1331,179 @@
                 return div.innerHTML;
             }
 
-            // Format text with line breaks, safe tags, bolding and navigation highlights
+            // Inline formatting helper (handles bold, code, br tags, ERP labels, bullets)
+            function formatInlineText(str) {
+                if (!str) return '';
+                let s = escapeHtml(str);
+
+                // Convert escaped <br> tags into real HTML line breaks so raw <br> is never printed
+                s = s.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
+                // Bold formatting **text**
+                s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+                // Italic formatting *text* (when not bold)
+                s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+
+                // ERP Field, Workflow & Navigation highlights
+                s = s.replace(/(ERP Module:|Page Name:|Page:|Menu Navigation:|Current Menu Navigation:|Next Expected Stage:|Next Menu Navigation:|Field Name:|Field Behavior:|Field Behavior \(புலத்தின் செயல்பாடு\):|Purpose:|Purpose \(நோக்கம்\):|Reason:|Reason \(காரணம்\):|Reason \/ Flow:|Explanation:|Explanation \(விளக்கம்\):|Answer:|Answer \(பதில்\):|Current Stage:|Related Workflow:|Flow:|Evidence:|Confidence:|Restrictions:|Restrictions \(கட்டுப்பாடு\):|URL:|Root Cause:|Resolution Steps:|Reported Error \/ Issue:|Screen Context:|Controller Business Logic Context:)/g, '<strong class="text-primary">$1</strong>');
+
+                // Bullet points inside inline text/cells
+                s = s.replace(/(?:^|<br\s*\/?>)\s*[•\-\*]\s+/gi, '<br><span class="text-secondary me-1">•</span> ');
+                s = s.replace(/^<br>/, '');
+
+                return s;
+            }
+
+            // Format a single non-table line
+            function formatSingleLine(line) {
+                if (!line) return '';
+                const trimmed = line.trim();
+                if (trimmed === '') return '';
+
+                // Headings
+                if (/^###\s+(.*)$/.test(trimmed)) {
+                    const hText = trimmed.replace(/^###\s+/, '');
+                    return `<h6 class="fw-bold text-dark mt-2 mb-1">${formatInlineText(hText)}</h6>`;
+                }
+                if (/^##\s+(.*)$/.test(trimmed)) {
+                    const hText = trimmed.replace(/^##\s+/, '');
+                    return `<h5 class="fw-bold text-dark mt-2 mb-1">${formatInlineText(hText)}</h5>`;
+                }
+                if (/^#\s+(.*)$/.test(trimmed)) {
+                    const hText = trimmed.replace(/^#\s+/, '');
+                    return `<h5 class="fw-bold text-primary mt-2 mb-1">${formatInlineText(hText)}</h5>`;
+                }
+
+                // Numbered list
+                if (/^(\d+)\.\s+(.*)$/.test(trimmed)) {
+                    const match = trimmed.match(/^(\d+)\.\s+(.*)$/);
+                    return `<div class="d-flex align-items-start gap-1 my-0.5"><strong class="text-primary">${match[1]}.</strong> <div>${formatInlineText(match[2])}</div></div>`;
+                }
+
+                // Bullet list
+                if (/^[•\-\*]\s+(.*)$/.test(trimmed)) {
+                    const bText = trimmed.replace(/^[•\-\*]\s+/, '');
+                    return `<div class="d-flex align-items-start gap-1 my-0.5"><span class="text-secondary">•</span> <div>${formatInlineText(bText)}</div></div>`;
+                }
+
+                return formatInlineText(trimmed);
+            }
+
+            // Format text with rich markdown tables, line breaks, safe tags, bolding and navigation highlights
             function formatMessageText(text) {
-                let escaped = escapeHtml(text);
-                escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                escaped = escaped.replace(/(ERP Module:|Page Name:|Page:|Menu Navigation:|Current Menu Navigation:|Next Expected Stage:|Next Menu Navigation:|Field Name:|Field Behavior:|Field Behavior \(புலத்தின் செயல்பாடு\):|Purpose:|Purpose \(நோக்கம்\):|Reason:|Reason \(காரணம்\):|Reason \/ Flow:|Explanation:|Explanation \(விளக்கம்\):|Answer:|Answer \(பதில்\):|Current Stage:|Related Workflow:|Flow:|Evidence:|Confidence:|Restrictions:|Restrictions \(கட்டுப்பாடு\):|URL:)/g, '<strong class="text-primary">$1</strong>');
-                escaped = escaped.replace(/^(\s*)[*\-]\s+(.*)$/gm, '$1<span class="text-secondary">•</span> $2');
-                escaped = escaped.replace(/\n/g, '<br>');
-                return escaped;
+                if (!text) return '';
+
+                // 1. Normalize line breaks
+                let src = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+                // 2. Extract fenced code blocks
+                const codeBlocks = [];
+                src = src.replace(/```([\s\S]*?)```/g, function (match, code) {
+                    const placeholder = `%%CODE_BLOCK_${codeBlocks.length}%%`;
+                    codeBlocks.push(code);
+                    return placeholder;
+                });
+
+                // 3. Extract inline code
+                const inlineCodes = [];
+                src = src.replace(/`([^`\n]+)`/g, function (match, code) {
+                    const placeholder = `%%INLINE_CODE_${inlineCodes.length}%%`;
+                    inlineCodes.push(code);
+                    return placeholder;
+                });
+
+                // 4. Process Markdown Tables and Lines
+                const lines = src.split('\n');
+                const processedLines = [];
+                let tableBuffer = [];
+
+                const flushTable = function () {
+                    if (tableBuffer.length === 0) return;
+
+                    let isTable = false;
+                    if (tableBuffer.length >= 2) {
+                        isTable = tableBuffer.some(row => /^\s*\|?\s*[-:]+[-| :]*\|?\s*$/.test(row));
+                    }
+
+                    if (isTable) {
+                        let html = '<div class="table-responsive my-2"><table class="table table-sm table-bordered table-striped bg-white shadow-xs rounded erp-chat-table mb-0">';
+                        let hasThead = false;
+                        let inBody = false;
+
+                        for (let i = 0; i < tableBuffer.length; i++) {
+                            const row = tableBuffer[i].trim();
+                            if (/^\s*\|?\s*[-:]+[-| :]*\|?\s*$/.test(row)) {
+                                continue;
+                            }
+
+                            let cells = row.split('|');
+                            if (cells.length > 1) {
+                                if (cells[0].trim() === '') cells.shift();
+                                if (cells.length > 0 && cells[cells.length - 1].trim() === '') cells.pop();
+                            }
+
+                            if (!hasThead) {
+                                html += '<thead class="table-light"><tr>';
+                                cells.forEach(cell => {
+                                    html += '<th class="py-1 px-2 fw-semibold text-dark">' + formatInlineText(cell.trim()) + '</th>';
+                                });
+                                html += '</tr></thead>';
+                                hasThead = true;
+                            } else {
+                                if (!inBody) {
+                                    html += '<tbody>';
+                                    inBody = true;
+                                }
+                                html += '<tr>';
+                                cells.forEach(cell => {
+                                    html += '<td class="py-1 px-2 align-middle">' + formatInlineText(cell.trim()) + '</td>';
+                                });
+                                html += '</tr>';
+                            }
+                        }
+
+                        if (inBody) {
+                            html += '</tbody>';
+                        }
+                        html += '</table></div>';
+                        processedLines.push(html);
+                    } else {
+                        tableBuffer.forEach(l => processedLines.push(formatSingleLine(l)));
+                    }
+                    tableBuffer = [];
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (/^\s*\|.*\|\s*$/.test(line)) {
+                        tableBuffer.push(line);
+                    } else {
+                        flushTable();
+                        processedLines.push(formatSingleLine(line));
+                    }
+                }
+                flushTable();
+
+                let output = processedLines.join('<br>');
+
+                // Clean up redundant line breaks around block elements
+                output = output.replace(/(<\/table><\/div>|<h[1-6][^>]*>.*?<\/h[1-6]>|<div class="d-flex[^>]*>.*?<\/div>)<br>/gi, '$1');
+                output = output.replace(/<br>(<div class="table-responsive|<h[1-6]|<div class="d-flex)/gi, '$1');
+
+                // 5. Restore Code Blocks
+                codeBlocks.forEach((code, idx) => {
+                    const escapedCode = escapeHtml(code.trim());
+                    output = output.replace(`%%CODE_BLOCK_${idx}%%`, `<pre class="bg-light p-2 rounded border my-2 font-monospace small" style="overflow-x: auto;"><code>${escapedCode}</code></pre>`);
+                });
+
+                // 6. Restore Inline Code
+                inlineCodes.forEach((code, idx) => {
+                    const escapedCode = escapeHtml(code);
+                    output = output.replace(`%%INLINE_CODE_${idx}%%`, `<code class="bg-light px-1 py-0.5 rounded text-primary fw-medium font-monospace small">${escapedCode}</code>`);
+                });
+
+                return output;
             }
 
             // Check if string contains Tamil characters

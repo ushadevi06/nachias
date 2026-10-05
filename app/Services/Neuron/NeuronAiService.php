@@ -194,7 +194,7 @@ class NeuronAiService
         // 5. Execute via Neuron AI Agent
         $aiAnswer = $this->runNeuronAgent($effectivePromptForLlm, $ragResult['context'], $history, $imageData);
 
-        $englishReply = $aiAnswer['message'] ?? 'I was unable to retrieve an answer at this time. Please try again.';
+        $englishReply = $this->cleanAiResponse($aiAnswer['message'] ?? 'I was unable to retrieve an answer at this time. Please try again.');
 
         return $this->formatResponse(
             message: $englishReply,
@@ -440,6 +440,38 @@ class NeuronAiService
         }
 
         return $result;
+    }
+
+    /**
+     * Clean raw AI response from malformed formatting, redundant HTML linebreaks, and extra whitespace.
+     */
+    public function cleanAiResponse(?string $text): string
+    {
+        if ($text === null) {
+            return '';
+        }
+
+        $clean = trim($text);
+
+        // Normalize <br>, <br/>, <br /> tags
+        $clean = preg_replace('/<br\s*\/?>/i', '<br>', $clean);
+
+        // Outside of markdown table rows (|), replace <br> with newline for cleaner markdown formatting
+        $lines = explode("\n", $clean);
+        $processed = [];
+        foreach ($lines as $line) {
+            if (str_contains($line, '|')) {
+                $processed[] = $line;
+            } else {
+                $processed[] = preg_replace('/<br\s*\/?>/i', "\n", $line);
+            }
+        }
+        $clean = implode("\n", $processed);
+
+        // Remove more than 2 consecutive newlines
+        $clean = preg_replace("/\n{3,}/", "\n\n", $clean);
+
+        return trim($clean);
     }
 
     /**
