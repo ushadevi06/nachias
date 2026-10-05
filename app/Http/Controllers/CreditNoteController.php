@@ -134,7 +134,13 @@ class CreditNoteController extends Controller
                 $eInvoiceBtn = '';
 
                 if ($note->einvoice_status == 'generated') {
-                    $eInvoiceBtn = '<button type="button" class="btn btn-danger einvoice-cancel-btn" data-id="' . $note->id . '" title="Cancel E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
+                    $ackDateTime = $note->ack_date ? \Carbon\Carbon::parse($note->ack_date) : null;
+                    $isExpired = $ackDateTime ? $ackDateTime->diffInHours(now()) >= 24 : false;
+                    if ($isExpired) {
+                        $eInvoiceBtn = '<button type="button" class="btn btn-secondary einvoice-expired-btn" data-id="' . $note->id . '" title="E-Invoice Cancellation Window Expired" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
+                    } else {
+                        $eInvoiceBtn = '<button type="button" class="btn btn-danger einvoice-cancel-btn" data-id="' . $note->id . '" title="Cancel E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
+                    }
                 } else {
                     if ($multiSalesInvoices) {
                         $eInvoiceBtn = '<button type="button" class="btn btn-info text-white" disabled  title="E-Invoice generation is allowed only for Credit Notes linked to a single Sales Invoice." style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
@@ -840,6 +846,24 @@ class CreditNoteController extends Controller
     public function cancelEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $creditNote = CreditNote::findOrFail($id);
+
+        if (empty($creditNote->irn)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active E-Invoice found for this credit note.'
+            ]);
+        }
+
+        if ($creditNote->ack_date) {
+            $ackDateTime = \Carbon\Carbon::parse($creditNote->ack_date);
+            if ($ackDateTime->diffInHours(now()) >= 24) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cancellation time window expired. According to GST guidelines, an E-Invoice cannot be cancelled after 24 hours of generation. Please adjust it in your GSTR-1 return.'
+                ]);
+            }
+        }
+
         $oldData = $creditNote->toArray();
         
         $cancelReason = $request->input('cancel_reason', '2');

@@ -15,9 +15,19 @@
                         $multiSalesInvoices = !empty($creditNote->sales_invoice_ids) && count($creditNote->sales_invoice_ids) > 1;
                     @endphp
                     @if($creditNote->einvoice_status == 'generated')
-                        <button type="button" class="btn btn-danger d-flex align-items-center" id="einvoice-cancel">
-                            <i class="ri ri-close-circle-line me-1"></i> Cancel E-Invoice
-                        </button>
+                        @php
+                            $ackDateTime = $creditNote->ack_date ? \Carbon\Carbon::parse($creditNote->ack_date) : null;
+                            $isExpired = $ackDateTime ? $ackDateTime->diffInHours(now()) >= 24 : false;
+                        @endphp
+                        @if($isExpired)
+                            <button type="button" class="btn btn-secondary d-flex align-items-center" id="einvoice-expired">
+                                <i class="ri ri-close-circle-line me-1"></i> Cancel E-Invoice
+                            </button>
+                        @else
+                            <button type="button" class="btn btn-danger d-flex align-items-center" id="einvoice-cancel">
+                                <i class="ri ri-close-circle-line me-1"></i> Cancel E-Invoice
+                            </button>
+                        @endif
                     @else
                         @if($multiSalesInvoices)
                             <button type="button" class="btn btn-info d-flex align-items-center text-white" disabled title="E-Invoice generation is allowed only for Credit Notes linked to a single Sales Invoice. Multiple Sales Invoices are not supported.">
@@ -549,6 +559,15 @@
                         }
                     });
                 }
+            });
+        });
+        $('#einvoice-expired').on('click', function() {
+            Swal.fire({
+                title: 'Cancellation Expired',
+                text: 'According to GST guidelines, an E-Invoice cannot be cancelled after 24 hours of generation. Please adjust it in your GSTR-1 return.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
             });
         });
     });

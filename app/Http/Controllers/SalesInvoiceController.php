@@ -91,26 +91,36 @@ class SalesInvoiceController extends Controller
             return $b->id - $a->id;
         });
 
-        return $sorted->first();
+        $best = $sorted->first();
+        if ($best) {
+            if (floatval($best->selling_price) > 0) {
+                $calculatedUnitPrice = round(floatval($best->selling_price) / 1.5, 2);
+                if (floatval($best->unit_price) <= 0 || abs(floatval($best->unit_price) - $calculatedUnitPrice) > 0.01) {
+                    $best->unit_price = $calculatedUnitPrice;
+                }
+            }
+        }
+
+        return $best;
     }
 
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = SalesInvoice::with(['customer', 'salesOrder'])->orderBy('id', 'desc');
+            $baseQuery = SalesInvoice::query();
 
             if ($request->customer_id) {
-                $query->where('customer_id', $request->customer_id);
+                $baseQuery->where('customer_id', $request->customer_id);
             }
 
             if ($request->status) {
                 if ($request->status === 'Cancelled') {
-                    $query->where(function($q) {
+                    $baseQuery->where(function($q) {
                         $q->where('invoice_status', 'Cancelled')
                           ->orWhere('einvoice_status', 'cancelled');
                     });
                 } else {
-                    $query->where('invoice_status', $request->status);
+                    $baseQuery->where('invoice_status', $request->status);
                 }
             }
 
@@ -119,23 +129,26 @@ class SalesInvoiceController extends Controller
                 if (count($dates) == 2) {
                     $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
                     $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
-                    $query->whereBetween('inv_date', [$startDate, $endDate]);
+                    $baseQuery->whereBetween('inv_date', [$startDate, $endDate]);
                 } elseif (count($dates) == 1) {
                     $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
-                    $query->whereDate('inv_date', $startDate);
+                    $baseQuery->whereDate('inv_date', $startDate);
                 }
             }
 
-            $totalRecords = $query->count();
+            $totalRecords = (clone $baseQuery)->count();
 
             if ($request->has('search') && !empty($request->search['value'])) {
-                $search = $request->search['value'];
+                $search = trim($request->search['value']);
                 $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);
 
-                $query->where(function ($q) use ($search, $numericSearch) {
+                $matchedCustomerIds = Customer::where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")->pluck('id')->toArray();
+
+                $matchedSoIds = SalesOrder::where('so_no', 'like', "%{$search}%")->orWhere('order_no', 'like', "%{$search}%")->orWhere('orderaxe_id', 'like', "%{$search}%")->orWhere('orderaxe_ref_id', 'like', "%{$search}%")->pluck('id')->toArray();
+
+                $baseQuery->where(function ($q) use ($search, $numericSearch, $matchedCustomerIds, $matchedSoIds) {
                     $q->where('inv_no', 'like', "%{$search}%");
 
-                    // Map CD search to CDW for sequence numbers > CDW_CD_OFFSET
                     if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
                         $sNum = (int)$sm[1];
                         if ($sNum > SalesInvoice::CDW_CD_OFFSET) {
@@ -153,46 +166,66 @@ class SalesInvoiceController extends Controller
                         $q->orWhere('inv_no', 'like', "%CDW/%");
                     }
 
-                    $q->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
-                      ->orWhere('sub_total', 'like', "%{$numericSearch}%")
-                      ->orWhere('discount', 'like', "%{$numericSearch}%")
-                      ->orWhere('grand_total', 'like', "%{$numericSearch}%")
-                      ->orWhere('invoice_status', 'like', "%{$search}%")
-                      ->orWhere('delivery_status', 'like', "%{$search}%")
-                      ->orWhereRaw("(sub_total - COALESCE(discount, 0)) LIKE ?", ["%{$numericSearch}%"])
-                      ->orWhereHas('customer', function($q2) use ($search) {
-                          $q2->where('name', 'like', "%{$search}%")
-                             ->orWhere('code', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('salesOrder', function($q3) use ($search) {
-                          $q3->where('so_no', 'like', "%{$search}%")
-                             ->orWhere('order_no', 'like', "%{$search}%")
-                             ->orWhere('orderaxe_id', 'like', "%{$search}%")
-                             ->orWhere('orderaxe_ref_id', 'like', "%{$search}%");
-                      })
-                      ->orWhereExists(function ($subQ) use ($search) {
-                          $subQ->select(DB::raw(1))
-                              ->from('sales_orders')
-                              ->whereRaw('FIND_IN_SET(sales_orders.id, sales_invoices.so_ids)')
-                              ->where(function ($sQ) use ($search) {
-                                  $sQ->where('so_no', 'like', "%{$search}%")
-                                     ->orWhere('order_no', 'like', "%{$search}%")
-                                     ->orWhere('orderaxe_id', 'like', "%{$search}%")
-                                     ->orWhere('orderaxe_ref_id', 'like', "%{$search}%");
-                              });
-                      });
+                    if (preg_match('/^\d{1,2}-\d{1,2}(-\d{2,4})?$/', $search)) {
+                        $parts = explode('-', $search);
+                        if (count($parts) == 3 && strlen($parts[2]) == 4) {
+                            try {
+                                $d = Carbon::createFromFormat('d-m-Y', $search)->format('Y-m-d');
+                                $q->orWhere('inv_date', $d);
+                            } catch (\Exception $e) {
+                                $q->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"]);
+                            }
+                        } else {
+                            $q->orWhereRaw("DATE_FORMAT(inv_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"]);
+                        }
+                    }
+
+                    if (is_numeric($numericSearch) && $numericSearch !== '') {
+                        $q->orWhere('sub_total', 'like', "%{$numericSearch}%")
+                          ->orWhere('discount', 'like', "%{$numericSearch}%")
+                          ->orWhere('grand_total', 'like', "%{$numericSearch}%");
+                    }
+
+                    $q->orWhere('invoice_status', 'like', "%{$search}%")
+                      ->orWhere('delivery_status', 'like', "%{$search}%");
+
+                    if (!empty($matchedCustomerIds)) {
+                        $q->orWhereIn('customer_id', $matchedCustomerIds);
+                    }
+
+                    if (!empty($matchedSoIds)) {
+                        $q->orWhereIn('so_id', $matchedSoIds);
+                        foreach ($matchedSoIds as $sId) {
+                            $q->orWhereRaw('FIND_IN_SET(?, so_ids)', [$sId]);
+                        }
+                    }
                 });
             }
 
-            $filteredRecords = $query->count();
-            
-            $overallSubTotal = (float)$query->sum('sub_total');
-            $overallDiscount = (float)$query->sum('discount');
-            $overallOtherCharges = (float)$query->sum('other_charges');
-            $overallTaxable = $overallSubTotal - $overallDiscount + $overallOtherCharges;
-            $overallGrandTotal = (float)$query->sum('grand_total');
+            $totals = (clone $baseQuery)->select(DB::raw('
+                COUNT(*) as total_count,
+                COALESCE(SUM(sub_total), 0) as total_sub_total,
+                COALESCE(SUM(discount), 0) as total_discount,
+                COALESCE(SUM(other_charges), 0) as total_other_charges,
+                COALESCE(SUM(grand_total), 0) as total_grand_total
+            '))->first();
 
-            $overallTotalQty = (float)(clone $query)->join('sales_invoice_items', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')->sum('sales_invoice_items.quantity');
+            $filteredRecords = $totals->total_count ?? 0;
+            $overallSubTotal = (float)($totals->total_sub_total ?? 0);
+            $overallDiscount = (float)($totals->total_discount ?? 0);
+            $overallOtherCharges = (float)($totals->total_other_charges ?? 0);
+            $overallTaxable = $overallSubTotal - $overallDiscount + $overallOtherCharges;
+            $overallGrandTotal = (float)($totals->total_grand_total ?? 0);
+
+            $overallTotalQty = (float) DB::table('sales_invoice_items')->whereIn('sales_invoice_id', (clone $baseQuery)->select('id'))->sum('quantity');
+            $query = (clone $baseQuery)
+                ->with([
+                    'customer:id,name,code',
+                    'salesOrder:id,so_no,order_no'
+                ])
+                ->withSum('items as total_qty', 'quantity')
+                ->withCount('items as total_items')
+                ->orderBy('id', 'desc');
 
             if ($request->has('start') && $request->has('length') && $request->length != '-1') {
                 $query->skip($request->start)->take($request->length);
@@ -278,11 +311,11 @@ class SalesInvoiceController extends Controller
                     'id' => $inv->id,
                     'DT_RowIndex' => $count++,
                     'inv_no' => $inv->inv_no . ($isCancelled ? '<br><span class="badge bg-danger mt-1" style="font-size:10px;"><i class="ri ri-close-circle-line align-middle me-1"></i> Cancelled</span>' : ($inv->irn && $inv->einvoice_status !== 'cancelled' ? '<br><span class="badge bg-label-success text-dark mt-1" style="font-size:10px;"><i class="ri ri-checkbox-circle-line align-middle me-1"></i> E-invoice Generated</span>' : '')),
-                    'inv_date' => $inv->inv_date->format('d-m-Y'),
+                    'inv_date' => $inv->inv_date ? $inv->inv_date->format('d-m-Y') : '',
                     'customer_name' => ($inv->customer ? $inv->customer->name : 'N/A') . ($inv->customer ? ' <span  class="mini-title">(' . $inv->customer->code . ')</span>' : ''),
                     'so_no' => ($inv->salesOrder ? $inv->salesOrder->so_no : 'N/A') . ($inv->salesOrder && $inv->salesOrder->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $inv->salesOrder->order_no . '</span>' : ''),
-                    'total_items' => $inv->items->count(),
-                    'total_qty' => $inv->items->sum('quantity'),
+                    'total_items' => $inv->total_items ?? 0,
+                    'total_qty' => $inv->total_qty ?? 0,
                     'sub_total' => '₹' . number_format($inv->sub_total, 2),
                     'raw_sub_total' => $inv->sub_total,
                     'discount' => '₹' . number_format($inv->discount ?? 0, 2),
@@ -311,7 +344,7 @@ class SalesInvoiceController extends Controller
             ]);
         }
 
-        $customers = Customer::all();
+        $customers = Customer::select('id', 'name', 'code')->orderBy('name')->get();
         return view('sales_invoice.view', compact('customers'));
     }
 

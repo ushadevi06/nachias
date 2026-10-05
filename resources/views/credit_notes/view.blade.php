@@ -261,6 +261,15 @@
                 }
             });
         });
+        $(document).on('click', '.einvoice-expired-btn', function() {
+            Swal.fire({
+                title: 'Cancellation Expired',
+                text: 'According to GST guidelines, an E-Invoice cannot be cancelled after 24 hours of generation. Please adjust it in your GSTR-1 return.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+            });
+        });
     });
 </script>
 @endsection

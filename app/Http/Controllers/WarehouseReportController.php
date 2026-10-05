@@ -3414,8 +3414,13 @@ class WarehouseReportController extends Controller
 
         $brandId = $request->brand_id;
         $brandName = $request->brand_name;
-        if (!$brandName && $brandId) {
-            $brandName = DB::table('brands')->where('id', $brandId)->value('brand_name') ?? '';
+        $brandCode = null;
+        if ($brandId) {
+            $brandObj = DB::table('brands')->where('id', $brandId)->first();
+            if ($brandObj) {
+                if (!$brandName) $brandName = $brandObj->brand_name;
+                $brandCode = $brandObj->code;
+            }
         }
         $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-d');
         $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : date('Y-m-d');
@@ -3432,20 +3437,6 @@ class WarehouseReportController extends Controller
 
         $stockItemsQuery = DB::table('stock_entry_items')
             ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
-            ->leftJoin('brands', function($join) {
-                $join->on(function($query) {
-                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
-                        ->orOn(function($sub) {
-                            $sub->whereNull('stock_entry_items.brand_id')
-                                ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                                ->whereRaw("NOT EXISTS (
-                                    SELECT 1 FROM brands b2 
-                                    WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
-                                    AND LENGTH(b2.code) > LENGTH(brands.code)
-                                )");
-                        });
-                });
-            })
             ->leftJoin('styles', 'stock_entry_items.style_id', '=', 'styles.id')
             ->select(
                 'stock_entry_items.art_no',
@@ -3459,7 +3450,15 @@ class WarehouseReportController extends Controller
             ->whereNull('stock_entry_items.deleted_at');
 
         if ($brandId) {
-            $stockItemsQuery->where('brands.id', $brandId);
+            $stockItemsQuery->where(function($q) use ($brandId, $brandCode) {
+                $q->where('stock_entry_items.brand_id', $brandId);
+                if ($brandCode) {
+                    $q->orWhere(function($sub) use ($brandCode) {
+                        $sub->whereNull('stock_entry_items.brand_id')
+                            ->where('stock_entry_items.art_no', 'like', $brandCode . '%');
+                    });
+                }
+            });
         }
         if ($storeId) {
             $stockItemsQuery->where('stock_entry_items.store_location_id', $storeId);
@@ -3486,20 +3485,6 @@ class WarehouseReportController extends Controller
 
         $inwardQuery = DB::table('stock_entry_items')
             ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
-            ->leftJoin('brands', function($join) {
-                $join->on(function($query) {
-                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
-                        ->orOn(function($sub) {
-                            $sub->whereNull('stock_entry_items.brand_id')
-                                ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                                ->whereRaw("NOT EXISTS (
-                                    SELECT 1 FROM brands b2 
-                                    WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
-                                    AND LENGTH(b2.code) > LENGTH(brands.code)
-                                )");
-                        });
-                });
-            })
             ->select(
                 'stock_entry_items.art_no',
                 'stock_entry_items.sleeve_type',
@@ -3512,7 +3497,15 @@ class WarehouseReportController extends Controller
             ->whereBetween(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), [$fromDate, $toDate]);
 
         if ($brandId) {
-            $inwardQuery->where('brands.id', $brandId);
+            $inwardQuery->where(function($q) use ($brandId, $brandCode) {
+                $q->where('stock_entry_items.brand_id', $brandId);
+                if ($brandCode) {
+                    $q->orWhere(function($sub) use ($brandCode) {
+                        $sub->whereNull('stock_entry_items.brand_id')
+                            ->where('stock_entry_items.art_no', 'like', $brandCode . '%');
+                    });
+                }
+            });
         }
         if ($storeId) {
             $inwardQuery->where('stock_entry_items.store_location_id', $storeId);
@@ -3529,20 +3522,6 @@ class WarehouseReportController extends Controller
 
         $inwardTillNowQuery = DB::table('stock_entry_items')
             ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
-            ->leftJoin('brands', function($join) {
-                $join->on(function($query) {
-                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
-                        ->orOn(function($sub) {
-                            $sub->whereNull('stock_entry_items.brand_id')
-                                ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                                ->whereRaw("NOT EXISTS (
-                                    SELECT 1 FROM brands b2 
-                                    WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
-                                    AND LENGTH(b2.code) > LENGTH(brands.code)
-                                )");
-                        });
-                });
-            })
             ->select(
                 'stock_entry_items.art_no',
                 'stock_entry_items.sleeve_type',
@@ -3555,7 +3534,15 @@ class WarehouseReportController extends Controller
             ->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '>=', $fromDate);
 
         if ($brandId) {
-            $inwardTillNowQuery->where('brands.id', $brandId);
+            $inwardTillNowQuery->where(function($q) use ($brandId, $brandCode) {
+                $q->where('stock_entry_items.brand_id', $brandId);
+                if ($brandCode) {
+                    $q->orWhere(function($sub) use ($brandCode) {
+                        $sub->whereNull('stock_entry_items.brand_id')
+                            ->where('stock_entry_items.art_no', 'like', $brandCode . '%');
+                    });
+                }
+            });
         }
         if ($storeId) {
             $inwardTillNowQuery->where('stock_entry_items.store_location_id', $storeId);
@@ -3573,20 +3560,6 @@ class WarehouseReportController extends Controller
         $salesQuery = DB::table('sales_invoice_items')
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
             ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
-            ->leftJoin('brands', function($join) {
-                $join->on(function($query) {
-                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
-                        ->orOn(function($sub) {
-                            $sub->whereNull('stock_entry_items.brand_id')
-                                ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                                ->whereRaw("NOT EXISTS (
-                                    SELECT 1 FROM brands b2 
-                                    WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
-                                    AND LENGTH(b2.code) > LENGTH(brands.code)
-                                )");
-                        });
-                });
-            })
             ->select(
                 'sales_invoice_items.art_no',
                 DB::raw('COALESCE(stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "") as sleeve_type'),
@@ -3598,7 +3571,15 @@ class WarehouseReportController extends Controller
             ->whereBetween('sales_invoices.inv_date', [$fromDate, $toDate]);
 
         if ($brandId) {
-            $salesQuery->where('brands.id', $brandId);
+            $salesQuery->where(function($q) use ($brandId, $brandCode) {
+                $q->where('stock_entry_items.brand_id', $brandId);
+                if ($brandCode) {
+                    $q->orWhere(function($sub) use ($brandCode) {
+                        $sub->whereNull('stock_entry_items.brand_id')
+                            ->where('sales_invoice_items.art_no', 'like', $brandCode . '%');
+                    });
+                }
+            });
         }
         if ($storeId) {
             $salesQuery->where('sales_invoices.store_id', $storeId);
@@ -3618,20 +3599,6 @@ class WarehouseReportController extends Controller
         $salesTillNowQuery = DB::table('sales_invoice_items')
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
             ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
-            ->leftJoin('brands', function($join) {
-                $join->on(function($query) {
-                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
-                        ->orOn(function($sub) {
-                            $sub->whereNull('stock_entry_items.brand_id')
-                                ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                                ->whereRaw("NOT EXISTS (
-                                    SELECT 1 FROM brands b2 
-                                    WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
-                                    AND LENGTH(b2.code) > LENGTH(brands.code)
-                                )");
-                        });
-                });
-            })
             ->select(
                 'sales_invoice_items.art_no',
                 DB::raw('COALESCE(stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "") as sleeve_type'),
@@ -3643,7 +3610,15 @@ class WarehouseReportController extends Controller
             ->where('sales_invoices.inv_date', '>=', $fromDate);
 
         if ($brandId) {
-            $salesTillNowQuery->where('brands.id', $brandId);
+            $salesTillNowQuery->where(function($q) use ($brandId, $brandCode) {
+                $q->where('stock_entry_items.brand_id', $brandId);
+                if ($brandCode) {
+                    $q->orWhere(function($sub) use ($brandCode) {
+                        $sub->whereNull('stock_entry_items.brand_id')
+                            ->where('sales_invoice_items.art_no', 'like', $brandCode . '%');
+                    });
+                }
+            });
         }
         if ($storeId) {
             $salesTillNowQuery->where('sales_invoices.store_id', $storeId);
@@ -3660,6 +3635,88 @@ class WarehouseReportController extends Controller
             return $makeKey($item->art_no, $item->sleeve_type, $item->size);
         });
 
+        // Credit Notes / Sales Return in Date Range
+        $returnsQuery = DB::table('credit_note_items')
+            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
+            ->leftJoin('sales_invoice_items', 'credit_note_items.sales_invoice_item_id', '=', 'sales_invoice_items.id')
+            ->leftJoin('stock_entry_items', function($join) {
+                $join->on('credit_note_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                     ->orOn('sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id');
+            })
+            ->select(
+                DB::raw('COALESCE(credit_note_items.art_no, sales_invoice_items.art_no) as art_no'),
+                DB::raw('COALESCE(credit_note_items.sleeve_type, stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "") as sleeve_type'),
+                DB::raw('COALESCE(credit_note_items.size, sales_invoice_items.size) as size'),
+                DB::raw('SUM(credit_note_items.quantity) as return_qty')
+            )
+            ->whereNull('credit_notes.deleted_at')
+            ->whereNull('credit_note_items.deleted_at')
+            ->whereBetween('credit_notes.note_date', [$fromDate, $toDate]);
+
+        if ($brandId) {
+            $returnsQuery->where(function($q) use ($brandId, $brandCode) {
+                $q->where('stock_entry_items.brand_id', $brandId);
+                if ($brandCode) {
+                    $q->orWhere(function($sub) use ($brandCode) {
+                        $sub->whereNull('stock_entry_items.brand_id')
+                            ->where(DB::raw('COALESCE(credit_note_items.art_no, sales_invoice_items.art_no)'), 'like', $brandCode . '%');
+                    });
+                }
+            });
+        }
+        if ($warehouseId) {
+            $returnsQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
+
+        $returnsMap = $returnsQuery->groupBy(
+            DB::raw('COALESCE(credit_note_items.art_no, sales_invoice_items.art_no)'),
+            DB::raw('COALESCE(credit_note_items.sleeve_type, stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "")'),
+            DB::raw('COALESCE(credit_note_items.size, sales_invoice_items.size)')
+        )->get()->keyBy(function($item) use ($makeKey) {
+            return $makeKey($item->art_no, $item->sleeve_type, $item->size);
+        });
+
+        // Credit Notes / Sales Return from fromDate till today
+        $returnsTillNowQuery = DB::table('credit_note_items')
+            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
+            ->leftJoin('sales_invoice_items', 'credit_note_items.sales_invoice_item_id', '=', 'sales_invoice_items.id')
+            ->leftJoin('stock_entry_items', function($join) {
+                $join->on('credit_note_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                     ->orOn('sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id');
+            })
+            ->select(
+                DB::raw('COALESCE(credit_note_items.art_no, sales_invoice_items.art_no) as art_no'),
+                DB::raw('COALESCE(credit_note_items.sleeve_type, stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "") as sleeve_type'),
+                DB::raw('COALESCE(credit_note_items.size, sales_invoice_items.size) as size'),
+                DB::raw('SUM(credit_note_items.quantity) as return_qty')
+            )
+            ->whereNull('credit_notes.deleted_at')
+            ->whereNull('credit_note_items.deleted_at')
+            ->where('credit_notes.note_date', '>=', $fromDate);
+
+        if ($brandId) {
+            $returnsTillNowQuery->where(function($q) use ($brandId, $brandCode) {
+                $q->where('stock_entry_items.brand_id', $brandId);
+                if ($brandCode) {
+                    $q->orWhere(function($sub) use ($brandCode) {
+                        $sub->whereNull('stock_entry_items.brand_id')
+                            ->where(DB::raw('COALESCE(credit_note_items.art_no, sales_invoice_items.art_no)'), 'like', $brandCode . '%');
+                    });
+                }
+            });
+        }
+        if ($warehouseId) {
+            $returnsTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
+
+        $returnsTillNowMap = $returnsTillNowQuery->groupBy(
+            DB::raw('COALESCE(credit_note_items.art_no, sales_invoice_items.art_no)'),
+            DB::raw('COALESCE(credit_note_items.sleeve_type, stock_entry_items.sleeve_type, sales_invoice_items.sleeve_type, "")'),
+            DB::raw('COALESCE(credit_note_items.size, sales_invoice_items.size)')
+        )->get()->keyBy(function($item) use ($makeKey) {
+            return $makeKey($item->art_no, $item->sleeve_type, $item->size);
+        });
+
         $allItems = [];
         foreach ($stockItems as $item) {
             $key = $makeKey($item->art_no, $item->sleeve_type, $item->size);
@@ -3668,15 +3725,16 @@ class WarehouseReportController extends Controller
             $currStock = floatval($item->current_stock ?? 0);
             $inwardTillNow = floatval($inwardTillNowMap[$key]->inward_qty ?? ($inwardTillNowMap[$simpleKey]->inward_qty ?? 0));
             $salesTillNow = floatval($salesTillNowMap[$key]->sales_qty ?? ($salesTillNowMap[$simpleKey]->sales_qty ?? 0));
+            $returnsTillNow = floatval($returnsTillNowMap[$key]->return_qty ?? ($returnsTillNowMap[$simpleKey]->return_qty ?? 0));
 
-            $opStock = max(0, $currStock - $inwardTillNow + $salesTillNow);
+            $opStock = max(0, $currStock - $inwardTillNow + $salesTillNow - $returnsTillNow);
             $inward = floatval($inwardMap[$key]->inward_qty ?? ($inwardMap[$simpleKey]->inward_qty ?? 0));
             $sales = floatval($salesMap[$key]->sales_qty ?? ($salesMap[$simpleKey]->sales_qty ?? 0));
             $closing = $opStock + $inward - $sales;
-            $salesReturn = 0;
+            $salesReturn = floatval($returnsMap[$key]->return_qty ?? ($returnsMap[$simpleKey]->return_qty ?? 0));
             $netClosing = $closing + $salesReturn;
 
-            if ($opStock == 0 && $inward == 0 && $sales == 0 && $closing == 0 && $netClosing == 0) {
+            if ($opStock == 0 && $inward == 0 && $sales == 0 && $closing == 0 && $salesReturn == 0 && $netClosing == 0) {
                 continue;
             }
 

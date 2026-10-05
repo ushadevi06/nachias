@@ -622,7 +622,14 @@ class ItemPriceController extends Controller
             Excel::import(new ItemPricesImport, $request->file('import_file'));
             return redirect('item_prices')->with('success', 'Item prices imported successfully.');
         } catch (ValidationException $e) {
-            return redirect('item_prices')->withErrors($e->errors());
+            $errorList = [];
+            foreach ($e->errors() as $messages) {
+                foreach ((array)$messages as $msg) {
+                    $errorList[] = $msg;
+                }
+            }
+            $formattedError = '<div class="fw-bold mb-1"><i class="ri-error-warning-line me-1"></i> Import Failed — Please fix the following errors in your Excel file:</div><ul class="mb-0 ps-3" style="font-size: 13.5px; line-height: 1.6;">' . implode('', array_map(fn($m) => '<li>' . e($m) . '</li>', $errorList)) . '</ul>';
+            return redirect('item_prices')->withErrors($e->errors())->with('error', $formattedError);
         } catch (\Exception $e) {
             Log::error('Item price import failed', ['exception' => $e]);
 

@@ -148,6 +148,7 @@
             lengthChange: true,
             serverSide: true,
             processing: true,
+            searchDelay: 500,
             ajax: {
                 url: "{{ url('sales_invoices') }}",
                 data: function(d) {

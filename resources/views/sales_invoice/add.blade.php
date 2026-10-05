@@ -1883,6 +1883,13 @@
                 var itemMrp = parseFloat(matchedItem.mrp || 0);
                 var itemRate = parseFloat(matchedItem.rate || 0);
 
+                if (itemMrp > 0) {
+                    var calculatedRate = Math.round((itemMrp / 1.5) * 100) / 100;
+                    if (itemRate <= 0 || Math.abs(itemRate - calculatedRate) > 0.01) {
+                        itemRate = calculatedRate;
+                    }
+                }
+
                 if (isMissingPrice) {
                     Swal.fire({
                         icon: 'error',
@@ -3144,10 +3151,18 @@
                 return;
             }
 
-            let mrp = parseFloat(res.mrp || 0).toFixed(2);
-            let price = parseFloat(res.price || 0).toFixed(2);
+            let mrpVal = parseFloat(res.mrp || 0);
+            let priceVal = parseFloat(res.price || 0);
+            if (mrpVal > 0) {
+                let calculatedPrice = Math.round((mrpVal / 1.5) * 100) / 100;
+                if (priceVal <= 0 || Math.abs(priceVal - calculatedPrice) > 0.01) {
+                    priceVal = calculatedPrice;
+                }
+            }
+            let mrp = mrpVal.toFixed(2);
+            let price = priceVal.toFixed(2);
             let qty = 1;
-            let amount = (qty * price).toFixed(2);
+            let amount = (qty * priceVal).toFixed(2);
 
             let size = res.size === null ? "" : res.size;
             let sizeStock = res.size_stock || {};

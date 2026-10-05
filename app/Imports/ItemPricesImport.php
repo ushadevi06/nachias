@@ -67,38 +67,54 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
                 $mrp = $row[$mrpKey] ?? null;
                 $sp = $row[$spKey] ?? null;
 
-                if ($mrp !== null && $mrp !== '' || $sp !== null && $sp !== '') {
+                $hasMrp = ($mrp !== null && trim((string)$mrp) !== '');
+                $hasSp = ($sp !== null && trim((string)$sp) !== '');
+
+                if ($hasMrp || $hasSp) {
                     $hasAnySize = true;
 
-                    if ($mrp !== null && $mrp !== '' && (!is_numeric($mrp) || $mrp < 0)) {
+                    $mrpNumeric = true;
+                    $spNumeric = true;
+
+                    if ($hasMrp && (!is_numeric($mrp) || $mrp < 0)) {
                         $rowErrors[] = "Row {$rowNumber}: MRP {$size} must be a number greater than or equal to 0.";
+                        $mrpNumeric = false;
                     }
 
-                    if ($sp !== null && $sp !== '' && (!is_numeric($sp) || $sp < 0)) {
+                    if ($hasSp && (!is_numeric($sp) || $sp < 0)) {
                         $rowErrors[] = "Row {$rowNumber}: Selling Price {$size} must be a number greater than or equal to 0.";
+                        $spNumeric = false;
                     }
 
-                    if (empty($rowErrors)) {
-                        if ($mrp === null || $mrp === '') {
+                    if ($mrpNumeric && $spNumeric) {
+                        if ($hasMrp && $hasSp) {
+                            $mrpFloat = round((float)$mrp, 2);
                             $spFloat = round((float)$sp, 2);
-                            $mrpFloat = round($spFloat * 1.5, 2);
-                        } else if ($sp === null || $sp === '') {
+                            $expectedSp = round($mrpFloat / 1.5, 2);
+
+                            // If entered price varies from MRP / 1.5
+                            if (abs($spFloat - $expectedSp) > 0.05) {
+                                $rowErrors[] = "Row {$rowNumber}: Item '{$itemCode}', Size {$size} — Selling Price ₹{$spFloat} is wrong! Expected Price is ₹{$expectedSp} (Formula: MRP ₹{$mrpFloat} / 1.5).";
+                            }
+                        } else if ($hasMrp) {
                             $mrpFloat = round((float)$mrp, 2);
                             $spFloat = round($mrpFloat / 1.5, 2);
                         } else {
-                            $mrpFloat = round((float)$mrp, 2);
                             $spFloat = round((float)$sp, 2);
+                            $mrpFloat = round($spFloat * 1.5, 2);
                         }
 
-                        $validRows[] = [
-                            'finished_item_code' => $itemCode,
-                            'art_no' => $artNo,
-                            'size' => $size,
-                            'selling_price' => $mrpFloat,
-                            'unit_price' => $spFloat,
-                            'effective_from' => $effectiveFrom->format('Y-m-d'),
-                            'status' => $status,
-                        ];
+                        if (empty($rowErrors)) {
+                            $validRows[] = [
+                                'finished_item_code' => $itemCode,
+                                'art_no' => $artNo,
+                                'size' => $size,
+                                'selling_price' => $mrpFloat,
+                                'unit_price' => $spFloat,
+                                'effective_from' => $effectiveFrom->format('Y-m-d'),
+                                'status' => $status,
+                            ];
+                        }
                     }
                 }
             }
