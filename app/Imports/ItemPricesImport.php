@@ -90,18 +90,18 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
                         if ($hasMrp && $hasSp) {
                             $mrpFloat = round((float)$mrp, 2);
                             $spFloat = round((float)$sp, 2);
-                            $expectedSp = round($mrpFloat / 1.5, 2);
+                            $expectedSp = round($mrpFloat / 1.5);
 
-                            // If entered price varies from MRP / 1.5
+                            // If entered price varies from MRP / 1.5 (rounded off)
                             if (abs($spFloat - $expectedSp) > 0.05) {
-                                $rowErrors[] = "Row {$rowNumber}: Item '{$itemCode}', Size {$size} — Selling Price ₹{$spFloat} is wrong! Expected Price is ₹{$expectedSp} (Formula: MRP ₹{$mrpFloat} / 1.5).";
+                                $rowErrors[] = "Row {$rowNumber}: Item '{$itemCode}', Size {$size} — Selling Price ₹{$spFloat} is wrong! Expected Price is ₹{$expectedSp} (Formula: MRP ₹{$mrpFloat} / 1.5 rounded off).";
                             }
                         } else if ($hasMrp) {
                             $mrpFloat = round((float)$mrp, 2);
-                            $spFloat = round($mrpFloat / 1.5, 2);
+                            $spFloat = round($mrpFloat / 1.5);
                         } else {
                             $spFloat = round((float)$sp, 2);
-                            $mrpFloat = round($spFloat * 1.5, 2);
+                            $mrpFloat = round($spFloat * 1.5);
                         }
 
                         if (empty($rowErrors)) {

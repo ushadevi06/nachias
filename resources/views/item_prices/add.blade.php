@@ -173,8 +173,8 @@
         $('#selling_price').on('input', function() {
             let sellingPrice = parseFloat($(this).val());
             if (!isNaN(sellingPrice)) {
-                let unitPrice = sellingPrice / 1.5;
-                $('#unit_price').val(unitPrice.toFixed(2));
+                let unitPrice = Math.round(sellingPrice / 1.5);
+                $('#unit_price').val(unitPrice);
             } else {
                 $('#unit_price').val('');
             }
@@ -228,7 +228,7 @@
                     unitVal = dbPrices[sz].unit_price;
                 } else if (val) {
                     let baseUnit = $('#unit_price').val();
-                    unitVal = baseUnit ? baseUnit : (parseFloat(val) / 1.5).toFixed(2);
+                    unitVal = baseUnit ? baseUnit : Math.round(parseFloat(val) / 1.5);
                 }
 
                 let actionTd = `
@@ -279,7 +279,7 @@
                     let unitInput = $(`#unit_price_${sz}`);
                     if (unitInput.prop('readonly')) {
                         if (basePrice) {
-                            let unitPrice = (parseFloat(basePrice) / 1.5).toFixed(2);
+                            let unitPrice = Math.round(parseFloat(basePrice) / 1.5);
                             unitInput.val(unitPrice);
                         } else {
                             unitInput.val('');
@@ -299,7 +299,7 @@
             if (unitInput.prop('readonly')) {
                 let val = parseFloat($(this).val());
                 if (!isNaN(val)) {
-                    unitInput.val((val / 1.5).toFixed(2));
+                    unitInput.val(Math.round(val / 1.5));
                 } else {
                     unitInput.val('');
                 }

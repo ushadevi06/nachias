@@ -88,6 +88,10 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             throw new \Exception('Product Code is required.');
         }
 
+        if (str_contains($finishedItemCode, '/')) {
+            throw new \Exception("Product Code '{$finishedItemCode}' cannot contain slashes ('/'). Please use 'FS' or 'HS' instead of 'F/S' or 'H/S' (e.g. CF-PRT-FS).");
+        }
+
         // If Art No is CRYSTAL, style should always be WHITE
         if (strtoupper(trim($artNo)) === 'CRYSTAL') {
             $style = $this->resolveStyle('WHITE');
@@ -98,7 +102,12 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             }
             $style = $this->resolveStyle($styleVal);
         }
-        $sku = $this->nullableTrim($this->getRowValue($row, ['sku', 'sku_barcode', 'skubarcode', 'sku_barcode_', 'sku_barco']));
+        $rawSku = $this->getRowValue($row, ['sku', 'sku_barcode', 'skubarcode', 'sku_barcode_', 'sku_barco']);
+        $sku = $this->nullableTrim($rawSku);
+        if ($sku !== null) {
+            $sku = preg_replace('/[\s\x{00A0}\x{200B}\x{FEFF}]+/u', '', $sku);
+            $sku = $sku === '' ? null : $sku;
+        }
 
         // 1. Detect Brand from Art No
         $brandByArt = $this->resolveBrandByArtNo($artNo);
@@ -154,17 +163,22 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
         }
 
         $sleeveType = $this->nullableTrim($this->getRowValue($row, ['sleeve_type', 'sleevetype', 'sleeve_typ']));
-        if ($sleeveType && $finishedItemCode) {
-            $cleanSleeve = strtoupper(preg_replace('/[\s\/\-]/', '', $sleeveType));
-            
-            if ($cleanSleeve === 'HALF') $cleanSleeve = 'HS';
-            if ($cleanSleeve === 'FULL') $cleanSleeve = 'FS';
+        if ($sleeveType !== null) {
+            if ($sleeveType !== 'Full' && $sleeveType !== 'Half') {
+                if (strtoupper($sleeveType) === 'FULL' || strtoupper($sleeveType) === 'HALF' || strtolower($sleeveType) === 'full' || strtolower($sleeveType) === 'half') {
+                    throw new \Exception("Sleeve Type '{$sleeveType}' must be entered as 'Full' or 'Half' (not 'FULL' or 'HALF').");
+                } else {
+                    throw new \Exception("Invalid Sleeve Type '{$sleeveType}'. Sleeve Type must be 'Full' or 'Half'.");
+                }
+            }
+        }
 
-            if (preg_match('/(F\/?S|H\/?S)$/i', $finishedItemCode, $matches)) {
-                $expectedSuffix = strtoupper(str_replace('/', '', $matches[1]));
-                if ($cleanSleeve !== $expectedSuffix) {
-                    $expectedOriginal = ($expectedSuffix === 'FS') ? 'F/S' : (($expectedSuffix === 'HS') ? 'H/S' : $expectedSuffix);
-                    throw new \Exception("Sleeve Type {$sleeveType} does not match Product Code {$finishedItemCode}. Expected Sleeve Type: {$expectedOriginal}.");
+        if ($sleeveType && $finishedItemCode) {
+            $expectedSuffix = ($sleeveType === 'Full') ? 'FS' : 'HS';
+            if (preg_match('/(FS|HS)$/i', $finishedItemCode, $matches)) {
+                $actualSuffix = strtoupper($matches[1]);
+                if ($actualSuffix !== $expectedSuffix) {
+                    throw new \Exception("Sleeve Type '{$sleeveType}' does not match Product Code '{$finishedItemCode}'. Expected Product Code suffix: -{$expectedSuffix}.");
                 }
             }
         }
@@ -536,7 +550,12 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
 
     protected function nullableTrim($value): ?string
     {
-        $value = trim((string) $value);
+        if ($value === null) {
+            return null;
+        }
+
+        $value = preg_replace('/[\x{00A0}\x{200B}\x{200E}\x{200F}\x{FEFF}]/u', ' ', (string) $value);
+        $value = trim($value);
 
         return $value === '' ? null : $value;
     }

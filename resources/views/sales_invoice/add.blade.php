@@ -1256,20 +1256,25 @@
                                         <span class="fw-bold" id="commission_amount_val">{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="commission_amount" id="commission_amount" value="{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}">
                                     </div> --}}
+                                        @php
+                                            $custStateId = isset($invoice) && $invoice->customer ? $invoice->customer->state_id : null;
+                                            $compStateId = $setting->state_id ?? 1;
+                                            $isInvoiceOtherState = ($custStateId && $compStateId) ? ($custStateId != $compStateId) : (isset($invoice) && $invoice->other_state);
+                                        @endphp
                                         <div class="mb-4 pt-2 border-top">
                                             <label class="text-secondary fw-medium mb-2 d-block">Other State?</label>
                                             <div class="d-flex gap-4">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="other_state"
                                                         id="other_state_yes" value="yes"
-                                                        {{ old('other_state', isset($invoice) && $invoice->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }}
+                                                        {{ old('other_state', $isInvoiceOtherState ? 'yes' : 'no') == 'yes' ? 'checked' : '' }}
                                                         onclick="return false;">
                                                     <label class="form-check-label" for="other_state_yes">Yes</label>
                                                 </div>
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio" name="other_state"
                                                         id="other_state_no" value="no"
-                                                        {{ old('other_state', isset($invoice) && $invoice->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }}
+                                                        {{ old('other_state', $isInvoiceOtherState ? 'yes' : 'no') == 'no' ? 'checked' : '' }}
                                                         onclick="return false;">
                                                     <label class="form-check-label" for="other_state_no">No</label>
                                                 </div>
@@ -1605,33 +1610,39 @@
             var preselectedSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []));
 
             if (preselectedCustomer) {
-                if ($('#so_ids option').length === 0) {
-                    $.ajax({
-                        url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
-                        type: "GET",
-                        data: {
-                            customer_id: preselectedCustomer,
-                            invoice_id: "{{ isset($invoice) ? $invoice->id : '' }}"
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                var soSelect = $('#so_ids');
-                                soSelect.empty();
-                                $.each(response.data, function(index, so) {
-                                    var selected = preselectedSoIds.map(String).includes(so.id
-                                        .toString());
-                                    soSelect.append(new Option(
-                                        so.so_no + ' (Pending: ' + so.pending_qty + ')',
-                                        so.id,
-                                        selected,
-                                        selected
-                                    ));
-                                });
-                                soSelect.trigger('change.select2');
-                            }
+                $.ajax({
+                    url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
+                    type: "GET",
+                    data: {
+                        customer_id: preselectedCustomer,
+                        invoice_id: "{{ isset($invoice) ? $invoice->id : '' }}"
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            var soSelect = $('#so_ids');
+                            var currentSelected = soSelect.val() || preselectedSoIds.map(String);
+                            soSelect.empty();
+                            $.each(response.data, function(index, so) {
+                                var selected = currentSelected.includes(so.id.toString());
+                                soSelect.append(new Option(
+                                    so.so_no + ' (Pending: ' + so.pending_qty + ')',
+                                    so.id,
+                                    selected,
+                                    selected
+                                ));
+                            });
+                            @if(isset($invoice))
+                                @foreach($saleOrders as $existingSo)
+                                    if (!soSelect.find('option[value="{{ $existingSo->id }}"]').length) {
+                                        var isSel = currentSelected.includes("{{ $existingSo->id }}");
+                                        soSelect.append(new Option("{{ $existingSo->so_no }}", "{{ $existingSo->id }}", isSel, isSel));
+                                    }
+                                @endforeach
+                            @endif
+                            soSelect.trigger('change.select2');
                         }
-                    });
-                }
+                    }
+                });
 
                 if (preselectedSoIds.length > 0) {
                     $.ajax({
@@ -1649,12 +1660,33 @@
                     });
                 }
             }
-            if ($('input[name="other_state"]:checked').val() == 'yes') {
-                $('#igst_section').show();
-                $('#cgst_sgst_section').hide();
+            let initialCustStateId = $('#customer_id').find(':selected').data('state-id');
+            let initialCompStateId = "{{ $setting->state_id ?? $web_settings->state_id ?? 1 }}";
+
+            if (initialCustStateId && initialCompStateId) {
+                if (initialCustStateId == initialCompStateId) {
+                    $('#other_state_no').prop('checked', true);
+                    $('#igst_section').hide();
+                    $('#cgst_sgst_section').show();
+                    $('#cgst_percent').val("{{ $setting->cgst ?? $web_settings->cgst ?? 2.5 }}");
+                    $('#sgst_percent').val("{{ $setting->sgst ?? $web_settings->sgst ?? 2.5 }}");
+                    $('#igst_percent').val(0);
+                } else {
+                    $('#other_state_yes').prop('checked', true);
+                    $('#igst_section').show();
+                    $('#cgst_sgst_section').hide();
+                    $('#igst_percent').val("{{ $setting->igst ?? $web_settings->igst ?? 5.0 }}");
+                    $('#cgst_percent').val(0);
+                    $('#sgst_percent').val(0);
+                }
             } else {
-                $('#igst_section').hide();
-                $('#cgst_sgst_section').show();
+                if ($('input[name="other_state"]:checked').val() == 'yes') {
+                    $('#igst_section').show();
+                    $('#cgst_sgst_section').hide();
+                } else {
+                    $('#igst_section').hide();
+                    $('#cgst_sgst_section').show();
+                }
             }
 
             if ({{ isset($invoice) || old('items') ? 'true' : 'false' }}) {
@@ -1664,6 +1696,10 @@
 
             $('#customer_id').on('change', function() {
                 var customerId = $(this).val();
+                var soSelect = $('#so_ids');
+                soSelect.empty().val(null).trigger('change.select2');
+                window.availableSOItems = [];
+
                 if (customerId) {
                     $.ajax({
                         url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
@@ -1674,22 +1710,19 @@
                         },
                         success: function(response) {
                             if (response.success) {
-                                var soSelect = $('#so_ids');
-                                var currentValue = soSelect.val() || [];
                                 soSelect.empty();
                                 $.each(response.data, function(index, so) {
-                                    var selected = currentValue.includes(so.id
-                                    .toString());
-                                    soSelect.append(new Option(so.so_no +
-                                        ' (Pending: ' + so.pending_qty + ')', so
-                                        .id, false, selected));
+                                    soSelect.append(new Option(
+                                        so.so_no + ' (Pending: ' + so.pending_qty + ')',
+                                        so.id,
+                                        false,
+                                        false
+                                    ));
                                 });
-                                soSelect.trigger('change.select2');
+                                soSelect.val(null).trigger('change.select2');
                             }
                         }
                     });
-                } else {
-                    $('#so_ids').empty().trigger('change.select2');
                 }
             });
 
@@ -1724,14 +1757,24 @@
                                 } else {
                                     $('#transport_mode').val('').trigger('change');
                                 }
-                                if (data.other_state == 'yes') {
+                                let customerStateId = $('#customer_id').find(':selected').data('state-id');
+                                let companyStateId = "{{ $setting->state_id ?? $web_settings->state_id ?? 1 }}";
+                                let isCustOtherState = (customerStateId && companyStateId) ? (customerStateId != companyStateId) : (data.other_state == 'yes');
+
+                                if (isCustOtherState) {
                                     $('#other_state_yes').prop('checked', true);
                                     $('#igst_section').show();
                                     $('#cgst_sgst_section').hide();
+                                    $('#igst_percent').val("{{ $setting->igst ?? $web_settings->igst ?? 5.0 }}");
+                                    $('#cgst_percent').val(0);
+                                    $('#sgst_percent').val(0);
                                 } else {
                                     $('#other_state_no').prop('checked', true);
                                     $('#igst_section').hide();
                                     $('#cgst_sgst_section').show();
+                                    $('#cgst_percent').val("{{ $setting->cgst ?? $web_settings->cgst ?? 2.5 }}");
+                                    $('#sgst_percent').val("{{ $setting->sgst ?? $web_settings->sgst ?? 2.5 }}");
+                                    $('#igst_percent').val(0);
                                 }
 
                                 if (!$('#discount_percent').val() || $('#discount_percent')
@@ -1884,7 +1927,7 @@
                 var itemRate = parseFloat(matchedItem.rate || 0);
 
                 if (itemRate <= 0 && itemMrp > 0) {
-                    itemRate = Math.round((itemMrp / 1.5) * 100) / 100;
+                    itemRate = Math.round(itemMrp / 1.5);
                 }
 
                 if (isMissingPrice) {
@@ -2280,23 +2323,23 @@
                     $('#sales_discount').val(parseFloat(salesDiscount).toFixed(2));
 
                     let customerStateId = $(this).find(':selected').data('state-id');
-                    let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+                    let companyStateId = "{{ $setting->state_id ?? $web_settings->state_id ?? 1 }}";
 
                     if (customerStateId && companyStateId) {
                         if (customerStateId == companyStateId) {
                             $('#other_state_no').prop('checked', true).trigger('change');
-                            $('#cgst_percent').val("{{ isset($web_settings->cgst) ? $web_settings->cgst : 0 }}");
-                            $('#sgst_percent').val("{{ isset($web_settings->sgst) ? $web_settings->sgst : 0 }}");
+                            $('#cgst_percent').val("{{ $setting->cgst ?? $web_settings->cgst ?? 2.5 }}");
+                            $('#sgst_percent').val("{{ $setting->sgst ?? $web_settings->sgst ?? 2.5 }}");
                             $('#igst_percent').val(0);
                         } else {
                             $('#other_state_yes').prop('checked', true).trigger('change');
-                            $('#igst_percent').val("{{ isset($web_settings->igst) ? $web_settings->igst : 0 }}");
+                            $('#igst_percent').val("{{ $setting->igst ?? $web_settings->igst ?? 5.0 }}");
                             $('#cgst_percent').val(0);
                             $('#sgst_percent').val(0);
                         }
                     }
                     let customerPincode = $(this).find(':selected').data('pincode');
-                    let companyPincode = "{{ $web_settings->zip_code ?? '' }}";
+                    let companyPincode = "{{ $setting->zip_code ?? $web_settings->zip_code ?? '' }}";
 
                     if (!customerPincode) {
                         Swal.fire({
@@ -3151,7 +3194,7 @@
             let mrpVal = parseFloat(res.mrp || 0);
             let priceVal = parseFloat(res.price || 0);
             if (priceVal <= 0 && mrpVal > 0) {
-                priceVal = Math.round((mrpVal / 1.5) * 100) / 100;
+                priceVal = Math.round(mrpVal / 1.5);
             }
             let mrp = mrpVal.toFixed(2);
             let price = priceVal.toFixed(2);

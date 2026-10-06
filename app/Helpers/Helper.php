@@ -245,3 +245,66 @@ if (!function_exists('formatLocationLogData')) {
         return $data;
     }
 }
+
+if (!function_exists('compareSizes')) {
+    function compareSizes($a, $b)
+    {
+        $aClean = strtolower(trim((string)$a));
+        $bClean = strtolower(trim((string)$b));
+
+        if ($aClean === $bClean) {
+            return 0;
+        }
+
+        // If both are numeric (e.g. 38, 40, 42, 44, 46, 48)
+        if (is_numeric($aClean) && is_numeric($bClean)) {
+            return (float)$aClean <=> (float)$bClean;
+        }
+
+        $sizeMap = [
+            '2xs' => 5, 'xxs' => 5,
+            'xs' => 10,
+            's' => 20,
+            'm' => 30,
+            'l' => 40,
+            'xl' => 50,
+            '2xl' => 60, 'xxl' => 60,
+            '3xl' => 70, 'xxxl' => 70,
+            '4xl' => 80, 'xxxxl' => 80,
+            '5xl' => 90,
+            '6xl' => 100,
+            'fs' => 200, 'hs' => 201,
+            'free' => 998, 'bulk' => 999
+        ];
+
+        $rankA = $sizeMap[$aClean] ?? null;
+        $rankB = $sizeMap[$bClean] ?? null;
+
+        if ($rankA !== null && $rankB !== null) {
+            return $rankA <=> $rankB;
+        }
+        if (is_numeric($aClean) && $rankB !== null) {
+            return -1;
+        }
+        if ($rankA !== null && is_numeric($bClean)) {
+            return 1;
+        }
+
+        return strnatcasecmp((string)$a, (string)$b);
+    }
+}
+
+if (!function_exists('sortSizes')) {
+    function sortSizes($sizes)
+    {
+        if (is_array($sizes)) {
+            usort($sizes, 'compareSizes');
+            return $sizes;
+        }
+        if ($sizes instanceof \Illuminate\Support\Collection) {
+            return $sizes->sort('compareSizes')->values();
+        }
+        return $sizes;
+    }
+}
+

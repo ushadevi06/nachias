@@ -660,8 +660,13 @@ class SalesMarketingReportController extends Controller
                         $tickHtml = '<span class="text-success fw-bold fs-4" title="✔"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
                         $crossHtml = '<span class="text-danger fw-bold fs-4" title="✘"><i class="ri ri-close-line"></i><span class="export-symbol" style="display:none;">✘</span></span>';
                         
+                        $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
+                        $invDateStr = $invoice->inv_date ? date('d-m-Y', strtotime((string)$invoice->inv_date)) : '-';
+                        $custStr = htmlspecialchars((string)(optional($invoice->customer)->name ?? '-'));
+                        
                         $isCancelled = ($invoice->invoice_status === 'Cancelled' || strtolower((string)$invoice->einvoice_status) === 'cancelled');
-                        $invNoHtml = '<span class="text-primary fw-bold">' . $invNoStr . '</span>';
+                        $invViewUrl = url('sales_invoices/view/' . $invoice->id);
+                        $invNoHtml = '<a href="' . $invViewUrl . '" target="_blank" class="fw-bold text-primary">' . $invNoStr . '</a>';
                         if ($isCancelled) {
                             $invNoHtml .= '<br><span class="badge bg-danger rounded-pill px-2 py-1 mt-1" style="font-size: 10px;"><i class="ri ri-close-circle-line me-1"></i>Cancelled</span>';
                         }

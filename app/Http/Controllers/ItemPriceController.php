@@ -225,7 +225,7 @@ class ItemPriceController extends Controller
                 }
                 $unitPrice = $request->has("size_prices.{$currentSize}.unit_price") 
                     ? $request->input("size_prices.{$currentSize}.unit_price") 
-                    : ($request->has('unit_price') && empty($currentSize) ? $request->unit_price : round($selPrice / 1.5, 2));
+                    : ($request->has('unit_price') && empty($currentSize) ? $request->unit_price : round($selPrice / 1.5));
                 
                 $data = [
                     'finished_item_code' => $finishedItemCode,
@@ -250,7 +250,7 @@ class ItemPriceController extends Controller
                         $selPrice = $request->input("size_prices.{$sz}.selling_price");
                         $unitPrice = $request->has("size_prices.{$sz}.unit_price") 
                             ? $request->input("size_prices.{$sz}.unit_price") 
-                            : round($selPrice / 1.5, 2);
+                            : round($selPrice / 1.5);
                         $sizeData = [
                             'finished_item_code' => $finishedItemCode,
                             'art_no'             => $artNo,
@@ -292,7 +292,7 @@ class ItemPriceController extends Controller
                             'art_no'             => $artNo,
                             'size'               => null,
                             'selling_price'      => $request->selling_price,
-                            'unit_price'         => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5, 2),
+                            'unit_price'         => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5),
                             'effective_from'     => $effectiveFrom,
                             'status'             => $status,
                             'created_by'         => auth()->id() ?? 1,
@@ -312,7 +312,7 @@ class ItemPriceController extends Controller
                     ->whereNull('size')
                     ->update([
                         'selling_price' => $request->selling_price,
-                        'unit_price'    => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5, 2),
+                        'unit_price'    => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5),
                         'effective_from'=> $effectiveFrom,
                         'status'        => $status,
                         'updated_by'    => auth()->id() ?? 1,
@@ -330,7 +330,7 @@ class ItemPriceController extends Controller
                         $selPrice = $request->input("size_prices.{$sz}.selling_price");
                         $unitPrice = $request->has("size_prices.{$sz}.unit_price") 
                             ? $request->input("size_prices.{$sz}.unit_price") 
-                            : round($selPrice / 1.5, 2);
+                            : round($selPrice / 1.5);
                         $data = [
                             'finished_item_code' => $finishedItemCode,
                             'art_no'             => $artNo,
@@ -362,7 +362,7 @@ class ItemPriceController extends Controller
                         'art_no'             => $artNo,
                         'size'               => null,
                         'selling_price'      => $request->selling_price,
-                        'unit_price'         => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5, 2),
+                        'unit_price'         => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5),
                         'effective_from'     => $effectiveFrom,
                         'status'             => $status,
                         'created_by'         => auth()->id() ?? 1,

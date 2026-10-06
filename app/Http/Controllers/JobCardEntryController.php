@@ -4213,7 +4213,7 @@ class JobCardEntryController extends Controller
         }
 
         $allMatrixQuantities = JobCardMatrixQuantity::whereIn('job_card_fabric_detail_id', $matchingFabricDetails->pluck('id'))->get();
-        $groupedSizes = $allMatrixQuantities->groupBy('size');
+        $groupedSizes = $allMatrixQuantities->groupBy('size')->sortKeysUsing('compareSizes');
 
         if ($request->bulk_print == 1 && $allMatrixQuantities->count() > 0) {
             foreach ($groupedSizes as $sz => $mql) {
@@ -4519,7 +4519,7 @@ class JobCardEntryController extends Controller
     {
         $issueItem = JobCardIssueItem::findOrFail($id);
         $jobCard = $issueItem->jobCard;
-        $sizes = JobCardMatrixQuantity::whereIn('job_card_fabric_detail_id', $jobCard->fabricDetails->pluck('id'))->where('total_qty', '>', 0)->pluck('size')->unique()->sort()->values();
+        $sizes = JobCardMatrixQuantity::whereIn('job_card_fabric_detail_id', $jobCard->fabricDetails->pluck('id'))->where('total_qty', '>', 0)->pluck('size')->unique()->sort('compareSizes')->values();
         return response()->json(['sizes' => $sizes]);
     }
 
@@ -4543,7 +4543,7 @@ class JobCardEntryController extends Controller
             }
 
             $allMatrixQuantities = JobCardMatrixQuantity::whereIn('job_card_fabric_detail_id', $matchingFabricDetails->pluck('id'))->get();
-            $groupedSizes = $allMatrixQuantities->groupBy('size');
+            $groupedSizes = $allMatrixQuantities->groupBy('size')->sortKeysUsing('compareSizes');
 
             if ($allMatrixQuantities->count() > 0) {
                 foreach ($groupedSizes as $sz => $mql) {

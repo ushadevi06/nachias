@@ -110,7 +110,7 @@ class ItemPricesExport implements FromCollection, WithHeadings, WithMapping
                 $sp = floatval($row['sizes'][$size]['unit_price']);
 
                 if ($mrp > 0 && $sp <= 0) {
-                    $sp = round($mrp / 1.5, 2);
+                    $sp = round($mrp / 1.5);
                 }
 
                 $mapped[] = $mrp > 0 ? number_format($mrp, 2, '.', '') : '';

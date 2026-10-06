@@ -94,7 +94,7 @@ class SalesInvoiceController extends Controller
         $best = $sorted->first();
         if ($best) {
             if (floatval($best->unit_price) <= 0 && floatval($best->selling_price) > 0) {
-                $best->unit_price = round(floatval($best->selling_price) / 1.5, 2);
+                $best->unit_price = round(floatval($best->selling_price) / 1.5);
             }
         }
 
@@ -567,15 +567,30 @@ class SalesInvoiceController extends Controller
                 if ($request->due_date) {
                     $invoiceData['due_date'] = Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d');
                 }
+                $cust = Customer::find($request->customer_id);
+                $setting = Setting::first();
+                $companyStateId = $setting ? $setting->state_id : 1;
+                $custStateId = $cust ? $cust->state_id : null;
+                $isOtherState = ($custStateId && $companyStateId) ? ($custStateId != $companyStateId) : ($request->other_state == 'yes');
+
                 $invoiceData['show_fields'] = $request->show_fields ?? [];
                 $invoiceData['delivery_show_fields'] = $request->delivery_show_fields ?? [];
-                $invoiceData['other_state'] = $request->other_state == 'yes';
+                $invoiceData['other_state'] = $isOtherState;
+                if (!$isOtherState) {
+                    $invoiceData['igst_percent'] = 0;
+                    $invoiceData['igst'] = 0;
+                } else {
+                    $invoiceData['cgst_percent'] = 0;
+                    $invoiceData['cgst'] = 0;
+                    $invoiceData['sgst_percent'] = 0;
+                    $invoiceData['sgst'] = 0;
+                }
                 $invoiceData['so_ids'] = json_encode($request->so_ids);
                 $invoiceData['so_id'] = $request->so_ids[0] ?? null;
 
                 $invoiceData3['show_fields'] = $request->show_fields ?? [];
                 $invoiceData3['delivery_show_fields'] = $request->delivery_show_fields ?? [];
-                $invoiceData3['other_state'] = $request->other_state == 'yes';
+                $invoiceData3['other_state'] = $isOtherState;
                 $invoiceData3['so_ids'] = json_encode($request->so_ids);
                 $invoiceData3['so_id'] = $request->so_ids[0] ?? null;
 
@@ -850,12 +865,21 @@ class SalesInvoiceController extends Controller
 
         if ($invoice) {
             $soIds = $invoice->so_ids ? json_decode($invoice->so_ids, true) : ($invoice->so_id ? [$invoice->so_id] : []);
-            $saleOrders = SalesOrder::whereIn('id', $soIds)->orderBy('id', 'desc')->get();
+            $saleOrders = SalesOrder::whereIn('id', $soIds)
+                ->orWhere(function($q) use ($invoice) {
+                    $q->where('customer_id', $invoice->customer_id)
+                      ->whereIn('status', ['Approved', 'Dispatched']);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
         } else {
             $saleOrders = collect(); 
         }
 
-        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'stores', 'sales_agent', 'brands', 'transportModes'));
+        $setting = Setting::first();
+        $web_settings = $setting;
+
+        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'stores', 'sales_agent', 'brands', 'transportModes', 'setting', 'web_settings'));
     }
 
     public function view($id)
@@ -1218,6 +1242,21 @@ class SalesInvoiceController extends Controller
             //     //     })->sum('charge_amount');
             // }
         }
+        $setting = Setting::first();
+        $companyStateId = $setting ? $setting->state_id : 1;
+        $custStateId = $firstSo->customer ? $firstSo->customer->state_id : null;
+        
+        $isOtherState = false;
+        if ($custStateId && $companyStateId) {
+            $isOtherState = ($custStateId != $companyStateId);
+        } else {
+            $isOtherState = (bool)$firstSo->other_state;
+        }
+
+        $cgstPercent = $isOtherState ? 0 : ($setting->cgst ?? 2.5);
+        $sgstPercent = $isOtherState ? 0 : ($setting->sgst ?? 2.5);
+        $igstPercent = $isOtherState ? ($setting->igst ?? 5.0) : 0;
+
         $weightedDiscountPercent = $totalSubTotal > 0 ? round(($totalDiscountAmount / $totalSubTotal) * 100, 2) : ($firstSo->discount_percent ?? 0);
         return response()->json([
             'success' => true,
@@ -1227,11 +1266,11 @@ class SalesInvoiceController extends Controller
             'commission_percent' => $firstSo->commission_percent,
             'billing_address' => $billingAddress,
             'shipping_address' => $shippingAddress,
-            'other_state' => $firstSo->other_state ? 'yes' : 'no',
+            'other_state' => $isOtherState ? 'yes' : 'no',
             'discount_percent' => $weightedDiscountPercent,
-            'igst_percent' => $firstSo->igst_percent,
-            'cgst_percent' => $firstSo->cgst_percent,
-            'sgst_percent' => $firstSo->sgst_percent,
+            'igst_percent' => $igstPercent,
+            'cgst_percent' => $cgstPercent,
+            'sgst_percent' => $sgstPercent,
             'transporter_name' => $transporterName,
             'transport_gst_no' => $firstSo->transport_gst_no,
             'transport_mode_id' => $transportModeId,

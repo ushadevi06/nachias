@@ -1,0 +1,144 @@
+GOOGLE DRIVE DATABASE BACKUP SETUP GUIDE
+
+This guide provides step by step instructions for configuring Google Drive OAuth 2.0 credentials (Client ID, Client Secret, Refresh Token) and setting up automated 7 day rolling database backups in Laravel.
+
+
+OVERVIEW
+
+Storage Method: Google Drive OAuth 2.0 (Uses free 15 GB Google Account quota)
+Backup Schedule: Daily at 11:00 PM (23:00)
+Retention: 7 Day Rolling Backups (Sunday to Saturday subfolders, previous week auto replaced)
+Upload Engine: Resumable Chunk Streaming (Uses less than 10 MB RAM even for 500 MB databases)
+
+
+Step 1: Create Google Cloud Project and Enable Google Drive API
+
+1. Open https://console.cloud.google.com/ in your browser.
+2. Click the Project dropdown at the top left and click New Project.
+   Project Name: Nachias ERP Backups
+   Click Create.
+3. In the left navigation menu, go to APIs and Services and click Library.
+4. Search for Google Drive API, click on it, and click Enable.
+
+
+Step 2: Configure OAuth Consent Screen and Test Users
+
+1. In the left menu, go to APIs and Services and click OAuth consent screen (or Branding).
+2. Select External user type and click Create (or click Get started).
+3. Fill in the required fields:
+   App name: Nachias Backup
+   User support email: Select your Google email address.
+   Developer contact information: Enter your Google email address.
+   Click Save and Continue.
+4. In the Scopes step, click Save and Continue.
+5. In the Test users step:
+   Click ADD USERS.
+   Enter the exact Google Email address where you want to store the backups.
+   Click Save and Continue.
+6. On the Summary page, click Back to Dashboard.
+
+
+Step 3: Create OAuth Client ID and Client Secret
+
+1. In the left menu, go to APIs and Services and click Credentials.
+2. Click CREATE CREDENTIALS at the top and select OAuth client ID.
+3. Fill in the following details:
+   Application type: Web application
+   Name: Nachias Backup Web Client
+4. Under Authorized redirect URIs, click ADD URI and paste this exact URL:
+   https://developers.google.com/oauthplayground
+5. Click CREATE.
+6. Copy and save your Client ID and Client Secret from the popup.
+
+
+Step 4: Generate OAuth 2.0 Refresh Token
+
+1. Open https://developers.google.com/oauthplayground in your browser.
+2. Click the Settings Gear Icon at the top right corner:
+   Check the box: Use your own OAuth credentials.
+   OAuth Client ID: Paste your Client ID from Step 3.
+   OAuth Client Secret: Paste your Client Secret from Step 3.
+   Close the settings panel.
+3. On the left side under Step 1 (Select and authorize APIs):
+   Scroll down to Drive API v3.
+   Check the scope: https://www.googleapis.com/auth/drive
+4. Click the blue Authorize APIs button.
+5. Log in with the Google Account added as a test user in Step 2:
+   If you see Google has not verified this app, click Continue (or Advanced then Go to Nachias Backup).
+   Check all requested permissions and click Continue / Allow.
+6. You will be redirected back to the Playground under Step 2.
+7. Click the blue button: Exchange authorization code for tokens.
+8. Copy the generated Refresh token value.
+
+
+Step 5: Get Google Drive Folder ID
+
+1. Open https://drive.google.com/ in your browser.
+2. Create a new folder (e.g. Nachias_DB_Backups).
+3. Open the folder and copy the Folder ID from your browser address bar:
+   Example: https://drive.google.com/drive/folders/1F8x02IRINSAmNqi7HDt4PT_mHjcYWisg
+   The folder ID is: 1F8x02IRINSAmNqi7HDt4PT_mHjcYWisg
+
+
+Step 6: Configure Environment Variables (.env)
+
+Add or update the following lines in your .env file (both Local and Live Server):
+
+GOOGLE_DRIVE_BACKUP_ENABLED=true
+GOOGLE_DRIVE_CLIENT_ID="your_google_client_id_here"
+GOOGLE_DRIVE_CLIENT_SECRET="your_google_client_secret_here"
+GOOGLE_DRIVE_REFRESH_TOKEN="your_google_refresh_token_here"
+GOOGLE_DRIVE_FOLDER_ID="your_google_drive_folder_id_here"
+MYSQLDUMP_PATH=mysqldump
+
+
+Step 7: Test the Backup
+
+Option A: Command Line Test (CLI)
+Run the following Artisan commands in your terminal:
+
+php artisan backup:test-drive
+php artisan backup:database
+
+Option B: Browser Endpoint Test (Web)
+Open the trigger URL in your browser:
+https://erp.nachias.com/auto-backup-drive
+
+
+Step 8: Set Up Nightly Cron Job (11:00 PM)
+
+In cPanel Cron Jobs:
+1. Open cPanel and go to Cron Jobs.
+2. Set the schedule:
+   Minute: 0
+   Hour: 23 (11:00 PM)
+   Day: *
+   Month: *
+   Weekday: *
+3. Enter the command:
+   /usr/local/bin/php /home/USERNAME/public_html/nachias/artisan backup:database >> /dev/null 2>&1
+4. Click Add New Cron Job.
+
+
+FILES CHANGED AND DEPLOYED
+
+1. app/Services/GoogleDriveBackupService.php
+   Handles OAuth token generation, day folder creation, auto replacement, and chunked resumable upload.
+
+2. app/Console/Commands/BackupDatabase.php
+   Console command for php artisan backup:database.
+
+3. app/Console/Commands/TestGoogleDriveBackup.php
+   Console test command for php artisan backup:test-drive.
+
+4. app/Http/Controllers/BackupController.php
+   Web endpoint method autoBackupToDrive.
+
+5. app/Console/Kernel.php
+   Daily 11:00 PM (23:00) schedule definition.
+
+6. config/services.php
+   Service definition for google_drive.
+
+7. routes/web.php
+   Route for auto-backup-drive.

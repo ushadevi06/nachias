@@ -53,29 +53,20 @@ class BackupDatabase extends Command
                 'created_by' => null, 
             ]);
 
-            $dbName = env('DB_DATABASE');
-            $dbUser = env('DB_USERNAME');
-            $dbPass = env('DB_PASSWORD');
-            $dbHost = env('DB_HOST');
+            $driveService = new \App\Services\GoogleDriveBackupService();
+            $dumpRes = $driveService->dumpDatabase($path . $filename);
 
-            $dumpPath = env('MYSQLDUMP_PATH', 'C:\xampp\mysql\bin\mysqldump.exe');
-            
-            $command = "\"{$dumpPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
-            
-            exec($command, $output, $returnVar);
-
-            if ($returnVar === 0) {
+            if ($dumpRes['success']) {
                 $size = filesize($path . $filename);
                 $location = 'Local';
 
                 // Check and upload to Google Drive if configured
-                $driveService = new \App\Services\GoogleDriveBackupService();
                 if ($driveService->isConfigured()) {
                     $this->info('Uploading backup to Google Drive...');
-                    $driveRes = $driveService->uploadBackup($path . $filename, $filename);
+                    $driveRes = $driveService->uploadBackup($path . $filename, $filename, true, true);
                     if ($driveRes['success']) {
-                        $location = 'Local & Google Drive';
-                        $this->info('Successfully uploaded to Google Drive! File ID: ' . ($driveRes['file_id'] ?? 'N/A'));
+                        $location = 'Local & Google Drive (' . ($driveRes['day_folder'] ?? date('l')) . ')';
+                        $this->info('Successfully uploaded to Google Drive (' . ($driveRes['day_folder'] ?? date('l')) . ' folder)! File ID: ' . ($driveRes['file_id'] ?? 'N/A'));
                     } else {
                         $this->warn('Google Drive upload warning: ' . ($driveRes['message'] ?? 'Unknown error'));
                     }
@@ -86,16 +77,16 @@ class BackupDatabase extends Command
                     'file_size' => $this->formatSize($size),
                     'location' => $location,
                 ]);
-                $this->info('Backup generated successfully: ' . $filename);
+                $this->info('Backup generated successfully: ' . $filename . ' (via ' . ($dumpRes['method'] ?? 'dump') . ')');
             } else {
-                $errorMessage = implode("\n", $output);
-                Log::error("Automated Backup failed. Return var: $returnVar. Output: " . $errorMessage);
+                $errorMessage = $dumpRes['message'] ?? 'Database export failed';
+                Log::error("Automated Backup failed: " . $errorMessage);
                 
                 $backup->update([
                     'status' => 'Failed',
-                    'error_message' => 'mysqldump failed. Code: ' . $returnVar . '. Error: ' . $errorMessage,
+                    'error_message' => $errorMessage,
                 ]);
-                $this->error('Backup generation failed. Check logs for details.');
+                $this->error('Backup generation failed: ' . $errorMessage);
             }
 
         } catch (\Exception $e) {

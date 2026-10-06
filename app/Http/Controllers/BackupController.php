@@ -261,9 +261,10 @@ class BackupController extends Controller
 
     public function autoBackupToDrive()
     {
+        set_time_limit(300);
         try {
             $day = strtolower(date('l')); // e.g., monday, tuesday
-            $period = (date('H') < 16) ? '11AM' : '11PM'; // Before 4 PM is 11AM backup, after is 11PM backup
+            $period = (date('H') < 16) ? '11AM' : '11PM';
             $filename = "{$day}_{$period}_backup.sql";
             $path = storage_path('app/');
 
@@ -271,37 +272,40 @@ class BackupController extends Controller
                 mkdir($path, 0755, true);
             }
 
-            $dbName = env('DB_DATABASE');
-            $dbUser = env('DB_USERNAME');
-            $dbPass = env('DB_PASSWORD');
-            $dbHost = env('DB_HOST');
+            $driveService = new \App\Services\GoogleDriveBackupService();
+            $dumpRes = $driveService->dumpDatabase($path . $filename);
 
-            $dumpPath = env('MYSQLDUMP_PATH', 'mysqldump');
-            
-            $passwordPart = $dbPass ? "--password=\"{$dbPass}\"" : "";
-            $command = "\"{$dumpPath}\" --user={$dbUser} {$passwordPart} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
+            if (!$dumpRes['success']) {
+                $errMsg = $dumpRes['message'] ?? 'Database export failed';
+                Log::error("Auto backup failed: {$errMsg}");
+                return response()->json(['status' => 'error', 'message' => 'Backup generation failed: ' . $errMsg], 500);
+            }
 
-            exec($command, $output, $returnVar);
-
-            if ($returnVar === 0) {
-                // Upload to Google Drive using the google disk
-                $uploaded = \Illuminate\Support\Facades\Storage::disk('google')->put($filename, file_get_contents($path . $filename));
-
-                if (file_exists($path . $filename)) {
-                    unlink($path . $filename);
-                }
-
-                if ($uploaded) {
-                    Log::info("Auto Google Drive Backup Successful: {$filename}");
-                    return response()->json(['status' => 'success', 'message' => "Backup {$filename} uploaded successfully."]);
-                } else {
-                    Log::error("Failed to upload auto backup to Google Drive: {$filename}");
-                    return response()->json(['status' => 'error', 'message' => 'Failed to upload to Google Drive.'], 500);
-                }
+            $uploaded = false;
+            $driveMsg = '';
+            if ($driveService->isConfigured()) {
+                $driveRes = $driveService->uploadBackup($path . $filename, $filename, true, true);
+                $uploaded = $driveRes['success'] ?? false;
+                $driveMsg = $driveRes['message'] ?? '';
             } else {
-                $errorMessage = implode("\n", $output);
-                Log::error("Auto backup mysqldump failed. Return var: $returnVar. Output: " . $errorMessage);
-                return response()->json(['status' => 'error', 'message' => 'Backup generation failed.'], 500);
+                $driveMsg = 'Google Drive is not configured or disabled in .env';
+            }
+
+            if (file_exists($path . $filename)) {
+                unlink($path . $filename);
+            }
+
+            if ($uploaded) {
+                Log::info("Auto Google Drive Backup Successful: {$filename} (via {$dumpRes['method']})");
+                return response()->json([
+                    'status' => 'success',
+                    'day' => date('l'),
+                    'method' => $dumpRes['method'] ?? 'mysqldump',
+                    'message' => "Backup {$filename} uploaded successfully to Google Drive (" . date('l') . " folder)."
+                ]);
+            } else {
+                Log::error("Failed to upload auto backup to Google Drive: {$filename}. Error: {$driveMsg}");
+                return response()->json(['status' => 'error', 'message' => 'Failed to upload to Google Drive: ' . $driveMsg], 500);
             }
 
         } catch (\Exception $e) {
