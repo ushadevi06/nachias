@@ -1901,7 +1901,28 @@
                         duePicker.set('minDate', refPicker.input.value);
                     }
                 }
-            }, 1000); 
+            }, 1000);
+
+            // Alt + A shortcut to add new item row and focus
+            $(document).on('keydown', function (e) {
+                if (e.altKey && (e.key === 'a' || e.key === 'A')) {
+                    e.preventDefault();
+                    $('.add_item').first().trigger('click');
+                    setTimeout(function () {
+                        let $tableContainer = $('#item-rows');
+                        if ($tableContainer.length) {
+                            $tableContainer.animate({ scrollLeft: 0 }, 150);
+                        }
+                        let $lastRow = $('#item-rows tbody tr:last');
+                        if ($lastRow.length) {
+                            let $catSelect = $lastRow.find('.po_store_category');
+                            if ($catSelect.length) {
+                                $catSelect.select2('open');
+                            }
+                        }
+                    }, 150);
+                }
+            });
         });
     </script>
 @endsection

@@ -928,7 +928,76 @@ class CreditNoteController extends Controller
                                     ]);
                                 }
                             } else {
-                                \App\Models\StockEntryItem::where('id', $salesInvoiceItem->stock_entry_item_id)->decrement('qty_out', $item->quantity);
+                                $remainingToRevert = (float)$item->quantity;
+                                $origStockItem = \App\Models\StockEntryItem::find($salesInvoiceItem->stock_entry_item_id);
+
+                                // 1. Try stock_allocations from sales_invoice_item
+                                $allocations = !empty($salesInvoiceItem->stock_allocations) && is_array($salesInvoiceItem->stock_allocations) ? $salesInvoiceItem->stock_allocations : [];
+                                if (!empty($allocations)) {
+                                    $reversedAlloc = array_reverse($allocations);
+                                    foreach ($reversedAlloc as $al) {
+                                        if ($remainingToRevert <= 0) break;
+                                        $alId = $al['stock_entry_item_id'] ?? null;
+                                        $alQty = (float)($al['qty'] ?? 0);
+                                        if ($alId && $alQty > 0) {
+                                            $stItem = \App\Models\StockEntryItem::find($alId);
+                                            if ($stItem && $stItem->qty_out > 0) {
+                                                $rev = min((float)$stItem->qty_out, min($alQty, $remainingToRevert));
+                                                $stItem->decrement('qty_out', $rev);
+                                                $remainingToRevert -= $rev;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 2. Fallback to matching sibling rows if still remaining (or legacy row)
+                                if ($remainingToRevert > 0 && $origStockItem) {
+                                    $stockQuery = \App\Models\StockEntryItem::where('stock_type', 'finished_goods')
+                                        ->whereNull('deleted_at')
+                                        ->where('warehouse_id', $origStockItem->warehouse_id)
+                                        ->where('store_type_id', $origStockItem->store_type_id)
+                                        ->where('art_no', $origStockItem->art_no)
+                                        ->where('size', $origStockItem->size);
+
+                                    if (!empty($origStockItem->sku)) {
+                                        $stockQuery->where('sku', $origStockItem->sku);
+                                    }
+
+                                    $stockQuery->orderByRaw('CASE WHEN id = ' . (int)$origStockItem->id . ' THEN 0 ELSE 1 END');
+                                    $deductedRows = $stockQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
+
+                                    foreach ($deductedRows as $stItem) {
+                                        if ($remainingToRevert <= 0) break;
+                                        $out = (float)$stItem->qty_out;
+                                        $rev = min($out, $remainingToRevert);
+                                        $stItem->decrement('qty_out', $rev);
+                                        $remainingToRevert -= $rev;
+                                    }
+                                }
+
+                                // 3. If there is still extra quantity that couldn't be deducted from qty_out, create new stock item so qty_out is NEVER negative!
+                                if ($remainingToRevert > 0 && $origStockItem) {
+                                    \App\Models\StockEntryItem::create([
+                                        'stock_entry_id' => $origStockItem->stock_entry_id,
+                                        'stock_type' => 'finished_goods',
+                                        'item_id' => $origStockItem->item_id,
+                                        'art_no' => $origStockItem->art_no,
+                                        'finished_item_code' => $origStockItem->finished_item_code,
+                                        'size' => $origStockItem->size,
+                                        'color_id' => $origStockItem->color_id,
+                                        'style_id' => $origStockItem->style_id,
+                                        'brand_id' => $origStockItem->brand_id,
+                                        'sleeve_type' => $origStockItem->sleeve_type,
+                                        'store_location_id' => $origStockItem->store_location_id,
+                                        'store_type_id' => $origStockItem->store_type_id,
+                                        'warehouse_id' => $origStockItem->warehouse_id,
+                                        'uom_id' => $origStockItem->uom_id,
+                                        'qty_in' => $remainingToRevert,
+                                        'qty_out' => 0,
+                                        'price' => $item->rate ?? $origStockItem->price,
+                                        'sku' => $origStockItem->sku,
+                                    ]);
+                                }
                             }
                         }
                     } elseif ($item->stock_entry_item_id) {

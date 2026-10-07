@@ -99,49 +99,103 @@ class LogController extends Controller
         $excludeFields = ['id', 'created_by', 'updated_by', 'deleted_at'];
         $changedFields = [];
 
-        $formatValue = function ($value) {
+        $processValue = function ($value) {
             if (is_null($value) || $value === '') {
-                return '-';
+                return ['type' => 'empty', 'display' => '-'];
             }
-            if (is_bool($value)) {
-                return $value ? 'Yes' : 'No';
-            }
-            if (is_array($value)) {
-                return json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            }
-            if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
-                try {
-                    return \Carbon\Carbon::parse($value)->format('d-m-Y h:i A');
-                } catch (\Exception $e) {
-                    return $value;
+
+            // Decode nested JSON strings if present
+            if (is_string($value) && (str_starts_with(trim($value), '[') || str_starts_with(trim($value), '{'))) {
+                $decoded = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $value = $decoded;
                 }
             }
-            return (string) $value;
+
+            if (is_bool($value)) {
+                return ['type' => 'boolean', 'display' => $value ? 'Yes' : 'No'];
+            }
+
+            if (is_array($value)) {
+                if (empty($value)) {
+                    return ['type' => 'empty', 'display' => '-'];
+                }
+
+                // Check if sequential list of items/objects (e.g. [[...], [...]] or [{...}, {...}])
+                $isList = array_is_list($value);
+                if ($isList && isset($value[0]) && is_array($value[0])) {
+                    $hiddenCols = ['id', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by'];
+                    // Collect all possible headers
+                    $allHeaders = [];
+                    foreach ($value as $itemRow) {
+                        if (is_array($itemRow)) {
+                            foreach (array_keys($itemRow) as $k) {
+                                if (!in_array($k, $hiddenCols) && !in_array($k, $allHeaders)) {
+                                    $allHeaders[] = $k;
+                                }
+                            }
+                        }
+                    }
+
+                    return [
+                        'type' => 'items_table',
+                        'count' => count($value),
+                        'headers' => array_values($allHeaders),
+                        'rows' => $value,
+                        'raw_json' => json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+                    ];
+                }
+
+                // List of scalar tags/strings (e.g. ["tag1", "tag2"])
+                if ($isList) {
+                    return [
+                        'type' => 'tags',
+                        'tags' => $value,
+                        'display' => implode(', ', $value)
+                    ];
+                }
+
+                // Associative array / key-value dictionary
+                return [
+                    'type' => 'key_value',
+                    'data' => $value,
+                    'raw_json' => json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+                ];
+            }
+
+            // Check if date
+            if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
+                try {
+                    return ['type' => 'date', 'display' => \Carbon\Carbon::parse($value)->format('d-m-Y h:i A')];
+                } catch (\Exception $e) {
+                    return ['type' => 'string', 'display' => (string) $value];
+                }
+            }
+
+            return ['type' => 'string', 'display' => (string) $value];
         };
 
         if ($log->action_type == 'create') {
             foreach (($newValues ?: []) as $key => $value) {
                 if (in_array($key, $excludeFields)) continue;
-                $isArray = is_array($value);
+                $processed = $processValue($value);
                 $changedFields[] = [
                     'field' => ucwords(str_replace('_', ' ', $key)),
                     'raw_field' => $key,
-                    'old' => '-',
-                    'new' => $formatValue($value),
-                    'is_array' => $isArray,
+                    'old' => ['type' => 'empty', 'display' => '-'],
+                    'new' => $processed,
                     'status' => 'added'
                 ];
             }
         } elseif ($log->action_type == 'delete') {
             foreach (($oldValues ?: []) as $key => $value) {
                 if (in_array($key, $excludeFields)) continue;
-                $isArray = is_array($value);
+                $processed = $processValue($value);
                 $changedFields[] = [
                     'field' => ucwords(str_replace('_', ' ', $key)),
                     'raw_field' => $key,
-                    'old' => $formatValue($value),
-                    'new' => '-',
-                    'is_array' => $isArray,
+                    'old' => $processed,
+                    'new' => ['type' => 'empty', 'display' => '-'],
                     'status' => 'removed'
                 ];
             }
@@ -153,13 +207,11 @@ class LogController extends Controller
                 $newVal = $newValues[$key] ?? null;
 
                 if ($oldVal != $newVal) {
-                    $isArray = is_array($oldVal) || is_array($newVal);
                     $changedFields[] = [
                         'field' => ucwords(str_replace('_', ' ', $key)),
                         'raw_field' => $key,
-                        'old' => $formatValue($oldVal),
-                        'new' => $formatValue($newVal),
-                        'is_array' => $isArray,
+                        'old' => $processValue($oldVal),
+                        'new' => $processValue($newVal),
                         'status' => 'modified'
                     ];
                 }

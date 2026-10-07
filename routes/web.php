@@ -98,6 +98,7 @@ Route::get('/', function () {
 });
 
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');
+Route::get('auto-backup-drive', [App\Http\Controllers\BackupController::class, 'autoBackupToDrive']);
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
     Route::get('/dashboard/service-wip', [HomeController::class, 'getServiceWipDetails']);
@@ -708,7 +709,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('backup_restore/restore', [BackupController::class, 'restore']);
     Route::get('backup_restore/download/{id}', [BackupController::class, 'download']);
     Route::get('backup_restore/delete/{id}', [BackupController::class, 'delete']);
-    Route::get('auto-backup-drive', [App\Http\Controllers\BackupController::class, 'autoBackupToDrive']);
 
     /*  Attendance  */
     Route::get('attendances', [AttendanceController::class, 'index']);

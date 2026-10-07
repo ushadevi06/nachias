@@ -2725,6 +2725,8 @@ class SalesInvoiceController extends Controller
         $remaining = (float)$quantityToDeduct;
 
         $firstDeductedId = null;
+        $allocations = !empty($item->stock_allocations) && is_array($item->stock_allocations) ? $item->stock_allocations : [];
+
         foreach ($availableItems as $stItem) {
             if ($remaining <= 0) break;
             
@@ -2733,6 +2735,25 @@ class SalesInvoiceController extends Controller
             if ($balance > 0) {
                 $deduct = min($balance, $remaining);
                 $stItem->increment('qty_out', $deduct);
+                
+                // Track in allocations JSON
+                $foundAlloc = false;
+                foreach ($allocations as &$al) {
+                    if (($al['stock_entry_item_id'] ?? null) == $stItem->id) {
+                        $al['qty'] = (float)($al['qty'] ?? 0) + $deduct;
+                        $foundAlloc = true;
+                        break;
+                    }
+                }
+                unset($al);
+
+                if (!$foundAlloc) {
+                    $allocations[] = [
+                        'stock_entry_item_id' => $stItem->id,
+                        'qty' => $deduct
+                    ];
+                }
+
                 $remaining -= $deduct;
                 if (!$firstDeductedId) {
                     $firstDeductedId = $stItem->id;
@@ -2740,9 +2761,11 @@ class SalesInvoiceController extends Controller
             }
         }
 
+        $updates = ['stock_allocations' => $allocations];
         if ($firstDeductedId && $item->stock_entry_item_id != $firstDeductedId) {
-            $item->update(['stock_entry_item_id' => $firstDeductedId]);
+            $updates['stock_entry_item_id'] = $firstDeductedId;
         }
+        $item->update($updates);
 
         if ($remaining > 0) {
             throw \Illuminate\Validation\ValidationException::withMessages([
@@ -2755,62 +2778,89 @@ class SalesInvoiceController extends Controller
     {
         if ($quantityToRevert <= 0) return;
 
-        $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at')
-            ->where(function ($q) use ($item) {
-                if (!empty($item->sku)) {
-                    $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
-                } else {
-                    $code = $item->item_name ?? $item->art_no;
-                    $q->where('finished_item_code', $code)->orWhere('art_no', $code);
-                }
-            });
-
-        if ($item->stock_entry_item_id) {
-            $finishedItemCode = \App\Models\StockEntryItem::where('id', $item->stock_entry_item_id)->value('finished_item_code');
-            if ($finishedItemCode) {
-                $stockQuery->where('finished_item_code', $finishedItemCode);
-            }
-        }
-
-        if (!empty($item->size)) {
-            $stockQuery->where('size', $item->size);
-        }
-
-        if (!empty($item->art_no)) {
-            $stockQuery->where('art_no', $item->art_no);
-        }
-
-        if (!empty($item->sleeve_type)) {
-            $sleeveUpper = strtoupper(trim($item->sleeve_type));
-            if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
-            } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
-            } else {
-                $sleeveDbValues = [$item->sleeve_type];
-            }
-            $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
-        }
-
-        $stockQuery->orderByRaw('CASE WHEN id = ' . (int)($item->stock_entry_item_id ?: 0) . ' THEN 0 ELSE 1 END');
-        $deductedItems = $stockQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
         $remaining = (float)$quantityToRevert;
+        $allocations = !empty($item->stock_allocations) && is_array($item->stock_allocations) ? $item->stock_allocations : [];
 
-        foreach ($deductedItems as $stItem) {
-            if ($remaining <= 0) break;
-            
-            $out = (float)$stItem->qty_out;
-            $revert = min($out, $remaining);
-            $stItem->decrement('qty_out', $revert);
-            $remaining -= $revert;
+        // 1. If stock_allocations exists, revert from allocated rows in reverse
+        if (!empty($allocations)) {
+            $allocations = array_reverse($allocations);
+            foreach ($allocations as $idx => &$alloc) {
+                if ($remaining <= 0) break;
+                $allocId = $alloc['stock_entry_item_id'] ?? null;
+                $allocQty = (float)($alloc['qty'] ?? 0);
+                if ($allocId && $allocQty > 0) {
+                    $stItem = StockEntryItem::find($allocId);
+                    if ($stItem && $stItem->qty_out > 0) {
+                        $revert = min((float)$stItem->qty_out, min($allocQty, $remaining));
+                        $stItem->decrement('qty_out', $revert);
+                        $alloc['qty'] = max(0, $allocQty - $revert);
+                        $remaining -= $revert;
+                    }
+                }
+            }
+            unset($alloc);
+            $allocations = array_values(array_filter(array_reverse($allocations), fn($a) => ($a['qty'] ?? 0) > 0));
+            $item->update(['stock_allocations' => $allocations]);
         }
 
-        if ($remaining > 0 && $item->stock_entry_item_id) {
-            $fallbackItem = StockEntryItem::find($item->stock_entry_item_id);
-            if ($fallbackItem && $fallbackItem->qty_out > 0) {
-                $dec = min((float)$fallbackItem->qty_out, $remaining);
-                $fallbackItem->decrement('qty_out', $dec);
+        // 2. Fallback to smart FIFO matching if still remaining (or legacy records)
+        if ($remaining > 0) {
+            $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
+                ->whereNull('deleted_at')
+                ->where(function ($q) use ($item) {
+                    if (!empty($item->sku)) {
+                        $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
+                    } else {
+                        $code = $item->item_name ?? $item->art_no;
+                        $q->where('finished_item_code', $code)->orWhere('art_no', $code);
+                    }
+                });
+
+            if ($item->stock_entry_item_id) {
+                $finishedItemCode = \App\Models\StockEntryItem::where('id', $item->stock_entry_item_id)->value('finished_item_code');
+                if ($finishedItemCode) {
+                    $stockQuery->where('finished_item_code', $finishedItemCode);
+                }
+            }
+
+            if (!empty($item->size)) {
+                $stockQuery->where('size', $item->size);
+            }
+
+            if (!empty($item->art_no)) {
+                $stockQuery->where('art_no', $item->art_no);
+            }
+
+            if (!empty($item->sleeve_type)) {
+                $sleeveUpper = strtoupper(trim($item->sleeve_type));
+                if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
+                    $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
+                } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
+                    $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
+                } else {
+                    $sleeveDbValues = [$item->sleeve_type];
+                }
+                $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
+            }
+
+            $stockQuery->orderByRaw('CASE WHEN id = ' . (int)($item->stock_entry_item_id ?: 0) . ' THEN 0 ELSE 1 END');
+            $deductedItems = $stockQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
+
+            foreach ($deductedItems as $stItem) {
+                if ($remaining <= 0) break;
+                
+                $out = (float)$stItem->qty_out;
+                $revert = min($out, $remaining);
+                $stItem->decrement('qty_out', $revert);
+                $remaining -= $revert;
+            }
+
+            if ($remaining > 0 && $item->stock_entry_item_id) {
+                $fallbackItem = StockEntryItem::find($item->stock_entry_item_id);
+                if ($fallbackItem && $fallbackItem->qty_out > 0) {
+                    $dec = min((float)$fallbackItem->qty_out, $remaining);
+                    $fallbackItem->decrement('qty_out', $dec);
+                }
             }
         }
     }

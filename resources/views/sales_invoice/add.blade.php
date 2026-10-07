@@ -2462,7 +2462,7 @@
 
                 if (otherState == 'yes') {
                     var igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                    igst = (total * igstPercent) / 100;
+                    igst = parseFloat((total * (igstPercent / 100)).toFixed(2));
                     taxAmount = igst;
                     $('#igst_val').text(igst.toFixed(2));
                     $('#igst').val(igst.toFixed(2));
@@ -2471,9 +2471,9 @@
                 } else {
                     var cgstP = parseFloat($('#cgst_percent').val()) || 0;
                     var sgstP = parseFloat($('#sgst_percent').val()) || 0;
-                    cgst = (total * cgstP) / 100;
-                    sgst = (total * sgstP) / 100;
-                    taxAmount = cgst + sgst;
+                    cgst = parseFloat((total * (cgstP / 100)).toFixed(2));
+                    sgst = parseFloat((total * (sgstP / 100)).toFixed(2));
+                    taxAmount = parseFloat((cgst + sgst).toFixed(2));
                     $('#cgst_val').text(cgst.toFixed(2));
                     $('#cgst').val(cgst.toFixed(2));
                     $('#sgst_val').text(sgst.toFixed(2));

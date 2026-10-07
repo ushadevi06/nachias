@@ -25,8 +25,13 @@ class SalesInvoiceItem extends Model
         'size',
         'sleeve_type',
         'stock_entry_item_id',
+        'stock_allocations',
         'scanned_qty',
         'is_extra',
+    ];
+
+    protected $casts = [
+        'stock_allocations' => 'array',
     ];
 
     public function salesInvoice()

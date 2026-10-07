@@ -1656,8 +1656,7 @@ $(document).ready(function () {
             $('.cgst-field, .sgst-field').addClass('d-none');
             taxPercent = parseFloat($('#igst_percent').val()) || 0;
             
-            let igstAmt = (effectiveTaxable * taxPercent) / 100;
-            let igstAmtRounded = parseFloat(igstAmt.toFixed(2));
+            let igstAmtRounded = parseFloat((effectiveTaxable * (taxPercent / 100)).toFixed(2));
             
             $('#igst_amount_display').text(igstAmtRounded.toFixed(2));
             $('#cgst_amount_display').text('0.00');
@@ -1671,17 +1670,14 @@ $(document).ready(function () {
             let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
             taxPercent = cgstPercent + sgstPercent;
             
-            let cgstAmt = (effectiveTaxable * cgstPercent) / 100;
-            let sgstAmt = (effectiveTaxable * sgstPercent) / 100;
-            
-            let cgstAmtRounded = parseFloat(cgstAmt.toFixed(2));
-            let sgstAmtRounded = parseFloat(sgstAmt.toFixed(2));
+            let cgstAmtRounded = parseFloat((effectiveTaxable * (cgstPercent / 100)).toFixed(2));
+            let sgstAmtRounded = parseFloat((effectiveTaxable * (sgstPercent / 100)).toFixed(2));
             
             $('#cgst_amount_display').text(cgstAmtRounded.toFixed(2));
             $('#sgst_amount_display').text(sgstAmtRounded.toFixed(2));
             $('#igst_amount_display').text('0.00');
             
-            taxAmount = cgstAmtRounded + sgstAmtRounded;
+            taxAmount = parseFloat((cgstAmtRounded + sgstAmtRounded).toFixed(2));
         }
 
         $('#tax_amount').val(taxAmount.toFixed(2));
