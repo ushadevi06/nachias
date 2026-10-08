@@ -72,10 +72,17 @@
                                                 id="activeChatHeaderTitle" style="max-width: 320px;">
                                                 ERP Flow Navigator AI
                                             </h6>
-                                            <span class="badge bg-label-success fs-tiny fw-normal px-2 py-0">
-                                                <i class="ri ri-circle-fill me-1" style="font-size: 7px;"></i>
-                                                {{ $isAvailable ? 'Online' : 'Offline' }}
-                                            </span>
+                                            @if ($isAvailable)
+                                                <span class="badge bg-label-success fs-tiny fw-normal px-2 py-0">
+                                                    <i class="ri ri-circle-fill me-1" style="font-size: 7px;"></i>
+                                                    Online
+                                                </span>
+                                            @else
+                                                <span class="badge bg-label-danger fs-tiny fw-normal px-2 py-0">
+                                                    <i class="ri ri-circle-fill me-1" style="font-size: 7px;"></i>
+                                                    Offline
+                                                </span>
+                                            @endif
                                             <span
                                                 class="badge bg-label-info fs-tiny fw-normal px-2 py-0 d-none d-sm-inline-flex"
                                                 title="Tamil voice notes automatically translated to English">
@@ -107,211 +114,213 @@
                             <!-- Ollama Offline Alert (if unavailable) -->
                             <div id="serviceAlert"
                                 class="alert alert-warning alert-dismissible fade show m-3 mb-0 {{ $isAvailable ? 'd-none' : '' }}"
-                                role="alert">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="ri ri-alert-line fs-5"></i>
-                                    <div>
-                                        <strong>Ollama Service Notice:</strong>
-                                        Ollama does not appear to be responding on
-                                        <code>{{ config('services.ollama.url') }}</code>.
-                                        Please make sure the local Ollama process is running.
-                                    </div>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-
-                            <!-- Messages Area -->
-                            <div class="card-body p-3 p-sm-4 chat-messages-container flex-grow-1" id="chatMessagesArea"
-                                style="overflow-y: auto; background-color: #f9fbfd;">
-
-                                <!-- Welcome AI Message (shown on fresh / empty chat) -->
-                                <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row"
-                                    id="welcomeMessage">
-                                    <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center"
-                                        style="width: 36px; height: 36px;">
-                                        <i class="ri ri-robot-2-line text-primary"></i>
-                                    </div>
-                                    <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3"
-                                        style="max-width: 85%;">
-                                        <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
-                                            <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
-                                        </div>
-                                        <div class="chat-text" style="line-height: 1.6; word-break: break-word;">
-                                            Hello! I am your <strong>ERP Flow Navigator AI</strong> assistant.<br>
-                                            You can ask questions in <strong>English</strong> or record a <strong>Tamil
-                                                Voice Note (குரல் பதிவு)</strong> — your Tamil speech will be automatically
-                                            translated to English and answered by the AI.<br>
-                                            <strong>Click a quick question to test:</strong>
-                                            <div class="d-flex flex-wrap gap-2 mt-2" id="quickPrompts">
-                                                <button type="button"
-                                                    class="btn btn-sm btn-outline-primary quick-prompt-btn"
-                                                    data-query="What is the next step after a Purchase Order is created?">
-                                                    <i class="ri ri-shopping-cart-line me-1"></i> Next step after Purchase
-                                                    Order?
-                                                </button>
-                                                <button type="button"
-                                                    class="btn btn-sm btn-outline-primary quick-prompt-btn"
-                                                    data-query="What happens after a Sales Order is confirmed?">
-                                                    <i class="ri ri-order-play-line me-1"></i> Next step after Sales Order?
-                                                </button>
-                                                <button type="button"
-                                                    class="btn btn-sm btn-outline-primary quick-prompt-btn"
-                                                    data-query="What is the next stage after Goods Receipt (GRN)?">
-                                                    <i class="ri ri-inbox-archive-line me-1"></i> Next stage after Goods
-                                                    Receipt
-                                                    (GRN)?
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-outline-info quick-prompt-btn"
-                                                    data-query="கொள்முதல் ஆணை உருவான பிறகு அடுத்த கட்டம் என்ன?">
-                                                    <i class="ri ri-translate-2 me-1"></i> தமிழ்: கொள்முதல் ஆணைக்கு அடுத்த
-                                                    கட்டம்?
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-outline-info quick-prompt-btn"
-                                                    data-query="விற்பனை ஆணை உறுதி செய்யப்பட்ட பிறகு என்ன நடக்கும்?">
-                                                    <i class="ri ri-translate-2 me-1"></i> தமிழ்: விற்பனை ஆணைக்கு அடுத்த
-                                                    படி?
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                            {{ date('h:i A') }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Dynamic bubbles will be appended here -->
-
-                                <!-- Typing / Loading Indicator Row (Hidden by default) -->
-                                <div class="d-flex justify-content-start mb-3 chat-bubble-row d-none" id="loadingBubbleRow">
-                                    <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center"
-                                        style="width: 36px; height: 36px;">
-                                        <i class="ri ri-robot-2-line text-primary"></i>
-                                    </div>
-                                    <div
-                                        class="chat-bubble ai-bubble bg-white text-dark shadow-sm border px-3 py-2 rounded-3">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="spinner-border spinner-border-sm text-primary" role="status"
-                                                style="width: 1rem; height: 1rem;">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                            <span class="text-muted small">AI is analyzing ERP flow...</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <!-- Chat Input Footer -->
-                            <div class="card-footer bg-white border-top p-3">
-                                <!-- Image Attachment Preview Bar -->
-                                <div id="imagePreviewBar"
-                                    class="d-none border rounded-3 p-2 px-3 mb-2 bg-light d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    role="alert">
                                     <div class="d-flex align-items-center gap-2">
-                                        <div class="position-relative">
-                                            <img id="imagePreviewThumb" src="" alt="Attached Screenshot"
-                                                class="rounded border shadow-sm"
-                                                style="width: 44px; height: 44px; object-fit: cover; cursor: pointer;"
-                                                title="Click to preview full size">
-                                        </div>
+                                        <i class="ri ri-alert-line fs-5"></i>
                                         <div>
+                                            <strong>Ollama Service Notice:</strong>
+                                            Ollama does not appear to be responding on
+                                            <code>{{ config('services.ollama.url') }}</code>.
+                                            Please make sure the local Ollama process is running.
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+
+                                <!-- Messages Area -->
+                                <div class="card-body p-3 p-sm-4 chat-messages-container flex-grow-1" id="chatMessagesArea"
+                                    style="overflow-y: auto; background-color: #f9fbfd;">
+
+                                    <!-- Welcome AI Message (shown on fresh / empty chat) -->
+                                    <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row"
+                                        id="welcomeMessage">
+                                        <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center"
+                                            style="width: 36px; height: 36px;">
+                                            <i class="ri ri-robot-2-line text-primary"></i>
+                                        </div>
+                                        <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3"
+                                            style="max-width: 85%;">
+                                            <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
+                                                <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
+                                            </div>
+                                            <div class="chat-text" style="line-height: 1.6; word-break: break-word;">
+                                                Hello! I am your <strong>ERP Flow Navigator AI</strong> assistant.<br>
+                                                You can ask questions in <strong>English</strong> or record a <strong>Tamil
+                                                    Voice Note (குரல் பதிவு)</strong> — your Tamil speech will be automatically
+                                                translated to English and answered by the AI.<br>
+                                                <strong>Click a quick question to test:</strong>
+                                                <div class="d-flex flex-wrap gap-2 mt-2" id="quickPrompts">
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-primary quick-prompt-btn"
+                                                        data-query="What is the next step after a Purchase Order is created?">
+                                                        <i class="ri ri-shopping-cart-line me-1"></i> Next step after Purchase
+                                                        Order?
+                                                    </button>
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-primary quick-prompt-btn"
+                                                        data-query="What happens after a Sales Order is confirmed?">
+                                                        <i class="ri ri-order-play-line me-1"></i> Next step after Sales Order?
+                                                    </button>
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-primary quick-prompt-btn"
+                                                        data-query="What is the next stage after Goods Receipt (GRN)?">
+                                                        <i class="ri ri-inbox-archive-line me-1"></i> Next stage after Goods
+                                                        Receipt
+                                                        (GRN)?
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-info quick-prompt-btn"
+                                                        data-query="கொள்முதல் ஆணை உருவான பிறகு அடுத்த கட்டம் என்ன?">
+                                                        <i class="ri ri-translate-2 me-1"></i> தமிழ்: கொள்முதல் ஆணைக்கு அடுத்த
+                                                        கட்டம்?
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-info quick-prompt-btn"
+                                                        data-query="விற்பனை ஆணை உறுதி செய்யப்பட்ட பிறகு என்ன நடக்கும்?">
+                                                        <i class="ri ri-translate-2 me-1"></i> தமிழ்: விற்பனை ஆணைக்கு அடுத்த
+                                                        படி?
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                                {{ date('h:i A') }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dynamic bubbles will be appended here -->
+
+                                    <!-- Typing / Loading Indicator Row (Hidden by default) -->
+                                    <div class="d-flex justify-content-start mb-3 chat-bubble-row d-none" id="loadingBubbleRow">
+                                        <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center"
+                                            style="width: 36px; height: 36px;">
+                                            <i class="ri ri-robot-2-line text-primary"></i>
+                                        </div>
+                                        <div
+                                            class="chat-bubble ai-bubble bg-white text-dark shadow-sm border px-3 py-2 rounded-3">
                                             <div class="d-flex align-items-center gap-2">
-                                                <span class="badge bg-label-primary fs-tiny py-0 px-1">
-                                                    <i class="ri ri-image-line me-1"></i> Attached Image
-                                                </span>
-                                                <span class="fw-semibold text-dark small" id="imageFileName"
-                                                    style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                                </span>
-                                            </div>
-                                            <div class="text-muted" style="font-size: 11px;">
-                                                <span id="imageFileSize"></span>
-                                                <span class="mx-1">•</span>
-                                                <span id="ocrStatusText" class="text-secondary fst-italic">Ready to send
-                                                    with
-                                                    text or voice note</span>
+                                                <div class="spinner-border spinner-border-sm text-primary" role="status"
+                                                    style="width: 1rem; height: 1rem;">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <span class="text-muted small">AI is analyzing ERP flow...</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-danger btn-icon"
-                                            id="removeImageBtn" title="Remove attached image">
-                                            <i class="ri ri-close-line fs-5"></i>
-                                        </button>
-                                    </div>
+
                                 </div>
 
-                                <!-- Active Tamil Voice Note Recording Bar -->
-                                <div id="voiceRecordingBar"
-                                    class="d-none border border-danger rounded-3 p-2 px-3 mb-2 bg-label-danger d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="voice-recording-pulse"></div>
-                                        <span class="fw-bold text-danger voice-rec-time" id="voiceTimer">00:00</span>
-                                        <span class="badge bg-danger text-white fs-tiny px-2 py-1">Tamil (தமிழ்)</span>
-                                        <div class="voice-wave-animation ms-1 d-none d-sm-flex">
-                                            <span></span><span></span><span></span><span></span><span></span>
+                                <!-- Chat Input Footer -->
+                                <div class="card-footer bg-white border-top p-3">
+                                    <!-- Image Attachment Preview Bar -->
+                                    <div id="imagePreviewBar"
+                                        class="d-none border rounded-3 p-2 px-3 mb-2 bg-light d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="position-relative">
+                                                <img id="imagePreviewThumb" src="" alt="Attached Screenshot"
+                                                    class="rounded border shadow-sm"
+                                                    style="width: 44px; height: 44px; object-fit: cover; cursor: pointer;"
+                                                    title="Click to preview full size">
+                                            </div>
+                                            <div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-label-primary fs-tiny py-0 px-1">
+                                                        <i class="ri ri-image-line me-1"></i> Attached Image
+                                                    </span>
+                                                    <span class="fw-semibold text-dark small" id="imageFileName"
+                                                        style="max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                    </span>
+                                                </div>
+                                                <div class="text-muted" style="font-size: 11px;">
+                                                    <span id="imageFileSize"></span>
+                                                    <span class="mx-1">•</span>
+                                                    <span id="ocrStatusText" class="text-secondary fst-italic">Ready to send
+                                                        with
+                                                        text or voice note</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span class="text-dark small ms-2 fst-italic" id="liveTranscript"
-                                            style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                            Listening in Tamil (தமிழில் பேசவும்)...
-                                        </span>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-icon"
+                                                id="removeImageBtn" title="Remove attached image">
+                                                <i class="ri ri-close-line fs-5"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                                            id="cancelVoiceBtn" title="Discard voice note">
-                                            <i class="ri ri-close-line"></i> <span class="d-none d-sm-inline">Cancel</span>
-                                        </button>
-                                        <button type="button"
-                                            class="btn btn-sm btn-danger d-flex align-items-center gap-1 shadow-sm"
-                                            id="sendVoiceBtn" title="Stop and send Tamil voice note">
-                                            <i class="ri ri-send-plane-fill"></i> <span>Send Note</span>
-                                        </button>
+
+                                    <!-- Active Tamil Voice Note Recording Bar -->
+                                    <div id="voiceRecordingBar"
+                                        class="d-none border border-danger rounded-3 p-2 px-3 mb-2 bg-label-danger d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="voice-recording-pulse"></div>
+                                            <span class="fw-bold text-danger voice-rec-time" id="voiceTimer">00:00</span>
+                                            <span class="badge bg-danger text-white fs-tiny px-2 py-1">Tamil (தமிழ்)</span>
+                                            <div class="voice-wave-animation ms-1 d-none d-sm-flex">
+                                                <span></span><span></span><span></span><span></span><span></span>
+                                            </div>
+                                            <span class="text-dark small ms-2 fst-italic" id="liveTranscript"
+                                                style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                Listening in Tamil (தமிழில் பேசவும்)...
+                                            </span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                id="cancelVoiceBtn" title="Discard voice note">
+                                                <i class="ri ri-close-line"></i> <span class="d-none d-sm-inline">Cancel</span>
+                                            </button>
+                                            <button type="button"
+                                                class="btn btn-sm btn-danger d-flex align-items-center gap-1 shadow-sm"
+                                                id="sendVoiceBtn" title="Stop and send Tamil voice note">
+                                                <i class="ri ri-send-plane-fill"></i> <span>Send Note</span>
+                                            </button>
+                                        </div>
                                     </div>
+
+                                    <form id="chatForm" onsubmit="return false;">
+                                        <div class="d-flex align-items-end gap-2">
+                                            <!-- Image Upload Button -->
+                                            <button type="button" id="imageUploadBtn"
+                                                class="btn btn-outline-primary d-flex align-items-center justify-content-center px-3"
+                                                style="height: 52px; min-width: 52px;"
+                                                title="Upload Image or Screenshot (படத்தைப் பதிவேற்றவும்)">
+                                                <i class="ri ri-image-add-line fs-5" id="imageIcon"></i>
+                                            </button>
+                                            <input type="file" id="imageFileInput"
+                                                accept="image/png, image/jpeg, image/jpg, image/webp" class="d-none">
+
+                                            <!-- Tamil Voice Record Button -->
+                                            <button type="button" id="voiceRecordBtn"
+                                                class="btn btn-outline-primary d-flex align-items-center justify-content-center px-3"
+                                                style="height: 52px; min-width: 52px;"
+                                                title="Record Tamil Voice Note (தமிழில் குரல் பதிவு)">
+                                                <i class="ri ri-mic-line fs-5" id="micIcon"></i>
+                                            </button>
+                                            <div class="flex-grow-1 position-relative">
+                                                <textarea id="userMessageInput" class="form-control border shadow-none" rows="2"
+                                                    placeholder="Ask doubt in English or Tamil, or upload screenshot and speak voice note (Enter to send)..."
+                                                    style="resize: none; font-size: 14px; min-height: 52px; max-height: 120px;"></textarea>
+                                            </div>
+                                            <button type="submit" id="sendBtn"
+                                                class="btn btn-primary d-flex align-items-center justify-content-center gap-1 px-4"
+                                                style="height: 52px; min-width: 100px;">
+                                                <i class="ri ri-send-plane-2-fill fs-5" id="sendIcon"></i>
+                                                <span class="d-none d-sm-inline fw-semibold ms-1">Send</span>
+                                            </button>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2 px-1">
+                                            <small class="text-muted d-flex align-items-center gap-1 flex-wrap"
+                                                style="font-size: 12px;">
+                                                <i class="ri ri-information-line"></i>
+                                                <span>Press <strong>Enter</strong> to send, click <i
+                                                        class="ri ri-image-add-line text-primary"></i> to attach
+                                                    <strong>Image</strong> (or paste <strong>Ctrl+V</strong>), or click <i
+                                                        class="ri ri-mic-line text-primary"></i> for <strong>Tamil Voice
+                                                        Note</strong></span>
+                                            </small>
+                                            <small class="text-muted" id="charCount" style="font-size: 11px;">0 / 2000</small>
+                                        </div>
+                                    </form>
                                 </div>
 
-                                <form id="chatForm" onsubmit="return false;">
-                                    <div class="d-flex align-items-end gap-2">
-                                        <!-- Image Upload Button -->
-                                        <button type="button" id="imageUploadBtn"
-                                            class="btn btn-outline-primary d-flex align-items-center justify-content-center px-3"
-                                            style="height: 52px; min-width: 52px;"
-                                            title="Upload Image or Screenshot (படத்தைப் பதிவேற்றவும்)">
-                                            <i class="ri ri-image-add-line fs-5" id="imageIcon"></i>
-                                        </button>
-                                        <input type="file" id="imageFileInput"
-                                            accept="image/png, image/jpeg, image/jpg, image/webp" class="d-none">
-
-                                        <!-- Tamil Voice Record Button -->
-                                        <button type="button" id="voiceRecordBtn"
-                                            class="btn btn-outline-primary d-flex align-items-center justify-content-center px-3"
-                                            style="height: 52px; min-width: 52px;"
-                                            title="Record Tamil Voice Note (தமிழில் குரல் பதிவு)">
-                                            <i class="ri ri-mic-line fs-5" id="micIcon"></i>
-                                        </button>
-                                        <div class="flex-grow-1 position-relative">
-                                            <textarea id="userMessageInput" class="form-control border shadow-none" rows="2"
-                                                placeholder="Ask doubt in English or Tamil, or upload screenshot and speak voice note (Enter to send)..."
-                                                style="resize: none; font-size: 14px; min-height: 52px; max-height: 120px;"></textarea>
-                                        </div>
-                                        <button type="submit" id="sendBtn"
-                                            class="btn btn-primary d-flex align-items-center justify-content-center gap-1 px-4"
-                                            style="height: 52px; min-width: 100px;">
-                                            <i class="ri ri-send-plane-2-fill fs-5" id="sendIcon"></i>
-                                            <span class="d-none d-sm-inline fw-semibold ms-1">Send</span>
-                                        </button>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mt-2 px-1">
-                                        <small class="text-muted d-flex align-items-center gap-1 flex-wrap"
-                                            style="font-size: 12px;">
-                                            <i class="ri ri-information-line"></i>
-                                            <span>Press <strong>Enter</strong> to send, click <i
-                                                    class="ri ri-image-add-line text-primary"></i> to attach
-                                                <strong>Image</strong> (or paste <strong>Ctrl+V</strong>), or click <i
-                                                    class="ri ri-mic-line text-primary"></i> for <strong>Tamil Voice
-                                                    Note</strong></span>
-                                        </small>
-                                        <small class="text-muted" id="charCount" style="font-size: 11px;">0 / 2000</small>
-                                    </div>
-                                </form>
                             </div>
 
                         </div>
@@ -319,28 +328,26 @@
                     </div>
 
                 </div>
-
             </div>
         </div>
-    </div>
 
-    <!-- Image Lightbox Modal for Full View -->
-    <div class="modal fade" id="imageLightboxModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header py-2 px-3">
-                    <h6 class="modal-title fw-bold" id="imageLightboxTitle">
-                        <i class="ri ri-image-line me-1 text-primary"></i> Attached Image / Screenshot
-                    </h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-2 text-center bg-dark rounded-bottom">
-                    <img id="imageLightboxImg" src="" alt="Screenshot Full View" class="img-fluid rounded"
-                        style="max-height: 80vh; object-fit: contain;">
+        <!-- Image Lightbox Modal for Full View -->
+        <div class="modal fade" id="imageLightboxModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header py-2 px-3">
+                        <h6 class="modal-title fw-bold" id="imageLightboxTitle">
+                            <i class="ri ri-image-line me-1 text-primary"></i> Attached Image / Screenshot
+                        </h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-2 text-center bg-dark rounded-bottom">
+                        <img id="imageLightboxImg" src="" alt="Screenshot Full View" class="img-fluid rounded"
+                            style="max-height: 80vh; object-fit: contain;">
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 @endsection
 
 @section('scripts')
@@ -873,19 +880,19 @@
                 if (filteredSessions.length === 0) {
                     if (filter) {
                         $chatHistoryList.html(`
-                                    <div class="text-center text-muted p-4 small">
-                                        <i class="ri ri-search-line fs-3 d-block mb-1 text-secondary"></i>
-                                        No chats match "<strong>${escapeHtml(filter)}</strong>"
-                                    </div>
-                                `);
+                                        <div class="text-center text-muted p-4 small">
+                                            <i class="ri ri-search-line fs-3 d-block mb-1 text-secondary"></i>
+                                            No chats match "<strong>${escapeHtml(filter)}</strong>"
+                                        </div>
+                                    `);
                     } else {
                         $chatHistoryList.html(`
-                                    <div class="text-center text-muted p-4 small">
-                                        <i class="ri ri-chat-voice-line fs-3 d-block mb-1 text-primary opacity-50"></i>
-                                        No chat history yet.<br>
-                                        Start asking questions or test a quick prompt!
-                                    </div>
-                                `);
+                                        <div class="text-center text-muted p-4 small">
+                                            <i class="ri ri-chat-voice-line fs-3 d-block mb-1 text-primary opacity-50"></i>
+                                            No chat history yet.<br>
+                                            Start asking questions or test a quick prompt!
+                                        </div>
+                                    `);
                     }
                     return;
                 }
@@ -909,33 +916,33 @@
                             const timeStr = formatSessionTime(s.updatedAt || s.createdAt);
 
                             const itemHtml = `
-                                        <div class="chat-history-item d-flex align-items-center justify-content-between ${isActive ? 'active' : ''}"
-                                            data-session-id="${s.id}">
-                                            <div class="d-flex align-items-center gap-2 overflow-hidden flex-grow-1 chat-item-click-area"
-                                                style="cursor: pointer;">
-                                                <i class="ri ri-chat-3-line ${isActive ? 'text-primary' : 'text-secondary'} flex-shrink-0" style="font-size: 15px;"></i>
-                                                <div class="overflow-hidden">
-                                                    <div class="chat-item-title" title="${escapeHtml(s.title || 'New Chat')}">
-                                                        ${escapeHtml(s.title || 'New Chat')}
-                                                    </div>
-                                                    <div class="chat-item-meta d-flex align-items-center gap-1">
-                                                        <span>${timeStr}</span>
-                                                        ${msgCount > 0 ? `<span>• ${msgCount} msgs</span>` : ''}
+                                            <div class="chat-history-item d-flex align-items-center justify-content-between ${isActive ? 'active' : ''}"
+                                                data-session-id="${s.id}">
+                                                <div class="d-flex align-items-center gap-2 overflow-hidden flex-grow-1 chat-item-click-area"
+                                                    style="cursor: pointer;">
+                                                    <i class="ri ri-chat-3-line ${isActive ? 'text-primary' : 'text-secondary'} flex-shrink-0" style="font-size: 15px;"></i>
+                                                    <div class="overflow-hidden">
+                                                        <div class="chat-item-title" title="${escapeHtml(s.title || 'New Chat')}">
+                                                            ${escapeHtml(s.title || 'New Chat')}
+                                                        </div>
+                                                        <div class="chat-item-meta d-flex align-items-center gap-1">
+                                                            <span>${timeStr}</span>
+                                                            ${msgCount > 0 ? `<span>• ${msgCount} msgs</span>` : ''}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <div class="chat-item-actions d-flex align-items-center gap-1 flex-shrink-0 ms-1">
+                                                    <button type="button" class="chat-item-action-btn rename-btn rename-chat-btn"
+                                                        title="Rename chat (பெயரை மாற்றவும்)" data-session-id="${s.id}">
+                                                        <i class="ri ri-edit-line" style="font-size: 12px;"></i>
+                                                    </button>
+                                                    <button type="button" class="chat-item-action-btn delete-btn delete-chat-btn"
+                                                        title="Delete chat (அழிக்கவும்)" data-session-id="${s.id}">
+                                                        <i class="ri ri-delete-bin-line" style="font-size: 12px;"></i>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div class="chat-item-actions d-flex align-items-center gap-1 flex-shrink-0 ms-1">
-                                                <button type="button" class="chat-item-action-btn rename-btn rename-chat-btn"
-                                                    title="Rename chat (பெயரை மாற்றவும்)" data-session-id="${s.id}">
-                                                    <i class="ri ri-edit-line" style="font-size: 12px;"></i>
-                                                </button>
-                                                <button type="button" class="chat-item-action-btn delete-btn delete-chat-btn"
-                                                    title="Delete chat (அழிக்கவும்)" data-session-id="${s.id}">
-                                                    <i class="ri ri-delete-bin-line" style="font-size: 12px;"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    `;
+                                        `;
                             $chatHistoryList.append(itemHtml);
                         });
                     }
@@ -1523,81 +1530,81 @@
                 let imageHtml = '';
                 if (imageSrc) {
                     imageHtml = `
-                                <div class="user-attached-image mb-2 text-end">
-                                    <img src="${imageSrc}" alt="Uploaded screenshot"
-                                        class="rounded border shadow-sm chat-uploaded-img"
-                                        style="max-width: 260px; max-height: 200px; object-fit: cover; cursor: pointer; display: inline-block; border-color: rgba(255,255,255,0.35) !important;"
-                                        title="Click to preview full image">
-                                </div>
-                            `;
+                                    <div class="user-attached-image mb-2 text-end">
+                                        <img src="${imageSrc}" alt="Uploaded screenshot"
+                                            class="rounded border shadow-sm chat-uploaded-img"
+                                            style="max-width: 260px; max-height: 200px; object-fit: cover; cursor: pointer; display: inline-block; border-color: rgba(255,255,255,0.35) !important;"
+                                            title="Click to preview full image">
+                                    </div>
+                                `;
                 }
 
                 let audioHtml = '';
                 if (audioUrl) {
                     audioHtml = `
-                                <div class="voice-audio-box my-2">
-                                    <audio controls src="${audioUrl}" class="w-100"></audio>
-                                </div>
-                            `;
+                                    <div class="voice-audio-box my-2">
+                                        <audio controls src="${audioUrl}" class="w-100"></audio>
+                                    </div>
+                                `;
                 }
 
                 let badgeHtml = '';
                 if (isVoice) {
                     badgeHtml = `
-                                <div class="voice-pill-original small mb-2">
-                                    <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                        <i class="ri ri-mic-fill text-warning"></i> <strong>Recorded Tamil Voice Note:</strong>
+                                    <div class="voice-pill-original small mb-2">
+                                        <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                            <i class="ri ri-mic-fill text-warning"></i> <strong>Recorded Tamil Voice Note:</strong>
+                                        </div>
+                                        <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
                                     </div>
-                                    <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
-                                </div>
-                            `;
+                                `;
                 } else if (hasTamilCharacters(msg.text || '')) {
                     badgeHtml = `
-                                <div class="voice-pill-original small mb-2">
-                                    <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                        <i class="ri ri-translate-2 text-warning"></i> <strong>Tamil Text Input:</strong>
+                                    <div class="voice-pill-original small mb-2">
+                                        <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                            <i class="ri ri-translate-2 text-warning"></i> <strong>Tamil Text Input:</strong>
+                                        </div>
+                                        <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
                                     </div>
-                                    <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
-                                </div>
-                            `;
+                                `;
                 } else {
                     badgeHtml = `
-                                <div class="chat-text" style="line-height: 1.6;">${formatted}</div>
-                            `;
+                                    <div class="chat-text" style="line-height: 1.6;">${formatted}</div>
+                                `;
                 }
 
                 let translationHtml = '';
                 if (msg.isTranslated && msg.translatedMsg) {
                     translationHtml = `
-                                <div class="user-msg-translation mt-2">
-                                    <div class="voice-pill-translation small">
-                                        <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                            <i class="ri ri-translate-2 text-warning"></i> <strong>Translated to English (Input for LLM):</strong>
+                                    <div class="user-msg-translation mt-2">
+                                        <div class="voice-pill-translation small">
+                                            <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                                <i class="ri ri-translate-2 text-warning"></i> <strong>Translated to English (Input for LLM):</strong>
+                                            </div>
+                                            <div class="text-white fw-semibold" style="line-height: 1.5;">${escapeHtml(msg.translatedMsg)}</div>
                                         </div>
-                                        <div class="text-white fw-semibold" style="line-height: 1.5;">${escapeHtml(msg.translatedMsg)}</div>
                                     </div>
-                                </div>
-                            `;
+                                `;
                 }
 
                 const html = `
-                            <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row" id="${msgId}">
-                                <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
-                                    <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
-                                        <span>You</span>
-                                        ${imageSrc ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-image-line"></i> Image</span>' : ''}
-                                        ${isVoice ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-mic-line"></i> Voice Note</span>' : (!imageSrc ? '<i class="ri ri-user-3-fill text-white ms-1"></i>' : '')}
-                                    </div>
-                                    ${imageHtml}
-                                    ${audioHtml}
-                                    ${badgeHtml}
-                                    ${translationHtml}
-                                    <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
-                                        ${time}
+                                <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row" id="${msgId}">
+                                    <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
+                                        <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
+                                            <span>You</span>
+                                            ${imageSrc ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-image-line"></i> Image</span>' : ''}
+                                            ${isVoice ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-mic-line"></i> Voice Note</span>' : (!imageSrc ? '<i class="ri ri-user-3-fill text-white ms-1"></i>' : '')}
+                                        </div>
+                                        ${imageHtml}
+                                        ${audioHtml}
+                                        ${badgeHtml}
+                                        ${translationHtml}
+                                        <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
+                                            ${time}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
                 $loadingRow.before(html);
             }
 
@@ -1618,50 +1625,50 @@
                     const navSource = ragSources.find(s => s.menu_path && s.url);
                     if (navSource) {
                         ragSourcesHtml = `
-                                    <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1 align-items-center">
-                                        <a href="${escapeHtml(navSource.url)}" class="badge bg-label-primary fs-tiny py-1 px-2 text-decoration-none d-inline-flex align-items-center gap-1" style="cursor: pointer;">
-                                            <i class="ri ri-compass-3-line"></i> ${escapeHtml(navSource.menu_path)} &nbsp;<span class="text-decoration-underline fw-bold">Open Screen →</span>
-                                        </a>
-                                    </div>
-                                `;
+                                        <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1 align-items-center">
+                                            <a href="${escapeHtml(navSource.url)}" class="badge bg-label-primary fs-tiny py-1 px-2 text-decoration-none d-inline-flex align-items-center gap-1" style="cursor: pointer;">
+                                                <i class="ri ri-compass-3-line"></i> ${escapeHtml(navSource.menu_path)} &nbsp;<span class="text-decoration-underline fw-bold">Open Screen →</span>
+                                            </a>
+                                        </div>
+                                    `;
                     }
                 }
 
                 let originalToggleHtml = '';
                 if (englishOriginal && isTamil) {
                     originalToggleHtml = `
-                                <div class="mt-3 pt-2 border-top">
-                                    <button type="button" class="btn btn-xs btn-outline-secondary toggle-eng-btn py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" style="font-size: 11px;">
-                                        <i class="ri ri-global-line"></i> <span class="toggle-eng-text">Show English Original / ஆங்கில வடிவம்</span>
-                                    </button>
-                                    <div class="english-original-box mt-2 p-2 bg-light rounded text-secondary small d-none" style="line-height: 1.5; word-break: break-word;">
-                                        ${formatMessageText(englishOriginal)}
+                                    <div class="mt-3 pt-2 border-top">
+                                        <button type="button" class="btn btn-xs btn-outline-secondary toggle-eng-btn py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" style="font-size: 11px;">
+                                            <i class="ri ri-global-line"></i> <span class="toggle-eng-text">Show English Original / ஆங்கில வடிவம்</span>
+                                        </button>
+                                        <div class="english-original-box mt-2 p-2 bg-light rounded text-secondary small d-none" style="line-height: 1.5; word-break: break-word;">
+                                            ${formatMessageText(englishOriginal)}
+                                        </div>
                                     </div>
-                                </div>
-                            `;
+                                `;
                 }
 
                 const html = `
-                            <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
-                                <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                    <i class="ri ri-robot-2-line text-primary"></i>
+                                <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
+                                    <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="ri ri-robot-2-line text-primary"></i>
+                                    </div>
+                                    <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
+                                        <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
+                                            <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
+                                            ${badgeHtml}
+                                        </div>
+                                        <div class="chat-text" style="line-height: 1.6;">
+                                            ${formatted}
+                                        </div>
+                                        ${ragSourcesHtml}
+                                        ${originalToggleHtml}
+                                        <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                            ${time}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
-                                    <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
-                                        <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
-                                        ${badgeHtml}
-                                    </div>
-                                    <div class="chat-text" style="line-height: 1.6;">
-                                        ${formatted}
-                                    </div>
-                                    ${ragSourcesHtml}
-                                    ${originalToggleHtml}
-                                    <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                        ${time}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                            `;
                 $loadingRow.before(html);
             }
 
@@ -1677,67 +1684,67 @@
                 let imageHtml = '';
                 if (imageSrc) {
                     imageHtml = `
-                                <div class="user-attached-image mb-2 text-end">
-                                    <img src="${imageSrc}" alt="Uploaded screenshot"
-                                        class="rounded border shadow-sm chat-uploaded-img"
-                                        style="max-width: 260px; max-height: 200px; object-fit: cover; cursor: pointer; display: inline-block; border-color: rgba(255,255,255,0.35) !important;"
-                                        title="Click to preview full image">
-                                </div>
-                            `;
+                                    <div class="user-attached-image mb-2 text-end">
+                                        <img src="${imageSrc}" alt="Uploaded screenshot"
+                                            class="rounded border shadow-sm chat-uploaded-img"
+                                            style="max-width: 260px; max-height: 200px; object-fit: cover; cursor: pointer; display: inline-block; border-color: rgba(255,255,255,0.35) !important;"
+                                            title="Click to preview full image">
+                                    </div>
+                                `;
                 }
 
                 let audioHtml = '';
                 if (audioUrl) {
                     audioHtml = `
-                                <div class="voice-audio-box my-2">
-                                    <audio controls src="${audioUrl}" class="w-100"></audio>
-                                </div>
-                            `;
+                                    <div class="voice-audio-box my-2">
+                                        <audio controls src="${audioUrl}" class="w-100"></audio>
+                                    </div>
+                                `;
                 }
 
                 let badgeHtml = '';
                 if (isVoice) {
                     badgeHtml = `
-                                <div class="voice-pill-original small mb-2">
-                                    <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                        <i class="ri ri-mic-fill text-warning"></i> <strong>Recorded Tamil Voice Note:</strong>
+                                    <div class="voice-pill-original small mb-2">
+                                        <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                            <i class="ri ri-mic-fill text-warning"></i> <strong>Recorded Tamil Voice Note:</strong>
+                                        </div>
+                                        <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
                                     </div>
-                                    <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
-                                </div>
-                            `;
+                                `;
                 } else if (hasTamilCharacters(text)) {
                     badgeHtml = `
-                                <div class="voice-pill-original small mb-2">
-                                    <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                        <i class="ri ri-translate-2 text-warning"></i> <strong>Tamil Text Input:</strong>
+                                    <div class="voice-pill-original small mb-2">
+                                        <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                            <i class="ri ri-translate-2 text-warning"></i> <strong>Tamil Text Input:</strong>
+                                        </div>
+                                        <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
                                     </div>
-                                    <div class="chat-text text-white" style="line-height: 1.5;">${formatted}</div>
-                                </div>
-                            `;
+                                `;
                 } else {
                     badgeHtml = `
-                                <div class="chat-text" style="line-height: 1.6;">${formatted}</div>
-                            `;
+                                    <div class="chat-text" style="line-height: 1.6;">${formatted}</div>
+                                `;
                 }
 
                 const html = `
-                            <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row" id="${msgId}">
-                                <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
-                                    <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
-                                        <span>You</span>
-                                        ${imageSrc ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-image-line"></i> Image</span>' : ''}
-                                        ${isVoice ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-mic-line"></i> Voice Note</span>' : (!imageSrc ? '<i class="ri ri-user-3-fill text-white ms-1"></i>' : '')}
-                                    </div>
-                                    ${imageHtml}
-                                    ${audioHtml}
-                                    ${badgeHtml}
-                                    <div class="user-msg-translation mt-2" style="display: none;"></div>
-                                    <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
-                                        ${time}
+                                <div class="d-flex justify-content-end mb-3 chat-bubble-row user-msg-row" id="${msgId}">
+                                    <div class="chat-bubble user-bubble shadow-sm p-3 rounded-3" style="max-width: 80%;">
+                                        <div class="fw-semibold text-white-50 mb-1 small d-flex align-items-center justify-content-end gap-1">
+                                            <span>You</span>
+                                            ${imageSrc ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-image-line"></i> Image</span>' : ''}
+                                            ${isVoice ? '<span class="badge bg-white text-primary fs-tiny py-0 px-1 ms-1"><i class="ri ri-mic-line"></i> Voice Note</span>' : (!imageSrc ? '<i class="ri ri-user-3-fill text-white ms-1"></i>' : '')}
+                                        </div>
+                                        ${imageHtml}
+                                        ${audioHtml}
+                                        ${badgeHtml}
+                                        <div class="user-msg-translation mt-2" style="display: none;"></div>
+                                        <div class="text-start text-white-50 mt-1" style="font-size: 11px;">
+                                            ${time}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
                 $loadingRow.before(html);
                 $welcomeMsg.addClass('d-none');
                 scrollToBottom();
@@ -1761,50 +1768,50 @@
                     const navSource = ragSources.find(s => s.menu_path && s.url);
                     if (navSource) {
                         ragSourcesHtml = `
-                                    <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1 align-items-center">
-                                        <a href="${escapeHtml(navSource.url)}" class="badge bg-label-primary fs-tiny py-1 px-2 text-decoration-none d-inline-flex align-items-center gap-1" style="cursor: pointer;">
-                                            <i class="ri ri-compass-3-line"></i> ${escapeHtml(navSource.menu_path)} &nbsp;<span class="text-decoration-underline fw-bold">Open Screen →</span>
-                                        </a>
-                                    </div>
-                                `;
+                                        <div class="mt-2 pt-2 border-top d-flex flex-wrap gap-1 align-items-center">
+                                            <a href="${escapeHtml(navSource.url)}" class="badge bg-label-primary fs-tiny py-1 px-2 text-decoration-none d-inline-flex align-items-center gap-1" style="cursor: pointer;">
+                                                <i class="ri ri-compass-3-line"></i> ${escapeHtml(navSource.menu_path)} &nbsp;<span class="text-decoration-underline fw-bold">Open Screen →</span>
+                                            </a>
+                                        </div>
+                                    `;
                     }
                 }
 
                 let originalToggleHtml = '';
                 if (englishOriginal && isTamil) {
                     originalToggleHtml = `
-                                <div class="mt-3 pt-2 border-top">
-                                    <button type="button" class="btn btn-xs btn-outline-secondary toggle-eng-btn py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" style="font-size: 11px;">
-                                        <i class="ri ri-global-line"></i> <span class="toggle-eng-text">Show English Original / ஆங்கில வடிவம்</span>
-                                    </button>
-                                    <div class="english-original-box mt-2 p-2 bg-light rounded text-secondary small d-none" style="line-height: 1.5; word-break: break-word;">
-                                        ${formatMessageText(englishOriginal)}
+                                    <div class="mt-3 pt-2 border-top">
+                                        <button type="button" class="btn btn-xs btn-outline-secondary toggle-eng-btn py-1 px-2 d-inline-flex align-items-center gap-1 shadow-none" style="font-size: 11px;">
+                                            <i class="ri ri-global-line"></i> <span class="toggle-eng-text">Show English Original / ஆங்கில வடிவம்</span>
+                                        </button>
+                                        <div class="english-original-box mt-2 p-2 bg-light rounded text-secondary small d-none" style="line-height: 1.5; word-break: break-word;">
+                                            ${formatMessageText(englishOriginal)}
+                                        </div>
                                     </div>
-                                </div>
-                            `;
+                                `;
                 }
 
                 const html = `
-                            <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
-                                <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                    <i class="ri ri-robot-2-line text-primary"></i>
+                                <div class="d-flex justify-content-start mb-3 chat-bubble-row ai-msg-row">
+                                    <div class="avatar avatar-sm rounded-circle bg-label-primary me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="ri ri-robot-2-line text-primary"></i>
+                                    </div>
+                                    <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
+                                        <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
+                                            <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
+                                            ${badgeHtml}
+                                        </div>
+                                        <div class="chat-text" style="line-height: 1.6;">
+                                            ${formatted}
+                                        </div>
+                                        ${ragSourcesHtml}
+                                        ${originalToggleHtml}
+                                        <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                            ${time}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="chat-bubble ai-bubble bg-white text-dark shadow-sm border p-3 rounded-3" style="max-width: 80%;">
-                                    <div class="fw-semibold text-primary mb-1 small d-flex align-items-center gap-1">
-                                        <i class="ri ri-sparkling-fill text-warning"></i> ERP Flow Navigator
-                                        ${badgeHtml}
-                                    </div>
-                                    <div class="chat-text" style="line-height: 1.6;">
-                                        ${formatted}
-                                    </div>
-                                    ${ragSourcesHtml}
-                                    ${originalToggleHtml}
-                                    <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                        ${time}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                            `;
                 $loadingRow.before(html);
                 scrollToBottom();
             }
@@ -1814,23 +1821,23 @@
                 const time = getCurrentTime();
                 const formatted = formatMessageText(errorText);
                 const html = `
-                            <div class="d-flex justify-content-start mb-3 chat-bubble-row error-msg-row">
-                                <div class="avatar avatar-sm rounded-circle bg-label-danger me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                    <i class="ri ri-error-warning-line text-danger"></i>
+                                <div class="d-flex justify-content-start mb-3 chat-bubble-row error-msg-row">
+                                    <div class="avatar avatar-sm rounded-circle bg-label-danger me-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="ri ri-error-warning-line text-danger"></i>
+                                    </div>
+                                    <div class="chat-bubble bg-label-danger text-danger border border-danger p-3 rounded-3" style="max-width: 80%;">
+                                        <div class="fw-semibold small d-flex align-items-center gap-1 mb-1">
+                                            <i class="ri ri-alert-line"></i> Service Alert
+                                        </div>
+                                        <div class="chat-text small" style="line-height: 1.5;">
+                                            ${formatted}
+                                        </div>
+                                        <div class="text-end text-muted mt-1" style="font-size: 11px;">
+                                            ${time}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="chat-bubble bg-label-danger text-danger border border-danger p-3 rounded-3" style="max-width: 80%;">
-                                    <div class="fw-semibold small d-flex align-items-center gap-1 mb-1">
-                                        <i class="ri ri-alert-line"></i> Service Alert
-                                    </div>
-                                    <div class="chat-text small" style="line-height: 1.5;">
-                                        ${formatted}
-                                    </div>
-                                    <div class="text-end text-muted mt-1" style="font-size: 11px;">
-                                        ${time}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                            `;
                 $loadingRow.before(html);
                 scrollToBottom();
             }
@@ -2172,13 +2179,13 @@
                                 const $transContainer = $(`#${msgId}`).find('.user-msg-translation');
                                 const safeTranslation = escapeHtml(translatedMsg);
                                 $transContainer.html(`
-                                            <div class="voice-pill-translation small">
-                                                <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
-                                                    <i class="ri ri-translate-2 text-warning"></i> <strong>Translated to English (Input for LLM):</strong>
+                                                <div class="voice-pill-translation small">
+                                                    <div class="d-flex align-items-center gap-1 text-white-50 fs-tiny mb-1">
+                                                        <i class="ri ri-translate-2 text-warning"></i> <strong>Translated to English (Input for LLM):</strong>
+                                                    </div>
+                                                    <div class="text-white fw-semibold" style="line-height: 1.5;">${safeTranslation}</div>
                                                 </div>
-                                                <div class="text-white fw-semibold" style="line-height: 1.5;">${safeTranslation}</div>
-                                            </div>
-                                        `).slideDown(200);
+                                            `).slideDown(200);
                             }
 
                             // Append AI response to UI
