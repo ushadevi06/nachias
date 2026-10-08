@@ -100,7 +100,7 @@ class WarehouseController extends Controller
         }
 
         $warehouse = $id ? Warehouse::with(['brandCapacities.brand', 'brandCapacities.style'])->findOrFail($id) : null;
-        $brands = Brand::where('status', 'Active')->orderBy('id','desc')->get();
+        $brands = Brand::with('storeCategories')->where('status', 'Active')->orderBy('id','desc')->get();
         $styles = Style::where('status', 'Active')->orderBy('id','desc')->get();
 
         if ($request->isMethod('post')) {
@@ -122,7 +122,7 @@ class WarehouseController extends Controller
                 $rules['brand_blocks'] = 'required|array|min:1';
                 $rules['brand_blocks.*.brand_id'] = 'required|exists:brands,id';
                 $rules['brand_blocks.*.styles'] = 'required|array|min:1';
-                $rules['brand_blocks.*.styles.*.style_id'] = 'required|exists:styles,id';
+                $rules['brand_blocks.*.styles.*.style_id'] = 'nullable|exists:styles,id';
                 $rules['brand_blocks.*.styles.*.capacity_pcs'] = 'required|numeric|min:0';
             } else {
                 $rules['brand_ids'] = 'required|array|min:1';
@@ -140,7 +140,6 @@ class WarehouseController extends Controller
                 'brand_blocks.*.brand_id.exists' => 'Selected brand is invalid.',
                 'brand_blocks.*.styles.required' => 'At least one style is required per brand.',
                 'brand_blocks.*.styles.min' => 'At least one style is required per brand.',
-                'brand_blocks.*.styles.*.style_id.required' => 'Style selection is required.',
                 'brand_blocks.*.styles.*.style_id.exists' => 'Selected style is invalid.',
                 'brand_blocks.*.styles.*.capacity_pcs.required' => 'Capacity is required.',
                 'brand_blocks.*.styles.*.capacity_pcs.numeric' => 'Capacity must be a number.',
@@ -156,7 +155,36 @@ class WarehouseController extends Controller
                 '*.max'      => 'This field should not be more than :max characters.',
             ];
 
-            $request->validate($rules, $messages);
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, $messages);
+
+            $validator->after(function ($validator) use ($request, $hasBrandBlocks) {
+                if ($hasBrandBlocks && is_array($request->brand_blocks)) {
+                    foreach ($request->brand_blocks as $bIdx => $bBlock) {
+                        $bId = $bBlock['brand_id'] ?? null;
+                        if (!$bId) continue;
+                        $brand = Brand::with('storeCategories')->find($bId);
+                        $catIds = $brand ? $brand->storeCategories->pluck('id')->toArray() : [];
+                        $isGarments = in_array(1, $catIds) || in_array(3, $catIds);
+                        $isAccessories = in_array(2, $catIds) || ($brand && (stripos($brand->brand_name, 'ACCESSORIES') !== false || stripos($brand->code ?? '', 'AS') !== false));
+
+                        $isStyleMandatory = $isGarments || !$isAccessories;
+
+                        if ($isStyleMandatory) {
+                            $stylesList = $bBlock['styles'] ?? [];
+                            foreach ($stylesList as $sIdx => $sItem) {
+                                if (empty($sItem['style_id'])) {
+                                    $bName = $brand ? $brand->brand_name : 'Selected brand';
+                                    $validator->errors()->add("brand_blocks.{$bIdx}.styles.{$sIdx}.style_id", "Style selection is required for {$bName}.");
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            if ($validator->fails()) {
+                return back()->withErrors($validator)->withInput();
+            }
 
             DB::beginTransaction();
             try {

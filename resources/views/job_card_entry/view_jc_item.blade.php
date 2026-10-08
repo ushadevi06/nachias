@@ -5,7 +5,7 @@
 <div class="container-xxl section-padding">
     @php
         $isCanvas = false;
-        if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+        if ($jobCard->brand && stripos($jobCard->brand->brand_name ?? '', 'CANVAS') !== false) {
             $isCanvas = true;
         }
     @endphp
@@ -34,7 +34,7 @@
             </a>
             @endif
 
-            @if(auth()->id() == 1 || auth()->user()->can('issue-item job-card') || auth()->user()->can('edit job-card'))
+            @if((auth()->id() == 1 || auth()->user()->can('issue-item job-card') || auth()->user()->can('edit job-card')) && !$isCanvas)
             <a href="{{ url('job_card_entries/additional-qty/' . $jobCard->id) }}" class="btn btn-warning me-2 fw-semibold position-relative">
                 <i class="ri ri-add-circle-line me-1"></i> Additional Qty
                 @if($jobCard->additional_qty > 0)
@@ -198,7 +198,8 @@
                                     </thead>
                                     <tbody>
                                         @php $lineNum = 1; @endphp
-                                        @foreach($mainItemGroups as $artKey => $group)
+                                        @if(count($mainItemGroups) > 0)
+                                            @foreach($mainItemGroups as $artKey => $group)
                                             @php
                                                 $item = $group['primaryItem'];
                                                 $materialName = $artMaterialMap[$item->art_no] ?? $item->art_no;
@@ -336,7 +337,12 @@
                                                 <td><p class="mb-0 col-unit-price text-end">{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : (isset($artPriceMap[$item->art_no]) ? number_format($artPriceMap[$item->art_no], 2, '.', '') : '0.00') }}</p></td>
                                                 <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
                                             </tr>
-                                        @endforeach
+                                            @endforeach
+                                        @else
+                                            <tr>
+                                                <td colspan="15" class="text-center text-muted py-4 fw-medium">No items found</td>
+                                            </tr>
+                                        @endif
                                     </tbody>
                                 </table>
                             </div>
@@ -367,7 +373,8 @@
                                     </thead>
                                     <tbody>
                                         @php $lineNumAcc = 1; @endphp
-                                        @foreach($accItems as $item)
+                                        @if(count($accItems) > 0)
+                                            @foreach($accItems as $item)
                                             @php
                                                 $rmId = $artRawMaterialIdMap[$item->art_no] ?? null;
                                                 $std = $rmId ? ($standardConsumptions[$rmId] ?? null) : null;
@@ -444,7 +451,12 @@
                                                 <td class="text-end col-unit-price">{{ number_format($unitPrice, 2) }}</td>
                                                 <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
                                             </tr>
-                                        @endforeach
+                                            @endforeach
+                                        @else
+                                            <tr>
+                                                <td colspan="16" class="text-center text-muted py-4 fw-medium">No items found</td>
+                                            </tr>
+                                        @endif
                                     </tbody>
                                 </table>
                             </div>

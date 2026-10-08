@@ -137,22 +137,17 @@ class TaskManagementController extends Controller
 
             $filteredRecords = $query->count();
 
-            $start = $request->input('start', 0);
-            $length = $request->input('length', 10);
-
-            if ($length != -1) {
-                $query->skip($start)->take($length);
-            }
-
             // DataTable sorting
             if ($request->has('order')) {
                 $orderColumnIndex = $request->input('order.0.column');
-                $orderDir = $request->input('order.0.dir');
+                $orderDir = $request->input('order.0.dir', 'desc');
                 $columns = $request->input('columns');
                 
                 if (isset($columns[$orderColumnIndex]['name'])) {
                     $orderColumnName = $columns[$orderColumnIndex]['name'];
-                    if (in_array($orderColumnName, ['task_no', 'status'])) {
+                    if ($orderColumnName === 'task_no') {
+                        $query->orderBy('id', $orderDir);
+                    } elseif (in_array($orderColumnName, ['status', 'issue_date', 'due_date'])) {
                         $query->orderBy($orderColumnName, $orderDir);
                     } else {
                         $query->orderBy('id', 'desc');
@@ -162,6 +157,13 @@ class TaskManagementController extends Controller
                 }
             } else {
                 $query->orderBy('id', 'desc');
+            }
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
             }
 
             $tasks = $query->get();

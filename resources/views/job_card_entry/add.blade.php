@@ -890,17 +890,23 @@
                                                     <td><input type="text" name="fabrics[{{ $index }}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="{{ $fabric['art_no'] ?? '' }}" value="{{ $fabric['mtr'] ?? '' }}" readonly></td>
                                                 @endforeach
                                             </tr>
-                                            <tr>
+                                            @php
+                                                $isCanvasJobCard = false;
+                                                if (isset($jobCard) && $jobCard->brand && stripos($jobCard->brand->brand_name ?? '', 'CANVAS') !== false) {
+                                                    $isCanvasJobCard = true;
+                                                }
+                                            @endphp
+                                            <tr class="in-out-row" style="{{ $isCanvasJobCard ? 'display: none;' : '' }}">
                                                 @foreach($fabrics as $index => $fabric)
                                                     <td class="fw-bold">IN/OUT</td>
-                                                    <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center" value="{{ $fabric['in_out'] ?? 'NO' }}" readonly></td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center in-out-input" value="{{ $fabric['in_out'] ?? 'NO' }}" readonly></td>
                                                 @endforeach
                                             </tr>
 
-                                            <tr>
+                                            <tr class="n-patti-row" style="{{ $isCanvasJobCard ? 'display: none;' : '' }}">
                                                 @foreach($fabrics as $index => $fabric)
                                                     <td class="fw-bold">N.PATTI</td>
-                                                    <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}" readonly></td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center n-patti-input" value="{{ $fabric['n_patti'] ?? 'WHITE' }}" readonly></td>
                                                 @endforeach
                                             </tr>
                                         @endif
@@ -1066,6 +1072,25 @@
         flex-grow: 1;
     }
 
+    .canvas-material-select + .select2-container .select2-selection--single {
+        height: 28px !important;
+        font-size: 11px !important;
+        display: flex !important;
+        align-items: center !important;
+        border-color: #ced4da;
+    }
+    .canvas-material-select + .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 26px !important;
+        padding-left: 6px !important;
+        padding-right: 18px !important;
+        text-align: center;
+        font-weight: 500;
+        font-size: 11px;
+    }
+    .canvas-material-select + .select2-container .select2-selection--single .select2-selection__arrow {
+        height: 26px !important;
+    }
+
     .extra-small { font-size: 0.65rem; }
     .hover-lift:hover { transform: translateY(-2px); color: #333 !important; }
     .hover-glow:hover { box-shadow: 0 8px 25px rgba(98, 0, 238, 0.4) !important; transform: translateY(-1px); opacity: 0.95; }
@@ -1150,6 +1175,7 @@
         const oldFabrics = rawOldFabrics;
 
         const hasTasks = @json($hasTasks);
+        const hasIssuedItems = @json($hasIssuedItems ?? false);
         const isFgConverted = @json($isFgConverted ?? false);
         const existingImages = @json($jobCard && $jobCard->images ? $jobCard->images : []);
         const grnImageMap = @json($grnImageMap ?? []);
@@ -1166,16 +1192,21 @@
             currentArtNumbers = [...new Set(phpFabrics.map(f => f.art_no))];
         }
         const articleUoms = @json(collect($fabrics)->pluck('uom_code', 'art_no')) || {};
-        let currentArtData = (@json(array_values($fabrics)) || []).map(f => ({
-            art_no: f.art_no,
-            mtr: parseFloat(f.stock_total_qty) || parseFloat(f.mtr) || 0,
-            already_issued: parseFloat(f.mtr) || 0,
-            saved_stock_total_qty: f.stock_total_qty || null,
-            saved_mtr: f.mtr || null,
-            art_name: f.art_no,
-            grn_image: f.grn_image || (grnImageMap[String(f.art_no || '').trim()] ? grnImageMap[String(f.art_no || '').trim()].image : null),
-            grn_image_url: f.grn_image ? `{{ url('uploads/grn_items') }}/${f.grn_image}` : (grnImageMap[String(f.art_no || '').trim()] ? grnImageMap[String(f.art_no || '').trim()].url : null)
-        }));
+        const canvasRawMaterials = @json($canvasRawMaterials ?? []);
+        const rawMaterialMap = @json(\App\Models\RawMaterial::pluck('name', 'code')->toArray());
+        let currentArtData = (@json(array_values($fabrics)) || []).map(f => {
+            const rName = f.art_name || (rawMaterialMap && rawMaterialMap[String(f.art_no).trim()] ? rawMaterialMap[String(f.art_no).trim()] : f.art_no);
+            return {
+                art_no: f.art_no,
+                mtr: parseFloat(f.stock_total_qty) || parseFloat(f.mtr) || 0,
+                already_issued: parseFloat(f.mtr) || 0,
+                saved_stock_total_qty: f.stock_total_qty || null,
+                saved_mtr: f.mtr || null,
+                art_name: rName,
+                grn_image: f.grn_image || (grnImageMap[String(f.art_no || '').trim()] ? grnImageMap[String(f.art_no || '').trim()].image : null),
+                grn_image_url: f.grn_image ? `{{ url('uploads/grn_items') }}/${f.grn_image}` : (grnImageMap[String(f.art_no || '').trim()] ? grnImageMap[String(f.art_no || '').trim()].url : null)
+            };
+        });
 
         let currentSizes = @json($sizes);
         let currentRatios = @json($ratios);
@@ -1187,6 +1218,22 @@
 
 
         let sleeveValues = {};
+        function isCanvasMode() {
+            let selectedBrandText = ($('#brand option:selected').text() || '').toUpperCase().trim();
+            if (selectedBrandText.includes('CANVAS')) return true;
+            if (typeof currentArtData !== 'undefined' && currentArtData && currentArtData.length > 0) {
+                if (currentArtData.some(d => ((d.art_name || d.name || d.art_no || '') + '').toUpperCase().includes('CANVAS'))) {
+                    return true;
+                }
+            }
+            if (typeof currentArtNumbers !== 'undefined' && currentArtNumbers && currentArtNumbers.length > 0) {
+                if (currentArtNumbers.some(a => (a + '').toUpperCase().includes('CANVAS'))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         function captureSleeveValues() {
             $('.qty-direct-input').each(function() {
                 const instId = $(this).data('instance');
@@ -1415,7 +1462,7 @@
                     matrixTotal = parseFloat($matrixRow.find('.qty-input').val()) || parseFloat($matrixRow.find('.row-total').val()) || 0;
                     const catId = data.cat_id;
 
-                    if (catId == 1) { 
+                    if (catId == 1 || isCanvasMode()) { 
                         let lmRequired = 0;
                         const $lmTable = $(`.lay-mark-table[data-art="${art}"]`);
                         if ($lmTable.length) {
@@ -1842,6 +1889,7 @@
                     currentArtData    = data.art_data;
 
                     let hasFabric = false;
+                    let hasCanvasMaterial = false;
                     if (data.art_data) {
                         data.art_data.forEach(d => { 
                             articleUoms[d.art_no] = d.uom_code; 
@@ -1851,11 +1899,22 @@
                                     $('#fabric_type_id').val(d.fabric_type_id);
                                 }
                             }
+                            let name = ((d.art_name || d.name || d.art_no || '') + '').toUpperCase();
+                            if (name.includes('CANVAS') || (d.art_no && d.art_no.toUpperCase().startsWith('AS-'))) {
+                                hasCanvasMaterial = true;
+                            }
                         });
                     }
 
-                    let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
-                    let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+                    if (hasCanvasMaterial && !$('#brand').val()) {
+                        $('#brand option').each(function() {
+                            if ($(this).text().toUpperCase().includes('CANVAS')) {
+                                $('#brand').val($(this).val()).trigger('change');
+                            }
+                        });
+                    }
+
+                    let isCanvas = isCanvasMode() || hasCanvasMaterial;
 
                     if (!hasFabric && !isCanvas) {
                         $('#fabric-validation-error').hide();
@@ -1989,6 +2048,7 @@
                 .then(data => {
                     currentArtNumbers = data.art_numbers;
                     currentArtData    = data.art_data;
+                    applyCanvasLogic();
 
                     if (typeof renderItemDetailsTable === "function") {
                         renderItemDetailsTable(currentArtData);
@@ -2037,6 +2097,7 @@
             $.get(`{{ url('job_card_entries/get-po-details') }}/${initialPoId}`, function(data) {
                 currentArtNumbers = data.art_numbers;
                 currentArtData = data.art_data;
+                applyCanvasLogic();
 
                 if (!isEditMode && $('#fabric-details-body tr').length === 0) {
                     $('#fabric-details-card').removeClass('d-none');
@@ -2060,6 +2121,40 @@
             });
         }
 
+        function getBestCanvasMaterial(size, baseMatVal, savedSpecificVal) {
+            if (savedSpecificVal && typeof canvasRawMaterials !== 'undefined' && canvasRawMaterials.some(rm => (rm.name || '').toUpperCase().trim() === String(savedSpecificVal).toUpperCase().trim())) {
+                return savedSpecificVal;
+            }
+            if (typeof canvasRawMaterials === 'undefined' || !canvasRawMaterials.length) {
+                return savedSpecificVal || baseMatVal || '';
+            }
+            const cleanSize = String(size).trim().toUpperCase();
+            
+            let basePrefix = '';
+            if (baseMatVal) {
+                basePrefix = String(baseMatVal).replace(/\b(\d+)\s*(SIZE)?\b/gi, '').replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+            }
+            
+            // 1. If baseMatVal has a size-specific variant matching this size (e.g. TAILOR FIT COLLAR DOUBLE CANVAS -> ... 36 SIZE)
+            if (basePrefix && basePrefix.length > 2) {
+                const words = basePrefix.split(' ').filter(w => w.length > 2);
+                let match = canvasRawMaterials.find(rm => {
+                    const nm = (rm.name || '').toUpperCase();
+                    const hasPrefix = nm.includes(basePrefix) || (words.length > 0 && words.every(w => nm.includes(w)));
+                    const hasSize = new RegExp(`(^|\\s|-|_)${cleanSize}(\\s|SIZE|$|-)`, 'i').test(nm);
+                    return hasPrefix && hasSize;
+                });
+                if (match) return match.name;
+            }
+            
+            // 2. If baseMatVal itself exists in canvasRawMaterials (e.g. "8450 BOTTOM COLLAR CANVAS"), preserve it
+            if (baseMatVal && canvasRawMaterials.some(rm => (rm.name || '').toUpperCase().trim() === String(baseMatVal).toUpperCase().trim())) {
+                return baseMatVal;
+            }
+
+            return savedSpecificVal || baseMatVal || '';
+        }
+
         function renderArticleQtyMatrix(artNumbers, activeFsSizes = [], activeHsSizes = []) {
             activeFsSizes = [...new Set(activeFsSizes)];
             activeHsSizes = [...new Set(activeHsSizes)];
@@ -2071,11 +2166,27 @@
             const capturedMatrix = {};
             $tbody.find('tr').each(function() {
                 const art = String($(this).data('art') || "").trim();
+                const size = String($(this).data('size') || "").trim();
                 if (art) {
-                    capturedMatrix[art] = {};
-                    const fgVal = $(this).find('.fg-art-input').val();
-                    if (fgVal !== undefined && fgVal !== 'null' && fgVal !== null) {
-                        capturedMatrix[art]['fg_art_no'] = fgVal;
+                    if (!capturedMatrix[art]) capturedMatrix[art] = {};
+                    if (size) {
+                        const fgVal = $(this).find('.fg-art-input').val();
+                        if (fgVal !== undefined && fgVal !== 'null' && fgVal !== null) {
+                            capturedMatrix[art]['fg_art_no_' + size] = fgVal;
+                        }
+                        const matVal = $(this).find('.canvas-material-select').val();
+                        if (matVal !== undefined && matVal !== 'null' && matVal !== null) {
+                            capturedMatrix[art]['material_name_' + size] = matVal;
+                        }
+                    } else {
+                        const fgVal = $(this).find('.fg-art-input').val();
+                        if (fgVal !== undefined && fgVal !== 'null' && fgVal !== null) {
+                            capturedMatrix[art]['fg_art_no'] = fgVal;
+                        }
+                        const matVal = $(this).find('.canvas-material-select').val();
+                        if (matVal !== undefined && matVal !== 'null' && matVal !== null) {
+                            capturedMatrix[art]['material_name'] = matVal;
+                        }
                     }
                     $(this).find('.qty-input').each(function() {
                         const col = $(this).data('col');
@@ -2092,15 +2203,154 @@
 
             if (!artNumbers || artNumbers.length === 0) return;
 
-            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
-            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+            let isCanvas = isCanvasMode();
 
-            const headHtml = isCanvas ? `
-                <tr class="size-headers">
-                    <th class="align-middle" style="min-width: 170px;">ART NO / FG ART NO</th>
-                    ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
-                    <th class="align-middle">TOTAL</th>
-                </tr>` : `
+            if (isCanvas) {
+                const headHtml = `
+                    <tr class="text-center bg-light">
+                        <th class="align-middle text-center py-2" style="width: 15%;">ART NO</th>
+                        <th class="align-middle text-center py-2" style="width: 10%;">SIZE</th>
+                        <th class="align-middle text-center py-2" style="width: 15%;">QTY (PCS)</th>
+                        <th class="align-middle text-center py-2" style="width: 35%;">CANVAS MATERIAL</th>
+                        <th class="align-middle text-center py-2" style="width: 25%;">FG ART NO / RECEIPT STYLE NAME</th>
+                    </tr>`;
+                $thead.append(headHtml);
+
+                const sizesToRender = activeFsSizes.length > 0 ? activeFsSizes : currentSizes;
+
+                artNumbers.forEach((art, index) => {
+                    art = String(art).trim();
+                    const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]) : null;
+                    let oldRow = (oldMatrix && oldMatrix.length > 0) ? Object.values(oldMatrix).find(r => String(r.art_no).split('|')[0].trim() == String(art).split('|')[0].trim()) : null;
+
+                    let uom = (articleUoms[art] || 'PCS').toUpperCase();
+                    let artName = '';
+                    let catId = 1;
+                    let actualArt = art;
+
+                    if (currentArtData && currentArtData.length > 0) {
+                        const d = currentArtData.find(d => String(d.art_no).trim() == String(art).trim());
+                        if (d) {
+                            artName = d.art_name || '';
+                            uom = (d.uom_code || uom).toUpperCase();
+                            catId = d.store_category_id || 1;
+                            if (d.actual_art_no) actualArt = d.actual_art_no;
+                        }
+                    }
+
+                    let resolvedArtName = artName || (typeof rawMaterialMap !== 'undefined' && rawMaterialMap[String(art).trim()] ? rawMaterialMap[String(art).trim()] : '');
+
+                    const isLocked = (isFgConverted || hasIssuedItems);
+                    const isTaskReadOnly = isLocked ? 'readonly tabindex="-1"' : '';
+                    const isSelectDisabled = isLocked ? 'disabled' : '';
+                    const readonlyAttr = isTaskReadOnly;
+
+                    let defaultBaseMat = (capturedMatrix[art] && (capturedMatrix[art].fg_art_no || capturedMatrix[art].material_name)) || (oldRow && (oldRow.fg_art_no || oldRow.material_name)) || (existingRow && existingRow.fg_art_no && existingRow.fg_art_no !== actualArt ? existingRow.fg_art_no : null) || resolvedArtName || actualArt || art;
+
+                    sizesToRender.forEach((s) => {
+                        let fsVal = '';
+                        const key = `fs_${s}`;
+                        if (capturedMatrix[art] && capturedMatrix[art][key] !== undefined) {
+                            fsVal = capturedMatrix[art][key];
+                        } else if (oldRow && oldRow[key] !== undefined) {
+                            fsVal = oldRow[key];
+                        } else if (existingRow && existingRow.quantities) {
+                            const q = existingRow.quantities.find(q => String(q.size) === String(s));
+                            fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
+                        } else {
+                            const $direct = $(`.qty-direct-input[data-type="fs"][data-size="${s}"]`);
+                            if ($direct.length && $direct.val()) {
+                                fsVal = $direct.val();
+                            }
+                        }
+
+                        let savedMatForSize = (capturedMatrix[art] && (capturedMatrix[art]['material_name_' + s] || capturedMatrix[art]['material_name'])) || (oldRow && (oldRow['material_name_' + s] || oldRow['material_name'])) || '';
+                        
+                        // Default to empty / -- Select Material -- unless explicitly saved/selected
+                        let chosenMatName = '';
+                        if (savedMatForSize && typeof canvasRawMaterials !== 'undefined' && canvasRawMaterials.some(rm => (rm.name || '').toUpperCase().trim() === String(savedMatForSize).toUpperCase().trim())) {
+                            chosenMatName = savedMatForSize;
+                        }
+
+                        let optHtml = `<option value="">-- Select Material --</option>`;
+                        if (typeof canvasRawMaterials !== 'undefined' && canvasRawMaterials.length > 0) {
+                            canvasRawMaterials.forEach(rm => {
+                                let rmName = rm.name || rm.code || '';
+                                let isSelected = (chosenMatName && rmName.toUpperCase().trim() === String(chosenMatName).toUpperCase().trim());
+                                optHtml += `<option value="${rmName}" data-code="${rm.code || ''}" data-id="${rm.id}" ${isSelected ? 'selected' : ''}>${rmName}</option>`;
+                            });
+                        }
+
+                        let curFgArtNo = (capturedMatrix[art] && (capturedMatrix[art]['fg_art_no_' + s] || capturedMatrix[art]['fg_art_no'])) || (oldRow && (oldRow['fg_art_no_' + s] || oldRow['fg_art_no'])) || (existingRow && existingRow.fg_art_no && existingRow.fg_art_no !== actualArt ? existingRow.fg_art_no : null) || chosenMatName || resolvedArtName || defaultBaseMat || actualArt || art;
+
+                        let rowHtml = `
+                            <tr class="cat1-row canvas-portrait-row" data-uom="${uom}" data-art="${art}" data-size="${s}" data-category="${catId}" data-index="${index}">
+                                <td class="text-center align-middle">
+                                    <span class="fw-bold small">${actualArt}</span>
+                                    <input type="hidden" name="article_matrix[${index}][art_no]" value="${art}">
+                                </td>
+                                <td class="text-center align-middle">
+                                    <span class="badge bg-primary fs-6 px-3 py-1">${s}</span>
+                                </td>
+                                <td class="text-center align-middle">
+                                    <input type="number" min="0" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center fw-bold" data-col="fs-${s}" data-art="${art}" data-size="${s}" value="${fsVal}" ${readonlyAttr} placeholder="0">
+                                </td>
+                                <td class="align-middle">
+                                    <select name="article_matrix[${index}][size_materials][${s}]" class="form-select form-select-sm canvas-material-select" data-index="${index}" data-art="${art}" data-size="${s}" style="width: 100%;" ${isSelectDisabled}>
+                                        ${optHtml}
+                                    </select>
+                                    ${isLocked ? `<input type="hidden" name="article_matrix[${index}][size_materials][${s}]" value="${chosenMatName}">` : ''}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="article_matrix[${index}][size_fg_art_nos][${s}]" class="form-control form-control-sm text-center fw-semibold fg-art-input bg-light" data-size="${s}" placeholder="FG Art No" value="${curFgArtNo}" readonly tabindex="-1" title="Finished Good Art No / Receipt Style">
+                                        ${isLocked ? `<span class="input-group-text bg-light text-muted px-2" title="Locked: Raw materials already issued"><i class="ri ri-lock-2-line"></i></span>` : ''}
+                                    </div>
+                                </td>
+                            </tr>`;
+                        $tbody.append(rowHtml);
+                    });
+
+                    $tbody.append(`
+                        <tr style="display:none;">
+                            <td colspan="5">
+                                <input type="hidden" name="article_matrix[${index}][fg_art_no]" id="canvas_main_fg_${index}" value="${defaultBaseMat}">
+                                <input type="hidden" name="article_matrix[${index}][material_name]" id="canvas_main_material_${index}" value="${defaultBaseMat}">
+                            </td>
+                        </tr>
+                    `);
+                });
+
+                const footHtml = `
+                    <tr>
+                        <td colspan="2" class="fw-bold text-center small py-2">CUTTING TOTAL (PCS)</td>
+                        <td><div id="article-qty-matrix-grand-total" class="grand-total text-center fw-bold py-1 border rounded small" style="min-height: 30px;">0</div></td>
+                        <td colspan="2"></td>
+                    </tr>`;
+                $tfoot.append(footHtml);
+
+                if ($tbody.find('.canvas-material-select').length > 0) {
+                    $tbody.find('.canvas-material-select').select2({
+                        width: '100%',
+                        placeholder: '-- Select Material --'
+                    }).on('change select2:select', function() {
+                        const selectedVal = $(this).val();
+                        const $row = $(this).closest('tr');
+                        const $fgInput = $row.find('.fg-art-input');
+                        if (selectedVal) {
+                            $fgInput.val(selectedVal);
+                        } else {
+                            const art = $row.data('art') || '';
+                            $fgInput.val(art);
+                        }
+                    });
+                }
+
+                calculateMatrixTotals(true);
+                return;
+            }
+
+            const headHtml = `
                 <tr>
                     <th rowspan="2" class="align-middle" style="min-width: 170px;">ART NO / FG ART NO</th>
                     ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
@@ -2163,7 +2413,8 @@
                     }
                 }
 
-                const isTaskReadOnly = isFgConverted ? 'readonly tabindex="-1"' : '';
+                const isLocked = (isFgConverted || hasIssuedItems);
+                const isTaskReadOnly = isLocked ? 'readonly tabindex="-1"' : '';
                 const readonlyAttr = (!isFabric && !hasAutoCons && !isCanvas) ? '' : ((isFabric || isCanvas) ? isTaskReadOnly : 'readonly tabindex="-1"');
                 const rowClass = (isFabric || isCanvas) ? 'cat1-row' : (hasAutoCons ? 'cat2-row-auto' : 'cat2-row-manual');
                 const styleAttr = (isFabric || hasAutoCons || isCanvas) ? '' : 'style="display: none;"';
@@ -2181,13 +2432,18 @@
                     fgArtNo = actualArt || art;
                 }
 
+                let materialNameHtml = `<div class="small text-muted text-center mb-1" style="font-size: 10px; line-height: 1.1;">${artName}</div>`;
+
                 let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" data-index="${index}" ${styleAttr}>
                                 <td style="min-width: 170px;">
                                     <div class="border rounded p-1 mb-1 text-center fw-bold small bg-light">${actualArt}</div>
                                     <input type="hidden" name="article_matrix[${index}][art_no]" value="${art}">
-                                    <div class="small text-muted text-center mb-1" style="font-size: 10px; line-height: 1.1;">${artName}</div>
+                                    ${materialNameHtml}
                                     <div class="mt-1">
-                                        <input type="text" name="article_matrix[${index}][fg_art_no]" class="form-control form-control-sm text-center fw-semibold fg-art-input" placeholder="FG Art No" value="${fgArtNo}" ${isTaskReadOnly} title="Finished Good Art No / Receipt Style">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="article_matrix[${index}][fg_art_no]" class="form-control form-control-sm text-center fw-semibold fg-art-input ${isLocked ? 'bg-light' : ''}" placeholder="FG Art No" value="${fgArtNo}" ${isTaskReadOnly} title="${isLocked ? 'Locked: Raw materials already issued' : 'Finished Good Art No / Receipt Style'}">
+                                            ${isLocked ? `<span class="input-group-text bg-light text-muted px-2" title="Locked: Raw materials already issued"><i class="ri ri-lock-2-line"></i></span>` : ''}
+                                        </div>
                                     </div>
                                 </td>`;
 
@@ -2217,7 +2473,6 @@
                         hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
                     }
                     rowHtml += `<td><input type="number" min="0" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" data-art="${art}" value="${hsVal}" ${readonlyAttr} placeholder="0"></td>`;
-;
                 });
 
                 rowHtml += `<td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td></tr>`;
@@ -2243,7 +2498,7 @@
             if ($row.closest('table').is('#article-qty-matrix')) {
                 const isCat1 = ($row.attr('data-category') == 1);
 
-                if (isCat1 && $('#article-qty-matrix-body tr.cat1-row').first().is($row)) {
+                if (isCat1 || isCanvasMode()) {
                     const col = $el.data('col');
                     const parts = (col || "").split('-');
                     if (parts.length >= 2) {
@@ -2251,7 +2506,6 @@
                         const size = parts[1];
                         const val = parseFloat($el.val()) || 0;
                         const pieces = val; 
-
                         const $masterInput = $('.qty-direct-input').filter(function() {
                             return $(this).data('size') == size && $(this).data('type') == type;
                         });
@@ -2269,12 +2523,82 @@
             }
         });
 
+        $(document).on('change select2:select', '.canvas-material-select', function() {
+            const selectedMatName = $(this).val();
+            const $row = $(this).closest('tr');
+            const changedSize = $(this).data('size');
+            const $fgInput = $row.find('.fg-art-input');
+            if ($fgInput.length && selectedMatName) {
+                $fgInput.val(selectedMatName);
+            }
+
+            const index = $(this).data('index');
+            if (index !== undefined && selectedMatName) {
+                $(`#canvas_main_material_${index}`).val(selectedMatName);
+                $(`#canvas_main_fg_${index}`).val(selectedMatName);
+            }
+
+            if (selectedMatName && changedSize && typeof canvasRawMaterials !== 'undefined') {
+                const newPrefix = selectedMatName.replace(new RegExp(`(^|\\s|-|_)${changedSize}(\\s|SIZE|$|-)`, 'i'), '').replace(/\s*(SIZE)?$/i, '').trim().toUpperCase();
+                if (newPrefix && newPrefix.length > 2) {
+                    $('.canvas-material-select').each(function() {
+                        const otherSize = $(this).data('size');
+                        if (otherSize && String(otherSize) !== String(changedSize)) {
+                            const otherVal = $(this).val();
+                            const matchingRm = canvasRawMaterials.find(rm => {
+                                const nm = (rm.name || '').toUpperCase();
+                                return (nm.includes(newPrefix) || newPrefix.split(' ').every(w => w.length > 2 ? nm.includes(w) : true)) && new RegExp(`(^|\\s|-|_)${otherSize}(\\s|SIZE|$|-)`, 'i').test(nm);
+                            });
+                            if (matchingRm && otherVal !== matchingRm.name) {
+                                $(this).val(matchingRm.name).trigger('change.select2');
+                                const $otherRow = $(this).closest('tr');
+                                $otherRow.find('.fg-art-input').val(matchingRm.name);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
         function calculateMatrixTotals(force = false) {
             if (isSyncing && !force) return;
             let wasSyncing = isSyncing;
             isSyncing = true;
 
             try {
+                let isCanvas = isCanvasMode();
+
+                if (isCanvas) {
+                    let grandTotal = 0;
+                    $('#article-qty-matrix-body tr.canvas-portrait-row').each(function() {
+                        const $row = $(this);
+                        const val = parseFloat($row.find('.qty-input').val()) || 0;
+                        grandTotal += val;
+                    });
+
+                    $('#article-qty-matrix-grand-total').text(grandTotal > 0 ? (grandTotal % 1 === 0 ? grandTotal : grandTotal.toFixed(2)) : '0');
+                    $('#total_qty_fs').val(grandTotal > 0 ? Math.round(grandTotal) : '');
+                    $('#total_qty_hs').val('');
+                    $('.total-summary-fs').text(grandTotal > 0 ? Math.round(grandTotal) : '0');
+                    $('.total-summary-hs').text('0');
+
+                    $('.requirement-display').each(function() {
+                        const art = $(this).data('art');
+                        let lmRequired = 0;
+                        const $lmTable = $(`.lay-mark-table[data-art="${art}"]`);
+                        if ($lmTable.length) {
+                            $lmTable.find('tbody tr.lay-mark-row').each(function() {
+                                const mkMeter = parseFloat($(this).find('input[name$="[meter]"]').val()) || 0;
+                                const mkLay = parseFloat($(this).find('input[name$="[no_of_lay]"]').val()) || 0;
+                                lmRequired += (mkMeter * mkLay);
+                            });
+                        }
+                        $(this).find('.req-val').text(lmRequired > 0 ? lmRequired.toFixed(2) : '-');
+                    });
+
+                    return;
+                }
+
                 const cat1ColSums = {};
                 $('#article-qty-matrix-body tr.cat1-row').each(function() {
                     const $row = $(this);
@@ -2288,9 +2612,6 @@
                         const val = parseFloat($(this).val()) || 0;
                         const rowCatId = $row.data('category');
 
-                        let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
-                        let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
-                        
                         if (rowCatId == 1 || isCanvas) {
                             cat1ColSums[col] = (cat1ColSums[col] || 0) + val;
                         }
@@ -2381,7 +2702,7 @@
                         });
                     }
                     let requirementText = '-';
-                    if (catId == 1) { 
+                    if (catId == 1 || isCanvasMode()) { 
                         requirementText = lmRequired > 0 ? lmRequired.toFixed(2) : '-';
                     } else {
                         const fsCons = parseFloat($(`.pcs-cons-input[data-art="${art}"][name*="[fs_cons]"]`).val()) || 0;
@@ -2455,7 +2776,14 @@
         $('#add-hs-instance').on('click', function() { addSleeveInstance('hs'); });
 
         $(document).on('change', '.size-checkbox', function() {
-            if (sleeveInstances.length === 0) {
+            let isCanvas = isCanvasMode();
+
+            if (isCanvas && sleeveInstances.length === 0) {
+                sleeveInstances.push({ id: 1, type: 'fs' });
+                updateSleeveJson();
+            }
+
+            if (!isCanvas && sleeveInstances.length === 0) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Sleeve Configuration Required',
@@ -2553,12 +2881,19 @@
         }
 
         function renderSleeveInstanceList() {
+            let isCanvas = isCanvasMode();
+
+            if (isCanvas && sleeveInstances.length === 0) {
+                sleeveInstances.push({ id: 1, type: 'fs' });
+                updateSleeveJson();
+            }
+
             updateLayMarkSleeveOptions();
             const $list = $('#sleeve-instance-list');
             const $msg = $('#no-sleeve-msg');
             $list.empty();
 
-            if (sleeveInstances.length === 0) {
+            if (sleeveInstances.length === 0 && !isCanvas) {
                 $msg.show();
                 $('#cutting-size-table-wrapper').hide();
                 $('#trigger-sync-wrapper').hide();
@@ -2678,7 +3013,7 @@
                     $(this).find('tbody tr.lay-mark-row').each(function() {
                         marks.push({
                             sizes: $(this).find('.select2-size-multi').val() || [],
-                            sleeve_type: $(this).find('select[name*="[sleeve]"]').val(),
+                            sleeve_type: $(this).find('[name*="[sleeve]"]').val() || 'F/S',
                             lay_mark_meter: $(this).find('input[name*="[meter]"]').val(),
                             no_of_lay: $(this).find('input[name*="[no_of_lay]"]').val()
                         });
@@ -2695,12 +3030,11 @@
             let artRow = '<tr>';
             let widthRow = '<tr>';
             let mtrRow = '<tr>';
-            let inOutRow = '<tr>';
-            let nPattiRow = '<tr>';
+            let inOutRow = '<tr class="in-out-row">';
+            let nPattiRow = '<tr class="n-patti-row">';
             let sleeveQtyRow = '<tr>';
 
-            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
-            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+            let isCanvas = isCanvasMode();
 
             currentArtNumbers.forEach((art, index) => {
                 let uom = '';
@@ -2709,9 +3043,12 @@
                 let actualArt = art;
 
                 let sizes = [];
-                if (typeof globalActiveSizes !== 'undefined') {
+                if (typeof globalActiveSizes !== 'undefined' && ((globalActiveSizes.fs && globalActiveSizes.fs.length) || (globalActiveSizes.hs && globalActiveSizes.hs.length))) {
                     sizes = [...new Set([...(globalActiveSizes.fs || []), ...(globalActiveSizes.hs || [])])].sort((a,b) => parseFloat(a)-parseFloat(b) || String(a).localeCompare(String(b)));
                 } else if (typeof currentSizes !== 'undefined') {
+                    sizes = currentSizes;
+                }
+                if (sizes.length === 0 && typeof currentSizes !== 'undefined' && currentSizes.length > 0) {
                     sizes = currentSizes;
                 }
                 if (currentArtData && currentArtData.length > 0) {
@@ -2847,7 +3184,7 @@
 
                 let sizeTableHtml = '';
                 if (sizes.length > 0) {
-                    if (catId == 1) {
+                    if (catId == 1 || isCanvas) {
                         sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1 lay-mark-table" id="lay-mark-table-art-${index}" data-art="${art}" style="font-size: 11px;">
                             <thead class="bg-light">
                                 <tr class="text-center">
@@ -2896,6 +3233,12 @@
                                     });
                                 }
                             }
+                        if (savedLayMarks.length === 0 && index > 0 && currentArtNumbers.length > 0) {
+                            const firstArt = currentArtNumbers[0];
+                            const firstArtMarks = captured.layMarks[firstArt];
+                            if (firstArtMarks && firstArtMarks.length > 0) {
+                                savedLayMarks = JSON.parse(JSON.stringify(firstArtMarks));
+                            }
                         }
 
                         const rowsToRender = savedLayMarks.length > 0 ? savedLayMarks : [{ sizes: [], sleeve_type: 'F/S', lay_mark_meter: null, no_of_lay: null }];
@@ -2904,7 +3247,7 @@
                             const savedSizes = lm.sizes ? (Array.isArray(lm.sizes) ? lm.sizes : JSON.parse(lm.sizes)) : [];
                             const savedSleeve = lm.sleeve_type || 'F/S';
                             const savedMeter = (lm.lay_mark_meter !== null && lm.lay_mark_meter !== undefined) ? lm.lay_mark_meter : '';
-                    const savedNoOfLay = (lm.no_of_lay !== null && lm.no_of_lay !== undefined) ? lm.no_of_lay : '';
+                            const savedNoOfLay = (lm.no_of_lay !== null && lm.no_of_lay !== undefined) ? lm.no_of_lay : '';
 
                             sizeTableHtml += `
                                 <tr class="lay-mark-row">
@@ -3004,11 +3347,11 @@
             $tbody.append(artRow + '</tr>');
             $tbody.append(widthRow + '</tr>');
             $tbody.append(mtrRow + '</tr>');
-            $tbody.append(inOutRow + '</tr>');
-            $tbody.append(nPattiRow + '</tr>');
             if (!isCanvas) {
-                $tbody.append(sleeveQtyRow + '</tr>');
+                $tbody.append(inOutRow + '</tr>');
+                $tbody.append(nPattiRow + '</tr>');
             }
+            $tbody.append(sleeveQtyRow + '</tr>');
             $('.select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
             if (typeof updateLayMarkSleeveOptions === 'function') updateLayMarkSleeveOptions();
         }
@@ -3035,8 +3378,7 @@
             const rowCount = $table.find('tr.lay-mark-row').length;
             const newIndex = rowCount;
             
-            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
-            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+            let isCanvas = isCanvasMode();
 
 
             let rowHtml = `
@@ -3077,7 +3419,11 @@
             $table.find('tr:last-child .select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
             updateLayMarkRowNumbers($table);
             if (typeof updateLayMarkSleeveOptions === 'function') updateLayMarkSleeveOptions();
-            calculateMatrixFromLayMarks();
+            if (!isCanvasMode()) {
+                calculateMatrixFromLayMarks();
+            } else {
+                calculateMatrixTotals();
+            }
         }
 
         $(document).on('click', '.remove-lay-mark', function() {
@@ -3100,7 +3446,11 @@
             if ($table.find('tr.lay-mark-row').length > 1) {
                 $row.remove();
                 updateLayMarkRowNumbers($table);
-                calculateMatrixFromLayMarks();
+                if (!isCanvasMode()) {
+                    calculateMatrixFromLayMarks();
+                } else {
+                    calculateMatrixTotals();
+                }
             }
         });
 
@@ -3146,9 +3496,9 @@
                     $(this).find('.select2-size-multi').attr('name', selectAttr.replace(/\[lay_marks\]\[\d+\]/, `[lay_marks][${i}]`));
                 }
 
-                const sleeveAttr = $(this).find('select[name$="[sleeve]"]').attr('name');
+                const sleeveAttr = $(this).find('[name$="[sleeve]"]').attr('name');
                 if (sleeveAttr) {
-                    $(this).find('select[name$="[sleeve]"]').attr('name', sleeveAttr.replace(/\[lay_marks\]\[\d+\]/, `[lay_marks][${i}]`));
+                    $(this).find('[name$="[sleeve]"]').attr('name', sleeveAttr.replace(/\[lay_marks\]\[\d+\]/, `[lay_marks][${i}]`));
                 }
 
                 const meterAttr = $(this).find('input[name$="[meter]"]').attr('name');
@@ -3192,10 +3542,18 @@
             const selectedRatioDisplay = $('#size_ratio_display').val() || '';
             const sizeStr = selectedRatioDisplay ? selectedRatioDisplay.split(' - ')[0] : '';
 
+            let isCanvas = isCanvasMode();
+
+            if (isCanvas && sleeveInstances.length === 0) {
+                sleeveInstances.push({ id: 1, type: 'fs' });
+                updateSleeveJson();
+            }
+
             const addTypeRows = (type, label, isVisible, showInfo = true, infoLabel = 'SIZE', instanceId = null) => {
                 const style = isVisible ? '' : 'display:none;';
 
-                let vRow = `<tr class="qty-${type}-row" style="${style}"><td><strong>${label}</strong></td>`;
+                let rowLabel = isCanvas ? 'QUANTITY' : label;
+                let vRow = `<tr class="qty-${type}-row" style="${style}"><td><strong>${rowLabel}</strong></td>`;
                 sizes.forEach((s, idx) => {
                     let savedVal = '';
                     if (matrixItems.length > 0) {
@@ -3326,7 +3684,7 @@
 
                 $('.lay-mark-table').each(function() {
                     $(this).find('tbody tr.lay-mark-row').each(function() {
-                        const sleeve = $(this).find('select[name$="[sleeve]"]').val();
+                        const sleeve = $(this).find('[name$="[sleeve]"]').val() || 'F/S';
                         const noOfLay = parseFloat($(this).find('input[name*="[no_of_lay]"]').val()) || 0;
                         if (noOfLay > 0) {
                             if (sleeve === 'F/S') hasFS = true;
@@ -3373,6 +3731,7 @@
                     $('#article-matrix-card').removeClass('d-none');
 
                     if (populateValues) {
+                        let isCanvas = isCanvasMode();
                         currentSizes.forEach(size => {
                             ['fs', 'hs'].forEach(type => {
                                 let totalVal = 0;
@@ -3383,7 +3742,7 @@
                                 $('table[id^="article-qty-matrix"] tbody tr .qty-input').filter(function() {
                                     const $row = $(this).closest('tr');
                                     const catId = $row.data('category');
-                                    return $(this).data('col') === `${type}-${size}` && catId != 1;
+                                    return $(this).data('col') === `${type}-${size}` && (catId != 1 || isCanvas);
                                 }).each(function() {
                                     const uom = ($(this).closest('tr').attr('data-uom') || '').toUpperCase();
                                     let finalCalc = totalVal > 0 ? (uom === 'PCS' ? Math.round(totalVal).toString() : totalVal.toString()) : '';
@@ -3394,7 +3753,9 @@
                                 });
                             });
                         });
-                        calculateMatrixFromLayMarks();
+                        if (!isCanvas) {
+                            calculateMatrixFromLayMarks();
+                        }
                     }
                     calculateMatrixTotals(true);
                 } else {
@@ -3423,11 +3784,12 @@
         }
 
         function calculateMatrixFromLayMarks() {
+            if (isCanvasMode()) return;
             const matrixData = {};
             let needsSync = false;
             $('.lay-mark-table').each(function() {
                 $(this).find('tbody tr.lay-mark-row').each(function() {
-                    const sleeve = $(this).find('select[name$="[sleeve]"]').val();
+                    const sleeve = $(this).find('[name$="[sleeve]"]').val() || 'F/S';
                     const noOfLay = parseFloat($(this).find('input[name*="[no_of_lay]"]').val()) || 0;
                     if (noOfLay > 0) {
                         const type = sleeve.toLowerCase().replace('/', '');
@@ -3464,7 +3826,7 @@
                     if (!matrixData[fabricIndex]) matrixData[fabricIndex] = { fs: {}, hs: {} };
                     $(this).find('tbody tr.lay-mark-row').each(function() {
                         const sizes = $(this).find('.select2-size-multi').val() || [];
-                        const sleeve = $(this).find('select[name$="[sleeve]"]').val();
+                        const sleeve = $(this).find('[name$="[sleeve]"]').val() || 'F/S';
                         const noOfLay = parseFloat($(this).find('input[name*="[no_of_lay]"]').val()) || 0;
 
                         if (sleeve && noOfLay > 0) {
@@ -3500,26 +3862,34 @@
             }
 
             if (matrixData[0]) {
-                for (const type in matrixData[0]) {
-                    for (const size in matrixData[0][type]) {
-                        const val = matrixData[0][type][size];
+                currentSizes.forEach(size => {
+                    ['fs', 'hs'].forEach(type => {
+                        const val = (matrixData[0][type] && matrixData[0][type][size]) ? matrixData[0][type][size] : '';
                         const $masterInput = $(`.qty-direct-input[data-type="${type}"][data-size="${size}"]`);
-                        if ($masterInput.length && !$masterInput.val()) {
+                        if ($masterInput.length) {
                             $masterInput.val(val || '');
                         }
-                    }
-                }
+                    });
+                });
                 updateSleeveJson();
             }
 
             calculateMatrixTotals();
         }
 
-        $(document).on('input', 'input[name$="[no_of_lay]"]', function() {
+        $(document).on('input', 'input[name$="[no_of_lay]"], .lay-mark-table input[type="number"]', function() {
+            if (isCanvasMode()) {
+                calculateMatrixTotals();
+                return;
+            }
             calculateMatrixFromLayMarks();
         });
 
-        $(document).on('change', '.select2-size-multi, select[name$="[sleeve]"]', function() {
+        $(document).on('change', '.select2-size-multi, [name$="[sleeve]"]', function() {
+            if (isCanvasMode()) {
+                calculateMatrixTotals();
+                return;
+            }
             calculateMatrixFromLayMarks();
         });
 
@@ -4026,10 +4396,35 @@
         });
 
         function applyCanvasLogic() {
-            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
-            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+            let isCanvas = isCanvasMode();
             
             if (isCanvas) {
+                $('.in-out-row, .n-patti-row').hide();
+                // Auto-fill Issue Store and Receipt Store to Accessories Store
+                let $accIssueOption = $('#issue_store option').filter(function() {
+                    let txt = $(this).text().toUpperCase().trim();
+                    return txt.includes('ACCESSORIES') || txt.includes('ACCESSORY');
+                });
+                if ($accIssueOption.length > 0) {
+                    let currentVal = $('#issue_store').val();
+                    let currentText = ($('#issue_store option:selected').text() || '').toUpperCase();
+                    if (!currentVal || (!currentText.includes('ACCESSORIES') && !currentText.includes('ACCESSORY'))) {
+                        $('#issue_store').val($accIssueOption.first().val()).trigger('change');
+                    }
+                }
+
+                let $accReceiptOption = $('#receipt_store_id option').filter(function() {
+                    let txt = $(this).text().toUpperCase().trim();
+                    return txt.includes('ACCESSORIES') || txt.includes('ACCESSORY');
+                });
+                if ($accReceiptOption.length > 0) {
+                    let currentVal = $('#receipt_store_id').val();
+                    let currentText = ($('#receipt_store_id option:selected').text() || '').toUpperCase();
+                    if (!currentVal || (!currentText.includes('ACCESSORIES') && !currentText.includes('ACCESSORY'))) {
+                        $('#receipt_store_id').val($accReceiptOption.first().val()).trigger('change');
+                    }
+                }
+
                 // Production Stages
                 $('#production-stages-table tbody tr').each(function() {
                     let $row = $(this);
@@ -4066,16 +4461,24 @@
                 $('select[name="sleeve_types[]"]').closest('.col-md-6').hide();
                 
                 $('#sleeve-instance-manager').hide();
+                let needsRender = false;
                 if (typeof sleeveInstances !== 'undefined' && sleeveInstances.length === 0) {
                      sleeveInstances.push({ id: 1, type: 'fs' });
-                     if (typeof renderSleeveInstanceList === 'function') renderSleeveInstanceList();
+                     updateSleeveJson();
+                     needsRender = true;
                 }
+                if (typeof renderSleeveInstanceList === 'function') renderSleeveInstanceList();
+                if (needsRender && typeof renderCuttingSizeTable === 'function') {
+                    renderCuttingSizeTable(currentSizes, currentRatios);
+                }
+                $('#cutting-size-table tr.qty-fs-row td:first').html('<strong>QUANTITY</strong>');
                 $('#cutting-size-table-wrapper').show();
                 
                 $('#production-stages-table thead th').each(function() {
                     $(this).html($(this).html().replace(' *', ''));
                 });
             } else {
+                $('.in-out-row, .n-patti-row').show();
                 $('#add-stage-row').show();
                 $('#cutting-size-table tr.qty-hs-row').show();
                 $('#cutting-size-table tr.qty-fs-row td:first').html('<strong>QTY - F/S</strong>');
@@ -4092,7 +4495,16 @@
             }
         }
         
-        $('#purchase_order_id, #brand_id, #service_provider_id, #fit_id, #patti_type_id, #collar_type_id, #cuff_type_id, #pocket_type_id, #bottom_cut_id, #season_id').on('change', function() {
+        $(document).on('change', '#brand, #brand_id', function() {
+            applyCanvasLogic();
+            if (typeof renderFabricDetails === 'function') {
+                renderFabricDetails();
+            }
+            renderCuttingSizeTable(currentSizes, currentRatios);
+            syncMatrixWithMasterTable(true);
+        });
+
+        $('#purchase_order_id, #service_provider_id, #fit_id, #patti_type_id, #collar_type_id, #cuff_type_id, #pocket_type_id, #bottom_cut_id, #season_id').on('change', function() {
             // debouncedUpdateItemName();
         });
 

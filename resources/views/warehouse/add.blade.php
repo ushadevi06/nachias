@@ -90,7 +90,13 @@
                                                         <select name="brand_blocks[{{ $bIdx }}][brand_id]" class="form-select brand-select select2 @error('brand_blocks.'.$bIdx.'.brand_id') is-invalid @enderror" data-placeholder="Select Brand">
                                                             <option value="">Select Brand</option>
                                                             @foreach($brands as $b)
-                                                                <option value="{{ $b->id }}" {{ $bId == $b->id ? 'selected' : '' }}>{{ $b->brand_name }}</option>
+                                                                @php
+                                                                    $catIds = $b->storeCategories ? $b->storeCategories->pluck('id')->toArray() : [];
+                                                                    $isGarments = in_array(1, $catIds) || in_array(3, $catIds);
+                                                                    $isAcc = in_array(2, $catIds) || (stripos($b->brand_name, 'ACCESSORIES') !== false || stripos($b->code ?? '', 'AS') !== false);
+                                                                    $isStyleMandatory = $isGarments || !$isAcc;
+                                                                @endphp
+                                                                <option value="{{ $b->id }}" data-mandatory-style="{{ $isStyleMandatory ? '1' : '0' }}" data-accessories="{{ $isAcc ? '1' : '0' }}" data-code="{{ $b->code ?? '' }}" {{ $bId == $b->id ? 'selected' : '' }}>{{ $b->brand_name }}</option>
                                                             @endforeach
                                                         </select>
                                                         @error('brand_blocks.'.$bIdx.'.brand_id')
@@ -111,7 +117,14 @@
                                                         <thead class="table-light">
                                                             <tr>
                                                                 <th style="width: 5%;" class="text-center">#</th>
-                                                                <th style="width: 55%;">Style Name <span class="text-danger">*</span></th>
+                                                                @php
+                                                                    $selectedBrand = $brands->firstWhere('id', $bId);
+                                                                    $catIds = $selectedBrand && $selectedBrand->storeCategories ? $selectedBrand->storeCategories->pluck('id')->toArray() : [];
+                                                                    $isGarments = in_array(1, $catIds) || in_array(3, $catIds);
+                                                                    $isAccBrand = in_array(2, $catIds) || ($selectedBrand ? (stripos($selectedBrand->brand_name, 'ACCESSORIES') !== false || stripos($selectedBrand->code ?? '', 'AS') !== false) : false);
+                                                                    $isMandatory = $selectedBrand ? ($isGarments || !$isAccBrand) : true;
+                                                                @endphp
+                                                                <th style="width: 55%;">Style Name <span class="text-danger style-required-star" style="{{ $isMandatory ? '' : 'display:none;' }}">*</span></th>
                                                                 <th style="width: 30%;">Capacity (Pcs) <span class="text-danger">*</span></th>
                                                                 <th style="width: 10%;" class="text-center">Action</th>
                                                             </tr>
@@ -125,8 +138,8 @@
                                                                 <tr class="style-row">
                                                                     <td class="text-center style-num">{{ $loop->iteration }}</td>
                                                                     <td>
-                                                                        <select name="brand_blocks[{{ $bIdx }}][styles][{{ $sIdx }}][style_id]" class="form-select style-select select2 @error('brand_blocks.'.$bIdx.'.styles.'.$sIdx.'.style_id') is-invalid @enderror" data-placeholder="Select Style">
-                                                                            <option value="">Select Style</option>
+                                                                        <select name="brand_blocks[{{ $bIdx }}][styles][{{ $sIdx }}][style_id]" class="form-select style-select select2 @error('brand_blocks.'.$bIdx.'.styles.'.$sIdx.'.style_id') is-invalid @enderror" data-placeholder="All Styles / General Capacity">
+                                                                            <option value="">All Styles / General Capacity</option>
                                                                             @foreach($styles as $st)
                                                                                 <option value="{{ $st->id }}" {{ $sId == $st->id ? 'selected' : '' }}>{{ $st->style_name }}</option>
                                                                             @endforeach
@@ -187,12 +200,18 @@
         const brandOptionsHtml = `
             <option value="">Select Brand</option>
             @foreach($brands as $b)
-                <option value="{{ $b->id }}">{{ addslashes($b->brand_name) }}</option>
+                @php
+                    $catIds = $b->storeCategories ? $b->storeCategories->pluck('id')->toArray() : [];
+                    $isGarments = in_array(1, $catIds) || in_array(3, $catIds);
+                    $isAcc = in_array(2, $catIds) || (stripos($b->brand_name, 'ACCESSORIES') !== false || stripos($b->code ?? '', 'AS') !== false);
+                    $isStyleMandatory = $isGarments || !$isAcc;
+                @endphp
+                <option value="{{ $b->id }}" data-mandatory-style="{{ $isStyleMandatory ? '1' : '0' }}" data-accessories="{{ $isAcc ? '1' : '0' }}" data-code="{{ $b->code ?? '' }}">{{ addslashes($b->brand_name) }}</option>
             @endforeach
         `;
 
         const styleOptionsHtml = `
-            <option value="">Select Style</option>
+            <option value="">All Styles / General Capacity</option>
             @foreach($styles as $st)
                 <option value="{{ $st->id }}">{{ addslashes($st->style_name) }}</option>
             @endforeach
@@ -287,7 +306,7 @@
         });
 
         $('.style-select').each(function() {
-            initSelect2(this, 'Select Style');
+            initSelect2(this, 'All Styles / General Capacity');
         });
 
         // Add Style row under specific brand
@@ -300,7 +319,7 @@
                 <tr class="style-row">
                     <td class="text-center style-num"></td>
                     <td>
-                        <select name="brand_blocks[${bIdx}][styles][${sIdx}][style_id]" class="form-select style-select" data-placeholder="Select Style">
+                        <select name="brand_blocks[${bIdx}][styles][${sIdx}][style_id]" class="form-select style-select" data-placeholder="All Styles / General Capacity">
                             ${styleOptionsHtml}
                         </select>
                     </td>
@@ -316,7 +335,7 @@
             `;
             let $newRow = $(newRowHtml);
             $block.find('.style-rows-container').append($newRow);
-            initSelect2($newRow.find('.style-select'), 'Select Style');
+            initSelect2($newRow.find('.style-select'), 'All Styles / General Capacity');
             updateDisabledStyles();
             updateRowNumbersAndTotals();
         });
@@ -337,6 +356,21 @@
                 alert('At least one style is required for this brand.');
             }
         });
+
+        function updateStyleRequiredStars() {
+            $('.brand-block').each(function() {
+                let $block = $(this);
+                let $selectedOpt = $block.find('.brand-select option:selected');
+                let mandatoryStyle = $selectedOpt.attr('data-mandatory-style');
+                let brandVal = $block.find('.brand-select').val();
+
+                if (brandVal && mandatoryStyle === '0') {
+                    $block.find('.style-required-star').hide();
+                } else {
+                    $block.find('.style-required-star').show();
+                }
+            });
+        }
 
         // Add Brand block
         $('#btnAddBrandBlock').on('click', function() {
@@ -367,7 +401,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 5%;" class="text-center">#</th>
-                                        <th style="width: 55%;">Style Name <span class="text-danger">*</span></th>
+                                        <th style="width: 55%;">Style Name <span class="text-danger style-required-star">*</span></th>
                                         <th style="width: 30%;">Capacity (Pcs) <span class="text-danger">*</span></th>
                                         <th style="width: 10%;" class="text-center">Action</th>
                                     </tr>
@@ -376,7 +410,7 @@
                                     <tr class="style-row">
                                         <td class="text-center style-num">1</td>
                                         <td>
-                                            <select name="brand_blocks[${bIdx}][styles][${sIdx}][style_id]" class="form-select style-select" data-placeholder="Select Style">
+                                            <select name="brand_blocks[${bIdx}][styles][${sIdx}][style_id]" class="form-select style-select" data-placeholder="All Styles / General Capacity">
                                                 ${styleOptionsHtml}
                                             </select>
                                         </td>
@@ -402,9 +436,10 @@
             let $newBlock = $(newBlockHtml);
             $('#brandCapacitiesContainer').append($newBlock);
             initSelect2($newBlock.find('.brand-select'), 'Select Brand');
-            initSelect2($newBlock.find('.style-select'), 'Select Style');
+            initSelect2($newBlock.find('.style-select'), 'All Styles / General Capacity');
             updateDisabledBrands();
             updateDisabledStyles();
+            updateStyleRequiredStars();
             updateRowNumbersAndTotals();
         });
 
@@ -420,6 +455,7 @@
                 $block.remove();
                 updateDisabledBrands();
                 updateDisabledStyles();
+                updateStyleRequiredStars();
                 updateRowNumbersAndTotals();
             } else {
                 alert('At least one brand is required.');
@@ -428,6 +464,7 @@
 
         $(document).on('change', '.brand-select', function() {
             updateDisabledBrands();
+            updateStyleRequiredStars();
         });
 
         $(document).on('change', '.style-select', function() {
@@ -440,6 +477,7 @@
 
         updateDisabledBrands();
         updateDisabledStyles();
+        updateStyleRequiredStars();
         updateRowNumbersAndTotals();
     });
 </script>

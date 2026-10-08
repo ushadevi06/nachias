@@ -348,14 +348,32 @@ class ProductionReceiptController extends Controller
                     }
                 }
 
-                $data = [
+                $receiptNo = $receipt ? $receipt->receipt_no : null;
+                if (!$receiptNo || ($receipt && $receipt->status !== 'Posted')) {
+                    $existingSe = $receiptNo ? StockEntry::where('reference_document', $receiptNo)->first() : null;
+                    if (!$receiptNo || ($existingSe && $existingSe->stockEntryItems()->where('qty_out', '>', 0)->exists())) {
+                        $lastReceipt = ProductionReceipt::where('receipt_no', 'like', 'RCPT-' . date('Y') . '-%')
+                            ->orderByRaw("CAST(SUBSTRING_INDEX(receipt_no, '-', -1) AS UNSIGNED) DESC")
+                            ->first();
+                        $lastStockRef = StockEntry::where('reference_document', 'like', 'RCPT-' . date('Y') . '-%')
+                            ->orderByRaw("CAST(SUBSTRING_INDEX(reference_document, '-', -1) AS UNSIGNED) DESC")
+                            ->first();
 
+                        $lastNum1 = $lastReceipt ? (int) substr(strrchr($lastReceipt->receipt_no, "-"), 1) : 0;
+                        $lastNum2 = $lastStockRef ? (int) substr(strrchr($lastStockRef->reference_document, "-"), 1) : 0;
+                        $nextNum = max($lastNum1, $lastNum2, ProductionReceipt::max('id') ?? 0) + 1;
+
+                        $receiptNo = 'RCPT-' . date('Y') . '-' . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+                    }
+                }
+
+                $data = [
                     'job_card_id' => $request->job_card_id,
                     'is_additional' => $request->is_additional ?? 0,
                     'job_card_fabric_detail_id' => $request->job_card_fabric_detail_id ?? null,
                     'employee_id' => $request->employee_id,
                     'order_due_date' => $orderDueDate,
-                    'receipt_no' => $request->receipt_no ?: ($receipt->receipt_no ?? ('RCPT-' . date('Y') . '-' . str_pad(ProductionReceipt::count() + 1, 4, '0', STR_PAD_LEFT))),
+                    'receipt_no' => $receiptNo,
                     'receipt_date' => date('Y-m-d', strtotime($request->receipt_date)),
                     'doc_no' => $request->doc_no,
                     'doc_date' => $request->doc_date ? date('Y-m-d', strtotime($request->doc_date)) : null,
@@ -759,7 +777,14 @@ class ProductionReceiptController extends Controller
 
     private function createStockEntry($receipt, $storeLocationId)
     {
-        $stockEntry = StockEntry::where('reference_document', $receipt->receipt_no)->where('entry_type', 'Finished Goods')->first();
+        $isCanvas = false;
+        if ($receipt->jobCard && $receipt->jobCard->brand && in_array(strtoupper(trim($receipt->jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+            $isCanvas = true;
+        }
+
+        $stockEntry = StockEntry::where('reference_document', $receipt->receipt_no)->first();
+
+        $entryType = $isCanvas ? 'Raw Material' : 'Finished Goods';
 
         if ($stockEntry) {
             $hasIssuedStock = StockEntryItem::where('stock_entry_id', $stockEntry->id)->where('qty_out', '>', 0)->exists();
@@ -770,6 +795,7 @@ class ProductionReceiptController extends Controller
 
             $stockEntry->update([
                 'stock_date' => $receipt->receipt_date,
+                'entry_type' => $entryType,
                 'to_store_location_id' => $storeLocationId,
                 'warehouse_id' => $receipt->warehouse_id ?? null,
                 'store_type_id' => $receipt->store_type_id ?? null,
@@ -789,7 +815,7 @@ class ProductionReceiptController extends Controller
             $stockEntry = StockEntry::create([
                 'stock_entry_no' => $stockEntryNo,
                 'stock_date' => $receipt->receipt_date,
-                'entry_type' => 'Finished Goods',
+                'entry_type' => $entryType,
                 'to_store_location_id' => $storeLocationId,
                 'warehouse_id' => $receipt->warehouse_id ?? null,
                 'store_type_id' => $receipt->store_type_id ?? null,
@@ -901,18 +927,47 @@ class ProductionReceiptController extends Controller
                     'quantity' => number_format($item->qty_to_receive, 2)
                 ];
 
+                $rawMatId = null;
+                $uomId = $item->uom_id;
+                if ($isCanvas) {
+                    $rawMat = \App\Models\RawMaterial::where('store_category_id', 2)
+                        ->where(function($q) use ($item) {
+                            $q->where('name', $item->item_code)
+                              ->orWhere('name', $item->item_name)
+                              ->orWhere('name', $item->description)
+                              ->orWhere('code', $item->art_no);
+                        })->first();
+
+                    if (!$rawMat) {
+                        $rawMat = \App\Models\RawMaterial::where('name', 'like', "%{$item->item_name}%")->first();
+                    }
+
+                    if ($rawMat) {
+                        $rawMatId = $rawMat->id;
+                        $uomId = $rawMat->uom_id ?: $uomId;
+                    } else {
+                        // Default to NOS (UOM ID 3) if not found
+                        $nosUom = \App\Models\Uom::whereIn('uom_code', ['NOS', 'PCS', 'NO'])->first();
+                        if ($nosUom) {
+                            $uomId = $nosUom->id;
+                        }
+                    }
+                }
+
                 StockEntryItem::create([
                     'stock_entry_id' => $stockEntry->id,
-                    'stock_type' => 'finished_goods',
+                    'stock_type' => $isCanvas ? 'raw_material' : 'finished_goods',
                     'finished_item_code' => $itemCode,
-                    'item_id' => $item->item_id,
+                    'raw_material_id' => $rawMatId,
+                    'item_id' => $isCanvas ? null : $item->item_id,
                     'art_no' => $item->art_no,
                     'size' => $item->size,
                     'color_id' => $item->color_id,
+                    'store_category_id' => $isCanvas ? 2 : null,
                     'store_location_id' => $storeLocationId,
                     'warehouse_id' => $receipt->warehouse_id ?? null,
                     'store_type_id' => $receipt->store_type_id ?? null,
-                    'uom_id' => $item->uom_id,
+                    'uom_id' => $uomId,
                     'qty_in' => $item->qty_to_receive,
                     'qty_out' => 0,
                     'price' => $item->unit_price,
@@ -1388,7 +1443,7 @@ class ProductionReceiptController extends Controller
 
                     if ($isCanvas) {
                         $itemCode = $displayArtNo;
-                        $itemName = count($pricing['consumption_details']) > 0 ? $pricing['consumption_details'][0]['material_name'] : $displayArtNo;
+                        $itemName = $displayArtNo;
                     }
 
                     $itemPrice = \App\Models\ItemPrice::where('status', 'Active')
@@ -1417,16 +1472,22 @@ class ProductionReceiptController extends Controller
 
                     if ($isCanvas && !$itemPrice) {
                         $issueItem = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
-                            ->whereHas('fabricDetail', function($q) use ($normalizedArtNo) {
-                                $q->where('art_no', $normalizedArtNo);
+                            ->where(function($q) use ($normalizedArtNo, $displayArtNo) {
+                                $q->whereHas('fabricDetail', function($fq) use ($normalizedArtNo, $displayArtNo) {
+                                    $fq->where('art_no', $normalizedArtNo)->orWhere('fg_art_no', $displayArtNo);
+                                })
+                                ->orWhereHas('rawMaterial', function($rq) use ($normalizedArtNo, $displayArtNo) {
+                                    $rq->where('code', $normalizedArtNo)->orWhere('name', $normalizedArtNo)
+                                       ->orWhere('name', $displayArtNo)->orWhere('code', $displayArtNo);
+                                });
                             })->first();
                         
                         if (!$issueItem) {
                             $issueItem = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
-                                ->whereHas('rawMaterial', function($q) use ($normalizedArtNo) {
-                                    $q->where('code', $normalizedArtNo)->orWhere('name', $normalizedArtNo);
-                                })->first();
+                                ->where('qty_used', '>', 0)
+                                ->first();
                         }
+
                         if ($issueItem) {
                             $qtyPerPc = $issueItem->produced_qty > 0 ? ($issueItem->qty_used / $issueItem->produced_qty) : 0;
                             $calculatedCost = $qtyPerPc > 0 ? ($qtyPerPc * $issueItem->unit_price) : 0;
@@ -1439,6 +1500,10 @@ class ProductionReceiptController extends Controller
                         }
                     }
 
+                    if ($unitPrice > 0) {
+                        unset($missingPriceArtNos[$displayArtNo]);
+                    }
+
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
                         'item_code' => $isCanvas ? $itemCode : ($barcodeMaster && $barcodeMaster->item_code ? str_replace('/', '', $barcodeMaster->item_code) : $itemCode),
@@ -1446,7 +1511,7 @@ class ProductionReceiptController extends Controller
                         'sleeve' => $sleeve,
                         'size' => $size,
                         'item_name' => $itemName,
-                        'art_no' => $displayArtNo ?: null,
+                        'art_no' => $isCanvas ? $normalizedArtNo : ($displayArtNo ?: null),
                         'description' => $isCanvas ? $itemName : trim($barcodeMaster && $barcodeMaster->item_name ? $barcodeMaster->item_name : $itemName),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
@@ -1533,7 +1598,7 @@ class ProductionReceiptController extends Controller
                 $isIssued = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
                     ->where(function($q) use ($artNo) {
                         $q->whereHas('fabricDetail', function($fq) use ($artNo) {
-                            $fq->where('art_no', $artNo);
+                            $fq->where('art_no', $artNo)->orWhere('fg_art_no', $artNo);
                         })
                         ->orWhereHas('rawMaterial', function($rq) use ($artNo) {
                             $rq->where('code', $artNo)->orWhere('name', $artNo);
@@ -1541,6 +1606,12 @@ class ProductionReceiptController extends Controller
                     })
                     ->where('qty_used', '>', 0)
                     ->exists();
+
+                if (!$isIssued && $isCanvas) {
+                    $isIssued = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                        ->where('qty_used', '>', 0)
+                        ->exists();
+                }
 
                 if (!$isIssued) {
                     $unissuedArtNos[] = $artNo;
@@ -1565,6 +1636,10 @@ class ProductionReceiptController extends Controller
             ]);
         }
 
+        $accessoriesStore = \App\Models\StoreType::where('store_type_name', 'ACCESSORIES')->first();
+        $finishedGoodsStore = \App\Models\StoreType::where('store_type_name', 'FINISHED GOODS')->first();
+        $preselectedStoreTypeId = $isCanvas ? ($accessoriesStore->id ?? 2) : ($finishedGoodsStore->id ?? 3);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -1577,6 +1652,8 @@ class ProductionReceiptController extends Controller
                 'order_due_date' => $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : (($jobCard->purchaseOrder && $jobCard->purchaseOrder->due_date) ? date('d-m-Y', strtotime($jobCard->purchaseOrder->due_date)) : ''),
                 'job_card_date' => $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '',
                 'doc_no' => $jobCard->job_card_no,
+                'is_canvas' => $isCanvas,
+                'store_type_id' => $preselectedStoreTypeId,
                 'items' => $items,
             ]
         ]);
@@ -1596,8 +1673,10 @@ class ProductionReceiptController extends Controller
             return response()->json(['has_capacity' => false]);
         }
 
-        $brand = Brand::find($jobCard->brand_id);
-        $warehouse = Warehouse::find($warehouseId);
+        $isCanvas = false;
+        if ($jobCard->brand && stripos($jobCard->brand->brand_name ?? '', 'CANVAS') !== false) {
+            $isCanvas = true;
+        }
 
         $capSum = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
             ->where('brand_id', $jobCard->brand_id)
@@ -1605,6 +1684,19 @@ class ProductionReceiptController extends Controller
             ->sum('capacity_pcs');
 
         if ($capSum <= 0) {
+            if ($isCanvas) {
+                return response()->json([
+                    'has_capacity' => true,
+                    'warehouse_name' => $warehouse?->warehouse_name,
+                    'brand_name' => $brand?->brand_name,
+                    'capacity_pcs' => 0,
+                    'current_stock' => 0,
+                    'utilization_pct' => 0,
+                    'is_over_capacity' => false,
+                    'message' => "{$warehouse?->warehouse_name} (Accessories - Storage Unrestricted)"
+                ]);
+            }
+
             return response()->json([
                 'has_capacity' => false,
                 'warehouse_name' => $warehouse?->warehouse_name,

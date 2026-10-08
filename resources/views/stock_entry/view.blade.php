@@ -135,6 +135,7 @@
                                         <th>Stock Entry No.</th>
                                         <th>Stock Date</th>
                                         <th>GRN No.</th>
+                                        <th>Job Card No.</th>
                                         <th>Warehouse</th>
                                         <th>Store Type</th>
                                         <th>Item Name</th>
@@ -309,6 +310,10 @@
                     name: 'grn_no'
                 },
                 {
+                    data: 'job_card_no',
+                    name: 'job_card_no'
+                },
+                {
                     data: 'warehouse',
                     name: 'warehouse',
                     visible: false
@@ -433,16 +438,20 @@
                     $('#export-finished-goods-btn').show();
                     $('#export-barcode-btn').show();
                     $('#export-raw-materials-btn').hide();
-                    table.column(1).visible(false);
-                    $(table.column(3).header()).text('Job Card No.');
-                    table.column(4).visible(true);
-                    table.column(5).visible(true);
-                    table.column(6).visible(true);
-                    table.column(7).visible(true);
-                    table.column(8).visible(true);
-                    table.column(9).visible(true);
-                    table.column(10).visible(true);
-                    table.column(11).visible(true);
+                    table.column(1).visible(false); // Stock Entry No
+                    table.column(2).visible(true);  // Stock Date
+                    table.column(3).visible(false); // GRN No
+                    table.column(4).visible(true);  // Job Card No
+                    table.column(5).visible(true);  // Warehouse
+                    table.column(6).visible(true);  // Store Type
+                    table.column(7).visible(true);  // Item Name
+                    table.column(8).visible(true);  // Art No
+                    table.column(9).visible(true);  // Fabric Type
+                    table.column(10).visible(true); // Sleeve Type
+                    table.column(11).visible(true); // Size
+                    table.column(12).visible(true); // SKU
+                    table.column(13).visible(true); // Total Qty
+                    table.column(14).visible(true); // Action
                 } else {
                     $('.filter-box').show();
                     $('#fg-filter-box').hide();
@@ -459,16 +468,20 @@
                     $('#export-finished-goods-btn').hide();
                     $('#export-barcode-btn').hide();
                     $('#export-raw-materials-btn').show();
-                    table.column(1).visible(true);
-                    $(table.column(3).header()).text('GRN No.');
-                    table.column(4).visible(false);
-                    table.column(5).visible(false);
-                    table.column(6).visible(false);
-                    table.column(7).visible(false);
-                    table.column(8).visible(false);
-                    table.column(9).visible(false);
-                    table.column(10).visible(false);
-                    table.column(11).visible(false);
+                    table.column(1).visible(true);  // Stock Entry No
+                    table.column(2).visible(true);  // Stock Date
+                    table.column(3).visible(true);  // GRN No
+                    table.column(4).visible(true);  // Job Card No
+                    table.column(5).visible(false); // Warehouse
+                    table.column(6).visible(false); // Store Type
+                    table.column(7).visible(false); // Item Name
+                    table.column(8).visible(false); // Art No
+                    table.column(9).visible(false); // Fabric Type
+                    table.column(10).visible(false); // Sleeve Type
+                    table.column(11).visible(false); // Size
+                    table.column(12).visible(false); // SKU
+                    table.column(13).visible(true); // Total Qty
+                    table.column(14).visible(true); // Action
                 }
 
                 updateExportButtonsState();

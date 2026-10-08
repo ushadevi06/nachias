@@ -231,7 +231,6 @@
                                         <th>Color</th>
                                         <th>Size</th>
                                         <th>Unit Price</th>
-                                        <th>MRP</th>
                                         <th>Qty Ordered</th>
                                         <th>Qty Received</th>
                                         <th>Qty Balance</th>
@@ -326,12 +325,8 @@
                             parseFloat(item.unit_price || 0).toFixed(2) + 
                         '</button>' +
                         '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '">' +
-                    '</td>' +
-                    '<td class="text-end">' + 
-                        '<button type="button" class="btn btn-sm btn-label-secondary p-1" data-index="' + index + '">' +
-                            parseFloat(item.mrp || 0).toFixed(2) + 
-                        '</button>' +
                         '<input type="hidden" class="mrp" name="items[' + index + '][mrp]" value="' + parseFloat(item.mrp || 0).toFixed(2) + '">' +
+                    '</td>' +
                     '<td class="text-end">' + orderedQty.toFixed(2) + '<input type="hidden" class="ordered-qty" name="items[' + index + '][ordered_qty]" value="' + orderedQty.toFixed(2) + '"></td>' +
                     '<td class="text-end"><span class="qty-received-text">' + (alreadyRec + scanQty).toFixed(2) + '</span><input type="hidden" class="qty-already-received" name="items[' + index + '][qty_already_received]" value="' + alreadyRec.toFixed(2) + '"></td>' +
                     '<td class="text-end"><span class="qty-balance-text">' + currentBalance.toFixed(2) + '</span><input type="hidden" class="balance-qty" name="items[' + index + '][balance_qty]" value="' + currentBalance.toFixed(2) + '"></td>' +
@@ -495,6 +490,10 @@
                         $('#order_due_date').val(response.data.order_due_date || '');
                         $('#doc_no').val(response.data.job_card_no || '');
                         $('#doc_date').val(response.data.job_card_date || '');
+                        
+                        if (response.data.store_type_id) {
+                            $('#store_type_id').val(response.data.store_type_id).trigger('change.select2');
+                        }
                         
                         if (response.data.items && response.data.items.length > 0) {
                             var responseItems = response.data.items;

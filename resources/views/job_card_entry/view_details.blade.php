@@ -714,6 +714,10 @@
                                         @endforeach
                                         @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>
+                                    @php
+                                        $isCanvas = (isset($jobCard->brand) && stripos($jobCard->brand->brand_name ?? '', 'CANVAS') !== false);
+                                    @endphp
+                                    @if(!$isCanvas)
                                     <tr class="text-center">
                                         <td class="fw-bold bg-light">IN/OUT</td>
                                         @foreach($chunk as $detail)
@@ -728,6 +732,7 @@
                                         @endforeach
                                         @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>
+                                    @endif
                                 </tbody>
                             </table>
 

@@ -44,6 +44,11 @@
                                 <label class="detail-title">GRN Number:</label>
                                 <div class="text-muted">{{ $stockEntry->grnEntry->grn_number }}</div>
                             </div>
+                            @elseif($isRawMaterial && ($stockEntry->productionReceipt || $stockEntry->reference_document))
+                            <div class="col-md-4">
+                                <label class="detail-title">Reference / Job Card:</label>
+                                <div class="text-muted">{{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard) ? $stockEntry->productionReceipt->jobCard->job_card_no : ($stockEntry->reference_document ?? '-') }}</div>
+                            </div>
                             @elseif($isFinishedGoods)
                             <div class="col-md-4">
                                 <label class="detail-title">Job Card Number:</label>
@@ -81,7 +86,7 @@
                                             @foreach($stockEntry->stockEntryItems as $item)
                                             <tr>
                                                 <td>
-                                                    {{ $item->rawMaterial->name ?? '-' }} <br>
+                                                    {{ $item->rawMaterial->name ?? ($item->finished_item_code ?: '-') }} <br>
                                                     <small class="text-muted">{{ $item->storeCategory->category_name ?? '-' }}</small>
                                                 </td>
                                                 <td>{{ $item->brand->brand_name ?? ($item->grnEntryItem->brand->brand_name ?? '-') }}</td>

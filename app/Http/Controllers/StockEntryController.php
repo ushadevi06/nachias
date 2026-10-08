@@ -216,7 +216,8 @@ class StockEntryController extends Controller
                         'material_category' => '<span class="badge bg-label-info">Finished Goods</span>',
                         'art_no' => $item->art_no ?? '-',
                         'material' => $materialDisplay,
-                        'grn_no' => $jobCardNo,
+                        'grn_no' => '-',
+                        'job_card_no' => $jobCardNo,
                         'item_name' => $item->finished_item_code ?: '-',
                         'fabric_type' => $fabricType,
                         'sleeve_type' => $item->sleeve_type ?? '-',
@@ -263,8 +264,14 @@ class StockEntryController extends Controller
                 }
 
                 if ($request->grn_no) {
-                    $query->whereHas('grnEntry', function ($q) use ($request) {
-                        $q->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
+                    $query->where(function ($q) use ($request) {
+                        $q->whereHas('grnEntry', function ($gq) use ($request) {
+                            $gq->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
+                        })
+                        ->orWhere('reference_document', 'LIKE', '%' . $request->grn_no . '%')
+                        ->orWhereHas('productionReceipt.jobCard', function ($jq) use ($request) {
+                            $jq->where('job_card_no', 'LIKE', '%' . $request->grn_no . '%');
+                        });
                     });
                 }
                 $totalRecords = $query->count();
@@ -273,11 +280,16 @@ class StockEntryController extends Controller
                     $search = $request->input('search')['value'];
                     $query->where(function ($q) use ($search) {
                         $q->where('stock_entry_no', 'like', "%{$search}%")
+                            ->orWhere('reference_document', 'like', "%{$search}%")
                             ->orWhereHas('grnEntry', function ($q2) use ($search) {
                                 $q2->where('grn_number', 'like', "%{$search}%");
                             })
+                            ->orWhereHas('productionReceipt.jobCard', function ($qpr) use ($search) {
+                                $qpr->where('job_card_no', 'like', "%{$search}%");
+                            })
                             ->orWhereHas('stockEntryItems', function ($q3) use ($search) {
                                 $q3->where('art_no', 'like', "%{$search}%")
+                                    ->orWhere('finished_item_code', 'like', "%{$search}%")
                                     ->orWhereHas('rawMaterial', function ($q4) use ($search) {
                                         $q4->where('name', 'like', "%{$search}%");
                                     });
@@ -324,9 +336,12 @@ class StockEntryController extends Controller
                         ? $firstItem->rawMaterial->name . ' <span class="mini-title">(' . $firstItem->rawMaterial->code . ')</span>'
                         : ($firstItem && $firstItem->finished_item_code ? $firstItem->finished_item_code : '-');
 
+                    $grnNo = $entry->grnEntry ? $entry->grnEntry->grn_number : '-';
+                    $jobCardNo = ($entry->productionReceipt && $entry->productionReceipt->jobCard) ? $entry->productionReceipt->jobCard->job_card_no : ($entry->reference_document ?: '-');
+
                     $action = '<div class="button-box">';
                     if (auth()->id() == 1 || auth()->user()->can('stock_adjustment stock-entry-raw-materials')) {
-                        $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-art-no="' . $artNo . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
+                        $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-art-no="' . $artNo . '" data-grn-no="' . $grnNo . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : ($firstItem && $firstItem->finished_item_code ? $firstItem->finished_item_code : '-')) . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
                     }
                     if (auth()->id() == 1 || auth()->user()->can('stock_adjustment_logs stock-entry-raw-materials')) {
                         $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
@@ -341,15 +356,16 @@ class StockEntryController extends Controller
                     $data[] = [
                         'DT_RowIndex' => $count++,
                         'stock_entry_no' => $entry->stock_entry_no,
-                        'stock_date' => $entry->stock_date->format('d-m-Y'),
+                        'stock_date' => $entry->stock_date ? $entry->stock_date->format('d-m-Y') : '-',
                         'warehouse' => $rawWarehouse,
                         'store_type' => $storeTypeDisplay,
                         'store_category' => $categoryDisplay,
                         'material_category' => $categoryDisplay,
                         'art_no' => $artNo,
                         'material' => $materialDisplay,
-                        'grn_no' => $entry->grnEntry->grn_number ?? '-',
-                        'item_name' => $firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-',
+                        'grn_no' => $grnNo,
+                        'job_card_no' => $jobCardNo,
+                        'item_name' => $firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : ($firstItem ? $firstItem->finished_item_code : '-'),
                         'fabric_type' => '-',
                         'sleeve_type' => '-',
                         'size' => '-',

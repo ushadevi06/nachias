@@ -108,7 +108,7 @@
 
     @php
         $isCanvas = false;
-        if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+        if ($jobCard->brand && stripos($jobCard->brand->brand_name ?? '', 'CANVAS') !== false) {
             $isCanvas = true;
         }
 
@@ -157,7 +157,14 @@
                 
                 $receiptStoreName = strtolower($jobCard->receiptStore->store_type_name ?? '');
                 $isFabricStore = str_contains($receiptStoreName, 'fabric');
-                $storeUom = $isFabricStore ? 'MTR' : 'PCS';
+                $isAccessoriesStore = str_contains($receiptStoreName, 'accessori');
+                if ($isCanvas || $isAccessoriesStore) {
+                    $storeUom = 'NOS';
+                } elseif ($isFabricStore) {
+                    $storeUom = 'MTR';
+                } else {
+                    $storeUom = 'PCS';
+                }
 
                 foreach($jobCard->fabricDetails as $detail) {
                     $trimmedArt = trim($detail->art_no ?? '');
@@ -209,24 +216,54 @@
                         return $arr;
                     };
 
-                    if ($hasValue('fs')) {
-                        $fullSleeveRows[] = [
-                            'item_no' => $isCanvas ? $detail->art_no : trim($brandCode . '-' . $displayStyle . '-F/S', '-'),
-                            'description' => $isCanvas ? ($artMaterialMap[$artNo] ?? $detail->item_name ?: 'CANVAS ACCESSORIES') : trim($brandName . ' ' . ($styleName ?: $styleCode) . ' F/S'),
-                            'uom' => $uom,
-                            'art' => $artNo,
-                            'sizes' => $getSizesArray('fs')
-                        ];
-                    }
+                    if ($isCanvas) {
+                        $desc = !empty($detail->fg_art_no) ? $detail->fg_art_no : ($artMaterialMap[trim($detail->art_no ?? '')] ?? null);
+                        if (!$desc && $detail->art_no) {
+                            $rm = \App\Models\RawMaterial::where('code', trim($detail->art_no))->first();
+                            if ($rm) {
+                                $desc = $rm->name;
+                            }
+                        }
+                        if (!$desc) {
+                            $desc = $detail->item_name ?: $detail->art_no;
+                        }
 
-                    if ($hasValue('hs')) {
-                        $halfSleeveRows[] = [
-                            'item_no' => trim($brandCode . '-' . $displayStyle . '-H/S', '-'),
-                            'description' => trim($brandName . ' ' . ($styleName ?: $styleCode) . ' H/S'),
-                            'uom' => $uom,
-                            'art' => $artNo,
-                            'sizes' => $getSizesArray('hs')
+                        $sizesArr = $getSizesArray('fs');
+                        if (array_sum($sizesArr) == 0) {
+                            $sizesArr = [];
+                            foreach($sizes as $s) {
+                                $q = $detail->quantities->where('size', $s)->first();
+                                $sizesArr[$s] = $q ? ($q->total_qty ?? 0) : 0;
+                            }
+                        }
+
+                        $fullSleeveRows[] = [
+                            'item_no' => $detail->art_no,
+                            'description' => $desc,
+                            'uom' => 'NOS',
+                            'art' => $desc,
+                            'sizes' => $sizesArr
                         ];
+                    } else {
+                        if ($hasValue('fs')) {
+                            $fullSleeveRows[] = [
+                                'item_no' => trim($brandCode . '-' . $displayStyle . '-F/S', '-'),
+                                'description' => trim($brandName . ' ' . ($styleName ?: $styleCode) . ' F/S'),
+                                'uom' => $uom,
+                                'art' => $artNo,
+                                'sizes' => $getSizesArray('fs')
+                            ];
+                        }
+
+                        if ($hasValue('hs')) {
+                            $halfSleeveRows[] = [
+                                'item_no' => trim($brandCode . '-' . $displayStyle . '-H/S', '-'),
+                                'description' => trim($brandName . ' ' . ($styleName ?: $styleCode) . ' H/S'),
+                                'uom' => $uom,
+                                'art' => $artNo,
+                                'sizes' => $getSizesArray('hs')
+                            ];
+                        }
                     }
                 }
 
