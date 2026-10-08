@@ -899,14 +899,21 @@
                                             <tr class="in-out-row" style="{{ $isCanvasJobCard ? 'display: none;' : '' }}">
                                                 @foreach($fabrics as $index => $fabric)
                                                     <td class="fw-bold">IN/OUT</td>
-                                                    <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center in-out-input" value="{{ $fabric['in_out'] ?? 'NO' }}" readonly></td>
+                                                    <td>
+                                                        <select name="fabrics[{{ $index }}][in_out]" class="form-select form-select-sm text-center in-out-input" data-art="{{ $fabric['art_no'] ?? '' }}">
+                                                            <option value="NO" {{ strtoupper($fabric['in_out'] ?? 'NO') === 'NO' ? 'selected' : '' }}>NO</option>
+                                                            <option value="YES" {{ strtoupper($fabric['in_out'] ?? '') === 'YES' ? 'selected' : '' }}>YES</option>
+                                                            <option value="IN" {{ strtoupper($fabric['in_out'] ?? '') === 'IN' ? 'selected' : '' }}>IN</option>
+                                                            <option value="OUT" {{ strtoupper($fabric['in_out'] ?? '') === 'OUT' ? 'selected' : '' }}>OUT</option>
+                                                        </select>
+                                                    </td>
                                                 @endforeach
                                             </tr>
 
                                             <tr class="n-patti-row" style="{{ $isCanvasJobCard ? 'display: none;' : '' }}">
                                                 @foreach($fabrics as $index => $fabric)
                                                     <td class="fw-bold">N.PATTI</td>
-                                                    <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center n-patti-input" value="{{ $fabric['n_patti'] ?? 'WHITE' }}" readonly></td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center n-patti-input" data-art="{{ $fabric['art_no'] ?? '' }}" value="{{ $fabric['n_patti'] ?? 'WHITE' }}"></td>
                                                 @endforeach
                                             </tr>
                                         @endif
@@ -1947,6 +1954,9 @@
                     if (typeof syncMatrixWithMasterTable === 'function') {
                         syncMatrixWithMasterTable(false);
                     }
+                    if (typeof calculateMatrixFromLayMarks === 'function') {
+                        calculateMatrixFromLayMarks();
+                    }
                     updateQuantityRowVisibility();
 
                 });
@@ -2106,6 +2116,8 @@
                         renderItemDetailsTable(currentArtData);
                     }
                     renderCuttingSizeTable(currentSizes, currentRatios);
+                    renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
+                    calculateMatrixFromLayMarks();
                     updateQuantityRowVisibility();
                 } else {
                     renderFabricDetails(); 
@@ -3036,7 +3048,11 @@
 
             let isCanvas = isCanvasMode();
 
-            currentArtNumbers.forEach((art, index) => {
+            currentArtNumbers.forEach((art, originalIndex) => {
+                let currentArtIndex = (currentArtData && currentArtData.length > 0) 
+                    ? currentArtData.findIndex(d => String(d.art_no || '').trim() === String(art || '').trim()) 
+                    : -1;
+                let index = currentArtIndex !== -1 ? currentArtIndex : originalIndex;
                 let uom = '';
                 let catId = 0;
                 let artName = '';
@@ -3177,8 +3193,14 @@
                         </div>
                         ${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}
                     </td>`;
-                inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center in-out-input" data-art="${art}" value="${vInOut}" readonly ${isTaskReadOnly}></td>`;
-                nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center n-patti-input" data-art="${art}" value="${vNPatti}" readonly ${isTaskReadOnly}></td>`;
+                let inOutOptions = `
+                    <option value="NO" ${String(vInOut).toUpperCase() === 'NO' ? 'selected' : ''}>NO</option>
+                    <option value="YES" ${String(vInOut).toUpperCase() === 'YES' ? 'selected' : ''}>YES</option>
+                    <option value="IN" ${String(vInOut).toUpperCase() === 'IN' ? 'selected' : ''}>IN</option>
+                    <option value="OUT" ${String(vInOut).toUpperCase() === 'OUT' ? 'selected' : ''}>OUT</option>
+                `;
+                inOutRow += `<td class="fw-bold">IN/OUT</td><td><select name="fabrics[${index}][in_out]" class="form-select form-select-sm text-center in-out-input" data-art="${art}" ${isFgConverted ? 'disabled' : ''}>${inOutOptions}</select></td>`;
+                nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center n-patti-input" data-art="${art}" value="${vNPatti}" ${isTaskReadOnly}></td>`;
 
 
 
@@ -3233,6 +3255,8 @@
                                     });
                                 }
                             }
+                        }
+
                         if (savedLayMarks.length === 0 && index > 0 && currentArtNumbers.length > 0) {
                             const firstArt = currentArtNumbers[0];
                             const firstArtMarks = captured.layMarks[firstArt];
@@ -3431,12 +3455,11 @@
             const $table = $row.closest('tbody');
             const rowIndex = $row.index();
             const $containerTable = $(this).closest('.lay-mark-table');
-            const fabricIndex = $containerTable.find('.add-lay-mark-btn').data('index');
+            const $firstTable = $('.lay-mark-table').first();
 
-            if (fabricIndex === 0) {
+            if ($firstTable.length && $containerTable[0] === $firstTable[0]) {
                 $('.lay-mark-table').each(function() {
-                    const thisTableIndex = $(this).find('.add-lay-mark-btn').data('index');
-                    if (thisTableIndex !== 0) {
+                    if (this !== $firstTable[0]) {
                         $(this).find('tbody tr').eq(rowIndex).remove();
                         updateLayMarkRowNumbers($(this).find('tbody'));
                     }
@@ -3454,21 +3477,26 @@
             }
         });
 
-        $(document).on('input change', '.lay-mark-table[id$="-art-0"] input, .lay-mark-table[id$="-art-0"] select', function() {
+        $(document).on('input change select2:select select2:unselect', '.lay-mark-table input, .lay-mark-table select', function() {
             if (isSyncing) return;
+            const $el = $(this);
+            const $firstTable = $('.lay-mark-table').first();
+            if (!$firstTable.length || !$el.closest('.lay-mark-table').is($firstTable)) {
+                return;
+            }
+
             isSyncing = true;
             try {
-                const $el = $(this);
                 const $row = $el.closest('tr');
                 const rowIndex = $row.index();
                 const name = $el.attr('name');
                 if (!name) return;
 
-                const suffix = name.replace(/^fabrics\[0\]\[lay_marks\]\[\d+\]/, '');
+                const suffix = name.replace(/^fabrics\[\d+\]\[lay_marks\]\[\d+\]/, '');
 
                 $('.lay-mark-table').each(function() {
+                    if (this === $firstTable[0]) return;
                     const fabricIndex = $(this).find('.add-lay-mark-btn').data('index');
-                    if (fabricIndex === 0) return;
 
                     const targetName = `fabrics[${fabricIndex}][lay_marks][${rowIndex}]${suffix}`;
                     const $target = $(`[name="${targetName}"]`);
@@ -3484,6 +3512,12 @@
                 });
             } finally {
                 isSyncing = false;
+            }
+
+            if (!isCanvasMode()) {
+                calculateMatrixFromLayMarks();
+            } else {
+                calculateMatrixTotals();
             }
         });
 
@@ -3817,6 +3851,7 @@
 
                 if (hasValidMarks) {
                     const fabricArt = String($(this).data('art') || "").split('|')[0].trim();
+                    $(`#article-qty-matrix-body tr[data-index="${fabricIndex}"] .qty-input`).val('');
                     if (fabricArt) {
                         $(`tr.cat1-row`).filter(function() {
                             return String($(this).data('art') || "").split('|')[0].trim() === fabricArt;
@@ -3841,18 +3876,18 @@
 
             for (const fIndex in matrixData) {
                 const $btn = $(`.add-lay-mark-btn[data-index="${fIndex}"]`);
-                if (!$btn.length) continue;
-
-                const fabricArt = String($btn.closest('.lay-mark-table').data('art') || "").split('|')[0].trim();
-                if (!fabricArt) continue;
+                const fabricArt = $btn.length ? String($btn.closest('.lay-mark-table').data('art') || "").split('|')[0].trim() : '';
 
                 for (const type in matrixData[fIndex]) {
                     for (const size in matrixData[fIndex][type]) {
                         const val = matrixData[fIndex][type][size];
                         const col = `${type}-${size}`;
-                        const $input = $(`.qty-input`).filter(function() {
-                            return String($(this).data('art') || "").split('|')[0].trim() === fabricArt && $(this).data('col') === col;
-                        });
+                        let $input = $(`#article-qty-matrix-body tr[data-index="${fIndex}"] .qty-input[data-col="${col}"]`);
+                        if (!$input.length && fabricArt) {
+                            $input = $(`.qty-input`).filter(function() {
+                                return String($(this).data('art') || "").split('|')[0].trim() === fabricArt && $(this).data('col') === col;
+                            });
+                        }
 
                         if ($input.length) {
                             $input.val(val > 0 ? val : '');
@@ -3877,7 +3912,7 @@
             calculateMatrixTotals();
         }
 
-        $(document).on('input', 'input[name$="[no_of_lay]"], .lay-mark-table input[type="number"]', function() {
+        $(document).on('input', 'input[name*="[no_of_lay]"], input[name*="[meter]"], .lay-mark-table input', function() {
             if (isCanvasMode()) {
                 calculateMatrixTotals();
                 return;
@@ -3885,7 +3920,7 @@
             calculateMatrixFromLayMarks();
         });
 
-        $(document).on('change', '.select2-size-multi, [name$="[sleeve]"]', function() {
+        $(document).on('change select2:select select2:unselect', '.select2-size-multi, [name*="[sleeve]"]', function() {
             if (isCanvasMode()) {
                 calculateMatrixTotals();
                 return;

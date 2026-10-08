@@ -370,14 +370,33 @@ class TaskManagementController extends Controller
             if (request()->has('job_card_id')) {
                 $jobCard = JobCardEntry::with(['fabricDetails.quantities'])->find(request()->job_card_id);
 
-                if ($jobCard && auth()->id() != 1 && auth()->user() && auth()->user()->service_provider_id) {
-                    if ($jobCard->service_provider_id && $jobCard->service_provider_id != auth()->user()->service_provider_id) {
-                        return redirect('task_management')->with('danger', 'You do not have access to tasks for this plant.');
-                    }
-                }
                 if ($jobCard) {
                     $jobCardId = $jobCard->id;
                     $stages = ProcessSchedule::with(['operationStage', 'serviceProvider'])->where('job_card_entry_id', $jobCardId)->get();
+                }
+
+                if ($jobCard && auth()->id() != 1 && auth()->user() && auth()->user()->service_provider_id) {
+                    $userSpId = auth()->user()->service_provider_id;
+                    $stageId = request()->stage_id;
+                    $isAllowed = false;
+
+                    if ($stageId && isset($stages) && $stages->isNotEmpty()) {
+                        $targetStage = $stages->where('id', $stageId)->first() ?: $stages->where('operation_stage_id', $stageId)->first();
+                        if ($targetStage && $targetStage->scheduled_to) {
+                            $isAllowed = ($targetStage->scheduled_to == $userSpId);
+                        }
+                    }
+
+                    if (!$isAllowed) {
+                        $hasMatchingStage = isset($stages) && $stages->contains(function ($st) use ($userSpId) {
+                            return $st->scheduled_to == $userSpId;
+                        });
+                        $isAllowed = $hasMatchingStage || ($jobCard->service_provider_id == $userSpId);
+                    }
+
+                    if (!$isAllowed) {
+                        return redirect('task_management')->with('danger', 'You do not have access to tasks for this plant.');
+                    }
                 }
             }
 
