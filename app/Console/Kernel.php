@@ -12,7 +12,7 @@ class Kernel extends ConsoleKernel
     */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('backup:database')->dailyAt('23:00');
+        $schedule->command('backup:database')->dailyAt('23:00')->timezone('Asia/Kolkata');
         $schedule->command('orderaxe:sync-orders')->everyFifteenMinutes();
         // $schedule->command('attendance:sync')->twiceDaily(10, 17);
         $schedule->command('attendance:sync')->everyMinute();

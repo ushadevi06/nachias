@@ -660,8 +660,31 @@ class JobCardEntryController extends Controller
                             $grnImage = $this->getLatestGrnImageForArtNo($artNo);
                         }
 
-                        $matrix = collect($request->article_matrix ?? [])->where('art_no', $artNo)->first();
-                        $fgArtNo = $matrix['material_name'] ?? ($matrix['fg_art_no'] ?? ($fabric['fg_art_no'] ?? null));
+                        $matrix = collect($request->article_matrix ?? [])->first(function($m) use ($artNo) {
+                            $mArt = trim(explode('|', $m['art_no'] ?? '')[0]);
+                            return $mArt === trim(explode('|', $artNo)[0]);
+                        });
+
+                        $fgArtNo = null;
+                        $sizeFgNos = $matrix['size_fg_art_nos'] ?? ($matrix['size_materials'] ?? null);
+                        if (!empty($sizeFgNos) && is_array($sizeFgNos)) {
+                            $validSizeNos = array_filter($sizeFgNos, function($v) {
+                                return !empty($v) && trim((string)$v) !== '' && trim((string)$v) !== 'null';
+                            });
+                            if (!empty($validSizeNos)) {
+                                $uniqueValues = array_unique(array_values($validSizeNos));
+                                if (count($uniqueValues) === 1) {
+                                    $fgArtNo = reset($uniqueValues);
+                                } else {
+                                    $fgArtNo = json_encode($validSizeNos);
+                                }
+                            }
+                        }
+
+                        if (empty($fgArtNo) || trim((string)$fgArtNo) === 'null' || trim((string)$fgArtNo) === 'NULL') {
+                            $fgArtNo = $matrix['material_name'] ?? ($matrix['fg_art_no'] ?? ($fabric['fg_art_no'] ?? null));
+                        }
+
                         if (empty($fgArtNo) || trim((string)$fgArtNo) === 'null' || trim((string)$fgArtNo) === 'NULL') {
                             $fgArtNo = !empty($artNo) ? trim($artNo) : null;
                         }
@@ -2854,7 +2877,7 @@ class JobCardEntryController extends Controller
     }
 
     /**
-     * Delete an Additional Quantity Batch and revert quantities and stock
+     * Delete an Additional Quantity Batch and revert quantities and stock (Soft Delete)
      */
     public function deleteAdditionalBatch(Request $request, $id, $batchId)
     {
@@ -2866,9 +2889,36 @@ class JobCardEntryController extends Controller
         }
 
         $jobCard = JobCardEntry::with(['fabricDetails.quantities', 'cuttingSizeRatios'])->findOrFail($id);
-        $batch = JobCardFabricDetail::with('quantities')->where('job_card_entry_id', $jobCard->id)->where('is_additional', 1)->findOrFail($batchId);
+        $targetFabric = JobCardFabricDetail::with('quantities')->where('job_card_entry_id', $jobCard->id)->where('is_additional', 1)->findOrFail($batchId);
 
-        if ($batch->isPostedToWarehouse()) {
+        // Find all fabrics belonging to this batch group
+        if (!empty($targetFabric->additional_batch_no)) {
+            $batchGroup = JobCardFabricDetail::with('quantities')
+                ->where('job_card_entry_id', $jobCard->id)
+                ->where('is_additional', 1)
+                ->where('additional_batch_no', $targetFabric->additional_batch_no)
+                ->get();
+        } else {
+            $batchGroup = collect([$targetFabric]);
+        }
+
+        $batchFabricIds = $batchGroup->pluck('id')->toArray();
+
+        // 1. Validation: Prevent deletion if task has already been assigned
+        $hasTaskAssigned = Task::where('job_card_entry_id', $jobCard->id)
+            ->whereIn('job_card_fabric_detail_id', $batchFabricIds)
+            ->exists();
+
+        if ($hasTaskAssigned) {
+            $msg = 'Cannot delete this Batch because a Task has already been assigned for it.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return back()->with('danger', $msg);
+        }
+
+        // 2. Validation: Prevent deletion if already posted to warehouse
+        if ($batchGroup->contains(fn($f) => $f->isPostedToWarehouse())) {
             $msg = 'This additional quantity batch has already been posted to the warehouse and cannot be deleted.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
@@ -2879,35 +2929,53 @@ class JobCardEntryController extends Controller
         DB::beginTransaction();
         try {
             $oldData = $jobCard->toArray();
-            $batchQty = intval($batch->total_qty);
-            $batchFs = intval($batch->fs_qty);
-            $batchHs = intval($batch->hs_qty);
-            $batchMtr = floatval($batch->mtr);
+            $batchNo = $targetFabric->additional_batch_no ?? $batchId;
+            $batchGrandExtraFs = intval($targetFabric->fs_qty ?? 0);
+            $batchGrandExtraHs = intval($targetFabric->hs_qty ?? 0);
+            $batchGrandExtraQty = intval($targetFabric->total_qty ?? 0);
 
-            // 1. Revert size pieces from Cutting Size Ratios
-            foreach ($batch->quantities as $mq) {
-                $ratio = JobCardCuttingSizeRatio::where('job_card_entry_id', $jobCard->id)->where('size', $mq->size)->first();
-                if ($ratio) {
-                    $ratio->qty_fs = max(0, intval($ratio->qty_fs) - intval($mq->qty_fs));
-                    $ratio->qty_hs = max(0, intval($ratio->qty_hs) - intval($mq->qty_hs));
-                    $ratio->total_qty = max(0, intval($ratio->total_qty) - intval($mq->total_qty));
-                    $ratio->save();
+            // 3. Revert size pieces from Cutting Size Ratios & Soft delete fabric details + matrix quantities
+            foreach ($batchGroup as $fab) {
+                foreach ($fab->quantities as $mq) {
+                    $ratio = JobCardCuttingSizeRatio::where('job_card_entry_id', $jobCard->id)->where('size', $mq->size)->first();
+                    if ($ratio) {
+                        $ratio->qty_fs = max(0, intval($ratio->qty_fs) - intval($mq->qty_fs));
+                        $ratio->qty_hs = max(0, intval($ratio->qty_hs) - intval($mq->qty_hs));
+                        $ratio->total_qty = max(0, intval($ratio->total_qty) - intval($mq->total_qty));
+                        $ratio->save();
+                    }
+                }
+                // Soft delete related quantities
+                $fab->quantities()->delete();
+
+                // Delete issue items specifically tied to this fabric detail if any
+                JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->where('job_card_article_matrix_id', $fab->id)->delete();
+
+                // Soft delete the fabric detail
+                $fab->delete();
+            }
+
+            // 4. Sync Issue Items for remaining fabrics
+            $remainingFabrics = $jobCard->fabricDetails()->get();
+            foreach ($remainingFabrics->groupBy('art_no') as $artNo => $artFabs) {
+                $totArtMtr = $artFabs->sum('mtr');
+                $totArtQty = $artFabs->flatMap->quantities->sum('total_qty');
+                $issueItem = JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                    ->whereIn('job_card_article_matrix_id', $artFabs->pluck('id'))
+                    ->first();
+                if ($issueItem) {
+                    $issueItem->update([
+                        'qty_issue' => $totArtMtr,
+                        'produced_qty' => $totArtQty > 0 ? $totArtQty : $jobCard->grand_total_qty,
+                    ]);
                 }
             }
-            $batch->quantities()->delete();
-
-            // 2. Delete Associated Batch Tasks and Issue Items if any
-            Task::where('job_card_fabric_detail_id', $batch->id)->delete();
-            JobCardIssueItem::where('job_card_article_matrix_id', $batch->id)->delete();
-
-            // 3. Delete the batch record
-            $batch->delete();
 
             // 5. Revert JobCardEntry grand totals and additional_qty
-            $newGrandTotal = max(0, intval($jobCard->grand_total_qty) - $batchQty);
-            $newFs = max(0, intval($jobCard->total_qty_fs ?? 0) - $batchFs);
-            $newHs = max(0, intval($jobCard->total_qty_hs ?? 0) - $batchHs);
-            $newAdditionalQty = max(0, intval($jobCard->additional_qty ?? 0) - $batchQty);
+            $newGrandTotal = max(0, intval($jobCard->grand_total_qty) - $batchGrandExtraQty);
+            $newFs = max(0, intval($jobCard->total_qty_fs ?? 0) - $batchGrandExtraFs);
+            $newHs = max(0, intval($jobCard->total_qty_hs ?? 0) - $batchGrandExtraHs);
+            $newAdditionalQty = max(0, intval($jobCard->additional_qty ?? 0) - $batchGrandExtraQty);
 
             $totalMtrAll = $jobCard->fabricDetails()->sum('mtr');
             $newAverage = ($newGrandTotal > 0) ? round($totalMtrAll / $newGrandTotal, 3) : ($jobCard->average ?? 0);
@@ -2922,24 +2990,24 @@ class JobCardEntryController extends Controller
 
             // 6. Log activity
             $newData = $jobCard->fresh()->toArray();
-            addLog('delete', 'Job Card Additional Batch #' . $batchId . ' Deleted (- ' . $batchQty . ' pcs)', 'job_card_entries', $jobCard->id, $oldData, $newData);
+            addLog('delete', 'Job Card Additional Batch #' . $batchNo . ' Deleted (- ' . $batchGrandExtraQty . ' pcs)', 'job_card_entries', $jobCard->id, $oldData, $newData);
 
             DB::commit();
 
-            $successMsg = "Addition Batch deleted and quantities reverted successfully!";
+            $successMsg = "Additional Batch #{$batchNo} deleted and quantities reverted successfully!";
             session()->flash('success', $successMsg);
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => $successMsg,
-                    'redirect' => url('job_card_entries/additional-qty/' . $jobCard->id),
+                    'redirect' => url('job_card_entries/additional-qty-history/' . $jobCard->id),
                     'new_grand_total' => $newGrandTotal,
                     'additional_qty' => $newAdditionalQty,
                 ]);
             }
 
-            return redirect('job_card_entries/additional-qty/' . $jobCard->id)->with('success', $successMsg);
+            return redirect('job_card_entries/additional-qty-history/' . $jobCard->id)->with('success', $successMsg);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($request->ajax() || $request->wantsJson()) {

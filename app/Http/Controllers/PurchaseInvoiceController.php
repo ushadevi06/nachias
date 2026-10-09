@@ -206,19 +206,6 @@ class PurchaseInvoiceController extends Controller
                 'indent_date' => 'nullable|date_format:d-m-Y',
                 'invoice_status' => 'required|in:Draft,Unpaid/Credit,Paid,Partially Paid',
                 'items' => 'required|array|min:1',
-                'items.*.raw_material_id' => 'required|exists:raw_materials,id',
-                'items.*.quantity' => 'required|numeric|min:0.01',
-                'items.*.rate' => 'required|numeric|min:0',
-                'items.*.cgst_percent' => 'nullable|numeric|min:0|max:100',
-                'items.*.cgst_amount' => 'nullable|numeric|min:0',
-                'items.*.sgst_percent' => 'nullable|numeric|min:0|max:100',
-                'items.*.sgst_amount' => 'nullable|numeric|min:0',
-                'items.*.igst_percent' => 'nullable|numeric|min:0|max:100',
-                'items.*.igst_amount' => 'nullable|numeric|min:0',
-                'items.*.hsn_code' => [
-                    'required',
-                    'digits_between:4,8'
-                ],
                 'other_state' => ($id ? 'nullable' : 'required') . '|in:Y,N',
                 'igst_percent' => 'nullable|numeric|min:0|max:100',
                 'cgst_percent' => 'nullable|numeric|min:0|max:100',
@@ -237,6 +224,32 @@ class PurchaseInvoiceController extends Controller
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
                 'commission' => 'nullable|numeric|min:0|max:100',
             ];
+
+            // Only validate items that are actually selected/checked
+            $hasSelected = false;
+            if ($request->has('items') && is_array($request->items)) {
+                foreach ($request->items as $index => $item) {
+                    if (isset($item['selected']) && ($item['selected'] == 1 || $item['selected'] == '1' || $item['selected'] === true)) {
+                        $hasSelected = true;
+                        $rules["items.{$index}.raw_material_id"] = 'required|exists:raw_materials,id';
+                        $rules["items.{$index}.quantity"] = 'required|numeric|min:0.01';
+                        $rules["items.{$index}.rate"] = 'required|numeric|min:0';
+                        $rules["items.{$index}.cgst_percent"] = 'nullable|numeric|min:0|max:100';
+                        $rules["items.{$index}.cgst_amount"] = 'nullable|numeric|min:0';
+                        $rules["items.{$index}.sgst_percent"] = 'nullable|numeric|min:0|max:100';
+                        $rules["items.{$index}.sgst_amount"] = 'nullable|numeric|min:0';
+                        $rules["items.{$index}.igst_percent"] = 'nullable|numeric|min:0|max:100';
+                        $rules["items.{$index}.igst_amount"] = 'nullable|numeric|min:0';
+                        $rules["items.{$index}.hsn_code"] = ['required', 'digits_between:4,8'];
+                    }
+                }
+            }
+
+            if (!$hasSelected) {
+                return back()->withInput()->withErrors([
+                    'items' => 'Please select at least one item from the Item Details section.'
+                ]);
+            }
 
             $messages = [
                 '*.required' => 'This field is required.',
@@ -710,25 +723,16 @@ class PurchaseInvoiceController extends Controller
                     $query->where(function ($sub) {
                         $sub->where('purchase_orders.status', 'Approved')
                             ->where('purchase_orders.is_self_closed', 0)
-                            ->whereIn(
-                                'purchase_orders.id',
-                                function ($q) {
-                                    $q->select('purchase_order_items.purchase_order_id')
-                                        ->from('purchase_order_items')
-                                        ->leftJoin(
-                                            'purchase_invoice_items',
-                                            'purchase_invoice_items.purchase_order_item_id',
-                                            '=',
-                                            'purchase_order_items.id'
-                                        )
-                                        ->groupBy(
-                                            'purchase_order_items.id',
-                                            'purchase_order_items.quantity',
-                                            'purchase_order_items.purchase_order_id'
-                                        )
-                                        ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
-                                }
-                            );
+                            ->whereHas('items', function ($itemQ) {
+                                $itemQ->whereRaw('
+                                    purchase_order_items.quantity > (
+                                        SELECT COALESCE(SUM(COALESCE(pii.quantity, pii.qty_invoiced, 0)), 0)
+                                        FROM purchase_invoice_items pii
+                                        WHERE pii.purchase_order_item_id = purchase_order_items.id
+                                          AND pii.deleted_at IS NULL
+                                    )
+                                ');
+                            });
                     });
 
                     if (!empty($selectedPoIdsArr)) {
@@ -746,25 +750,16 @@ class PurchaseInvoiceController extends Controller
                 $query->whereHas('purchaseOrders', function ($q) {
                     $q->where('purchase_orders.status', 'Approved')
                         ->where('purchase_orders.is_self_closed', 0)
-                        ->whereIn(
-                            'purchase_orders.id',
-                            function ($sub) {
-                                $sub->select('purchase_order_items.purchase_order_id')
-                                    ->from('purchase_order_items')
-                                    ->leftJoin(
-                                        'purchase_invoice_items',
-                                        'purchase_invoice_items.purchase_order_item_id',
-                                        '=',
-                                        'purchase_order_items.id'
-                                    )
-                                    ->groupBy(
-                                        'purchase_order_items.id',
-                                        'purchase_order_items.quantity',
-                                        'purchase_order_items.purchase_order_id'
-                                    )
-                                    ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced, 0)), 3) < ROUND(purchase_order_items.quantity, 3)');
-                            }
-                        );
+                        ->whereHas('items', function ($itemQ) {
+                            $itemQ->whereRaw('
+                                purchase_order_items.quantity > (
+                                    SELECT COALESCE(SUM(COALESCE(pii.quantity, pii.qty_invoiced, 0)), 0)
+                                    FROM purchase_invoice_items pii
+                                    WHERE pii.purchase_order_item_id = purchase_order_items.id
+                                      AND pii.deleted_at IS NULL
+                                )
+                            ');
+                        });
                 });
 
                 if ($invoice && $invoice->supplier_id) {
@@ -928,16 +923,16 @@ class PurchaseInvoiceController extends Controller
     {
         $purchaseOrders = PurchaseOrder::where('status', 'Approved')
             ->where('supplier_id', $supplier_id)
-            ->where(function ($query) {
-                $query->whereDoesntHave('items', function ($query) {
-                    $query->join('purchase_invoice_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id');
-                })
-                ->orWhereHas('items', function ($query) {
-                    $query->select('purchase_order_items.id', 'purchase_order_items.quantity', 'purchase_order_items.purchase_order_id')
-                        ->join('purchase_invoice_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id')
-                        ->groupBy('purchase_order_items.id', 'purchase_order_items.quantity', 'purchase_order_items.purchase_order_id')
-                        ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
-                });
+            ->where('is_self_closed', 0)
+            ->whereHas('items', function ($itemQ) {
+                $itemQ->whereRaw('
+                    purchase_order_items.quantity > (
+                        SELECT COALESCE(SUM(COALESCE(pii.quantity, pii.qty_invoiced, 0)), 0)
+                        FROM purchase_invoice_items pii
+                        WHERE pii.purchase_order_item_id = purchase_order_items.id
+                          AND pii.deleted_at IS NULL
+                    )
+                ');
             })
             ->orderBy('id', 'desc')
             ->get(['id', 'po_number']);

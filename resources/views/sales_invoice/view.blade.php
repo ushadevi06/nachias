@@ -42,7 +42,17 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-4 col-lg-2">
+                                <div class="form-floating form-floating-outline">
+                                    <select name="store_id" id="store_id_filter" class="form-select select2" data-placeholder="Select Store">
+                                        <option value="">All Stores</option>
+                                        @foreach($stores as $store)
+                                            <option value="{{ $store->id }}">{{ $store->store_type_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-lg-2">
                                 <select name="status" id="status" class="form-select select2" data-placeholder="Select Status">
                                     <option value="">Select Status</option>
                                     <option value="Draft">Draft</option>
@@ -55,7 +65,7 @@
                             <div class="col-md-4 col-lg-3">
                                 <input type="text" id="inv_date_range" class="form-control" placeholder="Select Invoice Date Range">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <button type="button" id="filterBtn" class="btn btn-primary">Filter</button>
                                 <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
                             </div>
@@ -68,6 +78,7 @@
                                     <th>#</th>
                                     <th>Invoice No</th>
                                     <th>Invoice Date</th>
+                                    <th>Store</th>
                                     <th>Customer Name / Buyer </th>
                                     <th>Linked SO No.</th>
                                     <th>Total Qty</th>
@@ -83,7 +94,7 @@
                             <tbody></tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="5" class="text-end fw-bold">Total:</th>
+                                    <th colspan="6" class="text-end fw-bold">Total:</th>
                                     <th id="footer-total-qty" class="fw-bold">0</th>
                                     <th id="footer-sub-total" class="fw-bold">₹0.00</th>
                                     <th id="footer-discount" class="fw-bold">₹0.00</th>
@@ -154,6 +165,7 @@
                 data: function(d) {
                     d.status = $('#status').val();
                     d.customer_id = $('#customer_id').val();
+                    d.store_id = $('#store_id_filter').val();
                     d.inv_date_range = $('#inv_date_range').val();
                 }
             },
@@ -161,6 +173,7 @@
                 { data: 'DT_RowIndex' },
                 { data: 'inv_no' },
                 { data: 'inv_date' },
+                { data: 'store_name' },
                 { data: 'customer_name' },
                 { data: 'so_no' },
                 { data: 'total_qty' },
@@ -235,6 +248,7 @@
         $('#resetBtn').click(function() {
             $('#status').val('').trigger('change');
             $('#customer_id').val('').trigger('change');
+            $('#store_id_filter').val('').trigger('change');
             $('#inv_date_range').val('');
             table.ajax.reload();
         });

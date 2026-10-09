@@ -8,8 +8,26 @@
             $isCanvas = true;
         }
         $totalBatchesCount = count($additionalBatches);
-        $totalAdditionalPieces = $jobCard->additional_qty ?? $jobCard->fabricDetails->where('is_additional', 1)->sum('total_qty');
-        $totalAdditionalMeters = $jobCard->fabricDetails->where('is_additional', 1)->sum('mtr');
+        $totalAdditionalPieces = $additionalBatches->sum(function($group) {
+            return $group->sum('total_qty');
+        });
+        $totalAdditionalMeters = $additionalBatches->sum(function($group) {
+            return $group->sum('mtr');
+        });
+
+        // Exact planned quantity from base fabrics (is_additional = 0)
+        $baseFabrics = $jobCard->fabricDetails->where('is_additional', 0);
+        $basePlannedPieces = $baseFabrics->sum(function($f) {
+            return intval($f->fs_qty ?? 0) + intval($f->hs_qty ?? 0);
+        });
+        if ($basePlannedPieces <= 0) {
+            $basePlannedPieces = $baseFabrics->flatMap->quantities->sum('total_qty');
+        }
+        if ($basePlannedPieces <= 0) {
+            $basePlannedPieces = max(0, intval($jobCard->grand_total_qty) - $totalAdditionalPieces);
+        }
+
+        $currentGrandTotal = $basePlannedPieces + $totalAdditionalPieces;
     @endphp
 
     <!-- Page Header & Action Buttons -->
@@ -47,7 +65,7 @@
         <div class="col-md-3 col-sm-6">
             <div class="card border-0 shadow-sm text-center p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #edf2f7 100%);">
                 <span class="text-muted small fw-bold text-uppercase">Planned Quantity</span>
-                <h3 class="mb-0 fw-bold text-dark mt-1">{{ number_format($jobCard->grand_total_qty - $totalAdditionalPieces, 0) }} <small class="fs-6 text-muted">pcs</small></h3>
+                <h3 class="mb-0 fw-bold text-dark mt-1">{{ number_format($basePlannedPieces, 0) }} <small class="fs-6 text-muted">pcs</small></h3>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
@@ -65,7 +83,7 @@
         <div class="col-md-3 col-sm-6">
             <div class="card border-0 shadow-sm text-center p-3" style="background: linear-gradient(135deg, #ebfbee 0%, #d3f9d8 100%);">
                 <span class="text-success small fw-bold text-uppercase">Current Grand Total</span>
-                <h3 class="mb-0 fw-bold text-success mt-1">{{ number_format($jobCard->grand_total_qty, 0) }} <small class="fs-6 text-muted">pcs</small></h3>
+                <h3 class="mb-0 fw-bold text-success mt-1">{{ number_format($currentGrandTotal, 0) }} <small class="fs-6 text-muted">pcs</small></h3>
             </div>
         </div>
     </div>
@@ -112,6 +130,8 @@
                                     $batchHsQty = $batchGroup->sum('hs_qty');
                                     $batchMtr = $batchGroup->sum('mtr');
                                     $isPosted = $batchGroup->contains(fn($f) => $f->isPostedToWarehouse());
+                                    $batchFabricIds = $batchGroup->pluck('id')->toArray();
+                                    $hasTaskAssigned = \App\Models\Task::where('job_card_entry_id', $jobCard->id)->whereIn('job_card_fabric_detail_id', $batchFabricIds)->exists();
                                 @endphp
                                 <tr>
                                     <td>
@@ -139,7 +159,7 @@
                                                 @if($batchGroup->count() <= 3)
                                                     @foreach($batchGroup as $bf)
                                                         <span class="badge bg-label-primary px-2 py-1 fs-6 fw-bold border">
-                                                            {{ $bf->art_no }} <small class="text-muted">({{ number_format($bf->mtr, 2) }}m / +{{ $bf->total_qty }}pcs)</small>
+                                                             {{ $bf->art_no }} <small class="text-muted">({{ number_format($bf->mtr, 2) }}m / +{{ $bf->total_qty }}pcs)</small>
                                                         </span>
                                                     @endforeach
                                                 @else
@@ -239,6 +259,24 @@
                                             <a href="{{ url('job_card_entries/additional-qty-view/' . $jobCard->id . '?batch_id=' . $firstFabric->id) }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" title="View Batch Details">
                                                 <i class="ri ri-eye-line"></i> View Details
                                             </a>
+                                            @if(!$isPosted)
+                                                @if(!$hasTaskAssigned)
+                                                    <button type="button" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 btn-delete-batch" 
+                                                            data-url="{{ route('job_card_entries.delete_additional_batch', ['id' => $jobCard->id, 'batchId' => $firstFabric->id]) }}" 
+                                                            data-batch-no="{{ $batchNo }}" 
+                                                            data-qty="{{ $batchTotalQty }}"
+                                                            title="Delete this Batch">
+                                                        <i class="ri ri-delete-bin-line"></i> Delete
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" 
+                                                            disabled 
+                                                            style="cursor: not-allowed; opacity: 0.6;" 
+                                                            title="Task already assigned. Cannot delete.">
+                                                        <i class="ri ri-delete-bin-line"></i> Delete
+                                                    </button>
+                                                @endif
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -250,4 +288,37 @@
         </div>
     </div>
 </div>
+
+<form id="deleteBatchForm" method="POST" style="display:none;">
+    @csrf
+</form>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    $(document).on('click', '.btn-delete-batch', function(e) {
+        e.preventDefault();
+        var url = $(this).data('url');
+        var batchNo = $(this).data('batch-no');
+        var qty = $(this).data('qty');
+
+        Swal.fire({
+            title: 'Delete Batch #' + batchNo + '?',
+            text: 'Are you sure you want to delete this additional batch (+' + qty + ' pcs)? Quantities will be reverted.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var form = $('#deleteBatchForm');
+                form.attr('action', url);
+                form.submit();
+            }
+        });
+    });
+});
+</script>
 @endsection

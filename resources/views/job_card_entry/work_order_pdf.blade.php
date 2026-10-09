@@ -217,15 +217,21 @@
                     };
 
                     if ($isCanvas) {
-                        $desc = !empty($detail->fg_art_no) ? $detail->fg_art_no : ($artMaterialMap[trim($detail->art_no ?? '')] ?? null);
-                        if (!$desc && $detail->art_no) {
+                        $savedFgMap = null;
+                        $rawFg = $detail->fg_art_no ?? '';
+                        if (!empty($rawFg) && str_starts_with(trim($rawFg), '{')) {
+                            $savedFgMap = json_decode($rawFg, true);
+                        }
+
+                        $baseDesc = !empty($detail->fg_art_no) ? $detail->fg_art_no : ($artMaterialMap[trim($detail->art_no ?? '')] ?? null);
+                        if (!$baseDesc && $detail->art_no) {
                             $rm = \App\Models\RawMaterial::where('code', trim($detail->art_no))->first();
                             if ($rm) {
-                                $desc = $rm->name;
+                                $baseDesc = $rm->name;
                             }
                         }
-                        if (!$desc) {
-                            $desc = $detail->item_name ?: $detail->art_no;
+                        if (!$baseDesc) {
+                            $baseDesc = $detail->item_name ?: $detail->art_no;
                         }
 
                         $sizesArr = $getSizesArray('fs');
@@ -237,13 +243,41 @@
                             }
                         }
 
-                        $fullSleeveRows[] = [
-                            'item_no' => $detail->art_no,
-                            'description' => $desc,
-                            'uom' => 'NOS',
-                            'art' => $desc,
-                            'sizes' => $sizesArr
-                        ];
+                        foreach($sizes as $s) {
+                            $szQty = $sizesArr[$s] ?? 0;
+                            if ($szQty > 0) {
+                                if ($savedFgMap && !empty($savedFgMap[$s])) {
+                                    $szDesc = $savedFgMap[$s];
+                                } else {
+                                    $szDesc = $baseDesc;
+                                    if (preg_match('/\b\d+(\s*SIZE)?\b/i', $baseDesc)) {
+                                        $szDesc = preg_replace_callback('/\b\d+(\s*SIZE)?\b/i', function($m) use ($s) {
+                                            return stripos($m[0], 'SIZE') !== false ? ($s . ' SIZE') : $s;
+                                        }, $baseDesc);
+                                    } else {
+                                        $szDesc = trim($baseDesc . ' ' . $s . ' SIZE');
+                                    }
+                                }
+
+                                $szItemNo = $detail->art_no;
+                                $matchedRm = \App\Models\RawMaterial::where('name', $szDesc)->orWhere('name', 'like', '%' . $szDesc . '%')->first();
+                                if ($matchedRm && !empty($matchedRm->code)) {
+                                    $szItemNo = $matchedRm->code;
+                                    $szDesc = $matchedRm->name;
+                                }
+
+                                $szArr = array_fill_keys($sizes, 0);
+                                $szArr[$s] = $szQty;
+
+                                $fullSleeveRows[] = [
+                                    'item_no' => $szItemNo,
+                                    'description' => $szDesc,
+                                    'uom' => 'NOS',
+                                    'art' => $szDesc,
+                                    'sizes' => $szArr
+                                ];
+                            }
+                        }
                     } else {
                         if ($hasValue('fs')) {
                             $fullSleeveRows[] = [

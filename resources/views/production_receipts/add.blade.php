@@ -23,6 +23,15 @@
                                         if ($oldRawVal && !str_contains((string)$oldRawVal, '_add_') && $oldFabId) {
                                             $oldRawVal = $oldRawVal . '_add_' . $oldFabId;
                                         }
+                                        $initialJcId = $receipt ? $receipt->job_card_id : null;
+                                        if ($oldRawVal) {
+                                            $initialJcId = explode('_add_', (string)$oldRawVal)[0];
+                                        }
+                                        $initialJc = $initialJcId ? $jobCards->firstWhere('id', (int)$initialJcId) : null;
+                                        $isCanvasReceipt = false;
+                                        if ($initialJc && $initialJc->brand && (in_array(strtoupper(trim($initialJc->brand->brand_name ?? '')), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)']) || stripos($initialJc->brand->brand_name ?? '', 'CANVAS') !== false)) {
+                                            $isCanvasReceipt = true;
+                                        }
                                     @endphp
                                     <input type="hidden" name="job_card_id_raw" id="job_card_id_raw" value="{{ $oldRawVal }}">
                                     <select name="job_card_id" id="job_card_id" class="form-select select2" data-placeholder="Select Job Card No">
@@ -159,7 +168,7 @@
                                             <option value="{{ $wh->id }}" {{ old('warehouse_id', $receipt->warehouse_id ?? '') == $wh->id ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="warehouse_id">Warehouse Name <span class="text-danger">*</span></label>
+                                    <label for="warehouse_id">Warehouse Name <span class="text-danger" id="warehouse_required_star" style="{{ $isCanvasReceipt ? 'display: none;' : '' }}">*</span></label>
                                 </div>
                                 <div id="warehouse_capacity_info"></div>
                                 @error('warehouse_id') <span class="text-danger">{{ $message }}</span> @enderror
@@ -226,8 +235,8 @@
                                 <thead>
                                     <tr>
                                         <th>Item</th>
-                                        <th>Art No</th>
-                                        <th>Description</th>
+                                        <th class="col-art-no" style="{{ $isCanvasReceipt ? 'display: none;' : '' }}">Art No</th>
+                                        <th class="col-description" style="{{ $isCanvasReceipt ? 'display: none;' : '' }}">Description</th>
                                         <th>Color</th>
                                         <th>Size</th>
                                         <th>Unit Price</th>
@@ -293,15 +302,22 @@
 
         var itemDataStore = [];
 
-        function populateItemsGrid(items) {
+        function populateItemsGrid(items, isCanvas) {
             itemDataStore = items || [];
             var tbody = $('#items-tbody');
             tbody.empty();
             
+            var colSpan = isCanvas ? 8 : 10;
             if (!items || items.length === 0) {
-                tbody.append('<tr><td colspan="10" class="text-center">No items found</td></tr>');
+                tbody.append('<tr><td colspan="' + colSpan + '" class="text-center">No items found</td></tr>');
                 $('#items-section').hide();
                 return;
+            }
+
+            if (isCanvas) {
+                $('.col-art-no, .col-description').hide();
+            } else {
+                $('.col-art-no, .col-description').show();
             }
 
             items.forEach(function(item, index) {
@@ -311,9 +327,9 @@
                 var currentBalance = orderedQty - (alreadyRec + scanQty);
 
                 var row = '<tr data-index="' + index + '">' +
-                    '<td>' + (item.item_code || '') + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || '') + '"></td>' +
-                    '<td>' + (item.art_no || '-') + '</td>' +
-                    '<td>' + 
+                    '<td>' + (item.item_code || item.item_name || '') + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || item.item_code || '') + '"></td>' +
+                    '<td class="col-art-no"' + (isCanvas ? ' style="display:none;"' : '') + '>' + (item.art_no || '-') + '</td>' +
+                    '<td class="col-description"' + (isCanvas ? ' style="display:none;"' : '') + '>' + 
                         (item.description || '') + 
                         '<button type="button" class="btn btn-sm btn-link p-0 ms-1 btn-show-consumption" data-index="' + index + '" title="View Consumption Details">' +
                         '<i class="icon-base ri ri-information-line fs-5"></i></button>' +
@@ -334,6 +350,7 @@
                     '<input type="hidden" name="items[' + index + '][item_id]" value="' + (item.item_id || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][item_code]" value="' + (item.item_code || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][art_no]" value="' + (item.art_no || '') + '">' +
+                    '<input type="hidden" name="items[' + index + '][description]" value="' + (item.description || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][size_variant]" value="' + (item.size_variant || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][uom_id]" value="' + (item.uom_id || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][uom_code]" value="' + (item.uom_code || '') + '">' +
@@ -451,6 +468,8 @@
                 $('#doc_date').val('');
                 $('#items-section').hide();
                 $('#items-tbody').empty();
+                $('#warehouse_required_star').show();
+                $('#warehouse_capacity_info').html('');
                 return;
             }
 
@@ -491,6 +510,13 @@
                         $('#doc_no').val(response.data.job_card_no || '');
                         $('#doc_date').val(response.data.job_card_date || '');
                         
+                        if (response.data.is_canvas) {
+                            $('#warehouse_required_star').hide();
+                            $('#warehouse_capacity_info').html('');
+                        } else {
+                            $('#warehouse_required_star').show();
+                        }
+
                         if (response.data.store_type_id) {
                             $('#store_type_id').val(response.data.store_type_id).trigger('change.select2');
                         }
@@ -511,7 +537,7 @@
                                     }
                                 });
                             }
-                            populateItemsGrid(responseItems);
+                            populateItemsGrid(responseItems, response.data.is_canvas);
                         } else {
                             $('#items-section').hide();
                         }

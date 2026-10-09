@@ -754,12 +754,14 @@ class TaskManagementController extends Controller
         }
 
         $supervisorsQuery = User::join('roles', 'users.role_id', '=', 'roles.id')
-            ->whereIn('roles.name', ['Production Supervisor', 'Supervisor', 'Unit Supervisor', 'Cutting Supervisor'])
+            ->whereIn('roles.name', [
+                'Production Supervisor', 'Supervisor', 'Unit Supervisor', 'Cutting Supervisor', 'Store Executive'
+            ])
             ->where('users.status', 'Active');
         if (auth()->user() && auth()->user()->service_provider_id) {
             $supervisorsQuery->where('users.service_provider_id', auth()->user()->service_provider_id);
         }
-        $supervisors = $supervisorsQuery->select('users.*')->get();
+        $supervisors = $supervisorsQuery->select('users.*')->with('role')->get();
         $allStatuses = TaskStatus::pluck('name')->toArray();
         if (empty($allStatuses)) {
             $allStatuses = ['Planned', 'In Progress', 'Completed', 'Hold'];

@@ -518,6 +518,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/report/export_items', [SalesInvoiceController::class, 'exportItemsReport']);
     Route::get('sales_invoices', [SalesInvoiceController::class, 'index']);
     Route::get('sales_invoices/get_next_invoice_no', [SalesInvoiceController::class, 'getNextInvoiceNo']);
+    Route::get('sales_invoices/get-store-stock-items', [SalesInvoiceController::class, 'getStoreStockItems']);
     Route::match(['GET', 'POST'], 'sales_invoices/add/{id?}', [SalesInvoiceController::class, 'add']);
     Route::get('sales_invoices/view/{id}', [SalesInvoiceController::class, 'view']);
     Route::get('sales_invoices/download-pdf/{id}', [SalesInvoiceController::class, 'downloadPdf']);

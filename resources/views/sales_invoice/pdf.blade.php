@@ -601,9 +601,13 @@ $totalChunks = count($pages);
                         <td class="text-center">{{ $rowCounter }}</td>
                         <td>
                             @php
-                                $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
-                                    ->where('sku', $item->sku)
-                                    ->first();
+                                $isRmInvoice = in_array((int)$invoice->store_id, [1, 2]) || ($item->stockEntryItem && $item->stockEntryItem->stock_type === 'raw_material');
+                                $soItem = null;
+                                if (!$isRmInvoice) {
+                                    $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                                        ->where('sku', $item->sku)
+                                        ->first();
+                                }
                                 $codeToParse = '';
                                 if ($soItem) {
                                     $codeToParse = $soItem->getAttributes()['item_name'] ?? '';
@@ -629,8 +633,20 @@ $totalChunks = count($pages);
                                 $sleeve = '';
                                 $resolved = false;
 
+                                if ($isRmInvoice) {
+                                    if ($item->stockEntryItem && $item->stockEntryItem->rawMaterial) {
+                                        $itemName = $item->stockEntryItem->rawMaterial->name;
+                                    } elseif ($item->stockEntryItem && $item->stockEntryItem->raw_material_id) {
+                                        $rmObj = \DB::table('raw_materials')->where('id', $item->stockEntryItem->raw_material_id)->first();
+                                        $itemName = $rmObj ? $rmObj->name : ($item->art_no ?: 'Raw Material');
+                                    } else {
+                                        $itemName = $item->art_no ?: 'Raw Material';
+                                    }
+                                    $resolved = true;
+                                }
+
                                 $seItem = $item->stockEntryItem;
-                                if (!$seItem && $soItem && $soItem->stock_entry_item_id) {
+                                if (!$isRmInvoice && !$seItem && $soItem && $soItem->stock_entry_item_id) {
                                     $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
                                 }
 

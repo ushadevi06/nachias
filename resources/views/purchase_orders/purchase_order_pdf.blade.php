@@ -232,8 +232,7 @@
         $isFabricStore = !$isAccessoriesStore;
         $isOtherState = (bool)($purchaseOrder->other_state ?? false)
             || in_array(strtolower((string)($purchaseOrder->other_state ?? '')), ['yes', 'y', '1', 'true'], true)
-            || ($purchaseOrder->items->sum('igst_amount') > 0)
-            || ($purchaseOrder->items->sum('igst_percent') > 0);
+            || ($purchaseOrder->items->sum('igst_amount') > 0);
         $totalCols = $isFabricStore ? 14 : ($isOtherState ? 11 : 13);
 
         $rowHeight = 46;
@@ -713,7 +712,7 @@
                             <td class="text-right">{{ number_format($purchaseOrder->taxable_amount, 2) }}</td>
                         </tr>
                         @if($isAccessoriesStore)
-                            @if($purchaseOrder->other_state)
+                            @if($isOtherState)
                             <tr>
                                 <td class="text-left">IGST:</td>
                                 <td class="text-right">{{ number_format($purchaseOrder->tax_amount, 2) }}</td>
@@ -733,7 +732,7 @@
                             </tr>
                             @endif
                         @else
-                            @if($purchaseOrder->other_state)
+                            @if($isOtherState)
                             <tr>
                                 <td class="text-left">IGST ({{ $purchaseOrder->igst_percent }}%):</td>
                                 <td class="text-right">{{ number_format($purchaseOrder->tax_amount, 2) }}</td>

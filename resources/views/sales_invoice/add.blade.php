@@ -28,15 +28,22 @@
                                 <h4>{{ $invoice ? 'Edit' : 'Add' }} Sales Invoice</h4>
                             </div>
                             <div class="row g-4">
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-6 col-xl-4" id="store_container">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('inv_no') is-invalid @enderror"
-                                            id="inv_no" placeholder="Enter Invoice No" name="inv_no"
-                                            value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}" readonly>
-                                        <input type="hidden" name="is_manual_inv_no" id="is_manual_inv_no"
-                                            value="{{ old('is_manual_inv_no', '0') }}">
-                                        <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
-                                        @error('inv_no')
+                                        <select id="store_id" name="store_id" class="select2 form-select @error('store_id') is-invalid @enderror"
+                                            data-placeholder="Select Store" {{ isset($invoice) ? 'disabled' : '' }}>
+                                            <option value="">Select Store</option>
+                                            @foreach ($stores as $store)
+                                                <option value="{{ $store->id }}"
+                                                    {{ old('store_id', isset($invoice) ? $invoice->store_id : '3') == $store->id ? 'selected' : '' }}>
+                                                    {{ $store->store_type_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        @if (isset($invoice))
+                                            <input type="hidden" name="store_id" value="{{ $invoice->store_id }}">
+                                        @endif
+                                        <label for="store_id">Store <span class="text-danger">*</span></label>
+                                        @error('store_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -56,6 +63,55 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control @error('inv_no') is-invalid @enderror"
+                                            id="inv_no" placeholder="Enter Invoice No" name="inv_no"
+                                            value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}" readonly>
+                                        <input type="hidden" name="is_manual_inv_no" id="is_manual_inv_no"
+                                            value="{{ old('is_manual_inv_no', '0') }}">
+                                        <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
+                                        @error('inv_no')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-xl-4" id="customer_container">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="customer_id" name="customer_id"
+                                            class="select2 form-select @error('customer_id') is-invalid @enderror"
+                                            data-placeholder="Select Customer/Buyer"
+                                            {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'disabled' : '' }}>
+                                            <option value="">Select Customer/Buyer</option>
+                                            @foreach ($customers as $customer)
+                                                @php
+                                                    $custAddr = implode(', ', array_filter([
+                                                        $customer->address_line_1,
+                                                        $customer->address_line_2,
+                                                        $customer->address_line_3,
+                                                        $customer->city ? $customer->city->name : '',
+                                                        $customer->state ? $customer->state->name : '',
+                                                        $customer->zip_code
+                                                    ]));
+                                                @endphp
+                                                <option value="{{ $customer->id }}"
+                                                    data-state-id="{{ $customer->state_id }}"
+                                                    data-pincode="{{ $customer->zip_code }}"
+                                                    data-sales-discount="{{ $customer->sales_discount ?? 0 }}"
+                                                    data-address="{{ $custAddr }}"
+                                                    {{ old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id ? 'selected' : '' }}>
+                                                    {{ $customer->name }} ({{ $customer->code }})</option>
+                                            @endforeach
+                                        </select>
+                                        @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                            <input type="hidden" name="customer_id" value="{{ $invoice->customer_id }}">
+                                        @endif
+                                        <label for="customer_id">Customer <span class="text-danger">*</span></label>
+                                        @error('customer_id')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-xl-4" id="brand_container">
+                                    <div class="form-floating form-floating-outline">
                                         <select id="brand_id" name="brand_id"
                                             class="select2 form-select @error('brand_id') is-invalid @enderror"
                                             data-placeholder="Select Brand"
@@ -70,38 +126,13 @@
                                         @if (isset($invoice))
                                             <input type="hidden" name="brand_id" value="{{ $invoice->brand_id }}">
                                         @endif
-                                        <label for="brand_id">Brand <span class="text-danger">*</span></label>
+                                        <label for="brand_id">Brand <span class="text-danger" id="brand_required_star">*</span></label>
                                         @error('brand_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="customer_id" name="customer_id"
-                                            class="select2 form-select @error('customer_id') is-invalid @enderror"
-                                            data-placeholder="Select Customer/Buyer"
-                                            {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'disabled' : '' }}>
-                                            <option value="">Select Customer/Buyer</option>
-                                            @foreach ($customers as $customer)
-                                                <option value="{{ $customer->id }}"
-                                                    data-state-id="{{ $customer->state_id }}"
-                                                    data-pincode="{{ $customer->zip_code }}"
-                                                    data-sales-discount="{{ $customer->sales_discount ?? 0 }}"
-                                                    {{ old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id ? 'selected' : '' }}>
-                                                    {{ $customer->name }} ({{ $customer->code }})</option>
-                                            @endforeach
-                                        </select>
-                                        @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
-                                            <input type="hidden" name="customer_id" value="{{ $invoice->customer_id }}">
-                                        @endif
-                                        <label for="customer_id">Customer <span class="text-danger">*</span></label>
-                                        @error('customer_id')
-                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-6 col-xl-4" id="so_container">
                                     <div class="form-floating form-floating-outline">
                                         <select id="so_ids" name="so_ids[]"
                                             class="select2 form-select @error('so_ids') is-invalid @enderror" multiple
@@ -109,16 +140,16 @@
                                             {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'disabled' : '' }}>
                                             @foreach ($saleOrders as $so)
                                                 <option value="{{ $so->id }}"
-                                                    {{ is_array(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : [])) && in_array($so->id, old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : [])) ? 'selected' : '' }}>
+                                                    {{ is_array(old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : [])) && in_array($so->id, old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : [])) ? 'selected' : '' }}>
                                                     {{ $so->so_no }}</option>
                                             @endforeach
                                         </select>
                                         @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
-                                            @foreach (old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []) as $soId)
+                                            @foreach (old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : []) as $soId)
                                                 <input type="hidden" name="so_ids[]" value="{{ $soId }}">
                                             @endforeach
                                         @endif
-                                        <label for="so_ids">Sales Order <span class="text-danger">*</span></label>
+                                        <label for="so_ids">Sales Order <span class="text-danger" id="so_required_star">*</span></label>
                                         @error('so_ids')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                         @enderror
@@ -140,21 +171,7 @@
                                         <label for="remarks">Remarks</label>
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="store_id" name="store_id" class="select2 form-select"
-                                            data-placeholder="Select Store">
-                                            <option value="">Select Store</option>
-                                            @foreach ($stores as $store)
-                                                <option value="{{ $store->id }}"
-                                                    {{ old('store_id', isset($invoice) ? $invoice->store_id : '') == $store->id ? 'selected' : '' }}>
-                                                    {{ $store->store_type_name }}</option>
-                                            @endforeach
-                                        </select>
-                                        <label for="store_id">Store</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-6 col-xl-4" id="agent_container">
                                     <div class="form-floating form-floating-outline">
                                         <select id="agent_id" name="agent_id" class="select2 form-select"
                                             data-placeholder="Select Sales Executive">
@@ -168,12 +185,6 @@
                                         <label for="agent_id">Sales Executive</label>
                                     </div>
                                 </div>
-                                {{-- <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" class="form-control" id="commission_percent" name="commission_percent" placeholder="Commission %" value="{{ old('commission_percent', isset($invoice) ? $invoice->commission_percent : '') }}">
-                                    <label for="commission_percent">Commission %</label>
-                                </div>
-                            </div> --}}
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
                                         <input type="number" min="0" step="1"
@@ -186,7 +197,7 @@
                                         @enderror
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-6 col-xl-4" id="hsn_container">
                                     <div class="form-floating form-floating-outline">
                                         <input type="text" class="form-control @error('hsn_sac') is-invalid @enderror"
                                             id="hsn_sac" name="hsn_sac" placeholder="HSN Code"
@@ -215,8 +226,31 @@
                                     </button>
                                 @endif
                             </div>
+
+                            <!-- Raw Material Store Stock Item Search Section (Fabric & Accessories) -->
+                            <div class="row mb-4" id="store_stock_search_section" style="display: none;">
+                                <div class="col-md-7">
+                                    <div class="form-floating form-floating-outline position-relative">
+                                        <input type="text" id="store_stock_search_input" class="form-control border-primary"
+                                            placeholder="Type raw material name or art no to search..." autocomplete="off"
+                                            style="border-width: 2px;">
+                                        <label for="store_stock_search_input" class="text-primary fw-bold">
+                                            <i class="ri ri-search-line me-1"></i> Search Store Stock Items
+                                        </label>
+                                    </div>
+                                    <small class="text-muted ps-1"><i class="ri ri-information-line"></i> Type stock item name or Art No. to search and select from the autocomplete list.</small>
+                                </div>
+                                <div class="col-md-5 d-flex justify-content-end align-items-center">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-medium">Total Qty:</span>
+                                        <span class="fw-bold" id="rm_item_details_total_qty">0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Finished Goods Barcode Scan Section -->
                             @if (!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
-                                <div class="row mb-4">
+                                <div class="row mb-4" id="barcode_scan_section">
                                     <div class="col-md-6 text-center">
                                         <div class="input-group mb-2 mx-auto">
                                             <div class="form-floating form-floating-outline flex-grow-1">
@@ -248,8 +282,9 @@
                                     </div>
                                 </div>
                             @endif
+
                             <div class="table-responsive">
-                                <div class="art-no-filter-row art-no-filter-row--items mt-3 mb-2">
+                                <div class="art-no-filter-row art-no-filter-row--items mt-3 mb-2" id="art_no_filter_container">
                                     <div class="form-floating form-floating-outline art-no-filter-row--open-orders-items">
                                         <input type="text" id="art_no_filter" class="form-control art-no-filter-input"
                                             placeholder="Search by Art No or Size">
@@ -257,7 +292,7 @@
                                     </div>
                                 </div>
                                 <table class="table">
-                                    <thead>
+                                    <thead id="fg_table_header">
                                         <tr>
                                             <th style="width: 5%;">S.No.</th>
                                             <th style="width: 20%;">Stock Item</th>
@@ -272,8 +307,23 @@
                                             <th style="width: 5%;">Action</th>
                                         </tr>
                                     </thead>
+                                    <thead id="rm_table_header" style="display: none;">
+                                        <tr>
+                                            <th style="width: 5%;">S.No.</th>
+                                            <th style="width: 22%;">Stock Item</th>
+                                            <th class="rm-style-col" style="width: 12%;">Style</th>
+                                            <th style="width: 12%;">Art No</th>
+                                            <th style="width: 8%;">UOM</th>
+                                            <th style="width: 10%;">HSN Code *</th>
+                                            <th style="width: 10%;">Quantity *</th>
+                                            <th style="width: 10%;">Price *</th>
+                                            <th style="width: 10%;">Amount *</th>
+                                            <th style="width: 5%;">Action</th>
+                                        </tr>
+                                    </thead>
                                     <tbody id="item-rows">
                                         @php
+                                            $isCurrentRawMaterialStore = in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2]);
                                             $items = old('items');
                                             if (!$items && isset($invoice)) {
                                                 $items = $invoice->items
@@ -283,7 +333,7 @@
                                                         $sleeveType = $item->sleeve_type;
 
                                                         if ($item->item) {
-                                                            if ($item->item->brand) {
+                                                             if ($item->item->brand) {
                                                                 $brandName = $item->item->brand->brand_name;
                                                             } elseif ($item->brandCategory) {
                                                                 $brandName = $item->brandCategory->name;
@@ -295,7 +345,10 @@
                                                                 $itemName = $item->item->name;
                                                             }
                                                         } elseif ($item->stockEntryItem) {
-                                                            if ($item->stockEntryItem->item) {
+                                                            if ($item->stockEntryItem->rawMaterial) {
+                                                                $itemName = $item->stockEntryItem->rawMaterial->name;
+                                                                $brandName = $item->stockEntryItem->rawMaterial->name;
+                                                            } elseif ($item->stockEntryItem->item) {
                                                                 $seItem = $item->stockEntryItem->item;
                                                                 if ($seItem->brand) {
                                                                     $brandName = $seItem->brand->brand_name;
@@ -438,9 +491,11 @@
                                                                 ? $item->sizeRatio->size
                                                                 : $item->size ?? '',
                                                             'art_no' => $item->art_no ?? null,
+                                                            'style_id' => $item->stockEntryItem ? $item->stockEntryItem->style_id : null,
+                                                            'style_name' => ($item->stockEntryItem && $item->stockEntryItem->style) ? $item->stockEntryItem->style->style_name : '',
                                                             'hsn_sac' => $item->hsn_sac ?? null,
                                                             'uom_id' => $item->uom_id ?? null,
-                                                            'uom_code' => $item->uom_id ?: '',
+                                                            'uom_code' => ($item->uom ? ($item->uom->uom_code ?: $item->uom->uom_name) : (($item->stockEntryItem && $item->stockEntryItem->uom) ? ($item->stockEntryItem->uom->uom_code ?: $item->stockEntryItem->uom->uom_name) : 'PCS')),
                                                             'quantity' => $item->quantity ?? 0,
                                                             'max_qty' => $maxQty,
                                                             'stock_qty' => (float) $stockQty,
@@ -509,147 +564,227 @@
                                         @if ($mainItems)
                                             @foreach ($mainItems as $index => $row)
                                                 @php $row = (object) $row; @endphp
-                                                <tr class="item-row">
-                                                    <td class="s-no text-center">{{ $loop->iteration }}</td>
-                                                    <td>
-                                                        <div class="fw-bold text-dark">{{ $row->brand_name ?? '' }}</div>
-                                                        @if (!empty($row->item_name) && $row->item_name !== ($row->brand_name ?? ''))
-                                                            <div class="small text-muted">{{ $row->item_name }}
-                                                                ({{ $row->sleeve_type ?? '' }})</div>
-                                                        @endif
-                                                        @if (!empty($row->sku))
-                                                            <div class="small text-primary">Barcode: {{ $row->sku }}
+                                                @if ($isCurrentRawMaterialStore)
+                                                    <tr class="item-row rm-item-row">
+                                                        <td class="s-no text-center">{{ $loop->iteration }}</td>
+                                                        <td>
+                                                            <div class="fw-bold text-dark">{{ $row->item_name ?: ($row->brand_name ?: 'Raw Material') }}</div>
+                                                            <input type="hidden" class="invoice-item-db-id" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name" value="{{ $row->item_name ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty" value="{{ $row->stock_qty ?? '' }}">
+                                                        </td>
+                                                        <td class="rm-style-col" style="{{ (int)old('store_id', isset($invoice) ? $invoice->store_id : 3) == 1 ? '' : 'display: none;' }}">
+                                                            <span class="style-text">{{ $row->style_name ?? '-' }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][style_id]" class="style-id" value="{{ $row->style_id ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <span class="art-no-text">{{ $row->art_no ?? '-' }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <span class="uom-text">{{ $row->uom_code ?? 'PCS' }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code" value="{{ $row->uom_code ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="text" class="form-control hsn-sac"
+                                                                    name="items[{{ $index }}][hsn_sac]"
+                                                                    value="{{ $row->hsn_sac ?? '' }}"
+                                                                    placeholder="HSN Code" required
+                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <label>HSN Code <span class="text-danger">*</span></label>
                                                             </div>
-                                                        @endif
-                                                        <input type="hidden" class="invoice-item-db-id"
-                                                            name="items[{{ $index }}][id]"
-                                                            value="{{ $row->id ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][brand_id]"
-                                                            class="brand-id" value="{{ $row->brand_id ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name"
-                                                            value="{{ $row->brand_name ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][item_id]"
-                                                            class="item-id" value="{{ $row->item_id ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name"
-                                                            value="{{ $row->item_name ?? '' }}">
-                                                        <input type="hidden"
-                                                            name="items[{{ $index }}][sleeve_type]"
-                                                            class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][sku]"
-                                                            class="sku" value="{{ $row->sku ?? '' }}">
-                                                        <input type="hidden"
-                                                            name="items[{{ $index }}][stock_entry_item_id]"
-                                                            class="stock-entry-item-id"
-                                                            value="{{ $row->stock_entry_item_id ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][max_qty]" class="max-qty"
-                                                            value="{{ $row->max_qty ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty"
-                                                            value="{{ $row->stock_qty ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][is_extra]"
-                                                            class="is-extra" value="{{ $row->is_extra ?? '' }}">
-                                                    </td>
-                                                    <td>
-                                                        <span
-                                                            class="color-text">{{ !empty($row->api_color) ? $row->api_color : (!empty($row->color_name) ? $row->color_name : '-') }}</span>
-                                                        <input type="hidden" name="items[{{ $index }}][color_id]"
-                                                            class="color-id" value="{{ $row->color_id ?? '' }}">
-                                                        <input type="hidden"
-                                                            name="items[{{ $index }}][api_color]"
-                                                            class="api-color" value="{{ $row->api_color ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name"
-                                                            value="{{ $row->color_name ?? '' }}">
-                                                    </td>
-                                                    <td>
-                                                        <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
-                                                        <input type="hidden" name="items[{{ $index }}][art_no]"
-                                                            class="art-no" value="{{ $row->art_no ?? '' }}">
-                                                    </td>
-                                                    <td>
-                                                        <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
-                                                        <input type="hidden" name="items[{{ $index }}][uom_id]"
-                                                            class="uom-id" value="{{ $row->uom_id ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code"
-                                                            value="{{ $row->uom_code ?? '' }}">
-                                                    </td>
-                                                    <td>
-                                                        <span class="size-text">{{ $row->size_name ?? '' }}</span>
-                                                        <input type="hidden" name="items[{{ $index }}][size]"
-                                                            class="size-id" value="{{ $row->size ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name"
-                                                            value="{{ $row->size_name ?? '' }}">
-                                                    </td>
-                                                    <td>
-                                                        <div class="form-floating form-floating-outline">
-                                                            <input type="number" min="0" step="any"
-                                                                class="form-control qty"
-                                                                name="items[{{ $index }}][quantity]"
-                                                                value="{{ $row->quantity ?? '' }}"
-                                                                data-original-qty="{{ $row->quantity ?? 0 }}"
-                                                                data-max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}"
-                                                                data-stock="{{ $row->stock_qty ?? '' }}"
-                                                                max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}"
-                                                                placeholder="Qty"
-                                                                {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
-                                                            <label>Qty *</label>
-                                                        </div>
-                                                        <div class="qty-error text-danger small" style="display:none;">
-                                                        </div>
-                                                        @error("items.$index.quantity")
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                        @if (isset($row->max_qty) && $row->max_qty !== '' && (!isset($row->is_open_order) || $row->is_open_order != 1))
-                                                            <small class="text-info d-block">Ordered:
-                                                                {{ $row->max_qty }}</small>
-                                                        @endif
-                                                        @if (isset($row->stock_qty) && $row->stock_qty !== '')
-                                                            <small
-                                                                class="{{ max(0, $row->stock_qty) < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block"
-                                                                style="font-weight: 500;">Stock:
-                                                                {{ max(0, $row->stock_qty) }}</small>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        <div class="form-floating form-floating-outline">
-                                                            <input type="number" min="0" step="any"
-                                                                class="form-control mrp"
-                                                                name="items[{{ $index }}][mrp]"
-                                                                value="{{ $row->mrp ?? '' }}" placeholder="MRP" readonly>
-                                                            <label>MRP</label>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="form-floating form-floating-outline">
-                                                            <input type="number" min="0" step="any"
-                                                                class="form-control rate"
-                                                                name="items[{{ $index }}][rate]"
-                                                                value="{{ $row->rate ?? '' }}" placeholder="Price" readonly>
-                                                            <label>Price *</label>
-                                                        </div>
-                                                        @error("items.$index.rate")
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <div class="form-floating form-floating-outline">
-                                                            <input type="text" class="form-control amount"
-                                                                name="items[{{ $index }}][amount]"
-                                                                value="{{ $row->amount ?? '' }}" placeholder="Amount"
-                                                                readonly>
-                                                            <label>Amount *</label>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
-                                                            <span class="text-muted">-</span>
-                                                        @else
-                                                            <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
-                                                        @endif
-                                                    </td>
-                                                </tr>
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="number" min="0.01" step="any"
+                                                                    class="form-control qty"
+                                                                    name="items[{{ $index }}][quantity]"
+                                                                    value="{{ $row->quantity ?? '' }}"
+                                                                    data-original-qty="{{ $row->quantity ?? 0 }}"
+                                                                    data-stock="{{ $row->stock_qty ?? '' }}"
+                                                                    placeholder="Qty"
+                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <label>Qty *</label>
+                                                            </div>
+                                                            <div class="qty-error text-danger small" style="display:none;"></div>
+                                                            @if (isset($row->stock_qty) && $row->stock_qty !== '')
+                                                                <small class="text-muted d-block" style="font-weight: 500;">Stock: {{ max(0, $row->stock_qty) }}</small>
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="number" min="0.01" step="any"
+                                                                    class="form-control rate"
+                                                                    name="items[{{ $index }}][rate]"
+                                                                    value="{{ $row->rate ?? '' }}" placeholder="Price"
+                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <label>Price *</label>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="text" class="form-control amount"
+                                                                    name="items[{{ $index }}][amount]"
+                                                                    value="{{ $row->amount ?? '' }}" placeholder="Amount"
+                                                                    readonly>
+                                                                <label>Amount *</label>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                                                <span class="text-muted">-</span>
+                                                            @else
+                                                                <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @else
+                                                    <tr class="item-row">
+                                                        <td class="s-no text-center">{{ $loop->iteration }}</td>
+                                                        <td>
+                                                            <div class="fw-bold text-dark">{{ $row->brand_name ?? '' }}</div>
+                                                            @if (!empty($row->item_name) && $row->item_name !== ($row->brand_name ?? ''))
+                                                                <div class="small text-muted">{{ $row->item_name }}
+                                                                    ({{ $row->sleeve_type ?? '' }})</div>
+                                                            @endif
+                                                            @if (!empty($row->sku))
+                                                                <div class="small text-primary">Barcode: {{ $row->sku }}
+                                                                </div>
+                                                            @endif
+                                                            <input type="hidden" class="invoice-item-db-id"
+                                                                name="items[{{ $index }}][id]"
+                                                                value="{{ $row->id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][brand_id]"
+                                                                class="brand-id" value="{{ $row->brand_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name"
+                                                                value="{{ $row->brand_name ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][item_id]"
+                                                                class="item-id" value="{{ $row->item_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name"
+                                                                value="{{ $row->item_name ?? '' }}">
+                                                            <input type="hidden"
+                                                                name="items[{{ $index }}][sleeve_type]"
+                                                                class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][sku]"
+                                                                class="sku" value="{{ $row->sku ?? '' }}">
+                                                            <input type="hidden"
+                                                                name="items[{{ $index }}][stock_entry_item_id]"
+                                                                class="stock-entry-item-id"
+                                                                value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][max_qty]" class="max-qty"
+                                                                value="{{ $row->max_qty ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty"
+                                                                value="{{ $row->stock_qty ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][is_extra]"
+                                                                class="is-extra" value="{{ $row->is_extra ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <span
+                                                                class="color-text">{{ !empty($row->api_color) ? $row->api_color : (!empty($row->color_name) ? $row->color_name : '-') }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][color_id]"
+                                                                class="color-id" value="{{ $row->color_id ?? '' }}">
+                                                            <input type="hidden"
+                                                                name="items[{{ $index }}][api_color]"
+                                                                class="api-color" value="{{ $row->api_color ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name"
+                                                                value="{{ $row->color_name ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][art_no]"
+                                                                class="art-no" value="{{ $row->art_no ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][uom_id]"
+                                                                class="uom-id" value="{{ $row->uom_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code"
+                                                                value="{{ $row->uom_code ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <span class="size-text">{{ $row->size_name ?? '' }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][size]"
+                                                                class="size-id" value="{{ $row->size ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name"
+                                                                value="{{ $row->size_name ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="number" min="0" step="any"
+                                                                    class="form-control qty"
+                                                                    name="items[{{ $index }}][quantity]"
+                                                                    value="{{ $row->quantity ?? '' }}"
+                                                                    data-original-qty="{{ $row->quantity ?? 0 }}"
+                                                                    data-max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}"
+                                                                    data-stock="{{ $row->stock_qty ?? '' }}"
+                                                                    max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}"
+                                                                    placeholder="Qty"
+                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <label>Qty *</label>
+                                                            </div>
+                                                            <div class="qty-error text-danger small" style="display:none;">
+                                                            </div>
+                                                            @error("items.$index.quantity")
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                            @if (isset($row->max_qty) && $row->max_qty !== '' && (!isset($row->is_open_order) || $row->is_open_order != 1))
+                                                                <small class="text-info d-block">Ordered:
+                                                                    {{ $row->max_qty }}</small>
+                                                            @endif
+                                                            @if (isset($row->stock_qty) && $row->stock_qty !== '')
+                                                                <small
+                                                                    class="{{ max(0, $row->stock_qty) < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block"
+                                                                    style="font-weight: 500;">Stock:
+                                                                    {{ max(0, $row->stock_qty) }}</small>
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="number" min="0" step="any"
+                                                                    class="form-control mrp"
+                                                                    name="items[{{ $index }}][mrp]"
+                                                                    value="{{ $row->mrp ?? '' }}" placeholder="MRP" readonly>
+                                                                <label>MRP</label>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="number" min="0" step="any"
+                                                                    class="form-control rate"
+                                                                    name="items[{{ $index }}][rate]"
+                                                                    value="{{ $row->rate ?? '' }}" placeholder="Price" readonly>
+                                                                <label>Price *</label>
+                                                            </div>
+                                                            @error("items.$index.rate")
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            <div class="form-floating form-floating-outline">
+                                                                <input type="text" class="form-control amount"
+                                                                    name="items[{{ $index }}][amount]"
+                                                                    value="{{ $row->amount ?? '' }}" placeholder="Amount"
+                                                                    readonly>
+                                                                <label>Amount *</label>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                                                <span class="text-muted">-</span>
+                                                            @else
+                                                                <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endif
                                             @endforeach
                                         @else
                                             <tr class="item-row">
-                                                <td colspan="10" class="text-center">No items found</td>
+                                                <td colspan="11" class="text-center">No items found</td>
                                             </tr>
                                         @endif
                                     </tbody>
@@ -1117,7 +1252,7 @@
                                         </div>
 
                                         <!-- Show Fields in Delivery Order PDF -->
-                                        <div class="border-top pt-5 mt-5">
+                                        <div class="border-top pt-5 mt-5" id="delivery_order_show_fields_section" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2]) ? 'display: none;' : '' }}">
                                             <h6 class="fw-bold mb-2">Show in Delivery Order PDF</h6>
                                             <div class="row">
                                                 @php
@@ -1531,6 +1666,7 @@
                 max-width: 100%;
             }
         }
+
     </style>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -1607,7 +1743,7 @@
                 dropdownParent: $('body')
             });
             var preselectedCustomer = $('#customer_id').val();
-            var preselectedSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []));
+            var preselectedSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : []));
 
             if (preselectedCustomer) {
                 $.ajax({
@@ -2058,7 +2194,7 @@
                 applyOpenOrderArtNoFilter();
             });
 
-            $(document).on('click', '.remove-item, .open_delete_row', function() {
+            $(document).on('click', '.open_delete_row', function() {
                 setTimeout(function() {
                     applyArtNoFilter();
                     applyOpenOrderArtNoFilter();
@@ -2281,20 +2417,34 @@
             updateOpenOrderIndices();
             calculateTotals();
 
-            $('#item-rows').on('click', '.remove-item', function() {
+            $(document).on('click', '.remove-item', function(e) {
+                e.preventDefault();
                 if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                     return;
                 }
-                if ($('#item-rows .item-row').length > 0) {
-                    $(this).closest('tr').remove();
+                $(this).closest('tr.item-row, tr').remove();
+                if (typeof window.updateSerialNumbers === 'function') {
+                    window.updateSerialNumbers();
+                } else if (typeof updateSerialNumbers === 'function') {
                     updateSerialNumbers();
-                    if ($('#item-rows .item-row').length === 0) {
-                        $('#item-rows').html(
-                            '<tr class="item-row"><td colspan="10" class="text-center">No items found</td></tr>'
-                            );
-                    }
+                }
+                if ($('#item-rows .item-row').length === 0) {
+                    let storeVal = $('#store_id').val();
+                    let isRM = (storeVal == '1' || storeVal == '2');
+                    let cols = isRM ? (storeVal == '1' ? 10 : 9) : 10;
+                    $('#item-rows').html(
+                        `<tr class="item-row"><td colspan="${cols}" class="text-center">No items found</td></tr>`
+                    );
+                }
+                if (typeof window.calculateTotals === 'function') {
+                    window.calculateTotals();
+                } else if (typeof calculateTotals === 'function') {
                     calculateTotals();
                 }
+                setTimeout(function() {
+                    if (typeof applyArtNoFilter === 'function') applyArtNoFilter();
+                    if (typeof applyOpenOrderArtNoFilter === 'function') applyOpenOrderArtNoFilter();
+                }, 0);
             });
 
             $('#customer_id').on('change', function() {
@@ -2402,6 +2552,7 @@
                 });
 
                 $('#item_details_total_qty').text(itemDetailsTotalQty.toFixed(2));
+                $('#rm_item_details_total_qty').text(itemDetailsTotalQty.toFixed(2));
                 $('#open_order_total_qty').text(openOrderTotalQty.toFixed(2));
 
                 var totalQty = itemDetailsTotalQty + openOrderTotalQty;
@@ -3414,6 +3565,7 @@
         });
 
         let originalBrandId = "{{ isset($invoice) ? $invoice->brand_id : '' }}";
+        let originalStoreId = "{{ isset($invoice) ? $invoice->store_id : '' }}";
         let originalInvNo = "{{ isset($invoice) ? $invoice->inv_no : '' }}";
         let originalInvDate = "{{ isset($invoice) ? $invoice->inv_date->format('d-m-Y') : '' }}";
 
@@ -3436,16 +3588,24 @@
         });
 
         function updateInvoiceNo() {
+            let storeId = $('#store_id').val();
             let brandId = $('#brand_id').val();
             let invDate = $('input[name="inv_date"]').val();
 
-            if (!brandId || !invDate) {
-                $('#inv_no').val('');
-                return;
+            let isRM = (storeId == '1' || storeId == '2');
+            if (isRM) {
+                if (!invDate) {
+                    $('#inv_no').val('');
+                    return;
+                }
+            } else {
+                if (!brandId || !invDate) {
+                    $('#inv_no').val('');
+                    return;
+                }
             }
 
-            if (originalInvNo && brandId == originalBrandId && getFinancialYearStart(invDate) === getFinancialYearStart(
-                    originalInvDate)) {
+            if (originalInvNo && ((isRM && storeId == originalStoreId) || (!isRM && brandId == originalBrandId)) && getFinancialYearStart(invDate) === getFinancialYearStart(originalInvDate)) {
                 $('#inv_no').val(originalInvNo);
                 return;
             }
@@ -3454,6 +3614,7 @@
                 url: '{{ url('sales_invoices/get_next_invoice_no') }}',
                 method: 'GET',
                 data: {
+                    store_id: storeId,
                     brand_id: brandId,
                     inv_date: invDate
                 },
@@ -3471,6 +3632,282 @@
             });
         }
 
+        window.availableStoreStockItems = [];
+
+        function initStoreStockAutocomplete() {
+            let $input = $('#store_stock_search_input');
+            if (!$input.length) return;
+
+            if ($input.hasClass('ui-autocomplete-input')) {
+                $input.autocomplete('destroy');
+            }
+
+            $input.autocomplete({
+                minLength: 1,
+                source: function(request, response) {
+                    let term = (request.term || '').toLowerCase().trim();
+                    let items = window.availableStoreStockItems || [];
+                    if (!term) {
+                        response([]);
+                        return;
+                    }
+
+                    let filtered = items.filter(function(it) {
+                        let nameMatch = (it.item_name || '').toLowerCase().indexOf(term) !== -1;
+                        let artMatch = (it.art_no || '').toLowerCase().indexOf(term) !== -1;
+                        let codeMatch = (it.raw_material_code || '').toLowerCase().indexOf(term) !== -1;
+                        let styleMatch = (it.style_name || '').toLowerCase().indexOf(term) !== -1;
+                        return nameMatch || artMatch || codeMatch || styleMatch;
+                    });
+
+                    if (filtered.length === 0) {
+                        response([{
+                            label: 'No matching stock items found in this store',
+                            value: '',
+                            noResult: true
+                        }]);
+                        return;
+                    }
+
+                    response(filtered.slice(0, 30).map(function(it) {
+                        return {
+                            label: it.display_label,
+                            value: it.item_name,
+                            rawItem: it
+                        };
+                    }));
+                },
+                focus: function(event, ui) {
+                    return false;
+                },
+                select: function(event, ui) {
+                    event.preventDefault();
+                    if (ui.item && !ui.item.noResult && ui.item.rawItem) {
+                        addRawMaterialToInvoice(ui.item.rawItem);
+                        $(this).val('');
+                    }
+                    return false;
+                }
+            }).autocomplete("instance")._renderItem = function(ul, item) {
+                if (item.noResult) {
+                    return $("<li>")
+                        .append(`<div class="p-2 text-muted text-center small">${item.label}</div>`)
+                        .appendTo(ul);
+                }
+                let raw = item.rawItem;
+                let storeId = $('#store_id').val();
+                let styleBadge = (storeId == '1' && raw.style_name) ? `<span class="badge bg-label-info ms-1 small" style="font-size: 11px;">Style: ${raw.style_name}</span>` : '';
+                let html = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-dark">${raw.item_name || 'Raw Material'}</strong>
+                            ${styleBadge}
+                            <span class="badge bg-label-secondary ms-1 small" style="font-size: 11px;">Art: ${raw.art_no || '-'}</span>
+                        </div>
+                        <div class="text-end ms-3">
+                            <span class="badge bg-label-success small" style="font-size: 11px;">Avail: ${raw.available_qty} ${raw.uom_code || raw.uom_name || 'PCS'}</span>
+                            <span class="fw-bold text-primary ms-1">₹${parseFloat(raw.rate || 0).toFixed(2)}</span>
+                        </div>
+                    </div>`;
+                return $("<li>").append(html).appendTo(ul);
+            };
+
+            $input.off('focus.stock_ac click.stock_ac');
+        }
+
+        function loadStoreStockItems(storeId) {
+            if (!storeId || (storeId != '1' && storeId != '2')) {
+                window.availableStoreStockItems = [];
+                return;
+            }
+            $.ajax({
+                url: '{{ url('sales_invoices/get-store-stock-items') }}',
+                method: 'GET',
+                data: { store_id: storeId },
+                success: function(response) {
+                    if (response.success) {
+                        window.availableStoreStockItems = response.data || [];
+                        initStoreStockAutocomplete();
+                    }
+                }
+            });
+        }
+
+        function addRawMaterialToInvoice(matchedItem) {
+            if (!matchedItem) return;
+
+            let existingRow = null;
+            $('#item-rows tr.item-row').each(function() {
+                if ($(this).find('.stock-entry-item-id').val() == matchedItem.stock_entry_item_id) {
+                    existingRow = $(this);
+                }
+            });
+
+            if (existingRow) {
+                let qtyInput = existingRow.find('.qty');
+                let currentQty = parseFloat(qtyInput.val()) || 0;
+                let maxStock = parseFloat(matchedItem.available_qty) || 999999;
+
+                if (currentQty + 1 > maxStock) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Stock Exceeded',
+                        text: 'Cannot add more. Available stock is ' + maxStock,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    return;
+                }
+
+                qtyInput.val(currentQty + 1).trigger('input');
+            } else {
+                let index = $('#item-rows .item-row').length;
+                if (index === 1 && $('#item-rows .item-row td').attr('colspan')) {
+                    $('#item-rows').empty();
+                    index = 0;
+                }
+
+                let storeId = $('#store_id').val();
+                let rateVal = parseFloat(matchedItem.rate || 0);
+                let html = `
+                <tr class="item-row rm-item-row">
+                    <td class="s-no text-center">${index + 1}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${matchedItem.item_name || 'Raw Material'}</div>
+                        <input type="hidden" class="invoice-item-db-id" name="items[${index}][id]" value="">
+                        <input type="hidden" name="items[${index}][stock_entry_item_id]" class="stock-entry-item-id" value="${matchedItem.stock_entry_item_id}">
+                        <input type="hidden" name="items[${index}][item_name]" class="item-name" value="${matchedItem.item_name || ''}">
+                        <input type="hidden" name="items[${index}][brand_name]" class="brand-name" value="${matchedItem.item_name || ''}">
+                        <input type="hidden" name="items[${index}][stock_qty]" class="stock-qty" value="${matchedItem.available_qty}">
+                    </td>
+                    <td class="rm-style-col" style="${storeId == '1' ? '' : 'display: none;'}">
+                        <span class="style-text">${matchedItem.style_name || '-'}</span>
+                        <input type="hidden" name="items[${index}][style_id]" class="style-id" value="${matchedItem.style_id || ''}">
+                    </td>
+                    <td>
+                        <span class="art-no-text">${matchedItem.art_no || '-'}</span>
+                        <input type="hidden" name="items[${index}][art_no]" class="art-no" value="${matchedItem.art_no || ''}">
+                    </td>
+                    <td>
+                        <span class="uom-text">${matchedItem.uom_code || matchedItem.uom_name || 'PCS'}</span>
+                        <input type="hidden" name="items[${index}][uom_id]" class="uom-id" value="${matchedItem.uom_id || ''}">
+                        <input type="hidden" name="items[${index}][uom_code]" class="uom-code" value="${matchedItem.uom_code || matchedItem.uom_name || 'PCS'}">
+                    </td>
+                    <td>
+                        <div class="form-floating form-floating-outline">
+                            <input type="text" class="form-control hsn-sac" name="items[${index}][hsn_sac]" value="${matchedItem.hsn_sac || ''}" placeholder="HSN Code" required>
+                            <label>HSN Code <span class="text-danger">*</span></label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="form-floating form-floating-outline">
+                            <input type="number" min="0.01" step="any" class="form-control qty" name="items[${index}][quantity]" value="1" data-original-qty="1" data-stock="${matchedItem.available_qty}" placeholder="Qty">
+                            <label>Qty *</label>
+                        </div>
+                        <div class="qty-error text-danger small" style="display:none;"></div>
+                        <small class="text-muted d-block" style="font-weight: 500;">Stock: ${matchedItem.available_qty}</small>
+                    </td>
+                    <td>
+                        <div class="form-floating form-floating-outline">
+                            <input type="number" min="0.01" step="any" class="form-control rate" name="items[${index}][rate]" value="${rateVal}" placeholder="Price">
+                            <label>Price *</label>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="form-floating form-floating-outline">
+                            <input type="text" class="form-control amount" name="items[${index}][amount]" value="${rateVal.toFixed(2)}" placeholder="Amount" readonly>
+                            <label>Amount *</label>
+                        </div>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
+                    </td>
+                </tr>`;
+
+                $('#item-rows').append(html);
+                updateSerialNumbers();
+                calculateTotals();
+            }
+        }
+
+        function applyStoreMode(isInit) {
+            let storeId = $('#store_id').val();
+            let isRM = (storeId == '1' || storeId == '2');
+
+            if (storeId == '1') {
+                $('#agent_container').hide();
+            } else {
+                $('#agent_container').show();
+            }
+
+            if (isRM) {
+                $('#hsn_container').hide();
+                $('#brand_container').hide();
+                $('#so_container').hide();
+                $('#brand_required_star').hide();
+                $('#so_required_star').hide();
+                $('#barcode_scan_section').hide();
+                $('#btn_toggle_open_order').hide();
+                $('#open_order_section').hide();
+                $('#art_no_filter_container').hide();
+                $('#fg_table_header').hide();
+                $('#rm_table_header').show();
+                $('#store_stock_search_section').show();
+                $('#delivery_order_show_fields_section').hide();
+
+                if (storeId == '1') {
+                    $('.rm-style-col').show();
+                } else {
+                    $('.rm-style-col').hide();
+                }
+
+                loadStoreStockItems(storeId);
+                updateInvoiceNo();
+            } else {
+                $('#hsn_container').show();
+                $('#brand_container').show();
+                $('#so_container').show();
+                $('#brand_required_star').show();
+                $('#so_required_star').show();
+                $('#barcode_scan_section').show();
+                $('#btn_toggle_open_order').show();
+                $('#art_no_filter_container').show();
+                $('#rm_table_header').hide();
+                $('#fg_table_header').show();
+                $('#store_stock_search_section').hide();
+                $('#delivery_order_show_fields_section').show();
+
+                let currentHsn = $('#hsn_sac').val();
+                if (!currentHsn) {
+                    $('#hsn_sac').val('62053000');
+                }
+
+                updateInvoiceNo();
+            }
+        }
+
+        $('#store_id').on('change', function() {
+            // Reset items table & inputs when switching stores
+            $('#item-rows').empty();
+            $('#open-order-item-rows tbody').empty();
+            $('#store_stock_search_input').val('');
+            $('#barcode_scanner').val('');
+            $('#rm_item_details_total_qty').text('0.00');
+            $('#item_details_total_qty').text('0.00');
+
+            let newStoreId = $(this).val();
+            if (newStoreId == '1' || newStoreId == '2') {
+                $('#brand_id').val('').trigger('change.select2');
+                $('#so_ids').val([]).trigger('change.select2');
+            }
+
+            if (typeof calculateTotals === 'function') {
+                calculateTotals();
+            }
+
+            applyStoreMode(false);
+        });
+
         $('#brand_id').on('change', function() {
             updateInvoiceNo();
         });
@@ -3479,10 +3916,9 @@
             updateInvoiceNo();
         });
 
-
-
-        if ($('#brand_id').val()) {
-            updateInvoiceNo();
+        applyStoreMode(true);
+        if (typeof calculateTotals === 'function') {
+            calculateTotals();
         }
 
         $(function() {

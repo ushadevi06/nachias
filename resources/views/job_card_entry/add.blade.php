@@ -2254,10 +2254,50 @@
 
                     const isLocked = (isFgConverted || hasIssuedItems);
                     const isTaskReadOnly = isLocked ? 'readonly tabindex="-1"' : '';
-                    const isSelectDisabled = isLocked ? 'disabled' : '';
                     const readonlyAttr = isTaskReadOnly;
 
-                    let defaultBaseMat = (capturedMatrix[art] && (capturedMatrix[art].fg_art_no || capturedMatrix[art].material_name)) || (oldRow && (oldRow.fg_art_no || oldRow.material_name)) || (existingRow && existingRow.fg_art_no && existingRow.fg_art_no !== actualArt ? existingRow.fg_art_no : null) || resolvedArtName || actualArt || art;
+                    let savedSizeMap = null;
+                    if (existingRow && existingRow.fg_art_no) {
+                        try {
+                            if (String(existingRow.fg_art_no).trim().startsWith('{')) {
+                                savedSizeMap = JSON.parse(existingRow.fg_art_no);
+                            }
+                        } catch(e) {}
+                    }
+
+                    let defaultBaseMat = (capturedMatrix[art] && (capturedMatrix[art].fg_art_no || capturedMatrix[art].material_name)) || (oldRow && (oldRow.fg_art_no || oldRow.material_name)) || (existingRow && existingRow.fg_art_no && !savedSizeMap && existingRow.fg_art_no !== actualArt ? existingRow.fg_art_no : null) || resolvedArtName || actualArt || art;
+
+                    const findMatchingCanvasMaterial = function(baseStr, targetSize) {
+                        if (!baseStr || typeof canvasRawMaterials === 'undefined' || !canvasRawMaterials.length) return null;
+                        const baseClean = String(baseStr).trim();
+                        
+                        // 1. Direct match with target size replacement
+                        const replaced = baseClean.replace(/\b\d+(\s*SIZE)?\b/i, function(match) {
+                            return match.toUpperCase().includes('SIZE') ? `${targetSize} SIZE` : targetSize;
+                        });
+
+                        let match = canvasRawMaterials.find(rm => (rm.name || '').toUpperCase().trim() === replaced.toUpperCase().trim() || (rm.code || '').toUpperCase().trim() === replaced.toUpperCase().trim());
+                        if (match) return match.name || match.code;
+
+                        // 2. Try with ' SIZE' suffix
+                        const withSize = replaced.replace(new RegExp(`\\b${targetSize}\\b`, 'i'), `${targetSize} SIZE`);
+                        match = canvasRawMaterials.find(rm => (rm.name || '').toUpperCase().trim() === withSize.toUpperCase().trim() || (rm.code || '').toUpperCase().trim() === withSize.toUpperCase().trim());
+                        if (match) return match.name || match.code;
+
+                        // 3. Match tokens
+                        const cleanTokens = baseClean.replace(/\b\d+(\s*SIZE)?\b/gi, '').trim().split(/\s+/).filter(t => t.length > 2);
+                        if (cleanTokens.length > 0) {
+                            match = canvasRawMaterials.find(rm => {
+                                const rmName = (rm.name || '').toUpperCase();
+                                const hasAllTokens = cleanTokens.every(t => rmName.includes(t.toUpperCase()));
+                                const hasSize = new RegExp(`\\b${targetSize}(\\s*SIZE)?\\b`, 'i').test(rmName);
+                                return hasAllTokens && hasSize;
+                            });
+                            if (match) return match.name || match.code;
+                        }
+
+                        return null;
+                    };
 
                     sizesToRender.forEach((s) => {
                         let fsVal = '';
@@ -2276,12 +2316,19 @@
                             }
                         }
 
-                        let savedMatForSize = (capturedMatrix[art] && (capturedMatrix[art]['material_name_' + s] || capturedMatrix[art]['material_name'])) || (oldRow && (oldRow['material_name_' + s] || oldRow['material_name'])) || '';
+                        let savedMatForSize = (savedSizeMap && savedSizeMap[s]) || (capturedMatrix[art] && (capturedMatrix[art]['material_name_' + s] || capturedMatrix[art]['material_name'])) || (oldRow && (oldRow['material_name_' + s] || oldRow['material_name'])) || '';
                         
-                        // Default to empty / -- Select Material -- unless explicitly saved/selected
                         let chosenMatName = '';
                         if (savedMatForSize && typeof canvasRawMaterials !== 'undefined' && canvasRawMaterials.some(rm => (rm.name || '').toUpperCase().trim() === String(savedMatForSize).toUpperCase().trim())) {
                             chosenMatName = savedMatForSize;
+                        }
+
+                        // Auto-detect matching canvas material for this size from base name if not explicitly saved
+                        if (!chosenMatName && defaultBaseMat) {
+                            const autoMatch = findMatchingCanvasMaterial(defaultBaseMat, s);
+                            if (autoMatch) {
+                                chosenMatName = autoMatch;
+                            }
                         }
 
                         let optHtml = `<option value="">-- Select Material --</option>`;
@@ -2293,7 +2340,23 @@
                             });
                         }
 
-                        let curFgArtNo = (capturedMatrix[art] && (capturedMatrix[art]['fg_art_no_' + s] || capturedMatrix[art]['fg_art_no'])) || (oldRow && (oldRow['fg_art_no_' + s] || oldRow['fg_art_no'])) || (existingRow && existingRow.fg_art_no && existingRow.fg_art_no !== actualArt ? existingRow.fg_art_no : null) || chosenMatName || resolvedArtName || defaultBaseMat || actualArt || art;
+                        let curFgArtNo = (savedSizeMap && savedSizeMap[s]) || (capturedMatrix[art] && (capturedMatrix[art]['fg_art_no_' + s] || capturedMatrix[art]['fg_art_no'])) || (oldRow && (oldRow['fg_art_no_' + s] || oldRow['fg_art_no'])) || (existingRow && existingRow.fg_art_no && !savedSizeMap && existingRow.fg_art_no !== actualArt ? existingRow.fg_art_no : null) || chosenMatName || resolvedArtName || defaultBaseMat || actualArt || art;
+
+                        // Make sure FG Art No for this specific size reflects the size-matched name
+                        if (savedSizeMap && savedSizeMap[s]) {
+                            curFgArtNo = savedSizeMap[s];
+                        } else if (chosenMatName) {
+                            curFgArtNo = chosenMatName;
+                        } else if (defaultBaseMat && typeof defaultBaseMat === 'string') {
+                            const sizeMatchedFg = findMatchingCanvasMaterial(defaultBaseMat, s);
+                            if (sizeMatchedFg) {
+                                curFgArtNo = sizeMatchedFg;
+                            } else if (/\b\d+(\s*SIZE)?\b/i.test(defaultBaseMat)) {
+                                curFgArtNo = defaultBaseMat.replace(/\b\d+(\s*SIZE)?\b/i, function(match) {
+                                    return match.toUpperCase().includes('SIZE') ? `${s} SIZE` : s;
+                                });
+                            }
+                        }
 
                         let rowHtml = `
                             <tr class="cat1-row canvas-portrait-row" data-uom="${uom}" data-art="${art}" data-size="${s}" data-category="${catId}" data-index="${index}">
@@ -2308,15 +2371,15 @@
                                     <input type="number" min="0" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center fw-bold" data-col="fs-${s}" data-art="${art}" data-size="${s}" value="${fsVal}" ${readonlyAttr} placeholder="0">
                                 </td>
                                 <td class="align-middle">
-                                    <select name="article_matrix[${index}][size_materials][${s}]" class="form-select form-select-sm canvas-material-select" data-index="${index}" data-art="${art}" data-size="${s}" style="width: 100%;" ${isSelectDisabled}>
+                                    <select name="article_matrix[${index}][size_materials][${s}]" class="form-select form-select-sm canvas-material-select" data-index="${index}" data-art="${art}" data-size="${s}" style="width: 100%;" ${isFgConverted ? 'disabled' : ''}>
                                         ${optHtml}
                                     </select>
-                                    ${isLocked ? `<input type="hidden" name="article_matrix[${index}][size_materials][${s}]" value="${chosenMatName}">` : ''}
+                                    ${isFgConverted ? `<input type="hidden" name="article_matrix[${index}][size_materials][${s}]" value="${chosenMatName}">` : ''}
                                 </td>
                                 <td class="align-middle">
                                     <div class="input-group input-group-sm">
-                                        <input type="text" name="article_matrix[${index}][size_fg_art_nos][${s}]" class="form-control form-control-sm text-center fw-semibold fg-art-input bg-light" data-size="${s}" placeholder="FG Art No" value="${curFgArtNo}" readonly tabindex="-1" title="Finished Good Art No / Receipt Style">
-                                        ${isLocked ? `<span class="input-group-text bg-light text-muted px-2" title="Locked: Raw materials already issued"><i class="ri ri-lock-2-line"></i></span>` : ''}
+                                        <input type="text" name="article_matrix[${index}][size_fg_art_nos][${s}]" class="form-control form-control-sm text-center fw-semibold fg-art-input ${isFgConverted ? 'bg-light' : ''}" data-size="${s}" placeholder="FG Art No" value="${curFgArtNo}" ${isFgConverted ? 'readonly tabindex="-1"' : ''} title="${isFgConverted ? 'Locked: Already Converted to FG' : 'Finished Good Art No / Receipt Style'}">
+                                        ${isFgConverted ? `<span class="input-group-text bg-light text-muted px-2" title="Locked: Already Converted to FG"><i class="ri ri-lock-2-line"></i></span>` : ''}
                                     </div>
                                 </td>
                             </tr>`;
@@ -2345,15 +2408,35 @@
                     $tbody.find('.canvas-material-select').select2({
                         width: '100%',
                         placeholder: '-- Select Material --'
-                    }).on('change select2:select', function() {
+                    }).on('change select2:select', function(e, fromCascade) {
+                        if (fromCascade) return;
                         const selectedVal = $(this).val();
+                        const curSize = String($(this).data('size') || '').trim();
                         const $row = $(this).closest('tr');
                         const $fgInput = $row.find('.fg-art-input');
+                        const rowIdx = $row.data('index');
                         if (selectedVal) {
                             $fgInput.val(selectedVal);
+                            $(`#canvas_main_fg_${rowIdx}`).val(selectedVal);
+                            $(`#canvas_main_material_${rowIdx}`).val(selectedVal);
                         } else {
                             const art = $row.data('art') || '';
                             $fgInput.val(art);
+                        }
+
+                        // Pre-select matching materials for all remaining sizes automatically!
+                        if (selectedVal && curSize) {
+                            $tbody.find('.canvas-portrait-row').each(function() {
+                                const otherSize = String($(this).data('size') || '').trim();
+                                if (otherSize && otherSize !== curSize) {
+                                    const $otherSelect = $(this).find('.canvas-material-select');
+                                    const matchedVal = findMatchingCanvasMaterial(selectedVal, otherSize);
+                                    if (matchedVal) {
+                                        $otherSelect.val(matchedVal).trigger('change', [true]);
+                                        $(this).find('.fg-art-input').val(matchedVal);
+                                    }
+                                }
+                            });
                         }
                     });
                 }
@@ -2453,8 +2536,8 @@
                                     ${materialNameHtml}
                                     <div class="mt-1">
                                         <div class="input-group input-group-sm">
-                                            <input type="text" name="article_matrix[${index}][fg_art_no]" class="form-control form-control-sm text-center fw-semibold fg-art-input ${isLocked ? 'bg-light' : ''}" placeholder="FG Art No" value="${fgArtNo}" ${isTaskReadOnly} title="${isLocked ? 'Locked: Raw materials already issued' : 'Finished Good Art No / Receipt Style'}">
-                                            ${isLocked ? `<span class="input-group-text bg-light text-muted px-2" title="Locked: Raw materials already issued"><i class="ri ri-lock-2-line"></i></span>` : ''}
+                                            <input type="text" name="article_matrix[${index}][fg_art_no]" class="form-control form-control-sm text-center fw-semibold fg-art-input ${isFgConverted ? 'bg-light' : ''}" placeholder="FG Art No" value="${fgArtNo}" ${isFgConverted ? 'readonly tabindex="-1"' : ''} title="${isFgConverted ? 'Locked: Already Converted to FG' : 'Finished Good Art No / Receipt Style'}">
+                                            ${isFgConverted ? `<span class="input-group-text bg-light text-muted px-2" title="Locked: Already Converted to FG"><i class="ri ri-lock-2-line"></i></span>` : ''}
                                         </div>
                                     </div>
                                 </td>`;

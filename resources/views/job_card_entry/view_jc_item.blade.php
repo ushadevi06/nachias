@@ -193,7 +193,7 @@
                                 <table class="table table-hover table-bordered table-sm align-middle text-nowrap" id="main-items-table">
                                     <thead class="bg-primary">
                                         <tr>
-                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Art</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Remaining Qty</th><th>Unit Price</th><th>Status</th>
+                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>FG Art No</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Remaining Qty</th><th>Unit Price</th><th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -283,13 +283,24 @@
                                                 $wastage = floatval($savedItem->qty_wastage ?? 0);
                                                 $adjusted = floatval($savedItem->qty_adjusted ?? 0);
                                                 $remaining = ($issue + $adjusted) - $used - $wastage;
+
+                                                $displayFgArtNo = $item->art_no;
+                                                if (!empty($item->fg_art_no)) {
+                                                    if (str_starts_with(trim($item->fg_art_no), '{')) {
+                                                        $decodedFg = json_decode($item->fg_art_no, true);
+                                                        $sampleFg = is_array($decodedFg) ? reset($decodedFg) : null;
+                                                        $displayFgArtNo = $sampleFg ? trim(preg_replace('/\s*\b\d+(\s*SIZE)?\b/i', '', $sampleFg)) : $item->art_no;
+                                                    } else {
+                                                        $displayFgArtNo = $item->fg_art_no;
+                                                    }
+                                                }
                                             @endphp
                                             <tr data-line="{{ $lineNum }}">
                                                 <td>
                                                     <button type="button" class="btn btn-sm btn-icon edit-item-btn text-primary" data-bs-toggle="modal" data-bs-target="#editItemModal"
                                                         data-store="{{ $jobCard->issueStore->store_type_name ?? '-' }}" 
                                                         data-item="{{ $itemDisplayNamePlain }}" 
-                                                        data-art="{{ $item->art_no }}" 
+                                                        data-art="{{ $displayFgArtNo }}" 
                                                         data-uom="{{ $uomName }}" 
                                                         data-qty-issue="{{ number_format($issue, 2, '.', '') }}" 
                                                         data-matrix-id="{{ $item->id }}" 
@@ -319,7 +330,7 @@
                                                 <td>{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
                                                 <td>{{ $locationName }}</td>
                                                 <td class="fw-bold">
-                                                    {{ $item->art_no }}
+                                                    {{ $displayFgArtNo }}
                                                     @if($group['has_additional'])
                                                         <span class="badge bg-warning text-dark ms-1" style="font-size: 10px;" title="Includes Base + {{ $group['additional_batch_count'] }} Extra Batch(es)">+{{ $group['additional_batch_count'] }} Extra Batch</span>
                                                     @endif
@@ -358,7 +369,7 @@
                                             <th>Store</th>
                                             <th>Location</th>
                                             <th>Item</th>
-                                            <th>Art</th>
+                                            <th>FG Art No</th>
                                             <th>Qty/UOM</th>
                                             <th>UOM</th>
                                             <th>Qty to Issue</th>
@@ -388,6 +399,17 @@
                                                 $uomName = ($poItem && $poItem->uom) ? $poItem->uom->uom_code : (($poItem && $poItem->rawMaterial && $poItem->rawMaterial->uom) ? $poItem->rawMaterial->uom->uom_code : ($artUomMap[$item->art_no] ?? '-'));
                                                 $savedItem = $issueItemMap[$item->id] ?? null;
                                                 $unitPrice = (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? $savedItem->unit_price : ($artPriceMap[$item->art_no] ?? 0);
+
+                                                $displayFgArtNoAcc = $item->art_no;
+                                                if (!empty($item->fg_art_no)) {
+                                                    if (str_starts_with(trim($item->fg_art_no), '{')) {
+                                                        $decodedFg = json_decode($item->fg_art_no, true);
+                                                        $sampleFg = is_array($decodedFg) ? reset($decodedFg) : null;
+                                                        $displayFgArtNoAcc = $sampleFg ? trim(preg_replace('/\s*\b\d+(\s*SIZE)?\b/i', '', $sampleFg)) : $item->art_no;
+                                                    } else {
+                                                        $displayFgArtNoAcc = $item->fg_art_no;
+                                                    }
+                                                }
                                             @endphp
                                             <tr data-line="{{ $lineNumAcc }}">
                                                 @php
@@ -397,7 +419,7 @@
                                                     <button type="button" class="btn btn-sm btn-icon edit-item-btn text-primary" data-bs-toggle="modal" data-bs-target="#editItemModal"
                                                         data-store="{{ $jobCard->issueStore->store_type_name ?? '-' }}" 
                                                         data-item="{{ $materialName }}" 
-                                                        data-art="{{ $item->art_no }}" 
+                                                        data-art="{{ $displayFgArtNoAcc }}" 
                                                         data-uom="{{ $uomName }}" 
                                                         data-qty-issue="{{ $defaultQty }}" 
                                                         data-matrix-id="{{ $item->id }}" 
@@ -422,13 +444,13 @@
                                                     <div class="fw-bold text-dark">{{ $materialName }}</div>
                                                     @if($fsCons > 0 || $hsCons > 0)
                                                         <div class="small text-muted mt-1" style="font-size: 10px;">
-                                                            <span class="badge bg-primary-subtle text-primary border-primary border px-1" style="font-size: 9px;">FS: {{ number_format($fsCons, 2) }}</span>
+                                                             <span class="badge bg-primary-subtle text-primary border-primary border px-1" style="font-size: 9px;">FS: {{ number_format($fsCons, 2) }}</span>
                                                             <span class="badge bg-success-subtle text-success border-success border px-1" style="font-size: 9px;">HS: {{ number_format($hsCons, 2) }}</span>
                                                         </div>
                                                     @endif
                                                 </td>
                                                 <td class="fw-bold">
-                                                    {{ $item->art_no }}
+                                                    {{ $displayFgArtNoAcc }}
                                                     @if($item->stockEntry)
                                                         <br><small class="text-info">{{ $item->stockEntry->stock_entry_no }}</small>
                                                     @endif
@@ -495,8 +517,8 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating form-floating-outline">
-                                <input type="text" id="modal_art" class="form-control" readonly placeholder="Art No">
-                                <label for="modal_art">Art No</label>
+                                <input type="text" id="modal_art" class="form-control" readonly placeholder="FG Art No">
+                                <label for="modal_art">FG Art No</label>
                             </div>
                         </div>
                         <div class="col-md-6">

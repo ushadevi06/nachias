@@ -107,6 +107,12 @@
                 <div class="card-header border-bottom">
                     <h5 class="card-title mb-0">Item Details</h5>
                 </div>
+                @php
+                    $isCanvasReceipt = false;
+                    if ($receipt->jobCard && $receipt->jobCard->brand && (in_array(strtoupper(trim($receipt->jobCard->brand->brand_name ?? '')), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)']) || stripos($receipt->jobCard->brand->brand_name ?? '', 'CANVAS') !== false)) {
+                        $isCanvasReceipt = true;
+                    }
+                @endphp
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover">
@@ -114,7 +120,9 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Item Name</th>
+                                    @if(!$isCanvasReceipt)
                                     <th>Art No</th>
+                                    @endif
                                     <th>Size / Variant</th>
                                     <th class="text-center">Ordered Qty</th>
                                     <th class="text-center">Scan Qty</th>
@@ -129,10 +137,14 @@
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
                                         <td>
-                                            <span class="fw-bold">{{ $item->item_name }}</span><br>
-                                            <small class="text-muted">{{ $item->item_code }}</small>
+                                            <span class="fw-bold">{{ $item->item_name }}</span>
+                                            @if(!$isCanvasReceipt && $item->item_code && $item->item_code != $item->item_name)
+                                                <br><small class="text-muted">{{ $item->item_code }}</small>
+                                            @endif
                                         </td>
+                                        @if(!$isCanvasReceipt)
                                         <td>{{ $item->resolved_art_no ?? $item->art_no ?? '-' }}</td>
+                                        @endif
                                         <td>{{ $item->size_variant }}</td>
                                         <td class="text-center">{{ number_format($item->ordered_qty, 2) }}</td>
                                         <td class="text-center">{{ number_format($item->scan_qty, 2) }}</td>
@@ -145,7 +157,7 @@
                             </tbody>
                             <tfoot class="table-light">
                                 <tr class="fw-bold">
-                                    <td colspan="4" class="text-end">Total Qty:</td>
+                                    <td colspan="{{ $isCanvasReceipt ? '3' : '4' }}" class="text-end">Total Qty:</td>
                                     <td class="text-center">{{ number_format($receipt->items->sum('ordered_qty'), 2) }}</td>
                                     <td class="text-center">{{ number_format($receipt->items->sum('scan_qty'), 2) }}</td>
                                     <td class="text-center">{{ number_format($receipt->items->sum('qty_to_receive'), 2) }}</td>

@@ -263,8 +263,18 @@ class BackupController extends Controller
     {
         set_time_limit(300);
         try {
-            $day = strtolower(date('l')); // e.g., monday, tuesday
-            $period = (date('H') < 16) ? '11AM' : '11PM';
+            // Check IST hour: skip daytime backups (before 22:00 IST) unless forced
+            $currentHourIST = (int) now('Asia/Kolkata')->format('H');
+            if ($currentHourIST < 22 && !request()->has('force')) {
+                Log::info("Auto backup skipped at {$currentHourIST}:00 IST. Automated backup is configured for 23:00 IST.");
+                return response()->json([
+                    'status' => 'skipped',
+                    'message' => "Backup skipped during daytime (Current IST hour: {$currentHourIST}:00). Automated backup runs at 23:00 (11:00 PM) IST. Use ?force=1 to run manually."
+                ]);
+            }
+
+            $day = strtolower(now('Asia/Kolkata')->format('l')); // e.g., monday, tuesday
+            $period = ($currentHourIST < 16) ? '11AM' : '11PM';
             $filename = "{$day}_{$period}_backup.sql";
             $path = storage_path('app/');
 
