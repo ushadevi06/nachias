@@ -248,10 +248,10 @@ $showPrice     = in_array('price', $showFields);
 
 $copies = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
 
-$isFabricStore = ((int)$invoice->store_id === 1 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')));
-$isAccessoriesStore = ((int)$invoice->store_id === 2 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')));
-$isScrapStore = ((int)$invoice->store_id === 15 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'SCRAP')));
-$isRawMaterial = ($isFabricStore || $isAccessoriesStore || $isScrapStore);
+$isFabricStore = ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')) || (int)$invoice->store_id === 1;
+$isAccessoriesStore = ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')) || (int)$invoice->store_id === 2;
+$isScrapStore = $invoice->isScrap();
+$isRawMaterial = $invoice->isRawMaterialOrScrap();
 
 if ($isFabricStore) {
     $colWidths = [

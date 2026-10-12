@@ -23,13 +23,13 @@
 <body>
     <div class="authentication-wrapper authentication-cover">
         <div class="authentication-inner row m-0">
-            <div class="d-none d-lg-flex col-lg-5 align-items-center justify-content-center p-0 login-background">
-                <img src="{{ url('assets/images/login.png') }}" class="img-fluid" alt="login background" />
+            <div class="d-none d-lg-flex col-lg-6 col-xl-7 align-items-center justify-content-center p-0 login-background overflow-hidden" style="min-height: 100vh;">
+                <img src="{{ url('assets/images/login.png') }}?v={{ filemtime(public_path('assets/images/login.png')) }}" alt="NIKO Garment Works" style="width: 100%; height: 100%; min-height: 100vh; object-fit: cover; object-position: center; display: block;" />
             </div>
-            <div class="d-flex col-12 col-lg-7 align-items-center authentication-bg position-relative py-sm-5 px-4 py-4">
-                <div class="login-card">
+            <div class="d-flex col-12 col-lg-6 col-xl-5 align-items-center justify-content-center authentication-bg position-relative py-sm-5 px-4 py-4" style="min-height: 100vh;">
+                <div class="login-card w-100">
                     <h4 class="login-logo">Nachias</h4>
-                    <h5>Welcome to Nachias! </h5>
+                    <h5>Welcome to Niko! </h5>
                     <div class="col-lg-12">
                         @include('flash_messages')
                     </div>

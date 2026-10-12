@@ -284,7 +284,7 @@ class SalesInvoiceController extends Controller
 
                 $eInvoiceBtn = '';
                 $isCancelled = ($inv->invoice_status === 'Cancelled' || $inv->einvoice_status === 'cancelled');
-                $isRmStore = in_array((int)$inv->store_id, [1, 2, 15]);
+                $isRmStore = $inv->isRawMaterialOrScrap();
 
                 if ($isRmStore) {
                     $eInvoiceBtn = '';
@@ -402,7 +402,8 @@ class SalesInvoiceController extends Controller
         $brandId = $request->brand_id;
         $invDateStr = $request->inv_date;
         $storeId = (int)($request->store_id ?? 0);
-        $isRawMaterialStore = in_array($storeId, [1, 2, 15]);
+        $storeName = $request->store_name ?? null;
+        $isRawMaterialStore = SalesInvoice::isRawMaterialOrScrapStore($storeId, $storeName);
         
         if (!$isRawMaterialStore && !$brandId) {
             return response()->json(['success' => false, 'message' => 'Brand ID is required.']);
@@ -437,7 +438,11 @@ class SalesInvoiceController extends Controller
     public function getStoreStockItems(Request $request)
     {
         $storeId = (int)$request->store_id;
-        if (!in_array($storeId, [1, 2, 15])) {
+        $storeName = $request->store_name ?? null;
+        $isRawMaterialStore = SalesInvoice::isRawMaterialOrScrapStore($storeId, $storeName);
+        $isScrapStore = SalesInvoice::isScrapStore($storeId, $storeName);
+
+        if (!$isRawMaterialStore) {
             return response()->json(['success' => false, 'data' => []]);
         }
 
@@ -449,15 +454,24 @@ class SalesInvoiceController extends Controller
             ->whereNull('sei.deleted_at')
             ->whereNull('se.deleted_at')
             ->where('sei.stock_type', 'raw_material')
-            ->where(function($q) use ($storeId) {
-                $categoryCheck = ($storeId == 15) ? 6 : $storeId;
-                $q->where('sei.store_type_id', $storeId)
-                  ->orWhere('se.store_type_id', $storeId)
-                  ->orWhere('sei.store_category_id', $categoryCheck)
-                  ->orWhere(function($q2) use ($storeId, $categoryCheck) {
-                      $q2->whereNull('sei.store_type_id')
-                         ->where('rm.store_category_id', $categoryCheck);
-                  });
+            ->where(function($q) use ($storeId, $isScrapStore) {
+                if ($isScrapStore) {
+                    $q->where('sei.store_type_id', $storeId)
+                      ->orWhere('se.store_type_id', $storeId)
+                      ->orWhere('sei.store_category_id', 6)
+                      ->orWhere(function($q2) {
+                          $q2->whereNull('sei.store_type_id')
+                             ->where('rm.store_category_id', 6);
+                      });
+                } else {
+                    $q->where('sei.store_type_id', $storeId)
+                      ->orWhere('se.store_type_id', $storeId)
+                      ->orWhere('sei.store_category_id', $storeId)
+                      ->orWhere(function($q2) use ($storeId) {
+                          $q2->whereNull('sei.store_type_id')
+                             ->where('rm.store_category_id', $storeId);
+                      });
+                }
             })
             ->whereRaw('(sei.qty_in - COALESCE(sei.qty_out, 0)) > 0')
             ->select([
@@ -479,12 +493,14 @@ class SalesInvoiceController extends Controller
 
         // Group stock items by raw_material_id, art_no, style_id, rate so duplicate stock entries are merged with total available quantity
         $grouped = [];
+        $isFabricStore = ($storeId == 1 || str_contains(strtoupper($storeName ?? ''), 'FABRIC'));
+
         foreach ($stockItems as $item) {
             $name = $item->raw_material_name ?: 'Raw Material #' . $item->raw_material_id;
             $uomCode = $item->uom_code ?: ($item->uom_name ?: 'PCS');
             $uomName = $item->uom_name ?: ($item->uom_code ?: 'PCS');
-            $artNo = ($storeId == 15) ? '' : ($item->art_no ?: '');
-            $styleName = ($storeId == 1 && $item->style_name) ? $item->style_name : '';
+            $artNo = $isScrapStore ? '' : ($item->art_no ?: '');
+            $styleName = ($isFabricStore && $item->style_name) ? $item->style_name : '';
             $rate = (float)($item->rate ?? 0);
 
             $groupKey = "rm_{$item->raw_material_id}_art_{$artNo}_style_{$item->style_id}_rate_{$rate}";
@@ -494,7 +510,7 @@ class SalesInvoiceController extends Controller
                 if ($styleName) {
                     $displayLabel .= " | Style: {$styleName}";
                 }
-                if ($storeId != 15 && $artNo && $artNo !== '-') {
+                if (!$isScrapStore && $artNo && $artNo !== '-') {
                     $displayLabel .= " | Art No: {$artNo}";
                 }
 
@@ -549,7 +565,8 @@ class SalesInvoiceController extends Controller
 
         if ($request->isMethod('post')) {
             $selectedStoreId = (int)($request->store_id ?? 0);
-            $isRawMaterialStore = in_array($selectedStoreId, [1, 2, 15]);
+            $selectedStoreName = $request->store_name ?? null;
+            $isRawMaterialStore = SalesInvoice::isRawMaterialOrScrapStore($selectedStoreId, $selectedStoreName);
             $selectedBrandId = $request->brand_id;
             
             if ($request->inv_date && ($selectedBrandId || $isRawMaterialStore)) {
@@ -578,7 +595,7 @@ class SalesInvoiceController extends Controller
                         $selFYStart = ($selMonth >= 4) ? $selYear : ($selYear - 1);
 
                         if ($isRawMaterialStore) {
-                            if ($origFYStart != $selFYStart || !in_array((int)$invoice->store_id, [1, 2, 15])) {
+                            if ($origFYStart != $selFYStart || !SalesInvoice::isRawMaterialOrScrapStore($invoice->store_id)) {
                                 $regenerate = true;
                             } else {
                                 $request->merge(['inv_no' => $invoice->raw_inv_no ?: $invoice->getRawOriginal('inv_no')]);
@@ -728,15 +745,7 @@ class SalesInvoiceController extends Controller
             DB::beginTransaction();
             try {
                 $invoiceData = $request->only([
-                    'inv_no', 'brand_id', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
-                    'invoice_status', 'payment_mode', 'extra_input', 'due_date',
-                    'notes', 'transporter_name', 'transporter_id', 'transport_mode',
-                    'vehicle_no', 'veh_type', 'transport_distance', 'tran_doc_no', 'tran_doc_date',
-                    'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'sales_discount', 'box_discount_amount', 'discount_percent', 'discount', 
-                    'commission_percent', 'commission_amount', 'total', 'other_state',
-                    'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
-                    'other_charges', 'round_off_type', 'round_off',
-                    'grand_total', 'due_amount'
+                    'inv_no', 'brand_id', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks', 'invoice_status', 'payment_mode', 'extra_input', 'due_date', 'notes', 'transporter_name', 'transporter_id', 'transport_mode', 'vehicle_no', 'veh_type', 'transport_distance', 'tran_doc_no', 'tran_doc_date', 'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'sales_discount', 'box_discount_amount', 'discount_percent', 'discount', 'commission_percent', 'commission_amount', 'total', 'other_state', 'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst', 'other_charges', 'round_off_type', 'round_off', 'grand_total', 'due_amount'
                 ]);
                 if ($request->tran_doc_date) {
                     $invoiceData['tran_doc_date'] = Carbon::createFromFormat('d-m-Y', $request->tran_doc_date)->format('Y-m-d');
@@ -1998,7 +2007,7 @@ class SalesInvoiceController extends Controller
     public function generateEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $invoice = SalesInvoice::findOrFail($id);
-        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
+        if ($invoice->isRawMaterialOrScrap()) {
             return response()->json([
                 'success' => false,
                 'message' => 'e-Invoice / IRN is not applicable for Fabric, Accessories and Scrap invoices.'
@@ -2071,7 +2080,7 @@ class SalesInvoiceController extends Controller
     public function getIrn(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $invoice = SalesInvoice::findOrFail($id);
-        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
+        if ($invoice->isRawMaterialOrScrap()) {
             return response()->json([
                 'success' => false,
                 'message' => 'e-Invoice / IRN is not applicable for Fabric, Accessories and Scrap invoices.'
@@ -2099,7 +2108,7 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::findOrFail($id);
 
-        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
+        if ($invoice->isRawMaterialOrScrap()) {
             return response()->json([
                 'success' => false,
                 'message' => 'e-Way Bill via e-Invoice is not applicable for Fabric, Accessories and Scrap invoices.'
@@ -2129,7 +2138,7 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::findOrFail($id);
 
-        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
+        if ($invoice->isRawMaterialOrScrap()) {
             return response()->json([
                 'success' => false,
                 'message' => 'e-Invoice is not applicable for Fabric, Accessories and Scrap invoices.'

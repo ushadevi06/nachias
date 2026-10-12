@@ -24,7 +24,7 @@
                                 </li>
                             </ul>
                         </div>
-                        @if(!in_array((int)$invoice->store_id, [1, 2, 15]))
+                        @if(!$invoice->isRawMaterialOrScrap())
                         <div class="dropdown">
                             <button class="btn btn-primary dropdown-toggle" type="button" id="deliveryOrderDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="ri ri-truck-line back-arrow"></i>Delivery Order
@@ -45,7 +45,7 @@
                                 <li><a class="dropdown-item" href="{{ url('sales_invoices/courier-sticker/' . $invoice->id) }}" target="_blank">Courier Sticker</a></li>
                             </ul>
                         </div>
-                        @if(!in_array((int)$invoice->store_id, [1, 2, 15]))
+                        @if(!$invoice->isRawMaterialOrScrap())
                             @if($invoice->irn || $invoice->eway_bill_no)
                             <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#einvoiceDetailsModal">
                                 <i class="ri ri-receipt-line"></i> E-INVOICE Details
@@ -113,10 +113,10 @@
                 <div class="card detail-card">
                     <div class="card-body">
                         @php
-                            $isFabricStore = ((int)$invoice->store_id === 1 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')));
-                            $isAccessoriesStore = ((int)$invoice->store_id === 2 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')));
-                            $isScrapStore = ((int)$invoice->store_id === 15 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'SCRAP')));
-                            $isRawMaterial = ($isFabricStore || $isAccessoriesStore || $isScrapStore);
+                            $isFabricStore = ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')) || (int)$invoice->store_id === 1;
+                            $isAccessoriesStore = ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')) || (int)$invoice->store_id === 2;
+                            $isScrapStore = $invoice->isScrap();
+                            $isRawMaterial = $invoice->isRawMaterialOrScrap();
                         @endphp
                         <div class="row g-4">
                             <div class="col-lg-12">
@@ -232,10 +232,10 @@
                             <div class="col-lg-12">
                                 <div class="table-responsive">
                                     @php
-                                        $isFabricStore = ((int)$invoice->store_id === 1 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')));
-                                        $isAccessoriesStore = ((int)$invoice->store_id === 2 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')));
-                                        $isScrapStore = ((int)$invoice->store_id === 15 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'SCRAP')));
-                                        $isRawMaterial = ($isFabricStore || $isAccessoriesStore || $isScrapStore);
+                                        $isFabricStore = ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')) || (int)$invoice->store_id === 1;
+                                        $isAccessoriesStore = ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')) || (int)$invoice->store_id === 2;
+                                        $isScrapStore = $invoice->isScrap();
+                                        $isRawMaterial = $invoice->isRawMaterialOrScrap();
                                     @endphp
                                     <table class="table table-bordered table-hover text-nowrap align-middle">
                                         <thead class="table-light">

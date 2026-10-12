@@ -24,27 +24,18 @@ class ScrapStockImport implements ToCollection, WithHeadingRow
         $validData = [];
 
         // Fetch Scrap Store Category and Scrap Store Type
-        $scrapCategory = StoreCategory::where('category_name', 'LIKE', '%SCRAP%')
-            ->orWhere('code', 'SCR')
-            ->first();
+        $scrapCategory = StoreCategory::where('category_name', 'LIKE', '%SCRAP%')->orWhere('code', 'SCR')->first();
         $scrapCategoryId = $scrapCategory ? $scrapCategory->id : 6;
 
         $scrapStoreType = StoreType::where('store_type_name', 'LIKE', '%SCRAP%')->first();
         $scrapStoreTypeId = $scrapStoreType ? $scrapStoreType->id : 15;
 
         // Fetch KGS UOM
-        $kgsUom = Uom::where('uom_code', 'KGS')
-            ->orWhere('uom_name', 'LIKE', '%KILOGRAM%')
-            ->first();
+        $kgsUom = Uom::where('uom_code', 'KGS')->orWhere('uom_name', 'LIKE', '%KILOGRAM%')->first();
         $kgsUomId = $kgsUom ? $kgsUom->id : 11;
 
-        // Default warehouse if not specified
-        $defaultWarehouse = Warehouse::where('warehouse_name', 'LIKE', '%HEAD OFFICE%')->first() ?? Warehouse::first();
-        $defaultWarehouseId = $defaultWarehouse ? $defaultWarehouse->id : 4;
-
-        // Default store location
-        $defaultLocation = \App\Models\StoreLocation::first();
-        $defaultLocationId = $defaultLocation ? $defaultLocation->id : 1;
+        // Scrap store entries do not require a warehouse (stored as null)
+        $defaultWarehouseId = null;
 
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
@@ -92,9 +83,7 @@ class ScrapStockImport implements ToCollection, WithHeadingRow
             if (empty($materialName)) {
                 $errors[] = "Row {$rowNumber}: Scrap Material Name is required.";
             } else {
-                $rawMaterial = RawMaterial::where('name', $materialName)
-                    ->orWhere('code', $materialName)
-                    ->first();
+                $rawMaterial = RawMaterial::where('name', $materialName)->orWhere('code', $materialName)->first();
                 if (!$rawMaterial) {
                     $errors[] = "Row {$rowNumber}: Scrap Material '{$materialName}' does not exist in master table.";
                 } elseif ($rawMaterial->store_category_id != $scrapCategoryId) {
@@ -145,6 +134,7 @@ class ScrapStockImport implements ToCollection, WithHeadingRow
                     'price' => (float)$price,
                     'remarks' => $remarks ?: 'Scrap Store Stock Import',
                     'warehouse_id' => $defaultWarehouseId,
+                    'store_location_id' => null,
                 ];
             }
         }

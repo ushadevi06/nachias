@@ -167,6 +167,66 @@ class SalesInvoice extends Model
         return $this->belongsTo(StoreType::class, 'store_id');
     }
 
+    public static function isRawMaterialOrScrapStore($storeIdOrModel, $storeName = null)
+    {
+        if (!empty($storeName)) {
+            $name = strtoupper(trim($storeName));
+            if (str_contains($name, 'FABRIC') || str_contains($name, 'ACCESSORIES') || str_contains($name, 'SCRAP')) {
+                return true;
+            }
+        }
+
+        if ($storeIdOrModel instanceof StoreType) {
+            $name = strtoupper(trim($storeIdOrModel->store_type_name ?? ''));
+            $id = $storeIdOrModel->id;
+        } elseif (is_numeric($storeIdOrModel)) {
+            $id = (int)$storeIdOrModel;
+            $name = strtoupper(trim(StoreType::where('id', $id)->value('store_type_name') ?? ''));
+        } elseif (is_string($storeIdOrModel)) {
+            $name = strtoupper(trim($storeIdOrModel));
+            $id = null;
+        } else {
+            return false;
+        }
+
+        return str_contains($name, 'FABRIC')
+            || str_contains($name, 'ACCESSORIES')
+            || str_contains($name, 'SCRAP')
+            || in_array($id, [1, 2]);
+    }
+
+    public static function isScrapStore($storeIdOrModel, $storeName = null)
+    {
+        if (!empty($storeName)) {
+            $name = strtoupper(trim($storeName));
+            if (str_contains($name, 'SCRAP')) {
+                return true;
+            }
+        }
+
+        if ($storeIdOrModel instanceof StoreType) {
+            $name = strtoupper(trim($storeIdOrModel->store_type_name ?? ''));
+        } elseif (is_numeric($storeIdOrModel)) {
+            $name = strtoupper(trim(StoreType::where('id', $storeIdOrModel)->value('store_type_name') ?? ''));
+        } elseif (is_string($storeIdOrModel)) {
+            $name = strtoupper(trim($storeIdOrModel));
+        } else {
+            return false;
+        }
+
+        return str_contains($name, 'SCRAP');
+    }
+
+    public function isRawMaterialOrScrap()
+    {
+        return self::isRawMaterialOrScrapStore($this->store ?? $this->store_id);
+    }
+
+    public function isScrap()
+    {
+        return self::isScrapStore($this->store ?? $this->store_id);
+    }
+
     /**
      * Base sequence offset to map internal CDW sequence numbers to public CD sequence numbers.
      * Based on the last live CD invoice CD/313/26-27.

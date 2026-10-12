@@ -197,9 +197,9 @@ class ProductionReceiptController extends Controller
 
         $receipt = $id ? ProductionReceipt::with(['items'])->findOrFail($id) : null;
 
-        // if ($receipt && $receipt->status === 'Posted') {
-        //     return redirect('production_receipts')->with('error', 'Cannot edit a Posted Production Receipt.');
-        // }
+        if ($receipt && $receipt->status === 'Posted') {
+            return redirect('production_receipts')->with('error', 'Cannot edit a Posted Production Receipt.');
+        }
 
         $fullyReceivedJobCardIds = $this->getFullyReceivedJobCardIds($id);
 
@@ -234,7 +234,8 @@ class ProductionReceiptController extends Controller
                 $receiptsSummary[$jcId]['base'] = ($receiptsSummary[$jcId]['base'] ?? 0) + $qty;
             }
         }
-        $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->get();
+        $notAllowedStores = StoreType::whereIn('store_type_name', ['FABRIC','SCRAP STORE'])->get();
+        $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->whereNotIn('id', $notAllowedStores->pluck('id'))->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('id','desc')->get();
 
         $allowedRoleNames = ['WAREHOUSE EXECUTIVE', 'WAREHOUSE INCHARGE', 'WAREHOUSE MANAGER', 'STORE EXECUTIVE', 'STORE INCHARGE'];

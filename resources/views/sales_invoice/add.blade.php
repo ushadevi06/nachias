@@ -225,7 +225,7 @@
                                         <label for="remarks">Remarks</label>
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-xl-4" id="agent_container" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]) ? 'display: none;' : '' }}">
+                                <div class="col-md-6 col-xl-4" id="agent_container" style="{{ \App\Models\SalesInvoice::isRawMaterialOrScrapStore(old('store_id', isset($invoice) ? $invoice->store_id : 3)) ? 'display: none;' : '' }}">
                                     <div class="form-floating form-floating-outline">
                                         <select id="agent_id" name="agent_id" class="select2 form-select"
                                             data-placeholder="Select Sales Executive">
@@ -372,7 +372,7 @@
                                     </thead>
                                     <tbody id="item-rows">
                                         @php
-                                            $isCurrentRawMaterialStore = in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]);
+                                            $isCurrentRawMaterialStore = \App\Models\SalesInvoice::isRawMaterialOrScrapStore(old('store_id', isset($invoice) ? $invoice->store_id : 3));
                                             $items = old('items');
                                             if (!$items && isset($invoice)) {
                                                 $items = $invoice->items
@@ -680,7 +680,7 @@
                                                             <input type="hidden" name="items[{{ $index }}][style_id]" class="style-id" value="{{ $row->style_id ?? '' }}">
                                                             <input type="hidden" name="items[{{ $index }}][style_name]" class="style-name" value="{{ $row->style_name ?? '' }}">
                                                         </td>
-                                                        <td class="rm-art-col" style="{{ (int)old('store_id', isset($invoice) ? $invoice->store_id : 3) == 15 ? 'display: none;' : '' }}">
+                                                        <td class="rm-art-col" style="{{ \App\Models\SalesInvoice::isScrapStore(old('store_id', isset($invoice) ? $invoice->store_id : 3)) ? 'display: none;' : '' }}">
                                                             <span class="art-no-text">{{ $row->art_no ?? '-' }}</span>
                                                             <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
                                                         </td>
@@ -1214,7 +1214,7 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="col-md-6 col-lg-4 mt-2" id="show_mrp_container" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]) ? 'display: none;' : '' }}">
+                                                <div class="col-md-6 col-lg-4 mt-2" id="show_mrp_container" style="{{ \App\Models\SalesInvoice::isRawMaterialOrScrapStore(old('store_id', isset($invoice) ? $invoice->store_id : 3)) ? 'display: none;' : '' }}">
                                                     <div class="form-check">
                                                         <input class="form-check-input" type="checkbox" id="show_mrp" name="show_fields[]" value="mrp" {{ in_array('mrp', $selected_fields) ? 'checked' : '' }}>
                                                         <label class="form-check-label" for="show_mrp">Show MRP</label>
@@ -1231,7 +1231,7 @@
                                         </div>
 
                                         <!-- Show Fields in Delivery Order PDF -->
-                                        <div class="border-top pt-5 mt-5" id="delivery_order_show_fields_section" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]) ? 'display: none;' : '' }}">
+                                        <div class="border-top pt-5 mt-5" id="delivery_order_show_fields_section" style="{{ \App\Models\SalesInvoice::isRawMaterialOrScrapStore(old('store_id', isset($invoice) ? $invoice->store_id : 3)) ? 'display: none;' : '' }}">
                                             <h6 class="fw-bold mb-2">Show in Delivery Order PDF</h6>
                                             <div class="row">
                                                 @php
@@ -3643,7 +3643,7 @@
             let invDate = $('input[name="inv_date"]').val();
             let storeText = ($('#store_id option:selected').text() || '').toUpperCase();
 
-            let isRM = (storeId == '1' || storeId == '2' || storeId == '15' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP'));
+            let isRM = (storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP') || storeId == '1' || storeId == '2');
             if (isRM) {
                 if (!invDate) {
                     $('#inv_no').val('');
@@ -3666,6 +3666,7 @@
                 method: 'GET',
                 data: {
                     store_id: storeId,
+                    store_name: storeText,
                     brand_id: brandId,
                     inv_date: invDate
                 },
@@ -3772,7 +3773,7 @@
 
         function loadStoreStockItems(storeId) {
             let storeText = ($('#store_id option:selected').text() || '').toUpperCase();
-            let isAllowed = (storeId == '1' || storeId == '2' || storeId == '15' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP'));
+            let isAllowed = (storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP') || storeId == '1' || storeId == '2');
             if (!storeId || !isAllowed) {
                 window.availableStoreStockItems = [];
                 return;
@@ -3780,7 +3781,7 @@
             $.ajax({
                 url: '{{ url('sales_invoices/get-store-stock-items') }}',
                 method: 'GET',
-                data: { store_id: storeId },
+                data: { store_id: storeId, store_name: storeText },
                 success: function(response) {
                     if (response.success) {
                         window.availableStoreStockItems = response.data || [];
@@ -3891,7 +3892,9 @@
         function applyStoreMode(isInit) {
             let storeId = $('#store_id').val();
             let storeText = ($('#store_id option:selected').text() || '').toUpperCase();
-            let isRM = (storeId == '1' || storeId == '2' || storeId == '15' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP'));
+            let isRM = (storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP') || storeId == '1' || storeId == '2');
+            let isScrap = storeText.includes('SCRAP');
+            let isFabric = storeText.includes('FABRIC') || storeId == '1';
 
             if (isRM) {
                 $('#agent_container').hide();
@@ -3918,13 +3921,13 @@
                 $('#delivery_order_show_fields_section').hide();
                 $('#show_mrp_container').hide();
 
-                if (storeId == '1' || storeText.includes('FABRIC')) {
+                if (isFabric) {
                     $('.rm-style-col').show();
                 } else {
                     $('.rm-style-col').hide();
                 }
 
-                if (storeId == '15' || storeText.includes('SCRAP')) {
+                if (isScrap) {
                     $('.rm-art-col').hide();
                 } else {
                     $('.rm-art-col').show();
@@ -3967,7 +3970,7 @@
 
             let newStoreId = $(this).val();
             let storeText = ($(this).find('option:selected').text() || '').toUpperCase();
-            let isRM = (newStoreId == '1' || newStoreId == '2' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES'));
+            let isRM = (storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP') || newStoreId == '1' || newStoreId == '2');
             if (isRM) {
                 $('#brand_id').val('').trigger('change.select2');
                 $('#so_ids').val([]).trigger('change.select2');
@@ -4034,18 +4037,15 @@
                     }
                 });
 
-                // Destroy flatpickr instances so they don't open on click
                 $('input').each(function() {
                     if (this._flatpickr) {
                         this._flatpickr.destroy();
                     }
                 });
 
-                // Hide item deletion and addition buttons
                 $('#btn_add_extra_item, #open_camera, #open_order_camera, .remove-item').hide();
             }
 
-            // Global form submit validation
             $('form.common-form').on('submit', function() {
                 $(this).find('select, input, textarea').prop('disabled', false);
             });

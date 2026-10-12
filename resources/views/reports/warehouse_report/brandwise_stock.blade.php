@@ -11,6 +11,7 @@
             <tr id="brandwiseStockTheadTr">
                 <th class="fw-bold" id="brandwiseStockCol1">BRAND</th>
                 <th class="text-center fw-bold">STOCK</th>
+                <th class="text-center fw-bold">AVG STOCK DAYS</th>
                 <th class="text-end fw-bold">STOCK VALUE</th>
             </tr>
         </thead>
@@ -20,6 +21,7 @@
             <tr id="brandwiseStockTfootTr" class="bg-light fw-bold">
                 <th class="fw-bold text-start">TOTAL</th>
                 <th class="text-center fw-bold text-primary" id="brandwiseStockFootQty">-</th>
+                <th class="text-center fw-bold text-muted">-</th>
                 <th class="text-end fw-bold text-primary" id="brandwiseStockFootValue">-</th>
             </tr>
         </tfoot>
@@ -65,11 +67,13 @@
         $('#brandwiseStockTheadTr').html(`
             <th class="fw-bold" id="brandwiseStockCol1">BRAND</th>
             <th class="text-center fw-bold">STOCK</th>
+            <th class="text-center fw-bold">AVG STOCK DAYS</th>
             <th class="text-end fw-bold">STOCK VALUE</th>
         `);
         $('#brandwiseStockTfootTr').html(`
             <th class="fw-bold text-start">TOTAL</th>
             <th class="text-center fw-bold text-primary" id="brandwiseStockFootQty">-</th>
+            <th class="text-center fw-bold text-muted">-</th>
             <th class="text-end fw-bold text-primary" id="brandwiseStockFootValue">-</th>
         `);
 
@@ -84,12 +88,15 @@
                     d.to_date = $('.end_date').val();
                     d.brand_id = $('select[name="brand_id"]').val();
                     d.store_id = $('select[name="store_id"]').val();
+                    d.warehouse_id = $('#filter_warehouse_id').val() || $('#top_warehouse_select').val();
+                    d.aging_filter = $('#aging_filter').val();
                 }
             },
             columns: [
-                { data: 'brand', name: 'brand', width: '55%' },
-                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '20%' },
-                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
+                { data: 'brand', name: 'brand', width: '45%' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '18%' },
+                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, width: '17%' },
+                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '20%' }
             ],
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
@@ -110,7 +117,7 @@
                         return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
                     };
                     var pQty = api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
-                    var pVal = api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    var pVal = api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
                     $('#brandwiseStockFootQty').html(formatNumber(pQty));
                     $('#brandwiseStockFootValue').html(formatCurrency(pVal));
                 }
@@ -146,11 +153,13 @@
         $('#brandwiseStockTheadTr').html(`
             <th class="fw-bold" id="brandwiseStockCol1">STYLE</th>
             <th class="text-center fw-bold">STOCK</th>
+            <th class="text-center fw-bold">AVG STOCK DAYS</th>
             <th class="text-end fw-bold">STOCK VALUE</th>
         `);
         $('#brandwiseStockTfootTr').html(`
             <th class="fw-bold text-start">TOTAL</th>
             <th class="text-center fw-bold text-primary" id="brandwiseStockFootQty">-</th>
+            <th class="text-center fw-bold text-muted">-</th>
             <th class="text-end fw-bold text-primary" id="brandwiseStockFootValue">-</th>
         `);
 
@@ -164,14 +173,17 @@
                     d.brand_id = brandId;
                     d.brand_name = brandName;
                     d.store_id = $('select[name="store_id"]').val();
+                    d.warehouse_id = $('#filter_warehouse_id').val() || $('#top_warehouse_select').val();
+                    d.aging_filter = $('#aging_filter').val();
                     d.from_date = $('.start_date').val();
                     d.to_date = $('.end_date').val();
                 }
             },
             columns: [
-                { data: 'brand', name: 'styles.style_name', width: '55%' },
-                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '20%' },
-                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '25%' }
+                { data: 'brand', name: 'styles.style_name', width: '45%' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '18%' },
+                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, width: '17%' },
+                { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '20%' }
             ],
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
@@ -192,7 +204,7 @@
                         return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
                     };
                     var pQty = api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
-                    var pVal = api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                    var pVal = api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
                     $('#brandwiseStockFootQty').html(formatNumber(pQty));
                     $('#brandwiseStockFootValue').html(formatCurrency(pVal));
                 }
@@ -237,6 +249,8 @@
                     d.brand_id = brandId;
                     d.style_id = styleId;
                     d.store_id = $('select[name="store_id"]').val();
+                    d.warehouse_id = $('#filter_warehouse_id').val() || $('#top_warehouse_select').val();
+                    d.aging_filter = $('#aging_filter').val();
                     d.from_date = $('.start_date').val();
                     d.to_date = $('.end_date').val();
                 }
@@ -246,9 +260,9 @@
                 { data: 'sleeve', name: 'stock_entry_items.sleeve_type', className: 'text-center', width: '10%' },
                 { data: 'size', name: 'stock_entry_items.size', className: 'text-center', width: '10%' },
                 { data: 'total_qty', name: 'total_qty', className: 'text-center', width: '11%' },
-                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, width: '12%' },
-                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, width: '12%' },
-                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, width: '9%' },
+                { data: 'low_stock', name: 'low_stock', className: 'text-center', orderable: false, width: '11%' },
+                { data: 'excess_stock', name: 'excess_stock', className: 'text-center', orderable: false, width: '11%' },
+                { data: 'stock_days', name: 'stock_days', className: 'text-center', orderable: false, width: '11%' },
                 { data: 'stock_value', name: 'stock_value', className: 'text-end fw-bold', width: '14%' }
             ],
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',

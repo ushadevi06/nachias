@@ -66,13 +66,23 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" id="warehouse_filter_col" style="{{ request('report_type') === 'stock-inward-sales' ? '' : 'display: none;' }}">
+                <div class="col-6 col-md-4 col-xl-2" id="warehouse_filter_col" style="{{ in_array(request('report_type'), ['stock-inward-sales', 'inward', 'stock-inward']) ? '' : 'display: none;' }}">
                     <label class="form-label small fw-bold text-muted">Warehouse</label>
                     <select class="form-select select2" name="warehouse_id" id="filter_warehouse_id">
                         <option value="all" {{ (request('warehouse_id') == 'all' || empty(request('warehouse_id'))) ? 'selected' : '' }}>All</option>
                         @foreach($warehouses ?? [] as $wh)
                             <option value="{{ $wh->id }}" {{ request('warehouse_id') == $wh->id ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
                         @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2" id="aging_filter_col" style="{{ in_array(request('report_type'), ['brand-stock', 'brandwise-stock']) ? '' : 'display: none;' }}">
+                    <label class="form-label small fw-bold text-muted">Stock Aging</label>
+                    <select class="form-select select2" name="aging_filter" id="aging_filter" data-placeholder="Select Stock Aging">
+                        <option value="">All Stock</option>
+                        <option value="0-30" {{ request('aging_filter') == '0-30' ? 'selected' : '' }}>0 - 30 Days (Fresh)</option>
+                        <option value="31-60" {{ request('aging_filter') == '31-60' ? 'selected' : '' }}>31 - 60 Days</option>
+                        <option value="61-90" {{ request('aging_filter') == '61-90' ? 'selected' : '' }}>61 - 90 Days</option>
+                        <option value="91+" {{ request('aging_filter') == '91+' ? 'selected' : '' }}>91+ Days (Old / Aged)</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-1 col-xl-1 d-flex gap-1">
@@ -101,8 +111,9 @@
             <div class="d-flex align-items-center gap-2">
                 <div id="top_warehouse_wrapper">
                     <select id="top_warehouse_select" class="form-select form-select-sm border-primary text-primary fw-bold" style="width: 240px;">
+                        <option value="all" {{ (request('warehouse_id') == 'all' || !request('warehouse_id')) ? 'selected' : '' }}>All Warehouses</option>
                         @foreach($warehouses ?? [] as $wh)
-                            <option value="{{ $wh->id }}" {{ $loop->first ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
+                            <option value="{{ $wh->id }}" {{ request('warehouse_id') == $wh->id ? 'selected' : '' }}>{{ $wh->warehouse_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -439,10 +450,16 @@ $(document).ready(function() {
             $('#top_warehouse_wrapper').hide();
         }
 
-        if (targetTabId === 'stock-inward-sales') {
+        if (targetTabId === 'stock-inward-sales' || targetTabId === 'inward' || targetTabId === 'stock-inward') {
             $('#warehouse_filter_col').show();
         } else {
             $('#warehouse_filter_col').hide();
+        }
+
+        if (targetTabId === 'brand-stock' || targetTabId === 'brandwise-stock') {
+            $('#aging_filter_col').show();
+        } else {
+            $('#aging_filter_col').hide();
         }
     }
 
@@ -625,6 +642,7 @@ $(document).ready(function() {
         $('select[name="customer_id"]').val('').trigger('change');
         $('select[name="store_id"]').val('').trigger('change');
         $('select[name="warehouse_id"]').val('all').trigger('change');
+        $('#aging_filter').val('').trigger('change.select2');
 
         let activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val() || 'brand-sales';
 
@@ -638,6 +656,8 @@ $(document).ready(function() {
             renderCompletionRootLevel();
         } else if ((activeTabId === 'brand-stock' || activeTabId === 'brandwise-stock') && typeof renderBrandLevel === 'function') {
             renderBrandLevel();
+        } else if (activeTabId === 'assorted-stock' && typeof renderAssortedBrandLevel === 'function') {
+            renderAssortedBrandLevel();
         }
 
         $('#warehouseReportForm').trigger('submit');

@@ -777,6 +777,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('warehouse_reports/brandwise_stock_details/{id}', [WarehouseReportController::class, 'brandwiseStockDetails']);
     Route::get('warehouse_reports/brandwise_styles', [WarehouseReportController::class, 'getBrandwiseStyles']);
     Route::get('warehouse_reports/brandwise_art_nos', [WarehouseReportController::class, 'getBrandwiseArtNos']);
+    Route::get('warehouse_reports/assorted_styles', [WarehouseReportController::class, 'getAssortedStyles']);
+    Route::get('warehouse_reports/assorted_art_nos', [WarehouseReportController::class, 'getAssortedArtNos']);
     Route::get('warehouse_reports/urgent_order_details/{id}', [WarehouseReportController::class, 'getUrgentOrderDetails']);
     Route::get('warehouse_reports/brandwise_lost_sales_orders', [WarehouseReportController::class, 'getBrandwiseLostSalesOrders']);
     Route::get('warehouse_reports/brandwise_completion_art_nos', [WarehouseReportController::class, 'getOrderProcessingTimeArtNos']);
