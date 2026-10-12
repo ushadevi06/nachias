@@ -379,7 +379,21 @@ class SalesInvoiceController extends Controller
         }
 
         $customers = Customer::select('id', 'name', 'code')->orderBy('name')->get();
-        $stores = StoreType::active()->whereIn('id', [1, 2, 3, 6, 15])->orderByRaw("FIELD(id, 3, 1, 2, 6, 15)")->get();
+        $storeNames = ['FINISHED GOODS', 'FABRIC', 'ACCESSORIES', 'DAMAGE GOODS STORE', 'SCRAP STORE'];
+        $stores = StoreType::active()
+            ->where(function ($q) use ($storeNames) {
+                $q->whereIn(DB::raw('UPPER(TRIM(store_type_name))'), $storeNames)
+                  ->orWhere('store_type_name', 'like', '%DAMAGE%GOOD%')
+                  ->orWhereIn('id', [1, 2, 3, 6, 15]);
+            })
+            ->orderByRaw("CASE 
+                WHEN UPPER(store_type_name) LIKE '%FINISHED GOODS%' THEN 1
+                WHEN UPPER(store_type_name) LIKE '%FABRIC%' THEN 2
+                WHEN UPPER(store_type_name) LIKE '%ACCESSORIES%' THEN 3
+                WHEN UPPER(store_type_name) LIKE '%DAMAGE%' THEN 4
+                WHEN UPPER(store_type_name) LIKE '%SCRAP%' THEN 5
+                ELSE 6 END")
+            ->get();
         return view('sales_invoice.view', compact('customers', 'stores'));
     }
 
@@ -639,7 +653,7 @@ class SalesInvoiceController extends Controller
                 $rules['items.*.quantity'] = 'required|numeric|min:0.01';
                 $rules['items.*.rate'] = 'required|numeric|min:0.01';
                 $rules['items.*.mrp'] = $isRawMaterialStore ? 'nullable|numeric' : 'required|numeric|min:0.01';
-                $rules['items.*.hsn_sac'] = 'required|string|min:2|max:8|regex:/^[0-9]+$/';
+                $rules['items.*.hsn_sac'] = $isRawMaterialStore ? 'required|string|min:2|max:8|regex:/^[0-9]+$/' : 'nullable|string|min:2|max:8|regex:/^[0-9]+$/';
             }
 
             $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, [
@@ -664,16 +678,16 @@ class SalesInvoiceController extends Controller
                 'items.min'                 => 'At least one item is required to save the invoice.',
                 'items.*.rate.min' => 'Price must be greater than 0.00.',
                 'items.*.mrp.min' => 'MRP must be greater than 0.00.',
-                'items.*.quantity.required' => 'This field is required',
-                'items.*.quantity.numeric'  => 'This field is required',
-                'items.*.quantity.min'      => 'This field is required',
-                'items.*.rate.required'     => 'This field is required',
-                'items.*.rate.numeric'      => 'This field is required',
+                'items.*.quantity.required' => 'Item Quantity is required.',
+                'items.*.quantity.numeric'  => 'Item Quantity must be a number.',
+                'items.*.quantity.min'      => 'Item Quantity must be greater than 0.',
+                'items.*.rate.required'     => 'Item Price is required.',
+                'items.*.rate.numeric'      => 'Item Price must be a number.',
                 'hsn_sac.required'          => 'HSN code is required.',
                 'hsn_sac.min'               => 'HSN code must be at least 2 digits.',
                 'hsn_sac.max'               => 'HSN code cannot exceed 8 digits.',
                 'hsn_sac.regex'             => 'HSN code must contain only numbers.',
-                'items.*.hsn_sac.required'  => 'This field is required',
+                'items.*.hsn_sac.required'  => 'Item HSN code is required.',
                 'items.*.hsn_sac.min'       => 'HSN code must be at least 2 digits.',
                 'items.*.hsn_sac.max'       => 'HSN code cannot exceed 8 digits.',
                 'items.*.hsn_sac.regex'     => 'HSN code must contain only numbers.',
@@ -991,18 +1005,42 @@ class SalesInvoiceController extends Controller
             }
         }
 
-        $invoice = $id ? SalesInvoice::with(['items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'items.sizeRatio', 'salesOrder'])->findOrFail($id) : null;
+        $invoice = $id ? SalesInvoice::with([
+            'items.brandCategory', 
+            'items.item.brand', 
+            'items.item.style', 
+            'items.color', 
+            'items.uom', 
+            'items.sizeRatio', 
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.uom',
+            'salesOrder'
+        ])->findOrFail($id) : null;
         if ($invoice && $invoice->einvoice_status === 'cancelled') {
             return redirect('sales_invoices')->with('error', 'Cancelled invoices cannot be edited.');
         }
         $customers = [];
         $brandCategories = BrandCategory::active()->get();
         $uoms = Uom::active()->get();
-        $allowedStoreIds = [1, 2, 3, 6, 15]; 
-        if ($invoice && $invoice->store_id) {
-            $allowedStoreIds[] = (int)$invoice->store_id;
-        }
-        $stores = StoreType::where('status', 'Active')->whereIn('id', array_unique($allowedStoreIds))->orderByRaw("FIELD(id, 3, 1, 2, 6, 15)")->get();
+        $storeNames = ['FINISHED GOODS', 'FABRIC', 'ACCESSORIES', 'DAMAGE GOODS STORE', 'SCRAP STORE'];
+        $stores = StoreType::active()
+            ->where(function ($q) use ($storeNames, $invoice) {
+                $q->whereIn(DB::raw('UPPER(TRIM(store_type_name))'), $storeNames)
+                  ->orWhere('store_type_name', 'like', '%DAMAGE%GOOD%')
+                  ->orWhereIn('id', [1, 2, 3, 6, 15]);
+                if ($invoice && $invoice->store_id) {
+                    $q->orWhere('id', (int)$invoice->store_id);
+                }
+            })
+            ->orderByRaw("CASE 
+                WHEN UPPER(store_type_name) LIKE '%FINISHED GOODS%' THEN 1
+                WHEN UPPER(store_type_name) LIKE '%FABRIC%' THEN 2
+                WHEN UPPER(store_type_name) LIKE '%ACCESSORIES%' THEN 3
+                WHEN UPPER(store_type_name) LIKE '%DAMAGE%' THEN 4
+                WHEN UPPER(store_type_name) LIKE '%SCRAP%' THEN 5
+                ELSE 6 END")
+            ->get();
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
 
         $brands = \App\Models\Brand::active()
@@ -1042,7 +1080,21 @@ class SalesInvoiceController extends Controller
                 ->orderBy('id', 'desc')
                 ->get();
         } else {
-            $saleOrders = collect(); 
+            $oldCustomer = old('customer_id');
+            $oldSoIds = old('so_ids', []);
+            if ($oldCustomer || !empty($oldSoIds)) {
+                $saleOrders = SalesOrder::where(function($q) use ($oldCustomer, $oldSoIds) {
+                    if ($oldCustomer) {
+                        $q->where('customer_id', $oldCustomer)
+                          ->whereIn('status', ['Approved', 'Dispatched']);
+                    }
+                    if (!empty($oldSoIds)) {
+                        $q->orWhereIn('id', (array)$oldSoIds);
+                    }
+                })->orderBy('id', 'desc')->get();
+            } else {
+                $saleOrders = collect();
+            }
         }
 
         $setting = Setting::first();
@@ -1901,7 +1953,11 @@ class SalesInvoiceController extends Controller
             'salesOrder.salesAgent', 
             'items.brandCategory', 
             'items.item.uom', 
-            'items.uom'
+            'items.item.style', 
+            'items.uom',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.brand'
         ])->findOrFail($id);
         
         $setting = Setting::with(['state', 'city'])->first();
@@ -1922,7 +1978,11 @@ class SalesInvoiceController extends Controller
             'salesOrder.salesAgent', 
             'items.brandCategory', 
             'items.item.uom', 
-            'items.uom'
+            'items.item.style', 
+            'items.uom',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.brand'
         ])->findOrFail($id);
         
         $setting = Setting::with(['state', 'city'])->first();
@@ -3135,61 +3195,97 @@ class SalesInvoiceController extends Controller
         }
 
         if ($remaining > 0) {
-            $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
-                ->whereNull('deleted_at')
-                ->where(function ($q) use ($item) {
-                    if (!empty($item->sku)) {
-                        $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
-                    } else {
-                        $code = $item->item_name ?? $item->art_no;
-                        $q->where('finished_item_code', $code)->orWhere('art_no', $code);
+            $rawStItem = $item->stock_entry_item_id ? StockEntryItem::find($item->stock_entry_item_id) : null;
+            if ($rawStItem && $rawStItem->stock_type === 'raw_material') {
+                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')
+                    ->whereNull('deleted_at')
+                    ->where('raw_material_id', $rawStItem->raw_material_id);
+
+                if (!empty($rawStItem->store_type_id)) {
+                    $rawQuery->where('store_type_id', $rawStItem->store_type_id);
+                } elseif (!empty($rawStItem->store_category_id)) {
+                    $rawQuery->where('store_category_id', $rawStItem->store_category_id);
+                }
+
+                if (!empty($rawStItem->style_id)) {
+                    $rawQuery->where('style_id', $rawStItem->style_id);
+                }
+                if (!empty($rawStItem->art_no) && $rawStItem->art_no !== '-') {
+                    $rawQuery->where('art_no', $rawStItem->art_no);
+                }
+
+                $rawQuery->orderByRaw('CASE WHEN id = ' . (int)$rawStItem->id . ' THEN 0 ELSE 1 END');
+                $deductedRaw = $rawQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
+
+                foreach ($deductedRaw as $stItem) {
+                    if ($remaining <= 0) break;
+                    $out = (float)$stItem->qty_out;
+                    $revert = min($out, $remaining);
+                    $stItem->decrement('qty_out', $revert);
+                    $remaining -= $revert;
+                }
+
+                if ($remaining > 0 && $rawStItem->qty_out > 0) {
+                    $dec = min((float)$rawStItem->qty_out, $remaining);
+                    $rawStItem->decrement('qty_out', $dec);
+                }
+            } else {
+                $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
+                    ->whereNull('deleted_at')
+                    ->where(function ($q) use ($item) {
+                        if (!empty($item->sku)) {
+                            $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
+                        } else {
+                            $code = $item->item_name ?? $item->art_no;
+                            $q->where('finished_item_code', $code)->orWhere('art_no', $code);
+                        }
+                    });
+
+                if ($item->stock_entry_item_id) {
+                    $finishedItemCode = \App\Models\StockEntryItem::where('id', $item->stock_entry_item_id)->value('finished_item_code');
+                    if ($finishedItemCode) {
+                        $stockQuery->where('finished_item_code', $finishedItemCode);
                     }
-                });
-
-            if ($item->stock_entry_item_id) {
-                $finishedItemCode = \App\Models\StockEntryItem::where('id', $item->stock_entry_item_id)->value('finished_item_code');
-                if ($finishedItemCode) {
-                    $stockQuery->where('finished_item_code', $finishedItemCode);
                 }
-            }
 
-            if (!empty($item->size)) {
-                $stockQuery->where('size', $item->size);
-            }
-
-            if (!empty($item->art_no)) {
-                $stockQuery->where('art_no', $item->art_no);
-            }
-
-            if (!empty($item->sleeve_type)) {
-                $sleeveUpper = strtoupper(trim($item->sleeve_type));
-                if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                    $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
-                } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                    $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
-                } else {
-                    $sleeveDbValues = [$item->sleeve_type];
+                if (!empty($item->size)) {
+                    $stockQuery->where('size', $item->size);
                 }
-                $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
-            }
 
-            $stockQuery->orderByRaw('CASE WHEN id = ' . (int)($item->stock_entry_item_id ?: 0) . ' THEN 0 ELSE 1 END');
-            $deductedItems = $stockQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
+                if (!empty($item->art_no)) {
+                    $stockQuery->where('art_no', $item->art_no);
+                }
 
-            foreach ($deductedItems as $stItem) {
-                if ($remaining <= 0) break;
-                
-                $out = (float)$stItem->qty_out;
-                $revert = min($out, $remaining);
-                $stItem->decrement('qty_out', $revert);
-                $remaining -= $revert;
-            }
+                if (!empty($item->sleeve_type)) {
+                    $sleeveUpper = strtoupper(trim($item->sleeve_type));
+                    if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
+                        $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
+                    } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
+                        $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
+                    } else {
+                        $sleeveDbValues = [$item->sleeve_type];
+                    }
+                    $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
+                }
 
-            if ($remaining > 0 && $item->stock_entry_item_id) {
-                $fallbackItem = StockEntryItem::find($item->stock_entry_item_id);
-                if ($fallbackItem && $fallbackItem->qty_out > 0) {
-                    $dec = min((float)$fallbackItem->qty_out, $remaining);
-                    $fallbackItem->decrement('qty_out', $dec);
+                $stockQuery->orderByRaw('CASE WHEN id = ' . (int)($item->stock_entry_item_id ?: 0) . ' THEN 0 ELSE 1 END');
+                $deductedItems = $stockQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
+
+                foreach ($deductedItems as $stItem) {
+                    if ($remaining <= 0) break;
+                    
+                    $out = (float)$stItem->qty_out;
+                    $revert = min($out, $remaining);
+                    $stItem->decrement('qty_out', $revert);
+                    $remaining -= $revert;
+                }
+
+                if ($remaining > 0 && $item->stock_entry_item_id) {
+                    $fallbackItem = StockEntryItem::find($item->stock_entry_item_id);
+                    if ($fallbackItem && $fallbackItem->qty_out > 0) {
+                        $dec = min((float)$fallbackItem->qty_out, $remaining);
+                        $fallbackItem->decrement('qty_out', $dec);
+                    }
                 }
             }
         }

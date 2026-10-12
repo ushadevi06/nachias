@@ -524,6 +524,30 @@
 
                                                         $stockQty += (float) ($item->quantity ?? 0);
 
+                                                        $rowStyleId = null;
+                                                        $rowStyleName = '';
+                                                        $rowSeItem = $item->stockEntryItem;
+                                                        if (!$rowSeItem && !empty($item->stock_entry_item_id)) {
+                                                            $rowSeItem = \App\Models\StockEntryItem::with(['style', 'rawMaterial', 'uom'])->find($item->stock_entry_item_id);
+                                                        }
+                                                        if ($rowSeItem) {
+                                                            $rowStyleId = $rowSeItem->style_id;
+                                                            if ($rowSeItem->style) {
+                                                                $rowStyleName = $rowSeItem->style->style_name;
+                                                            }
+                                                        }
+                                                        if (empty($rowStyleName) && $item->item && $item->item->style) {
+                                                            $rowStyleId = $item->item->style_id;
+                                                            $rowStyleName = $item->item->style->style_name;
+                                                        }
+                                                        if (empty($rowStyleName) && !empty($item->art_no)) {
+                                                            $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)->whereNotNull('style_id')->with('style')->first();
+                                                            if ($matchedSe && $matchedSe->style) {
+                                                                $rowStyleId = $matchedSe->style_id;
+                                                                $rowStyleName = $matchedSe->style->style_name;
+                                                            }
+                                                        }
+
                                                         return [
                                                             'brand_id' => $item->brand_id ?? null,
                                                             'brand_name' => $brandName ?: '',
@@ -540,8 +564,8 @@
                                                                 ? $item->sizeRatio->size
                                                                 : $item->size ?? '',
                                                             'art_no' => $item->art_no ?? null,
-                                                            'style_id' => $item->stockEntryItem ? $item->stockEntryItem->style_id : null,
-                                                            'style_name' => ($item->stockEntryItem && $item->stockEntryItem->style) ? $item->stockEntryItem->style->style_name : '',
+                                                            'style_id' => $rowStyleId,
+                                                            'style_name' => $rowStyleName,
                                                             'hsn_sac' => $item->hsn_sac ?? null,
                                                             'uom_id' => $item->uom_id ?? null,
                                                             'uom_code' => ($item->uom ? ($item->uom->uom_code ?: $item->uom->uom_name) : (($item->stockEntryItem && $item->stockEntryItem->uom) ? ($item->stockEntryItem->uom->uom_code ?: $item->stockEntryItem->uom->uom_name) : 'PCS')),
@@ -572,6 +596,33 @@
                                             if ($items) {
                                                 foreach ($items as $index => $row) {
                                                     $rowObj = (object) $row;
+
+                                                    if (empty($rowObj->style_name)) {
+                                                        if (!empty($rowObj->style_id)) {
+                                                            $dbStyle = \App\Models\Style::find($rowObj->style_id);
+                                                            if ($dbStyle) {
+                                                                $rowObj->style_name = $dbStyle->style_name;
+                                                            }
+                                                        }
+                                                        if (empty($rowObj->style_name) && !empty($rowObj->stock_entry_item_id)) {
+                                                            $stockItem = \App\Models\StockEntryItem::with('style')->find($rowObj->stock_entry_item_id);
+                                                            if ($stockItem && $stockItem->style) {
+                                                                $rowObj->style_name = $stockItem->style->style_name;
+                                                                $rowObj->style_id = $stockItem->style_id;
+                                                            }
+                                                        }
+                                                        if (empty($rowObj->style_name) && !empty($rowObj->art_no)) {
+                                                            $matchedSe = \App\Models\StockEntryItem::where('art_no', $rowObj->art_no)
+                                                                ->whereNotNull('style_id')
+                                                                ->with('style')
+                                                                ->first();
+                                                            if ($matchedSe && $matchedSe->style) {
+                                                                $rowObj->style_name = $matchedSe->style->style_name;
+                                                                $rowObj->style_id = $matchedSe->style_id;
+                                                            }
+                                                        }
+                                                    }
+
                                                     if (isset($rowObj->is_extra) && $rowObj->is_extra == 1) {
                                                         if (
                                                             empty($rowObj->brand_name) &&
@@ -627,6 +678,7 @@
                                                         <td class="rm-style-col" style="{{ (int)old('store_id', isset($invoice) ? $invoice->store_id : 3) == 1 ? '' : 'display: none;' }}">
                                                             <span class="style-text">{{ $row->style_name ?? '-' }}</span>
                                                             <input type="hidden" name="items[{{ $index }}][style_id]" class="style-id" value="{{ $row->style_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][style_name]" class="style-name" value="{{ $row->style_name ?? '' }}">
                                                         </td>
                                                         <td class="rm-art-col" style="{{ (int)old('store_id', isset($invoice) ? $invoice->store_id : 3) == 15 ? 'display: none;' : '' }}">
                                                             <span class="art-no-text">{{ $row->art_no ?? '-' }}</span>
@@ -867,6 +919,7 @@
                                                         <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $row->item_id ?? '' }}">
                                                         <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $row->brand_cat_id ?? '' }}">
                                                         <input type="hidden" name="items[{{ $index }}][is_extra]" value="1">
+                                                        <input type="hidden" name="items[{{ $index }}][hsn_sac]" class="hsn-sac" value="{{ $row->hsn_sac ?? old('hsn_sac', '62053000') }}">
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
@@ -1647,7 +1700,8 @@
                 dropdownParent: $('body')
             });
             var preselectedCustomer = $('#customer_id').val();
-            var preselectedSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : []));
+            var rawSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : []));
+            var preselectedSoIds = Array.isArray(rawSoIds) ? rawSoIds.map(String) : (rawSoIds ? [String(rawSoIds)] : []);
 
             if (preselectedCustomer) {
                 $.ajax({
@@ -1660,7 +1714,10 @@
                     success: function(response) {
                         if (response.success) {
                             var soSelect = $('#so_ids');
-                            var currentSelected = soSelect.val() || preselectedSoIds.map(String);
+                            var currentVal = soSelect.val();
+                            var currentSelected = (Array.isArray(currentVal) && currentVal.length > 0)
+                                ? currentVal.map(String)
+                                : preselectedSoIds;
                             soSelect.empty();
                             $.each(response.data, function(index, so) {
                                 var selected = currentSelected.includes(so.id.toString());
@@ -1671,7 +1728,7 @@
                                     selected
                                 ));
                             });
-                            @if(isset($invoice))
+                            @if((isset($invoice) || old('so_ids')) && isset($saleOrders))
                                 @foreach($saleOrders as $existingSo)
                                     if (!soSelect.find('option[value="{{ $existingSo->id }}"]').length) {
                                         var isSel = currentSelected.includes("{{ $existingSo->id }}");
@@ -1679,7 +1736,7 @@
                                     }
                                 @endforeach
                             @endif
-                            soSelect.trigger('change.select2');
+                            soSelect.val(currentSelected).trigger('change.select2');
                         }
                     }
                 });
@@ -2031,6 +2088,7 @@
                         <input type="hidden" name="items[${index}][sku]" class="sku" value="${matchedItem.sku || ''}">
                         <input type="hidden" name="items[${index}][stock_entry_item_id]" class="stock-entry-item-id" value="${matchedItem.stock_entry_item_id || ''}">
                         <input type="hidden" name="items[${index}][is_extra]" class="is-extra" value="${matchedItem.is_extra || ''}">
+                        <input type="hidden" name="items[${index}][hsn_sac]" class="hsn-sac" value="${matchedItem.hsn_sac || $('#hsn_sac').val() || '62053000'}">
                     </td>
                     <td>
                         <span class="color-text">${matchedItem.api_color || matchedItem.color_name || '-'}</span>
@@ -3358,6 +3416,7 @@
                     <input type="hidden" name="items[open_${index}][item_id]" value="${res.item_id || ''}">
                     <input type="hidden" name="items[open_${index}][brand_cat_id]" value="${res.brand_cat_id || ''}">
                     <input type="hidden" name="items[open_${index}][is_extra]" value="1">
+                    <input type="hidden" name="items[open_${index}][hsn_sac]" class="hsn-sac" value="${res.hsn_sac || $('#hsn_sac').val() || '62053000'}">
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
@@ -3781,6 +3840,7 @@
                     <td class="rm-style-col" style="${storeId == '1' ? '' : 'display: none;'}">
                         <span class="style-text">${matchedItem.style_name || '-'}</span>
                         <input type="hidden" name="items[${index}][style_id]" class="style-id" value="${matchedItem.style_id || ''}">
+                        <input type="hidden" name="items[${index}][style_name]" class="style-name" value="${matchedItem.style_name || ''}">
                     </td>
                     <td class="rm-art-col" style="${(storeId == '15' || ($('#store_id option:selected').text() || '').toUpperCase().includes('SCRAP')) ? 'display: none;' : ''}">
                         <span class="art-no-text">${matchedItem.art_no || '-'}</span>

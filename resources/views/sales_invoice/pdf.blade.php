@@ -256,11 +256,12 @@ $isRawMaterial = ($isFabricStore || $isAccessoriesStore || $isScrapStore);
 if ($isFabricStore) {
     $colWidths = [
         'sno' => 4,
-        'desc' => $showAmount ? 26 : 38,
-        'style' => 12,
-        'art' => 18,
-        'uom' => 6,
-        'qty' => 8,
+        'desc' => $showAmount ? 33 : 45,
+        'style' => 11,
+        'art' => 11,
+        'uom' => 5,
+        'hsn' => 9,
+        'qty' => 7,
     ];
     if ($showPrice) {
         $colWidths['price'] = 8;
@@ -284,16 +285,17 @@ if ($isFabricStore) {
 } elseif ($isAccessoriesStore) {
     $colWidths = [
         'sno' => 4,
-        'desc' => $showAmount ? 36 : 48,
-        'art' => 20,
-        'uom' => 6,
-        'qty' => 8,
+        'desc' => $showAmount ? 46 : 58,
+        'art' => 10,
+        'uom' => 5,
+        'hsn' => 9,
+        'qty' => 7,
     ];
     if ($showPrice) {
         $colWidths['price'] = 8;
     }
     if ($showAmount) {
-        $colWidths['amount'] = 12;
+        $colWidths['amount'] = 11;
     }
 } else {
     $colWidths = [
@@ -321,17 +323,17 @@ foreach ($colWidths as $key => $w) {
 }
 
 if ($isFabricStore) {
-    $colsBeforeQty = 5;
+    $colsBeforeQty = 6;
     $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0) + ($colWidths['style'] ?? 0) + ($colWidths['art'] ?? 0);
-    $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['qty'] ?? 0);
+    $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['hsn'] ?? 0) + ($colWidths['qty'] ?? 0);
 } elseif ($isScrapStore) {
     $colsBeforeQty = 3;
     $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0);
     $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['qty'] ?? 0);
 } elseif ($isAccessoriesStore) {
-    $colsBeforeQty = 4;
+    $colsBeforeQty = 5;
     $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0) + ($colWidths['art'] ?? 0);
-    $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['qty'] ?? 0);
+    $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['hsn'] ?? 0) + ($colWidths['qty'] ?? 0);
 } else {
     $colsBeforeQty = 5;
     $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0) + ($colWidths['art'] ?? 0) + ($colWidths['uom'] ?? 0);
@@ -340,7 +342,7 @@ if ($isFabricStore) {
 
 $w1_6 = 0;
 foreach ($colWidths as $key => $w) {
-    if (in_array($key, ['sno', 'desc', 'style', 'art', 'uom', 'size', 'qty'])) {
+    if (in_array($key, ['sno', 'desc', 'style', 'art', 'uom', 'hsn', 'size', 'qty'])) {
         $w1_6 += $w;
     }
 }
@@ -654,6 +656,9 @@ $totalChunks = count($pages);
                     <th width="{{ $colWidths['art'] }}%">Art</th>
                     @endif
                     <th width="{{ $colWidths['uom'] }}%">UOM</th>
+                    @if($isFabricStore || $isAccessoriesStore)
+                    <th width="{{ $colWidths['hsn'] }}%">HSN</th>
+                    @endif
                     @if(!$isRawMaterial)
                     <th width="{{ $colWidths['size'] }}%">Size</th>
                     @endif
@@ -716,6 +721,12 @@ $totalChunks = count($pages);
                                 $styleName = $seItem->style->style_name;
                             } elseif ($item->item && $item->item->style) {
                                 $styleName = $item->item->style->style_name;
+                            } elseif (!empty($item->art_no)) {
+                                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)
+                                    ->whereNotNull('style_id')
+                                    ->with('style')
+                                    ->first();
+                                $styleName = ($matchedSe && $matchedSe->style) ? $matchedSe->style->style_name : '-';
                             } else {
                                 $styleName = '-';
                             }
@@ -886,6 +897,9 @@ $totalChunks = count($pages);
                             <td class="text-center">{{ $displayArtNo ?? '-' }}</td>
                         @endif
                         <td class="text-center">{{ $uomDisplay }}</td>
+                        @if($isFabricStore || $isAccessoriesStore)
+                            <td class="text-center">{{ $item->hsn_sac ?? '-' }}</td>
+                        @endif
                         @if(!$isRawMaterial)
                             <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                         @endif
@@ -914,6 +928,9 @@ $totalChunks = count($pages);
                             <td>&nbsp;</td>
                             @endif
                             <td>&nbsp;</td>
+                            @if($isFabricStore || $isAccessoriesStore)
+                            <td>&nbsp;</td>
+                            @endif
                             @if(!$isRawMaterial)
                             <td>&nbsp;</td>
                             @endif

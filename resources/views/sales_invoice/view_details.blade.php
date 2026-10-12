@@ -369,7 +369,20 @@
                                                     }
 
                                                     $displayArtNo = $seItem ? ($seItem->art_no ?: $item->art_no) : $item->art_no;
-                                                    $styleName = ($seItem && $seItem->style) ? $seItem->style->style_name : '-';
+                                                    $styleName = ($seItem && $seItem->style) ? $seItem->style->style_name : '';
+                                                    if (empty($styleName) && $item->item && $item->item->style) {
+                                                        $styleName = $item->item->style->style_name;
+                                                    }
+                                                    if (empty($styleName) && !empty($displayArtNo)) {
+                                                        $matchedSe = \App\Models\StockEntryItem::where('art_no', $displayArtNo)
+                                                            ->whereNotNull('style_id')
+                                                            ->with('style')
+                                                            ->first();
+                                                        if ($matchedSe && $matchedSe->style) {
+                                                            $styleName = $matchedSe->style->style_name;
+                                                        }
+                                                    }
+                                                    $styleName = $styleName ?: '-';
                                                 @endphp
 
                                                 @if($isRawMaterial)

@@ -386,6 +386,17 @@
                         $styleName = $seItem->style->style_name;
                     } elseif ($seItem && $seItem->item && $seItem->item->style) {
                         $styleName = $seItem->item->style->style_name;
+                    } elseif (!empty($codeToParse) || !empty($item->art_no)) {
+                        $searchArt = (!empty($codeToParse) && $codeToParse !== '-') ? $codeToParse : $item->art_no;
+                        if (!empty($searchArt)) {
+                            $matchedSe = \App\Models\StockEntryItem::where('art_no', $searchArt)
+                                ->whereNotNull('style_id')
+                                ->with('style')
+                                ->first();
+                            if ($matchedSe && $matchedSe->style) {
+                                $styleName = $matchedSe->style->style_name;
+                            }
+                        }
                     }
                 }
 
