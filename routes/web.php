@@ -149,6 +149,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('get-materials-by-category/{category_id}', [AjaxController::class, 'getMaterialsByCategory']);
     Route::get('get-brands-by-category/{category_id}', [AjaxController::class, 'getBrandsByCategory']);
     Route::get('ajax/search_raw_materials', [AjaxController::class, 'searchRawMaterials']);
+    Route::get('ajax/search_customers', [AjaxController::class, 'searchCustomers']);
     Route::get('get-employees-by-plant/{plantId?}/{stageId?}', [AjaxController::class, 'getEmployeesByPlant']);
 
     Route::get('get-service-providers-by-stage/{stageId}', [AjaxController::class, 'getServiceProvidersByStage']);
@@ -483,8 +484,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('stock_entries/view/{id}/{entry_type?}', [StockEntryController::class, 'view']);
     Route::post('stock_entries/import-raw-materials', [StockEntryController::class, 'importRawMaterials']);
     Route::post('stock_entries/import-finished-goods', [StockEntryController::class, 'importFinishedGoods']);
+    Route::post('stock_entries/import-scrap-materials', [StockEntryController::class, 'importScrapMaterials']);
     Route::get('stock_entries/download-raw-material-sample', [StockEntryController::class, 'downloadRawMaterialSample']);
     Route::get('stock_entries/download-finished-goods-sample', [StockEntryController::class, 'downloadFinishedGoodsSample']);
+    Route::get('stock_entries/download-scrap-material-sample', [StockEntryController::class, 'downloadScrapMaterialSample']);
     Route::get('labels/print/{id}', [\App\Http\Controllers\LabelController::class, 'print']);
 
     /* Store */

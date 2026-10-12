@@ -1201,12 +1201,9 @@ $(document).ready(function () {
 					event.preventDefault();
                     return false;
                 }
-                // if (ui.item && ui.item.disabled) {
-                //     return false;
-                // }
+                
                 
                 if (ui.item && ui.item.balance <= 0) {
-                    // 05-08 changes
                     $this.val('');
                     Swal.fire({ icon: 'warning', title: 'Out of Stock', text: 'This item is out of stock and cannot be selected.', showConfirmButton: true, confirmButtonText: 'Close' });
                     return false;
@@ -1241,7 +1238,6 @@ $(document).ready(function () {
                             success: function(res) {
                                 if (res.success) {
                                     handleGlobalItemSelection(res);
-                                    // 05-08
 									$this.val('').focus();
                                 } else {
                                     alert("Failed to fetch item details. Please try again.");
@@ -1258,9 +1254,7 @@ $(document).ready(function () {
             }
         }).autocomplete("instance")._renderItem = function(ul, item) {
             if (item.noResult) {
-                return $("<li>")
-                    .append(`<div class="ui-menu-item-wrapper text-danger fw-bold">Barcode not found</div>`)
-                    .appendTo(ul);
+                return $("<li>").append(`<div class="ui-menu-item-wrapper text-danger fw-bold">Barcode not found</div>`).appendTo(ul);
             }
 
             let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
@@ -1585,7 +1579,6 @@ $(document).ready(function () {
 
     function validateSubmit() {
         let hasError = $('.qty-input.is-invalid').length > 0;
-        // submit button is kept enabled regardless of stock error
         $('button[type="submit"]').prop('disabled', false);
     }
 
@@ -1684,9 +1677,6 @@ $(document).ready(function () {
         
         let finalTotal = effectiveTaxable + taxAmount + postGstCharges;
         
-        // if ($('#freight_type').val() === 'Paid') {
-        //     finalTotal += parseFloat($('#freight_amount').val()) || 0;
-        // }
 
         let roundedTotal = Math.round(finalTotal);
         $('#total_before_round_off').val(finalTotal.toFixed(2));
@@ -1991,7 +1981,6 @@ $(document).ready(function () {
         }
     });
 
-    // Camera scanning logic
     let html5QrCode = null;
     let isCameraOpen = false;
 
@@ -2032,7 +2021,6 @@ $(document).ready(function () {
                     });
                 },
                 (errorMessage) => {
-                    // Parse error, ignore it
                 }
             ).then(() => {
                 isCameraOpen = true;
@@ -2069,7 +2057,6 @@ $(document).ready(function () {
         let currentNewCount = soAttachmentDataTransfer.files.length;
         let newlySelectedFiles = Array.from(this.files);
 
-        // Filter duplicates
         let filesToAdd = [];
         for (let file of newlySelectedFiles) {
             let duplicate = false;

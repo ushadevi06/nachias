@@ -113,7 +113,7 @@ class SalesInvoice extends Model
 
     public static function cleanAddress($address)
     {
-        if (empty($address)) {
+        if (empty($address) || stripos($address, 'Fetching delivery address') !== false) {
             return '';
         }
         

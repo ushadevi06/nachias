@@ -284,7 +284,7 @@ class SalesInvoiceController extends Controller
 
                 $eInvoiceBtn = '';
                 $isCancelled = ($inv->invoice_status === 'Cancelled' || $inv->einvoice_status === 'cancelled');
-                $isRmStore = in_array((int)$inv->store_id, [1, 2]);
+                $isRmStore = in_array((int)$inv->store_id, [1, 2, 15]);
 
                 if ($isRmStore) {
                     $eInvoiceBtn = '';
@@ -379,7 +379,7 @@ class SalesInvoiceController extends Controller
         }
 
         $customers = Customer::select('id', 'name', 'code')->orderBy('name')->get();
-        $stores = StoreType::active()->orderBy('id')->get();
+        $stores = StoreType::active()->whereIn('id', [1, 2, 3, 6, 15])->orderByRaw("FIELD(id, 3, 1, 2, 6, 15)")->get();
         return view('sales_invoice.view', compact('customers', 'stores'));
     }
 
@@ -388,7 +388,7 @@ class SalesInvoiceController extends Controller
         $brandId = $request->brand_id;
         $invDateStr = $request->inv_date;
         $storeId = (int)($request->store_id ?? 0);
-        $isRawMaterialStore = in_array($storeId, [1, 2]);
+        $isRawMaterialStore = in_array($storeId, [1, 2, 15]);
         
         if (!$isRawMaterialStore && !$brandId) {
             return response()->json(['success' => false, 'message' => 'Brand ID is required.']);
@@ -423,7 +423,7 @@ class SalesInvoiceController extends Controller
     public function getStoreStockItems(Request $request)
     {
         $storeId = (int)$request->store_id;
-        if (!in_array($storeId, [1, 2])) {
+        if (!in_array($storeId, [1, 2, 15])) {
             return response()->json(['success' => false, 'data' => []]);
         }
 
@@ -436,11 +436,13 @@ class SalesInvoiceController extends Controller
             ->whereNull('se.deleted_at')
             ->where('sei.stock_type', 'raw_material')
             ->where(function($q) use ($storeId) {
+                $categoryCheck = ($storeId == 15) ? 6 : $storeId;
                 $q->where('sei.store_type_id', $storeId)
                   ->orWhere('se.store_type_id', $storeId)
-                  ->orWhere(function($q2) use ($storeId) {
+                  ->orWhere('sei.store_category_id', $categoryCheck)
+                  ->orWhere(function($q2) use ($storeId, $categoryCheck) {
                       $q2->whereNull('sei.store_type_id')
-                         ->where('rm.store_category_id', $storeId);
+                         ->where('rm.store_category_id', $categoryCheck);
                   });
             })
             ->whereRaw('(sei.qty_in - COALESCE(sei.qty_out, 0)) > 0')
@@ -461,36 +463,53 @@ class SalesInvoiceController extends Controller
             ->orderBy('rm.name', 'asc')
             ->get();
 
-        $formatted = $stockItems->map(function ($item) use ($storeId) {
+        // Group stock items by raw_material_id, art_no, style_id, rate so duplicate stock entries are merged with total available quantity
+        $grouped = [];
+        foreach ($stockItems as $item) {
             $name = $item->raw_material_name ?: 'Raw Material #' . $item->raw_material_id;
-            $hsn = '';
             $uomCode = $item->uom_code ?: ($item->uom_name ?: 'PCS');
             $uomName = $item->uom_name ?: ($item->uom_code ?: 'PCS');
-            $artNo = $item->art_no ?: '-';
+            $artNo = ($storeId == 15) ? '' : ($item->art_no ?: '');
             $styleName = ($storeId == 1 && $item->style_name) ? $item->style_name : '';
-            
-            $displayLabel = $name;
-            if ($styleName) {
-                $displayLabel .= " | Style: {$styleName}";
-            }
-            $displayLabel .= " | Art No: {$artNo} | Avail: {$item->available_qty} {$uomCode}";
+            $rate = (float)($item->rate ?? 0);
 
-            return [
-                'stock_entry_item_id' => $item->stock_entry_item_id,
-                'raw_material_id' => $item->raw_material_id,
-                'style_id' => $item->style_id,
-                'style_name' => $styleName,
-                'item_name' => $name,
-                'art_no' => $artNo,
-                'uom_id' => $item->uom_id,
-                'uom_name' => $uomName,
-                'uom_code' => $uomCode,
-                'hsn_sac' => $hsn,
-                'available_qty' => (float)$item->available_qty,
-                'rate' => (float)$item->rate,
-                'display_label' => $displayLabel
-            ];
-        });
+            $groupKey = "rm_{$item->raw_material_id}_art_{$artNo}_style_{$item->style_id}_rate_{$rate}";
+
+            if (!isset($grouped[$groupKey])) {
+                $displayLabel = $name;
+                if ($styleName) {
+                    $displayLabel .= " | Style: {$styleName}";
+                }
+                if ($storeId != 15 && $artNo && $artNo !== '-') {
+                    $displayLabel .= " | Art No: {$artNo}";
+                }
+
+                $grouped[$groupKey] = [
+                    'stock_entry_item_id' => $item->stock_entry_item_id,
+                    'raw_material_id' => $item->raw_material_id,
+                    'style_id' => $item->style_id,
+                    'style_name' => $styleName,
+                    'item_name' => $name,
+                    'art_no' => $artNo,
+                    'uom_id' => $item->uom_id,
+                    'uom_name' => $uomName,
+                    'uom_code' => $uomCode,
+                    'hsn_sac' => '',
+                    'available_qty' => (float)$item->available_qty,
+                    'rate' => $rate,
+                    'base_display_label' => $displayLabel
+                ];
+            } else {
+                $grouped[$groupKey]['available_qty'] += (float)$item->available_qty;
+            }
+        }
+
+        $formatted = array_values(array_map(function ($item) {
+            $item['available_qty'] = round($item['available_qty'], 2);
+            $item['display_label'] = $item['base_display_label'] . " | Avail: {$item['available_qty']} {$item['uom_code']}";
+            unset($item['base_display_label']);
+            return $item;
+        }, $grouped));
 
         return response()->json(['success' => true, 'data' => $formatted]);
     }
@@ -516,7 +535,7 @@ class SalesInvoiceController extends Controller
 
         if ($request->isMethod('post')) {
             $selectedStoreId = (int)($request->store_id ?? 0);
-            $isRawMaterialStore = in_array($selectedStoreId, [1, 2]);
+            $isRawMaterialStore = in_array($selectedStoreId, [1, 2, 15]);
             $selectedBrandId = $request->brand_id;
             
             if ($request->inv_date && ($selectedBrandId || $isRawMaterialStore)) {
@@ -545,7 +564,7 @@ class SalesInvoiceController extends Controller
                         $selFYStart = ($selMonth >= 4) ? $selYear : ($selYear - 1);
 
                         if ($isRawMaterialStore) {
-                            if ($origFYStart != $selFYStart || !in_array((int)$invoice->store_id, [1, 2])) {
+                            if ($origFYStart != $selFYStart || !in_array((int)$invoice->store_id, [1, 2, 15])) {
                                 $regenerate = true;
                             } else {
                                 $request->merge(['inv_no' => $invoice->raw_inv_no ?: $invoice->getRawOriginal('inv_no')]);
@@ -596,7 +615,7 @@ class SalesInvoiceController extends Controller
                 'sgst_amount' => 'nullable|numeric|min:0',
                 'igst_percent' => 'nullable|numeric|min:0|max:100',
                 'igst_amount' => 'nullable|numeric|min:0',
-                'hsn_sac' => $isCancelled ? 'nullable|string|max:50' : ($isRawMaterialStore ? 'nullable|string|max:50' : 'required|string|max:50'),
+                'hsn_sac' => $isCancelled ? 'nullable|string|min:2|max:8|regex:/^[0-9]+$/' : ($isRawMaterialStore ? 'nullable|string|min:2|max:8|regex:/^[0-9]+$/' : 'required|string|min:2|max:8|regex:/^[0-9]+$/'),
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
                 'box_discount_amount' => 'nullable|numeric|min:0',
@@ -620,7 +639,7 @@ class SalesInvoiceController extends Controller
                 $rules['items.*.quantity'] = 'required|numeric|min:0.01';
                 $rules['items.*.rate'] = 'required|numeric|min:0.01';
                 $rules['items.*.mrp'] = $isRawMaterialStore ? 'nullable|numeric' : 'required|numeric|min:0.01';
-                $rules['items.*.hsn_sac'] = 'required|string|max:50';
+                $rules['items.*.hsn_sac'] = 'required|string|min:2|max:8|regex:/^[0-9]+$/';
             }
 
             $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, [
@@ -645,12 +664,19 @@ class SalesInvoiceController extends Controller
                 'items.min'                 => 'At least one item is required to save the invoice.',
                 'items.*.rate.min' => 'Price must be greater than 0.00.',
                 'items.*.mrp.min' => 'MRP must be greater than 0.00.',
-                'items.*.quantity.required' => 'Quantity is required.',
-                'items.*.quantity.numeric'  => 'Quantity must be a valid number.',
-                'items.*.quantity.min'      => 'Quantity must be greater than 0.00.',
-                'items.*.rate.required'     => 'Price is required.',
-                'items.*.rate.numeric'      => 'Price must be a valid number.',
-                'items.*.hsn_sac.required'  => 'HSN Code is required for each item.',
+                'items.*.quantity.required' => 'This field is required',
+                'items.*.quantity.numeric'  => 'This field is required',
+                'items.*.quantity.min'      => 'This field is required',
+                'items.*.rate.required'     => 'This field is required',
+                'items.*.rate.numeric'      => 'This field is required',
+                'hsn_sac.required'          => 'HSN code is required.',
+                'hsn_sac.min'               => 'HSN code must be at least 2 digits.',
+                'hsn_sac.max'               => 'HSN code cannot exceed 8 digits.',
+                'hsn_sac.regex'             => 'HSN code must contain only numbers.',
+                'items.*.hsn_sac.required'  => 'This field is required',
+                'items.*.hsn_sac.min'       => 'HSN code must be at least 2 digits.',
+                'items.*.hsn_sac.max'       => 'HSN code cannot exceed 8 digits.',
+                'items.*.hsn_sac.regex'     => 'HSN code must contain only numbers.',
                 '*.min'           => 'This field must be at least :min characters.',
                 '*.max'           => 'This field must be at most :max characters.',
             ]);
@@ -792,14 +818,15 @@ class SalesInvoiceController extends Controller
                 $cgst = 0; $sgst = 0; $igst = 0;
                 if ($request->other_state == 'yes') {
                     $igstPercent = (float)($request->igst_percent ?? 0);
-                    $igst = ($taxableAmount * $igstPercent) / 100;
+                    $igst = round(($taxableAmount * $igstPercent) / 100, 2);
+                    $calculatedTaxAmount = $igst;
                 } else {
                     $cgstPercent = (float)($request->cgst_percent ?? 0);
                     $sgstPercent = (float)($request->sgst_percent ?? 0);
-                    $cgst = ($taxableAmount * $cgstPercent) / 100;
-                    $sgst = ($taxableAmount * $sgstPercent) / 100;
+                    $cgst = round(($taxableAmount * $cgstPercent) / 100, 2);
+                    $sgst = round(($taxableAmount * $sgstPercent) / 100, 2);
+                    $calculatedTaxAmount = round($cgst + $sgst, 2);
                 }
-                $calculatedTaxAmount = $cgst + $sgst + $igst;
                 
                 $totalBeforeRoundOff = $taxableAmount + $calculatedTaxAmount;
                 $calculatedGrandTotal = round($totalBeforeRoundOff);
@@ -915,7 +942,7 @@ class SalesInvoiceController extends Controller
                             'rate' => $itemRate,
                             'mrp' => $itemMrp,
                             'amount' => $itemAmount,
-                            'hsn_sac' => !empty($item['hsn_sac']) ? $item['hsn_sac'] : ($request->hsn_sac ?? null),
+                            'hsn_sac' => !empty($item['hsn_sac']) ? $item['hsn_sac'] : ($isRawMaterialStore ? null : ($request->hsn_sac ?? '62053000')),
                             'art_no' => $item['art_no'] ?? null,
                             'size' => $item['size'] ?? null,
                             'color_id' => $item['color_id'] ?? null,
@@ -968,10 +995,14 @@ class SalesInvoiceController extends Controller
         if ($invoice && $invoice->einvoice_status === 'cancelled') {
             return redirect('sales_invoices')->with('error', 'Cancelled invoices cannot be edited.');
         }
-        $customers = Customer::active()->orderBy('id', 'desc')->get();
+        $customers = [];
         $brandCategories = BrandCategory::active()->get();
         $uoms = Uom::active()->get();
-        $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $allowedStoreIds = [1, 2, 3, 6, 15]; 
+        if ($invoice && $invoice->store_id) {
+            $allowedStoreIds[] = (int)$invoice->store_id;
+        }
+        $stores = StoreType::where('status', 'Active')->whereIn('id', array_unique($allowedStoreIds))->orderByRaw("FIELD(id, 3, 1, 2, 6, 15)")->get();
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
 
         $brands = \App\Models\Brand::active()
@@ -1025,7 +1056,23 @@ class SalesInvoiceController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details sales-invoice')) {
             return unauthorizedRedirect();
         }
-        $invoice = SalesInvoice::with(['customer', 'salesOrder', 'items.brandCategory', 'items.item', 'items.color', 'items.uom'])->findOrFail($id);
+        $invoice = SalesInvoice::with([
+            'customer.state', 
+            'customer.city', 
+            'customer.place', 
+            'salesOrder.salesAgent', 
+            'brand',
+            'store',
+            'items.brandCategory', 
+            'items.item.style', 
+            'items.item.brand', 
+            'items.color', 
+            'items.uom',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.brand',
+            'items.stockEntryItem.uom'
+        ])->findOrFail($id);
         return view('sales_invoice.view_details', compact('invoice'));
     }
     
@@ -1666,6 +1713,7 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::with([
             'brand',
+            'store',
             'customer.state', 
             'customer.city', 
             'salesOrder.salesAgent', 
@@ -1674,6 +1722,11 @@ class SalesInvoiceController extends Controller
             },
             'items.brandCategory', 
             'items.item.uom', 
+            'items.item.style',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.brand',
+            'items.stockEntryItem.uom',
             'items.uom'
         ])->findOrFail($id);
         
@@ -1724,8 +1777,9 @@ class SalesInvoiceController extends Controller
             ];
         }
 
+        $actualTaxTotal = !$invoice->other_state ? ((float)$invoice->cgst + (float)$invoice->sgst) : (float)$invoice->igst;
         $totalInWords = numberToWords($invoice->grand_total);
-        $totalTaxInWords = numberToWords($invoice->tax_amount);
+        $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
 
         $pdf = Pdf::loadView('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords'));
         $pdf->setPaper('A4', 'portrait');
@@ -1738,6 +1792,7 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::with([
             'brand',
+            'store',
             'customer.state', 
             'customer.city', 
             'salesOrder.salesAgent', 
@@ -1746,6 +1801,11 @@ class SalesInvoiceController extends Controller
             },
             'items.brandCategory', 
             'items.item.uom', 
+            'items.item.style',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.brand',
+            'items.stockEntryItem.uom',
             'items.uom'
         ])->findOrFail($id);
         
@@ -1796,8 +1856,9 @@ class SalesInvoiceController extends Controller
             ];
         }
 
+        $actualTaxTotal = !$invoice->other_state ? ((float)$invoice->cgst + (float)$invoice->sgst) : (float)$invoice->igst;
         $totalInWords = numberToWords($invoice->grand_total);
-        $totalTaxInWords = numberToWords($invoice->tax_amount);
+        $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
         $is_print = true;
 
         return view('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print'));
@@ -1877,10 +1938,10 @@ class SalesInvoiceController extends Controller
     public function generateEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $invoice = SalesInvoice::findOrFail($id);
-        if (in_array((int)$invoice->store_id, [1, 2])) {
+        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
             return response()->json([
                 'success' => false,
-                'message' => 'e-Invoice / IRN is not applicable for Fabric and Accessories invoices.'
+                'message' => 'e-Invoice / IRN is not applicable for Fabric, Accessories and Scrap invoices.'
             ]);
         }
         if ($invoice->einvoice_status === 'cancelled') {
@@ -1950,10 +2011,10 @@ class SalesInvoiceController extends Controller
     public function getIrn(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $invoice = SalesInvoice::findOrFail($id);
-        if (in_array((int)$invoice->store_id, [1, 2])) {
+        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
             return response()->json([
                 'success' => false,
-                'message' => 'e-Invoice / IRN is not applicable for Fabric and Accessories invoices.'
+                'message' => 'e-Invoice / IRN is not applicable for Fabric, Accessories and Scrap invoices.'
             ]);
         }
         if ($invoice->einvoice_status === 'cancelled') {
@@ -1978,10 +2039,10 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::findOrFail($id);
 
-        if (in_array((int)$invoice->store_id, [1, 2])) {
+        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
             return response()->json([
                 'success' => false,
-                'message' => 'e-Way Bill via e-Invoice is not applicable for Fabric and Accessories invoices.'
+                'message' => 'e-Way Bill via e-Invoice is not applicable for Fabric, Accessories and Scrap invoices.'
             ]);
         }
 
@@ -2008,10 +2069,10 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::findOrFail($id);
 
-        if (in_array((int)$invoice->store_id, [1, 2])) {
+        if (in_array((int)$invoice->store_id, [1, 2, 15])) {
             return response()->json([
                 'success' => false,
-                'message' => 'e-Invoice is not applicable for Fabric and Accessories invoices.'
+                'message' => 'e-Invoice is not applicable for Fabric, Accessories and Scrap invoices.'
             ]);
         }
 
@@ -2555,12 +2616,17 @@ class SalesInvoiceController extends Controller
                     if ($stItem->stock_type === 'raw_material') {
                         $rmName = DB::table('raw_materials')->where('id', $stItem->raw_material_id)->value('name');
                         $rawMaterialName = $rmName ?: ($stItem->art_no ?: 'Raw Material');
-                        $identifier = 'rm_' . $stockEntryItemId;
+                        $identifier = 'rm_' . $stItem->raw_material_id . '_' . ($stItem->style_id ?? 0) . '_' . ($stItem->art_no ?? '');
                         if (!isset($requiredQuantities[$identifier])) {
                             $requiredQuantities[$identifier] = [
                                 'sku' => null,
                                 'is_raw_material' => true,
                                 'stock_entry_item_id' => $stockEntryItemId,
+                                'raw_material_id' => $stItem->raw_material_id,
+                                'style_id' => $stItem->style_id,
+                                'art_no' => $stItem->art_no,
+                                'store_type_id' => $stItem->store_type_id,
+                                'store_category_id' => $stItem->store_category_id,
                                 'qty' => 0,
                                 'display' => $rawMaterialName
                             ];
@@ -2635,19 +2701,41 @@ class SalesInvoiceController extends Controller
 
         foreach ($requiredQuantities as $req) {
             if (!empty($req['is_raw_material'])) {
-                $stItem = StockEntryItem::find($req['stock_entry_item_id']);
-                if (!$stItem) {
-                    throw new \Exception("Stock item not found for " . $req['display']);
+                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')
+                    ->whereNull('deleted_at')
+                    ->where('raw_material_id', $req['raw_material_id']);
+
+                if (!empty($req['store_type_id'])) {
+                    $rawQuery->where('store_type_id', $req['store_type_id']);
+                } elseif (!empty($req['store_category_id'])) {
+                    $rawQuery->where('store_category_id', $req['store_category_id']);
                 }
+
+                if (!empty($req['style_id'])) {
+                    $rawQuery->where('style_id', $req['style_id']);
+                }
+                if (!empty($req['art_no']) && $req['art_no'] !== '-') {
+                    $rawQuery->where('art_no', $req['art_no']);
+                }
+
+                $totalIn = (clone $rawQuery)->sum('qty_in');
+                $totalOut = (clone $rawQuery)->sum('qty_out');
+
                 $alreadyDeducted = 0;
                 if ($invoiceId) {
                     foreach ($existingInvoiceItems as $ei) {
-                        if ($ei->stock_entry_item_id == $req['stock_entry_item_id']) {
+                        if (!empty($ei->stock_allocations) && is_array($ei->stock_allocations)) {
+                            $allocIds = array_column($ei->stock_allocations, 'stock_entry_item_id');
+                            if (in_array($req['stock_entry_item_id'], $allocIds)) {
+                                $alreadyDeducted += $ei->quantity;
+                            }
+                        } elseif ($ei->stock_entry_item_id == $req['stock_entry_item_id']) {
                             $alreadyDeducted += $ei->quantity;
                         }
                     }
                 }
-                $effectiveAvailable = ($stItem->qty_in - $stItem->qty_out) + $alreadyDeducted;
+
+                $effectiveAvailable = ($totalIn - $totalOut) + $alreadyDeducted;
                 if ($effectiveAvailable < $req['qty']) {
                     throw new \Exception("Insufficient stock for " . $req['display'] . " (Available: " . $effectiveAvailable . ", Required: " . $req['qty'] . ")");
                 }
@@ -2851,23 +2939,76 @@ class SalesInvoiceController extends Controller
         if ($item->stock_entry_item_id) {
             $rawStItem = StockEntryItem::find($item->stock_entry_item_id);
             if ($rawStItem && $rawStItem->stock_type === 'raw_material') {
-                $rawStItem->increment('qty_out', $quantityToDeduct);
+                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')
+                    ->whereNull('deleted_at')
+                    ->where('raw_material_id', $rawStItem->raw_material_id);
+
+                if (!empty($rawStItem->store_type_id)) {
+                    $rawQuery->where('store_type_id', $rawStItem->store_type_id);
+                } elseif (!empty($rawStItem->store_category_id)) {
+                    $rawQuery->where('store_category_id', $rawStItem->store_category_id);
+                }
+
+                if (!empty($rawStItem->style_id)) {
+                    $rawQuery->where('style_id', $rawStItem->style_id);
+                }
+                if (!empty($rawStItem->art_no) && $rawStItem->art_no !== '-') {
+                    $rawQuery->where('art_no', $rawStItem->art_no);
+                }
+
+                $availableRawItems = $rawQuery->orderByRaw('CASE WHEN id = ' . (int)$rawStItem->id . ' THEN 0 ELSE 1 END')
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                $remaining = (float)$quantityToDeduct;
                 $allocations = !empty($item->stock_allocations) && is_array($item->stock_allocations) ? $item->stock_allocations : [];
-                $foundAlloc = false;
-                foreach ($allocations as &$al) {
-                    if (($al['stock_entry_item_id'] ?? null) == $rawStItem->id) {
-                        $al['qty'] = (float)($al['qty'] ?? 0) + $quantityToDeduct;
-                        $foundAlloc = true;
-                        break;
+
+                foreach ($availableRawItems as $stItem) {
+                    if ($remaining <= 0) break;
+                    $balance = (float)$stItem->qty_in - (float)$stItem->qty_out;
+                    if ($balance > 0) {
+                        $deduct = min($balance, $remaining);
+                        $stItem->increment('qty_out', $deduct);
+
+                        $foundAlloc = false;
+                        foreach ($allocations as &$al) {
+                            if (($al['stock_entry_item_id'] ?? null) == $stItem->id) {
+                                $al['qty'] = (float)($al['qty'] ?? 0) + $deduct;
+                                $foundAlloc = true;
+                                break;
+                            }
+                        }
+                        unset($al);
+
+                        if (!$foundAlloc) {
+                            $allocations[] = [
+                                'stock_entry_item_id' => $stItem->id,
+                                'qty' => $deduct
+                            ];
+                        }
+                        $remaining -= $deduct;
                     }
                 }
-                unset($al);
-                if (!$foundAlloc) {
-                    $allocations[] = [
-                        'stock_entry_item_id' => $rawStItem->id,
-                        'qty' => $quantityToDeduct
-                    ];
+
+                if ($remaining > 0) {
+                    $rawStItem->increment('qty_out', $remaining);
+                    $foundAlloc = false;
+                    foreach ($allocations as &$al) {
+                        if (($al['stock_entry_item_id'] ?? null) == $rawStItem->id) {
+                            $al['qty'] = (float)($al['qty'] ?? 0) + $remaining;
+                            $foundAlloc = true;
+                            break;
+                        }
+                    }
+                    unset($al);
+                    if (!$foundAlloc) {
+                        $allocations[] = [
+                            'stock_entry_item_id' => $rawStItem->id,
+                            'qty' => $remaining
+                        ];
+                    }
                 }
+
                 $item->update(['stock_allocations' => $allocations]);
                 return;
             }

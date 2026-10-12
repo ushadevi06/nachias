@@ -96,7 +96,7 @@ class LogController extends Controller
         $oldValues = $log->old_values ? json_decode($log->old_values, true) : [];
         $newValues = $log->new_values ? json_decode($log->new_values, true) : [];
 
-        $excludeFields = ['id', 'created_by', 'updated_by', 'deleted_at'];
+        $excludeFields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at'];
         $changedFields = [];
 
         $processValue = function ($value) {
@@ -166,7 +166,9 @@ class LogController extends Controller
             // Check if date
             if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
                 try {
-                    return ['type' => 'date', 'display' => \Carbon\Carbon::parse($value)->format('d-m-Y h:i A')];
+                    $carbon = \Carbon\Carbon::parse($value)->setTimezone(config('app.timezone', 'Asia/Kolkata'));
+                    $hasTime = preg_match('/\d{2}:\d{2}/', $value);
+                    return ['type' => 'date', 'display' => $hasTime ? $carbon->format('d-m-Y h:i A') : $carbon->format('d-m-Y')];
                 } catch (\Exception $e) {
                     return ['type' => 'string', 'display' => (string) $value];
                 }
@@ -253,8 +255,7 @@ class LogController extends Controller
         $newValues = $log->new_values ? json_decode($log->new_values, true) : [];
         
         // Fields to exclude from display
-        // $excludeFields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at'];
-        $excludeFields = ['id', 'created_by', 'updated_by', 'deleted_at'];
+        $excludeFields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at'];
         $changedFields = [];
         
         // Helper function to format values
@@ -273,7 +274,9 @@ class LogController extends Controller
             // Check if it's a date/datetime string
             if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
                 try {
-                    return \Carbon\Carbon::parse($value)->format('d-m-Y');
+                    $carbon = \Carbon\Carbon::parse($value)->setTimezone(config('app.timezone', 'Asia/Kolkata'));
+                    $hasTime = preg_match('/\d{2}:\d{2}/', $value);
+                    return $hasTime ? $carbon->format('d-m-Y h:i A') : $carbon->format('d-m-Y');
                 } catch (\Exception $e) {
                     return $value;
                 }

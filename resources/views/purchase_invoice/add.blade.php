@@ -332,8 +332,21 @@
                                         @foreach($invoice->items as $index => $invItem)
                                             @php
                                                 $balancedQty = $invItem->qty_ordered - $invItem->qty_invoiced;
+                                                $itemCatId = $invItem->purchaseOrderItem->store_category_id ?? $invItem->rawMaterial->store_category_id ?? 0;
+                                                $poObj = $invItem->purchaseOrderItem->purchaseOrder ?? null;
+                                                $poIg = $poObj->igst_percent ?? 0;
+                                                $poCg = $poObj->cgst_percent ?? 0;
+                                                $poSg = $poObj->sgst_percent ?? 0;
                                             @endphp
-                                            <tr class="item-row">
+                                            <tr class="item-row" 
+                                                data-store-category-id="{{ $itemCatId }}" 
+                                                data-is-fabric="{{ intval($itemCatId) === 1 ? '1' : '0' }}"
+                                                data-po-igst="{{ $poIg }}"
+                                                data-po-cgst="{{ $poCg }}"
+                                                data-po-sgst="{{ $poSg }}"
+                                                data-item-igst="{{ $invItem->igst_percent ?? 0 }}"
+                                                data-item-cgst="{{ $invItem->cgst_percent ?? 0 }}"
+                                                data-item-sgst="{{ $invItem->sgst_percent ?? 0 }}">
                                                 <td>
                                                     <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" checked>
                                                     <input type="hidden" name="items[{{ $index }}][purchase_order_item_id]" value="{{ $invItem->purchase_order_item_id }}">
@@ -1204,7 +1217,15 @@
                                 }
 
                                 itemsHtml += `
-                                    <tr class="item-row">
+                                    <tr class="item-row" 
+                                        data-store-category-id="${item.store_category_id || 0}" 
+                                        data-is-fabric="${parseInt(item.store_category_id) === 1 ? '1' : '0'}"
+                                        data-po-igst="${item.po_igst_percent || response.igst_percent || 0}"
+                                        data-po-cgst="${item.po_cgst_percent || response.cgst_percent || 0}"
+                                        data-po-sgst="${item.po_sgst_percent || response.sgst_percent || 0}"
+                                        data-item-igst="${item.item_igst_percent || 0}"
+                                        data-item-cgst="${item.item_cgst_percent || 0}"
+                                        data-item-sgst="${item.item_sgst_percent || 0}">
                                         <td>
                                             <input type="checkbox" name="items[${index}][selected]" class="form-check-input item-checkbox" value="1" checked>
                                             <input type="hidden" name="items[${index}][purchase_order_item_id]" value="${item.id}">
@@ -1480,23 +1501,43 @@
                 $('#igst_div').show();
                 $('#cgst_sgst_div').hide();
                 if (parseFloat($('#igst_percent').val()) == 0) {
-                    $('#igst_percent').val("{{ $web_settings->igst }}");
+                    $('#igst_percent').val("{{ $web_settings->igst ?? 5 }}");
                 }
             } else {
                 $('#igst_div').hide();
                 $('#cgst_sgst_div').show();
                 if (parseFloat($('#cgst_percent').val()) == 0) {
-                    $('#cgst_percent').val("{{ $web_settings->cgst }}");
+                    $('#cgst_percent').val("{{ $web_settings->cgst ?? 2.5 }}");
                 }
                 if (parseFloat($('#sgst_percent').val()) == 0) {
-                    $('#sgst_percent').val("{{ $web_settings->sgst }}");
+                    $('#sgst_percent').val("{{ $web_settings->sgst ?? 2.5 }}");
                 }
             }
 
             calculateTotals();
         });
 
-        $('#igst_percent, #cgst_percent, #sgst_percent').on('input', function () {
+        $('#igst_percent').on('input', function () {
+            let val = parseFloat($(this).val()) || 0;
+            $('.item-row').each(function () {
+                let $r = $(this);
+                if (parseInt($r.data('store-category-id')) === 1 || $r.data('is-fabric') == '1') {
+                    $r.data('po-igst', val);
+                }
+            });
+            calculateTotals();
+        });
+
+        $('#cgst_percent, #sgst_percent').on('input', function () {
+            let cgstVal = parseFloat($('#cgst_percent').val()) || 0;
+            let sgstVal = parseFloat($('#sgst_percent').val()) || 0;
+            $('.item-row').each(function () {
+                let $r = $(this);
+                if (parseInt($r.data('store-category-id')) === 1 || $r.data('is-fabric') == '1') {
+                    $r.data('po-cgst', cgstVal);
+                    $r.data('po-sgst', sgstVal);
+                }
+            });
             calculateTotals();
         });
 
@@ -1629,6 +1670,10 @@
             updateNegativeWarning(taxableAmount);
 
             let factor = subTotal > 0 ? (dispTaxableAmt / subTotal) : 1;
+            otherState = $('input[name="other_state"]:checked').val() || 'N';
+            let footerIgst = parseFloat($('#igst_percent').val()) || 0;
+            let footerCgst = parseFloat($('#cgst_percent').val()) || 0;
+            let footerSgst = parseFloat($('#sgst_percent').val()) || 0;
 
             let totalRowCgst = 0;
             let totalRowSgst = 0;
@@ -1648,15 +1693,60 @@
                 let amount = (qty > 0 && rate > 0) ? (qty * rate) : 0;
                 let rowTaxable = amount * factor;
 
+                let isFabric = parseInt($row.data('store-category-id')) === 1 || $row.data('is-fabric') == '1';
+
                 if (otherState === 'Y') {
-                    let itemIgstPercent = parseFloat($row.find('.igst_percent').val()) || 0;
+                    let itemIgstPercent = 0;
+                    if (isFabric) {
+                        // Fabric: ALWAYS use Main PO GST
+                        itemIgstPercent = parseFloat($row.data('po-igst')) || footerIgst;
+                        if (itemIgstPercent === 0) {
+                            let poC = parseFloat($row.data('po-cgst')) || 0;
+                            let poS = parseFloat($row.data('po-sgst')) || 0;
+                            itemIgstPercent = (poC + poS > 0) ? (poC + poS) : (footerIgst > 0 ? footerIgst : 5.0);
+                        }
+                    } else {
+                        // Accessories: ALWAYS use Item GST
+                        itemIgstPercent = parseFloat($row.find('.igst_percent').val()) || parseFloat($row.data('item-igst')) || 0;
+                        if (itemIgstPercent === 0) {
+                            let itC = parseFloat($row.find('.cgst_percent').val()) || parseFloat($row.data('item-cgst')) || 0;
+                            let itS = parseFloat($row.find('.sgst_percent').val()) || parseFloat($row.data('item-sgst')) || 0;
+                            itemIgstPercent = (itC + itS > 0) ? (itC + itS) : (footerIgst > 0 ? footerIgst : 5.0);
+                        }
+                    }
+
+                    $row.find('.igst_percent').val(itemIgstPercent);
                     let igstAmount = (rowTaxable * itemIgstPercent) / 100;
                     $row.find('.igst_amount').val(igstAmount.toFixed(2));
                     $row.find('.cgst_amount, .sgst_amount').val('0.00');
                     totalRowIgst += igstAmount;
                 } else {
-                    let itemCgstPercent = parseFloat($row.find('.cgst_percent').val()) || 0;
-                    let itemSgstPercent = parseFloat($row.find('.sgst_percent').val()) || 0;
+                    let itemCgstPercent = 0;
+                    let itemSgstPercent = 0;
+                    if (isFabric) {
+                        // Fabric: ALWAYS use Main PO GST
+                        itemCgstPercent = parseFloat($row.data('po-cgst')) || footerCgst;
+                        itemSgstPercent = parseFloat($row.data('po-sgst')) || footerSgst;
+                        if (itemCgstPercent === 0 && itemSgstPercent === 0) {
+                            let poIg = parseFloat($row.data('po-igst')) || footerIgst;
+                            let half = poIg > 0 ? (poIg / 2) : (footerCgst > 0 ? footerCgst : 2.5);
+                            itemCgstPercent = half;
+                            itemSgstPercent = half;
+                        }
+                    } else {
+                        // Accessories: ALWAYS use Item GST
+                        itemCgstPercent = parseFloat($row.find('.cgst_percent').val()) || parseFloat($row.data('item-cgst')) || 0;
+                        itemSgstPercent = parseFloat($row.find('.sgst_percent').val()) || parseFloat($row.data('item-sgst')) || 0;
+                        if (itemCgstPercent === 0 && itemSgstPercent === 0) {
+                            let itIg = parseFloat($row.find('.igst_percent').val()) || parseFloat($row.data('item-igst')) || 0;
+                            let half = itIg > 0 ? (itIg / 2) : (footerCgst > 0 ? footerCgst : 2.5);
+                            itemCgstPercent = half;
+                            itemSgstPercent = half;
+                        }
+                    }
+
+                    $row.find('.cgst_percent').val(itemCgstPercent);
+                    $row.find('.sgst_percent').val(itemSgstPercent);
                     let cgstAmount = (rowTaxable * itemCgstPercent) / 100;
                     let sgstAmount = (rowTaxable * itemSgstPercent) / 100;
                     $row.find('.cgst_amount').val(cgstAmount.toFixed(2));

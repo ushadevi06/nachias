@@ -345,7 +345,28 @@ class PurchaseReportController extends Controller
                 $artNoVal = 'N/A';
             }
 
-            $key = $artNoVal . '-' . ($item->raw_material_id ?: 0) . '-' . ($item->item_id ?: 0) . '-' . ($item->style_id ?: 0) . '-' . ($item->color_id ?: 0) . '-' . ($item->fabric_type_id ?: 0) . '-' . ($item->size ?: '') . '-' . ($item->brand_id ?: 0) . '-' . ($item->fabric_width_id ?: 0);
+            $itemName = 'N/A';
+            if ($item->rawMaterial) {
+                $itemName = $item->rawMaterial->name;
+            } elseif ($item->item) {
+                $itemName = $item->item->name;
+            } elseif (!empty($item->finished_item_code)) {
+                $itemName = $item->finished_item_code;
+            }
+
+            $rawMatId = $item->raw_material_id ?: 0;
+
+            if ($storeCategoryId == 2 && $isStockReport) {
+                if (!$rawMatId && $itemName !== 'N/A') {
+                    $foundRm = \App\Models\RawMaterial::where('store_category_id', 2)->where('name', $itemName)->first();
+                    if ($foundRm) {
+                        $rawMatId = $foundRm->id;
+                    }
+                }
+                $key = $rawMatId > 0 ? ('rm_' . $rawMatId) : ($item->item_id ? ('item_' . $item->item_id) : ('name_' . strtoupper(trim($itemName))));
+            } else {
+                $key = $artNoVal . '-' . ($item->raw_material_id ?: 0) . '-' . ($item->item_id ?: 0) . '-' . ($item->style_id ?: 0) . '-' . ($item->color_id ?: 0) . '-' . ($item->fabric_type_id ?: 0) . '-' . ($item->size ?: '') . '-' . ($item->brand_id ?: 0) . '-' . ($item->fabric_width_id ?: 0);
+            }
             
             if (!isset($grouped[$key])) {
                 $brandName = 'N/A';
@@ -353,13 +374,6 @@ class PurchaseReportController extends Controller
                     $brandName = $item->brand->brand_name;
                 } elseif ($item->item && $item->item->brand) {
                     $brandName = $item->item->brand->name;
-                }
-
-                $itemName = 'N/A';
-                if ($item->rawMaterial) {
-                    $itemName = $item->rawMaterial->name;
-                } elseif ($item->item) {
-                    $itemName = $item->item->name;
                 }
 
                 $minStock = 0;
@@ -370,7 +384,8 @@ class PurchaseReportController extends Controller
                 }
 
                 $grouped[$key] = [
-                    'raw_material_id' => $item->raw_material_id ?: 0,
+                    'raw_material_id' => $rawMatId ?: ($item->raw_material_id ?: 0),
+                    'item_id' => $item->item_id ?: 0,
                     'art_no' => $artNoVal,
                     'brand' => $brandName,
                     'item_name' => $itemName,
@@ -388,9 +403,12 @@ class PurchaseReportController extends Controller
                 ];
             }
 
-            $date = $item->created_at->format('Y-m-d');
+            $date = $item->created_at ? $item->created_at->format('Y-m-d') : '';
+            $remarks = strtolower($item->stockEntry ? ($item->stockEntry->remarks ?? '') : '');
+            $rawEntryType = strtolower($item->stockEntry ? ($item->stockEntry->entry_type ?? '') : '');
+            $isOpeningEntry = str_contains($remarks, 'opening') || str_contains($rawEntryType, 'opening');
 
-            if ($fromDate && $date < $fromDate) {
+            if (($fromDate && $date < $fromDate) || $isOpeningEntry) {
                 $grouped[$key]['opening'] += ($item->qty_in - $item->qty_out);
             } else {
                 $grouped[$key]['inward'] += $item->qty_in;
@@ -421,7 +439,14 @@ class PurchaseReportController extends Controller
 
         foreach ($grouped as &$group) {
             $group['closing']      = $group['opening'] + $group['inward'] - $group['outward'];
-            $group['avg_cost']     = $avgCosts[$group['raw_material_id']] ?? 0;
+            $avgCost = $avgCosts[$group['raw_material_id']] ?? 0;
+            if ($avgCost == 0 && !empty($group['raw_material_id'])) {
+                $latestStockPrice = \App\Models\StockEntryItem::where('raw_material_id', $group['raw_material_id'])->where('price', '>', 0)->latest('id')->value('price');
+                if ($latestStockPrice) {
+                    $avgCost = (float)$latestStockPrice;
+                }
+            }
+            $group['avg_cost']     = $avgCost;
             $group['closing_cost'] = $group['closing'] * $group['avg_cost'];
         }
         unset($group);

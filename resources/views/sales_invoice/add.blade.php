@@ -1,5 +1,55 @@
 @extends('layouts.common')
 @section('title', ($invoice ? 'Edit' : 'Add') . ' Sales Invoice - ' . env('WEBSITE_NAME'))
+@section('styles')
+<style>
+    .ui-autocomplete {
+        z-index: 10000 !important;
+        max-height: 320px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #d9d8e3 !important;
+        padding: 4px !important;
+        background: #ffffff !important;
+    }
+    .ui-autocomplete::-webkit-scrollbar {
+        width: 6px;
+    }
+    .ui-autocomplete::-webkit-scrollbar-track {
+        background: #f8f9fa;
+    }
+    .ui-autocomplete::-webkit-scrollbar-thumb {
+        background: #d0d2de;
+        border-radius: 4px;
+    }
+    .ui-menu-item {
+        list-style: none;
+        margin: 2px 0;
+    }
+    .ui-menu-item .ui-menu-item-wrapper {
+        padding: 7px 12px !important;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: #5d596c !important;
+        border-radius: 6px !important;
+        transition: none;
+        cursor: pointer;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border: none !important;
+    }
+    .ui-menu-item .ui-menu-item-wrapper.ui-state-active,
+    .ui-menu-item .ui-menu-item-wrapper:hover {
+        background-color: #7367f0 !important;
+        color: #ffffff !important;
+        margin: 0 !important;
+        border: none !important;
+    }
+</style>
+@endsection
 @section('content')
     <div class="container-xxl section-padding">
         <div class="row">
@@ -75,36 +125,40 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6 col-xl-4" id="customer_container">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="customer_id" name="customer_id"
-                                            class="select2 form-select @error('customer_id') is-invalid @enderror"
-                                            data-placeholder="Select Customer/Buyer"
-                                            {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'disabled' : '' }}>
-                                            <option value="">Select Customer/Buyer</option>
-                                            @foreach ($customers as $customer)
-                                                @php
-                                                    $custAddr = implode(', ', array_filter([
-                                                        $customer->address_line_1,
-                                                        $customer->address_line_2,
-                                                        $customer->address_line_3,
-                                                        $customer->city ? $customer->city->name : '',
-                                                        $customer->state ? $customer->state->name : '',
-                                                        $customer->zip_code
-                                                    ]));
-                                                @endphp
-                                                <option value="{{ $customer->id }}"
-                                                    data-state-id="{{ $customer->state_id }}"
-                                                    data-pincode="{{ $customer->zip_code }}"
-                                                    data-sales-discount="{{ $customer->sales_discount ?? 0 }}"
-                                                    data-address="{{ $custAddr }}"
-                                                    {{ old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id ? 'selected' : '' }}>
-                                                    {{ $customer->name }} ({{ $customer->code }})</option>
-                                            @endforeach
-                                        </select>
-                                        @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
-                                            <input type="hidden" name="customer_id" value="{{ $invoice->customer_id }}">
+                                    <div class="form-floating form-floating-outline position-relative">
+                                        @php
+                                            $initialCustomerName = '';
+                                            $initialCustomerId = old('customer_id', isset($invoice) ? $invoice->customer_id : '');
+                                            if ($initialCustomerId) {
+                                                $initCust = (isset($invoice) && $invoice->customer && $invoice->customer->id == $initialCustomerId)
+                                                    ? $invoice->customer
+                                                    : \App\Models\Customer::with('city')->find($initialCustomerId);
+                                                if ($initCust) {
+                                                    $cityName = $initCust->city->city_name ?? ($initCust->place->place_name ?? '');
+                                                    $codeStr = $initCust->code ? " ({$initCust->code})" : "";
+                                                    $locationStr = $cityName ? " - {$cityName}" : "";
+                                                    $initialCustomerName = "{$initCust->name}{$codeStr}{$locationStr}";
+                                                }
+                                            }
+                                        @endphp
+                                        <input type="text"
+                                            id="customer_search"
+                                            class="form-control @error('customer_id') is-invalid @enderror"
+                                            placeholder="Type Customer Name, Code, City..."
+                                            value="{{ $initialCustomerName }}"
+                                            autocomplete="off"
+                                            style="padding-right: 38px;"
+                                            {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                        
+                                        <input type="hidden" name="customer_id" id="customer_id" value="{{ $initialCustomerId }}">
+                                        <label for="customer_search">Customer <span class="text-danger">*</span></label>
+                                        
+                                        @if (!isset($invoice) || !($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                            <button type="button" id="clear_customer_btn" class="btn p-0 text-muted position-absolute d-flex align-items-center justify-content-center" style="right: 10px; top: 50%; transform: translateY(-50%); border: none; background: transparent; width: 26px; height: 26px; z-index: 5; cursor: pointer; {{ empty($initialCustomerId) ? 'display: none;' : '' }}" title="Clear Customer">
+                                                <i class="ri ri-close-circle-fill text-secondary fs-5" style="font-size: 20px; transition: color 0.2s;"></i>
+                                            </button>
                                         @endif
-                                        <label for="customer_id">Customer <span class="text-danger">*</span></label>
+                                        
                                         @error('customer_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                         @enderror
@@ -171,7 +225,7 @@
                                         <label for="remarks">Remarks</label>
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-xl-4" id="agent_container">
+                                <div class="col-md-6 col-xl-4" id="agent_container" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]) ? 'display: none;' : '' }}">
                                     <div class="form-floating form-floating-outline">
                                         <select id="agent_id" name="agent_id" class="select2 form-select"
                                             data-placeholder="Select Sales Executive">
@@ -227,7 +281,6 @@
                                 @endif
                             </div>
 
-                            <!-- Raw Material Store Stock Item Search Section (Fabric & Accessories) -->
                             <div class="row mb-4" id="store_stock_search_section" style="display: none;">
                                 <div class="col-md-7">
                                     <div class="form-floating form-floating-outline position-relative">
@@ -248,7 +301,6 @@
                                 </div>
                             </div>
 
-                            <!-- Finished Goods Barcode Scan Section -->
                             @if (!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
                                 <div class="row mb-4" id="barcode_scan_section">
                                     <div class="col-md-6 text-center">
@@ -267,10 +319,8 @@
                                                 <i class="ri ri-camera-line me-1"></i> CAMERA
                                             </button>
                                         </div>
-                                        <div id="reader" class="rounded overflow-hidden mb-3 mx-auto"
-                                            style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
-                                        <div id="scan_alert" class="alert alert-danger mt-3 mx-auto"
-                                            style="display: none; max-width: 500px; text-align: left;">
+                                        <div id="reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
+                                        <div id="scan_alert" class="alert alert-danger mt-3 mx-auto" style="display: none; max-width: 500px; text-align: left;">
                                             <span id="scan_msg"></span>
                                         </div>
                                     </div>
@@ -286,8 +336,7 @@
                             <div class="table-responsive">
                                 <div class="art-no-filter-row art-no-filter-row--items mt-3 mb-2" id="art_no_filter_container">
                                     <div class="form-floating form-floating-outline art-no-filter-row--open-orders-items">
-                                        <input type="text" id="art_no_filter" class="form-control art-no-filter-input"
-                                            placeholder="Search by Art No or Size">
+                                        <input type="text" id="art_no_filter" class="form-control art-no-filter-input" placeholder="Search by Art No or Size">
                                         <label for="art_no_filter">Search By Art No / Size</label>
                                     </div>
                                 </div>
@@ -312,7 +361,7 @@
                                             <th style="width: 5%;">S.No.</th>
                                             <th style="width: 22%;">Stock Item</th>
                                             <th class="rm-style-col" style="width: 12%;">Style</th>
-                                            <th style="width: 12%;">Art No</th>
+                                            <th class="rm-art-col" style="width: 12%;">Art No</th>
                                             <th style="width: 8%;">UOM</th>
                                             <th style="width: 10%;">HSN Code *</th>
                                             <th style="width: 10%;">Quantity *</th>
@@ -323,7 +372,7 @@
                                     </thead>
                                     <tbody id="item-rows">
                                         @php
-                                            $isCurrentRawMaterialStore = in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2]);
+                                            $isCurrentRawMaterialStore = in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]);
                                             $items = old('items');
                                             if (!$items && isset($invoice)) {
                                                 $items = $invoice->items
@@ -579,7 +628,7 @@
                                                             <span class="style-text">{{ $row->style_name ?? '-' }}</span>
                                                             <input type="hidden" name="items[{{ $index }}][style_id]" class="style-id" value="{{ $row->style_id ?? '' }}">
                                                         </td>
-                                                        <td>
+                                                        <td class="rm-art-col" style="{{ (int)old('store_id', isset($invoice) ? $invoice->store_id : 3) == 15 ? 'display: none;' : '' }}">
                                                             <span class="art-no-text">{{ $row->art_no ?? '-' }}</span>
                                                             <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
                                                         </td>
@@ -590,26 +639,21 @@
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="text" class="form-control hsn-sac"
-                                                                    name="items[{{ $index }}][hsn_sac]"
-                                                                    value="{{ $row->hsn_sac ?? '' }}"
-                                                                    placeholder="HSN Code" required
-                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
-                                                                <label>HSN Code <span class="text-danger">*</span></label>
+                                                                <input type="text" class="form-control hsn-sac @error('items.' . $index . '.hsn_sac') is-invalid @enderror" name="items[{{ $index }}][hsn_sac]" value="{{ old('items.' . $index . '.hsn_sac', $row->hsn_sac ?? '') }}" placeholder="HSN Code" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <label>HSN Code *</label>
                                                             </div>
+                                                            @error('items.' . $index . '.hsn_sac')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0.01" step="any"
-                                                                    class="form-control qty"
-                                                                    name="items[{{ $index }}][quantity]"
-                                                                    value="{{ $row->quantity ?? '' }}"
-                                                                    data-original-qty="{{ $row->quantity ?? 0 }}"
-                                                                    data-stock="{{ $row->stock_qty ?? '' }}"
-                                                                    placeholder="Qty"
-                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <input type="number" min="0.01" step="any" class="form-control qty @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" value="{{ old('items.' . $index . '.quantity', $row->quantity ?? '') }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-stock="{{ $row->stock_qty ?? '' }}" placeholder="Qty" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
                                                                 <label>Qty *</label>
                                                             </div>
+                                                            @error('items.' . $index . '.quantity')
+                                                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                                            @enderror
                                                             <div class="qty-error text-danger small" style="display:none;"></div>
                                                             @if (isset($row->stock_qty) && $row->stock_qty !== '')
                                                                 <small class="text-muted d-block" style="font-weight: 500;">Stock: {{ max(0, $row->stock_qty) }}</small>
@@ -617,20 +661,13 @@
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0.01" step="any"
-                                                                    class="form-control rate"
-                                                                    name="items[{{ $index }}][rate]"
-                                                                    value="{{ $row->rate ?? '' }}" placeholder="Price"
-                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <input type="number" min="0.01" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
                                                                 <label>Price *</label>
                                                             </div>
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="text" class="form-control amount"
-                                                                    name="items[{{ $index }}][amount]"
-                                                                    value="{{ $row->amount ?? '' }}" placeholder="Amount"
-                                                                    readonly>
+                                                                <input type="text" class="form-control amount" name="items[{{ $index }}][amount]" value="{{ $row->amount ?? '' }}" placeholder="Amount" readonly>
                                                                 <label>Amount *</label>
                                                             </div>
                                                         </td>
@@ -655,75 +692,41 @@
                                                                 <div class="small text-primary">Barcode: {{ $row->sku }}
                                                                 </div>
                                                             @endif
-                                                            <input type="hidden" class="invoice-item-db-id"
-                                                                name="items[{{ $index }}][id]"
-                                                                value="{{ $row->id ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][brand_id]"
-                                                                class="brand-id" value="{{ $row->brand_id ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name"
-                                                                value="{{ $row->brand_name ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][item_id]"
-                                                                class="item-id" value="{{ $row->item_id ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name"
-                                                                value="{{ $row->item_name ?? '' }}">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][sleeve_type]"
-                                                                class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][sku]"
-                                                                class="sku" value="{{ $row->sku ?? '' }}">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][stock_entry_item_id]"
-                                                                class="stock-entry-item-id"
-                                                                value="{{ $row->stock_entry_item_id ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][max_qty]" class="max-qty"
-                                                                value="{{ $row->max_qty ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty"
-                                                                value="{{ $row->stock_qty ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][is_extra]"
-                                                                class="is-extra" value="{{ $row->is_extra ?? '' }}">
+                                                            <input type="hidden" class="invoice-item-db-id" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][item_id]" class="item-id" value="{{ $row->item_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name" value="{{ $row->item_name ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][sleeve_type]" class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][sku]" class="sku" value="{{ $row->sku ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][max_qty]" class="max-qty" value="{{ $row->max_qty ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty" value="{{ $row->stock_qty ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][is_extra]" class="is-extra" value="{{ $row->is_extra ?? '' }}">
                                                         </td>
                                                         <td>
-                                                            <span
-                                                                class="color-text">{{ !empty($row->api_color) ? $row->api_color : (!empty($row->color_name) ? $row->color_name : '-') }}</span>
-                                                            <input type="hidden" name="items[{{ $index }}][color_id]"
-                                                                class="color-id" value="{{ $row->color_id ?? '' }}">
-                                                            <input type="hidden"
-                                                                name="items[{{ $index }}][api_color]"
-                                                                class="api-color" value="{{ $row->api_color ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name"
-                                                                value="{{ $row->color_name ?? '' }}">
+                                                            <span class="color-text">{{ !empty($row->api_color) ? $row->api_color : (!empty($row->color_name) ? $row->color_name : '-') }}</span>
+                                                            <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id" value="{{ $row->color_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][api_color]" class="api-color" value="{{ $row->api_color ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name" value="{{ $row->color_name ?? '' }}">
                                                         </td>
                                                         <td>
                                                             <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
-                                                            <input type="hidden" name="items[{{ $index }}][art_no]"
-                                                                class="art-no" value="{{ $row->art_no ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
                                                         </td>
                                                         <td>
                                                             <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
-                                                            <input type="hidden" name="items[{{ $index }}][uom_id]"
-                                                                class="uom-id" value="{{ $row->uom_id ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code"
-                                                                value="{{ $row->uom_code ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code" value="{{ $row->uom_code ?? '' }}">
                                                         </td>
                                                         <td>
                                                             <span class="size-text">{{ $row->size_name ?? '' }}</span>
-                                                            <input type="hidden" name="items[{{ $index }}][size]"
-                                                                class="size-id" value="{{ $row->size ?? '' }}">
-                                                            <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name"
-                                                                value="{{ $row->size_name ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][size]" class="size-id" value="{{ $row->size ?? '' }}">
+                                                            <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name" value="{{ $row->size_name ?? '' }}">
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0" step="any"
-                                                                    class="form-control qty"
-                                                                    name="items[{{ $index }}][quantity]"
-                                                                    value="{{ $row->quantity ?? '' }}"
-                                                                    data-original-qty="{{ $row->quantity ?? 0 }}"
-                                                                    data-max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}"
-                                                                    data-stock="{{ $row->stock_qty ?? '' }}"
-                                                                    max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}"
-                                                                    placeholder="Qty"
-                                                                    {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <input type="number" min="0" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}" placeholder="Qty" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
                                                                 <label>Qty *</label>
                                                             </div>
                                                             <div class="qty-error text-danger small" style="display:none;">
@@ -732,31 +735,21 @@
                                                                 <div class="text-danger small mt-1">{{ $message }}</div>
                                                             @enderror
                                                             @if (isset($row->max_qty) && $row->max_qty !== '' && (!isset($row->is_open_order) || $row->is_open_order != 1))
-                                                                <small class="text-info d-block">Ordered:
-                                                                    {{ $row->max_qty }}</small>
+                                                                <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                             @endif
                                                             @if (isset($row->stock_qty) && $row->stock_qty !== '')
-                                                                <small
-                                                                    class="{{ max(0, $row->stock_qty) < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block"
-                                                                    style="font-weight: 500;">Stock:
-                                                                    {{ max(0, $row->stock_qty) }}</small>
+                                                                <small class="{{ max(0, $row->stock_qty) < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block" style="font-weight: 500;">Stock: {{ max(0, $row->stock_qty) }}</small>
                                                             @endif
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0" step="any"
-                                                                    class="form-control mrp"
-                                                                    name="items[{{ $index }}][mrp]"
-                                                                    value="{{ $row->mrp ?? '' }}" placeholder="MRP" readonly>
+                                                                <input type="number" min="0" step="any" class="form-control mrp" name="items[{{ $index }}][mrp]" value="{{ $row->mrp ?? '' }}" placeholder="MRP" readonly>
                                                                 <label>MRP</label>
                                                             </div>
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0" step="any"
-                                                                    class="form-control rate"
-                                                                    name="items[{{ $index }}][rate]"
-                                                                    value="{{ $row->rate ?? '' }}" placeholder="Price" readonly>
+                                                                <input type="number" min="0" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price" readonly>
                                                                 <label>Price *</label>
                                                             </div>
                                                             @error("items.$index.rate")
@@ -765,10 +758,7 @@
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="text" class="form-control amount"
-                                                                    name="items[{{ $index }}][amount]"
-                                                                    value="{{ $row->amount ?? '' }}" placeholder="Amount"
-                                                                    readonly>
+                                                                <input type="text" class="form-control amount" name="items[{{ $index }}][amount]" value="{{ $row->amount ?? '' }}" placeholder="Amount" readonly>
                                                                 <label>Amount *</label>
                                                             </div>
                                                         </td>
@@ -793,7 +783,6 @@
                         </div>
                     </div>
 
-                    <!-- Open Order Items Section -->
                     <div class="card mb-4" id="open_order_section"
                         style="display: {{ !empty($openOrderItems) ? 'block' : 'none' }}; border-left: 3px solid #00bcd4;">
                         <div class="card-header">
@@ -929,36 +918,24 @@
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="number" name="items[{{ $index }}][mrp]"
-                                                                class="form-control mrp-input"
-                                                                value="{{ $row->mrp ?? '' }}" min="0" readonly>
+                                                            <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $row->mrp ?? '' }}" min="0" readonly>
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="number"
-                                                                name="items[{{ $index }}][rate]"
-                                                                class="form-control rate-input open-rate"
-                                                                value="{{ $row->rate ?? '' }}" step="0.01"
-                                                                min="0" readonly>
+                                                            <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input open-rate" value="{{ $row->rate ?? '' }}" step="0.01" min="0" readonly>
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <div class="form-floating form-floating-outline">
-                                                            <input type="text"
-                                                                name="items[{{ $index }}][amount]"
-                                                                class="form-control amount-input amount open-amount"
-                                                                value="{{ $row->amount ?? '' }}" readonly
-                                                                tabindex="-1">
+                                                            <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input amount open-amount" value="{{ $row->amount ?? '' }}" readonly tabindex="-1">
                                                         </div>
                                                     </td>
                                                     <td>
                                                         @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
                                                             <span class="text-muted">-</span>
                                                         @else
-                                                            <button type="button"
-                                                                class="btn btn-danger btn-sm open_delete_row"><i
-                                                                    class="ri ri-delete-bin-line"></i></button>
+                                                            <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
                                                         @endif
                                                     </td>
                                                 </tr>
@@ -985,33 +962,20 @@
                                                 @php
                                                     $currentInvStatus = old('invoice_status');
                                                     if (empty($currentInvStatus)) {
-                                                        $currentInvStatus =
-                                                            isset($invoice) && !empty($invoice->invoice_status)
-                                                                ? $invoice->invoice_status
-                                                                : 'Draft';
+                                                        $currentInvStatus = isset($invoice) && !empty($invoice->invoice_status) ? $invoice->invoice_status : 'Draft';
                                                     }
                                                 @endphp
                                                 <select name="invoice_status" id="invoice_status"
                                                     class="form-select select2 @error('invoice_status') is-invalid @enderror"
                                                     data-placeholder="Select Invoice Status">
                                                     <option value="">Select Invoice Status</option>
-                                                    <option value="Draft"
-                                                        {{ $currentInvStatus == 'Draft' ? 'selected' : '' }}>Draft
-                                                    </option>
-                                                    <option value="Unpaid/Credit"
-                                                        {{ $currentInvStatus == 'Unpaid/Credit' ? 'selected' : '' }}>
-                                                        Unpaid/Credit</option>
-                                                    <option value="Paid"
-                                                        {{ $currentInvStatus == 'Paid' ? 'selected' : '' }}>Paid</option>
-                                                    <option value="Partially Paid"
-                                                        {{ $currentInvStatus == 'Partially Paid' ? 'selected' : '' }}>
-                                                        Partially Paid</option>
-                                                    <option value="Cancelled"
-                                                        {{ $currentInvStatus == 'Cancelled' ? 'selected' : '' }}>
-                                                        Cancelled</option>
+                                                    <option value="Draft" {{ $currentInvStatus == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                                    <option value="Unpaid/Credit" {{ $currentInvStatus == 'Unpaid/Credit' ? 'selected' : '' }}>Unpaid/Credit</option>
+                                                    <option value="Paid" {{ $currentInvStatus == 'Paid' ? 'selected' : '' }}>Paid</option>
+                                                    <option value="Partially Paid" {{ $currentInvStatus == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
+                                                    <option value="Cancelled" {{ $currentInvStatus == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
                                                 </select>
-                                                <label for="invoice_status">Invoice Status <span
-                                                        class="text-danger">*</span></label>
+                                                <label for="invoice_status">Invoice Status <span class="text-danger">*</span></label>
                                                 @error('invoice_status')
                                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                                 @enderror
@@ -1038,27 +1002,21 @@
                                         <!-- Cheque / UPI field -->
                                         <div class="col-md-12" id="extra_field" style="display:none;">
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" name="extra_input"
-                                                    id="extra_input" placeholder="Enter Cheque / UPI No"
-                                                    value="{{ old('extra_input', isset($invoice) ? $invoice->extra_input : '') }}">
+                                                <input type="text" class="form-control" name="extra_input" id="extra_input" placeholder="Enter Cheque / UPI No" value="{{ old('extra_input', isset($invoice) ? $invoice->extra_input : '') }}">
                                                 <label id="extra_label">Cheque / UPI No</label>
                                             </div>
                                         </div>
 
                                         <div class="col-md-6">
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control due_date" id="due_date"
-                                                    name="due_date"
-                                                    value="{{ old('due_date', isset($invoice) ? ($invoice->due_date ? $invoice->due_date->format('d-m-Y') : '') : date('d-m-Y')) }}">
+                                                <input type="text" class="form-control due_date" id="due_date" name="due_date" value="{{ old('due_date', isset($invoice) ? ($invoice->due_date ? $invoice->due_date->format('d-m-Y') : '') : date('d-m-Y')) }}">
                                                 <label for="due_date">Due Date</label>
                                             </div>
                                         </div>
 
                                         <div class="col-md-6">
                                             <div class="form-floating form-floating-outline mb-4">
-                                                <input type="number" step="any" min="0" class="form-control"
-                                                    id="other_charges" name="other_charges" placeholder="Courier Charge"
-                                                    value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
+                                                <input type="number" step="any" min="0" class="form-control" id="other_charges" name="other_charges" placeholder="Courier Charge" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
                                                 <label for="other_charges">Courier Charge</label>
                                             </div>
                                         </div>
@@ -1072,8 +1030,7 @@
 
                                         <div class="col-md-12">
                                             <div class="form-floating form-floating-outline">
-                                                <input type="file" class="form-control" id="signature_file"
-                                                    name="signature_file" accept=".jpg, .jpeg, .png">
+                                                <input type="file" class="form-control" id="signature_file" name="signature_file" accept=".jpg, .jpeg, .png">
                                                 <label for="signature_file">Authorized Signature / Stamp Upload</label>
                                                 @if (isset($invoice) && $invoice->signature_file)
                                                     @php
@@ -1091,17 +1048,11 @@
                                                                 $invoice->signature_file,
                                                         );
                                                     @endphp
-                                                    <div
-                                                        class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
+                                                    <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                         @if ($isSigImage)
-                                                            <img src="{{ $sigUrl }}"
-                                                                class="rounded cursor-pointer view-image"
-                                                                data-image="{{ $sigUrl }}" width="45"
-                                                                height="45" style="object-fit: cover;"
-                                                                alt="Signature">
+                                                            <img src="{{ $sigUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $sigUrl }}" width="45" height="45" style="object-fit: cover;" alt="Signature">
                                                         @else
-                                                            <a href="{{ $sigUrl }}" target="_blank"
-                                                                class="text-decoration-none d-flex align-items-center px-2">
+                                                            <a href="{{ $sigUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
                                                                 @if (strtolower($sigExt) == 'pdf')
                                                                     <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
                                                                 @else
@@ -1118,9 +1069,7 @@
 
                                         <div class="col-md-12">
                                             <div class="form-floating form-floating-outline">
-                                                <input type="file" class="form-control" id="attachment_file"
-                                                    name="attachment_file"
-                                                    accept = ".pdf, .doc, .docx, .jpg, .jpeg, .png">
+                                                <input type="file" class="form-control" id="attachment_file" name="attachment_file" accept = ".pdf, .doc, .docx, .jpg, .jpeg, .png">
                                                 <label for="attachment_file">Attachments</label>
                                                 @if (isset($invoice) && $invoice->attachment_file)
                                                     @php
@@ -1138,17 +1087,11 @@
                                                                 $invoice->attachment_file,
                                                         );
                                                     @endphp
-                                                    <div
-                                                        class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
+                                                    <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                         @if ($isAttImage)
-                                                            <img src="{{ $attUrl }}"
-                                                                class="rounded cursor-pointer view-image"
-                                                                data-image="{{ $attUrl }}" width="45"
-                                                                height="45" style="object-fit: cover;"
-                                                                alt="Attachment">
+                                                            <img src="{{ $attUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $attUrl }}" width="45" height="45" style="object-fit: cover;" alt="Attachment">
                                                         @else
-                                                            <a href="{{ $attUrl }}" target="_blank"
-                                                                class="text-decoration-none d-flex align-items-center px-2">
+                                                            <a href="{{ $attUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
                                                                 @if (strtolower($attExt) == 'pdf')
                                                                     <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
                                                                 @else
@@ -1193,66 +1136,49 @@
                                                 </div>
                                                 <div class="col-md-6 col-lg-4">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            id="show_discount" name="show_fields[]" value="discount"
-                                                            {{ in_array('discount', $selected_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="show_discount">Show
-                                                            Discount</label>
+                                                        <input class="form-check-input" type="checkbox" id="show_discount" name="show_fields[]" value="discount" {{ in_array('discount', $selected_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="show_discount">Show Discount</label>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6 col-lg-4">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="show_tax"
-                                                            name="show_fields[]" value="tax"
-                                                            {{ in_array('tax', $selected_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="show_tax">Show Tax
-                                                            (GST/IGST)</label>
+                                                        <input class="form-check-input" type="checkbox" id="show_tax" name="show_fields[]" value="tax" {{ in_array('tax', $selected_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="show_tax">Show Tax (GST/IGST)</label>
                                                     </div>
                                                 </div>
 
                                                 <div class="col-md-6 col-lg-4 mt-2">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            id="show_subtotal" name="show_fields[]" value="subtotal"
-                                                            {{ in_array('subtotal', $selected_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="show_subtotal">Show Sub
-                                                            Total</label>
+                                                        <input class="form-check-input" type="checkbox" id="show_subtotal" name="show_fields[]" value="subtotal" {{ in_array('subtotal', $selected_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="show_subtotal">Show Sub Total</label>
                                                     </div>
                                                 </div>
 
                                                 <div class="col-md-6 col-lg-4 mt-2">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            id="show_grandtotal" name="show_fields[]" value="grandtotal"
-                                                            {{ in_array('grandtotal', $selected_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="show_grandtotal">Show Grand
-                                                            Total</label>
+                                                    <div class="form-check">    
+                                                        <input class="form-check-input" type="checkbox" id="show_grandtotal" name="show_fields[]" value="grandtotal" {{ in_array('grandtotal', $selected_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="show_grandtotal">Show Grand Total</label>
                                                     </div>
                                                 </div>
 
-                                                <div class="col-md-6 col-lg-4 mt-2">
+                                                <div class="col-md-6 col-lg-4 mt-2" id="show_mrp_container" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]) ? 'display: none;' : '' }}">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="show_mrp"
-                                                            name="show_fields[]" value="mrp"
-                                                            {{ in_array('mrp', $selected_fields) ? 'checked' : '' }}>
+                                                        <input class="form-check-input" type="checkbox" id="show_mrp" name="show_fields[]" value="mrp" {{ in_array('mrp', $selected_fields) ? 'checked' : '' }}>
                                                         <label class="form-check-label" for="show_mrp">Show MRP</label>
                                                     </div>
                                                 </div>
 
                                                 <div class="col-md-6 col-lg-4 mt-2">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="show_price"
-                                                            name="show_fields[]" value="price"
-                                                            {{ in_array('price', $selected_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="show_price">Show
-                                                            Price</label>
+                                                        <input class="form-check-input" type="checkbox" id="show_price" name="show_fields[]" value="price" {{ in_array('price', $selected_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="show_price">Show Price</label>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <!-- Show Fields in Delivery Order PDF -->
-                                        <div class="border-top pt-5 mt-5" id="delivery_order_show_fields_section" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2]) ? 'display: none;' : '' }}">
+                                        <div class="border-top pt-5 mt-5" id="delivery_order_show_fields_section" style="{{ in_array((int)old('store_id', isset($invoice) ? $invoice->store_id : 3), [1, 2, 15]) ? 'display: none;' : '' }}">
                                             <h6 class="fw-bold mb-2">Show in Delivery Order PDF</h6>
                                             <div class="row">
                                                 @php
@@ -1265,34 +1191,22 @@
                                                 @endphp
                                                 <div class="col-md-6 col-lg-4 mt-2">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            id="delivery_show_mrp" name="delivery_show_fields[]"
-                                                            value="mrp"
-                                                            {{ in_array('mrp', $selected_delivery_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="delivery_show_mrp">Show
-                                                            Retail Price (MRP)</label>
+                                                        <input class="form-check-input" type="checkbox" id="delivery_show_mrp" name="delivery_show_fields[]" value="mrp" {{ in_array('mrp', $selected_delivery_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="delivery_show_mrp">Show Retail Price (MRP)</label>
                                                     </div>
                                                 </div>
 
                                                 <div class="col-md-6 col-lg-4 mt-2">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            id="delivery_show_price" name="delivery_show_fields[]"
-                                                            value="price"
-                                                            {{ in_array('price', $selected_delivery_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="delivery_show_price">Show
-                                                            Unit Price</label>
+                                                        <input class="form-check-input" type="checkbox" id="delivery_show_price" name="delivery_show_fields[]" value="price" {{ in_array('price', $selected_delivery_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="delivery_show_price">Show Unit Price</label>
                                                     </div>
                                                 </div>
 
                                                 <div class="col-md-6 col-lg-4 mt-2">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            id="delivery_show_art_no" name="delivery_show_fields[]"
-                                                            value="art_no"
-                                                            {{ in_array('art_no', $selected_delivery_fields) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="delivery_show_art_no">Show
-                                                            Art No</label>
+                                                        <input class="form-check-input" type="checkbox" id="delivery_show_art_no" name="delivery_show_fields[]" value="art_no" {{ in_array('art_no', $selected_delivery_fields) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="delivery_show_art_no">Show Art No</label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1310,26 +1224,19 @@
                                     <div class="summary-box px-2">
                                         <div class="d-flex justify-content-between align-items-center mb-5">
                                             <span class="text-secondary fw-medium">Total Quantity:</span>
-                                            <span class="fw-bold mb-0"
-                                                id="total_qty_val">{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}</span>
-                                            <input type="hidden" name="total_qty" id="total_qty"
-                                                value="{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}">
+                                            <span class="fw-bold mb-0" id="total_qty_val">{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}</span>
+                                            <input type="hidden" name="total_qty" id="total_qty" value="{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}">
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mb-5">
                                             <span class="text-secondary fw-medium">Sub total:</span>
-                                            <span class="fw-bold mb-0"
-                                                id="sub_total_val">{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}</span>
-                                            <input type="hidden" name="sub_total" id="sub_total"
-                                                value="{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}">
+                                            <span class="fw-bold mb-0" id="sub_total_val">{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}</span>
+                                            <input type="hidden" name="sub_total" id="sub_total" value="{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}">
                                         </div>
                                         <div class="d-flex justify-content-between align-items-start mb-3">
                                             <div class="d-flex flex-column">
                                                 <div class="d-flex align-items-center">
                                                     <span class="text-secondary fw-medium me-2">Sales Discount (%):</span>
-                                                    <input type="number" step="any" min="0"
-                                                        class="form-control form-control-sm text-end @error('sales_discount') is-invalid @enderror"
-                                                        style="width: 80px;" name="sales_discount" id="sales_discount"
-                                                        value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount > 0 ? $invoice->sales_discount : $invoice->discount_percent, 2, '.', '') : '0.00') }}">
+                                                    <input type="number" step="any" min="0" class="form-control form-control-sm text-end @error('sales_discount') is-invalid @enderror" style="width: 80px;" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount > 0 ? $invoice->sales_discount : $invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                                 </div>
                                                 @error('sales_discount')
                                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -1344,10 +1251,7 @@
                                             <div class="d-flex flex-column">
                                                 <div class="d-flex align-items-center">
                                                     <span class="text-secondary fw-medium me-2">Box Discount (₹/pc):</span>
-                                                    <input type="number" step="any" min="0"
-                                                        class="form-control form-control-sm text-end" style="width: 80px;"
-                                                        name="box_discount_amount" id="box_discount_amount"
-                                                        value="{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}">
+                                                    <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="box_discount_amount" id="box_discount_amount" value="{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}">
                                                 </div>
                                                 @error('box_discount_amount')
                                                     <div class="text-danger small mt-1">{{ $message }}</div>
@@ -2447,91 +2351,167 @@
                 }, 0);
             });
 
-            $('#customer_id').on('change', function() {
-                let customerId = $(this).val();
-                if (customerId) {
-                    $.ajax({
-                        url: "{{ url('get-customer-details') }}/" + customerId,
-                        type: "GET",
-                        beforeSend: function() {
-                            $('#address').val('Fetching delivery address...').prop('readonly',
-                                true);
-                        },
-                        success: function(res) {
-                            if (res.success && res.address) {
-                                $('#address').val(res.address).prop('readonly', true);
-                            } else {
-                                $('#address').val('').prop('readonly', true);
-                            }
-                        },
-                        error: function() {
-                            $('#address').val('').prop('readonly', true);
-                        }
-                    });
-
-                    let salesDiscount = $(this).find(':selected').data('sales-discount') || 0;
-                    $('#sales_discount').val(parseFloat(salesDiscount).toFixed(2));
-
-                    let customerStateId = $(this).find(':selected').data('state-id');
-                    let companyStateId = "{{ $setting->state_id ?? $web_settings->state_id ?? 1 }}";
-
-                    if (customerStateId && companyStateId) {
-                        if (customerStateId == companyStateId) {
-                            $('#other_state_no').prop('checked', true).trigger('change');
-                            $('#cgst_percent').val("{{ $setting->cgst ?? $web_settings->cgst ?? 2.5 }}");
-                            $('#sgst_percent').val("{{ $setting->sgst ?? $web_settings->sgst ?? 2.5 }}");
-                            $('#igst_percent').val(0);
-                        } else {
-                            $('#other_state_yes').prop('checked', true).trigger('change');
-                            $('#igst_percent').val("{{ $setting->igst ?? $web_settings->igst ?? 5.0 }}");
-                            $('#cgst_percent').val(0);
-                            $('#sgst_percent').val(0);
-                        }
-                    }
-                    let customerPincode = $(this).find(':selected').data('pincode');
-                    let companyPincode = "{{ $setting->zip_code ?? $web_settings->zip_code ?? '' }}";
-
-                    if (!customerPincode) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Danger',
-                            text: 'Customer zipcode is empty.'
-                        });
-                    }
-
-                    if (customerPincode && companyPincode) {
+            if ($('#customer_search').length) {
+                $('#customer_search').autocomplete({
+                    source: function(request, response) {
                         $.ajax({
-                            url: "{{ url('sales_invoices/calculate-distance') }}",
-                            type: "GET",
+                            url: "{{ url('ajax/search_customers') }}",
+                            dataType: 'json',
                             data: {
-                                from_pincode: companyPincode,
-                                to_pincode: customerPincode
+                                q: request.term
                             },
-                            beforeSend: function() {
-                                $('#transport_distance').attr('placeholder', 'Calculating...');
-                            },
-                            success: function(res) {
-                                if (res.success && res.distance) {
-                                    $('#transport_distance').val(Math.round(res.distance)).prop(
-                                        'readonly', true);
+                            success: function(data) {
+                                if (data.results && data.results.length > 0) {
+                                    response(data.results.map(function(item) {
+                                        return {
+                                            label: item.text,
+                                            value: item.text,
+                                            customer: item
+                                        };
+                                    }));
                                 } else {
-                                    $('#transport_distance').prop('readonly', false).attr(
-                                        'placeholder', 'Distance (in km)');
+                                    response([{
+                                        label: 'No customer found',
+                                        value: '',
+                                        noResult: true
+                                    }]);
                                 }
                             },
                             error: function() {
-                                $('#transport_distance').removeAttr('readonly').attr(
-                                    'placeholder', 'Distance (in km)');
+                                response([]);
                             }
                         });
-                    } else {
-                        $('#transport_distance').removeAttr('readonly').val('');
+                    },
+                    minLength: 1,
+                    focus: function(event, ui) {
+                        event.preventDefault();
+                    },
+                    select: function(event, ui) {
+                        event.preventDefault();
+                        if (ui.item && ui.item.noResult) {
+                            return false;
+                        }
+
+                        var data = ui.item.customer;
+                        $('#customer_id').val(data.id).trigger('change');
+                        $('#customer_search').val(data.text);
+                        $('#clear_customer_btn').show();
+
+                        if (data.address) {
+                            $('#address').val(data.address).prop('readonly', true);
+                        } else {
+                            $.ajax({
+                                url: "{{ url('get-customer-details') }}/" + data.id,
+                                type: "GET",
+                                beforeSend: function() {
+                                    $('#address').attr('placeholder', 'Fetching delivery address...').val('').prop('readonly', true);
+                                },
+                                success: function(res) {
+                                    if (res.success && res.address) {
+                                        $('#address').val(res.address).prop('readonly', true);
+                                    } else {
+                                        $('#address').attr('placeholder', 'Enter Delivery Address').val('').prop('readonly', false);
+                                    }
+                                },
+                                error: function() {
+                                    $('#address').attr('placeholder', 'Enter Delivery Address').val('').prop('readonly', false);
+                                }
+                            });
+                        }
+
+                        var salesDiscount = (data.sales_discount !== undefined) ? parseFloat(data.sales_discount) : 0;
+                        $('#sales_discount').val(parseFloat(salesDiscount).toFixed(2));
+
+                        var customerStateId = data.state_id;
+                        var companyStateId = "{{ $setting->state_id ?? $web_settings->state_id ?? 1 }}";
+
+                        if (customerStateId && companyStateId) {
+                            if (customerStateId == companyStateId) {
+                                $('#other_state_no').prop('checked', true).trigger('change');
+                                $('#cgst_percent').val("{{ $setting->cgst ?? $web_settings->cgst ?? 2.5 }}");
+                                $('#sgst_percent').val("{{ $setting->sgst ?? $web_settings->sgst ?? 2.5 }}");
+                                $('#igst_percent').val(0);
+                            } else {
+                                $('#other_state_yes').prop('checked', true).trigger('change');
+                                $('#igst_percent').val("{{ $setting->igst ?? $web_settings->igst ?? 5.0 }}");
+                                $('#cgst_percent').val(0);
+                                $('#sgst_percent').val(0);
+                            }
+                        }
+
+                        var customerPincode = data.pincode;
+                        var companyPincode = "{{ $setting->zip_code ?? $web_settings->zip_code ?? '' }}";
+
+                        if (!customerPincode) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Danger',
+                                text: 'Customer zipcode is empty.'
+                            });
+                        }
+
+                        if (customerPincode && companyPincode) {
+                            $.ajax({
+                                url: "{{ url('sales_invoices/calculate-distance') }}",
+                                type: "GET",
+                                data: {
+                                    from_pincode: companyPincode,
+                                    to_pincode: customerPincode
+                                },
+                                beforeSend: function() {
+                                    $('#transport_distance').attr('placeholder', 'Calculating...');
+                                },
+                                success: function(res) {
+                                    if (res.success && res.distance) {
+                                        $('#transport_distance').val(Math.round(res.distance)).prop('readonly', true);
+                                    } else {
+                                        $('#transport_distance').prop('readonly', false).attr('placeholder', 'Distance (in km)');
+                                    }
+                                },
+                                error: function() {
+                                    $('#transport_distance').removeAttr('readonly').attr('placeholder', 'Distance (in km)');
+                                }
+                            });
+                        } else {
+                            $('#transport_distance').removeAttr('readonly').val('');
+                        }
+
+                        calculateTotals();
+                        return false;
                     }
-                    calculateTotals();
-                } else {
+                }).autocomplete("instance")._renderItem = function(ul, item) {
+                    if (item.noResult) {
+                        return $("<li>")
+                            .append(`<div class="ui-menu-item-wrapper text-muted" style="font-size:13px;">No results found</div>`)
+                            .appendTo(ul);
+                    }
+
+                    return $("<li>")
+                        .append(`<div class="ui-menu-item-wrapper">${item.label}</div>`)
+                        .appendTo(ul);
+                };
+
+                $('#customer_search').on('input', function() {
+                    if (!$(this).val().trim()) {
+                        $('#customer_id').val('').trigger('change');
+                        $('#address').val('').prop('readonly', true);
+                        $('#sales_discount').val('0.00');
+                        $('#transport_distance').val('');
+                        $('#clear_customer_btn').hide();
+                        calculateTotals();
+                    }
+                });
+
+                $('#clear_customer_btn').on('click', function() {
+                    $('#customer_search').val('').focus();
+                    $('#customer_id').val('').trigger('change');
                     $('#address').val('').prop('readonly', true);
-                }
-            });
+                    $('#sales_discount').val('0.00');
+                    $('#transport_distance').val('');
+                    $(this).hide();
+                    calculateTotals();
+                });
+            }
 
             function calculateTotals() {
                 var subTotal = 0;
@@ -2749,38 +2729,54 @@
                 calculateTotals();
             });
 
-            $('#item-rows').on('input', '.qty, .mrp, .rate', function() {
+            $('#item-rows').on('input blur change', '.qty, .mrp, .rate', function() {
                 var row = $(this).closest('.item-row');
                 var qtyInput = row.find('.qty');
-                var qty = parseFloat(qtyInput.val()) || 0;
+                var qtyValStr = (qtyInput.val() || '').trim();
+                var qty = parseFloat(qtyValStr);
                 var maxAttr = qtyInput.attr('data-max');
                 var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
                 var stockAttr = qtyInput.attr('data-stock');
                 var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
-                var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0; //new line
-                var maxAllowedStock = !isNaN(stock) ? Math.max(stock, originalQty) : NaN; //new line
+                var originalQty = parseFloat(qtyInput.attr('data-original-qty')) || 0;
+                var maxAllowedStock = !isNaN(stock) ? Math.max(stock, originalQty) : NaN;
                 var errorDiv = row.find('.qty-error');
-
-                var isExistingItem = row.find('.invoice-item-db-id').length > 0 && row.find(
-                    '.invoice-item-db-id').val() !== ''; //new line
 
                 if (!isNaN(max) && qty > max) {
                     errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                     qtyInput.addClass('is-invalid');
-                    // } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) { // old line
-                } else if (!isNaN(maxAllowedStock) && qty > maxAllowedStock) { // new line
+                } else if (!isNaN(maxAllowedStock) && qty > maxAllowedStock) {
                     errorDiv.text('Exceeds stock!').show();
                     qtyInput.addClass('is-invalid');
                 } else {
-                    errorDiv.hide();
-                    qtyInput.removeClass('is-invalid');
+                    errorDiv.hide().text('');
+                    if (qty > 0) {
+                        qtyInput.removeClass('is-invalid');
+                        row.find('.text-danger').filter(function() { return $(this).text().trim() === 'This field is required'; }).hide();
+                    }
                 }
 
                 var mrp = parseFloat(row.find('.mrp').val()) || 0;
                 var rate = parseFloat(row.find('.rate').val()) || 0;
                 var price = rate > 0 ? rate : mrp;
-                row.find('.amount').val((qty * price).toFixed(2));
+                var safeQty = (isNaN(qty) || qty <= 0) ? 0 : qty;
+                row.find('.amount').val((safeQty * price).toFixed(2));
                 calculateTotals();
+            });
+
+            $(document).on('input', '.hsn-sac, #hsn_sac', function() {
+                var cleanVal = $(this).val().replace(/[^0-9]/g, '');
+                if ($(this).val() !== cleanVal) {
+                    $(this).val(cleanVal);
+                }
+            });
+
+            $('#item-rows').on('input blur change', '.hsn-sac', function() {
+                var val = ($(this).val() || '').trim();
+                if (val !== '') {
+                    $(this).removeClass('is-invalid');
+                    $(this).closest('td').find('.text-danger').filter(function() { return $(this).text().trim() === 'This field is required'; }).hide();
+                }
             });
 
             $('.common-form').on('submit', function(e) {
@@ -2807,12 +2803,13 @@
                 let isCancelled = ($('#invoice_status').val() === 'Cancelled');
 
                 if (!isCancelled) {
-                    // Validate regular items
+                    // Validate regular items (stock & order limits)
                     $('#item-rows .item-row').each(function() {
                         var row = $(this);
                         var qtyInput = row.find('.qty');
                         if (qtyInput.length === 0) return;
-                        var qty = parseFloat(qtyInput.val()) || 0;
+                        var qtyValStr = (qtyInput.val() || '').trim();
+                        var qty = parseFloat(qtyValStr);
                         var maxAttr = qtyInput.attr('data-max');
                         var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
                         var stockAttr = qtyInput.attr('data-stock');
@@ -2822,9 +2819,6 @@
                         var maxAllowedStock = !isNaN(stock) ? Math.max(stock, originalQty) : NaN;
                         var errorDiv = row.find('.qty-error');
 
-                        var isExistingItem = row.find('.invoice-item-db-id').length > 0 && row.find(
-                            '.invoice-item-db-id').val() !== '';
-
                         if (!isNaN(max) && qty > max) {
                             errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                             qtyInput.addClass('is-invalid');
@@ -2833,9 +2827,6 @@
                             errorDiv.text('Exceeds stock!').show();
                             qtyInput.addClass('is-invalid');
                             hasError = true;
-                        } else {
-                            errorDiv.hide();
-                            qtyInput.removeClass('is-invalid');
                         }
                     });
 
@@ -3591,8 +3582,9 @@
             let storeId = $('#store_id').val();
             let brandId = $('#brand_id').val();
             let invDate = $('input[name="inv_date"]').val();
+            let storeText = ($('#store_id option:selected').text() || '').toUpperCase();
 
-            let isRM = (storeId == '1' || storeId == '2');
+            let isRM = (storeId == '1' || storeId == '2' || storeId == '15' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP'));
             if (isRM) {
                 if (!invDate) {
                     $('#inv_no').val('');
@@ -3696,13 +3688,17 @@
                 }
                 let raw = item.rawItem;
                 let storeId = $('#store_id').val();
+                let storeText = ($('#store_id option:selected').text() || '').toUpperCase();
+                let isScrap = (storeId == '15' || storeText.includes('SCRAP'));
                 let styleBadge = (storeId == '1' && raw.style_name) ? `<span class="badge bg-label-info ms-1 small" style="font-size: 11px;">Style: ${raw.style_name}</span>` : '';
+                let hasArt = !isScrap && raw.art_no && raw.art_no !== '-' && raw.art_no.trim() !== '';
+                let artBadge = hasArt ? `<span class="badge bg-label-secondary ms-1 small" style="font-size: 11px;">Art: ${raw.art_no}</span>` : '';
                 let html = `
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <strong class="text-dark">${raw.item_name || 'Raw Material'}</strong>
                             ${styleBadge}
-                            <span class="badge bg-label-secondary ms-1 small" style="font-size: 11px;">Art: ${raw.art_no || '-'}</span>
+                            ${artBadge}
                         </div>
                         <div class="text-end ms-3">
                             <span class="badge bg-label-success small" style="font-size: 11px;">Avail: ${raw.available_qty} ${raw.uom_code || raw.uom_name || 'PCS'}</span>
@@ -3716,7 +3712,9 @@
         }
 
         function loadStoreStockItems(storeId) {
-            if (!storeId || (storeId != '1' && storeId != '2')) {
+            let storeText = ($('#store_id option:selected').text() || '').toUpperCase();
+            let isAllowed = (storeId == '1' || storeId == '2' || storeId == '15' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP'));
+            if (!storeId || !isAllowed) {
                 window.availableStoreStockItems = [];
                 return;
             }
@@ -3784,7 +3782,7 @@
                         <span class="style-text">${matchedItem.style_name || '-'}</span>
                         <input type="hidden" name="items[${index}][style_id]" class="style-id" value="${matchedItem.style_id || ''}">
                     </td>
-                    <td>
+                    <td class="rm-art-col" style="${(storeId == '15' || ($('#store_id option:selected').text() || '').toUpperCase().includes('SCRAP')) ? 'display: none;' : ''}">
                         <span class="art-no-text">${matchedItem.art_no || '-'}</span>
                         <input type="hidden" name="items[${index}][art_no]" class="art-no" value="${matchedItem.art_no || ''}">
                     </td>
@@ -3795,8 +3793,8 @@
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="text" class="form-control hsn-sac" name="items[${index}][hsn_sac]" value="${matchedItem.hsn_sac || ''}" placeholder="HSN Code" required>
-                            <label>HSN Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control hsn-sac" name="items[${index}][hsn_sac]" value="${matchedItem.hsn_sac || ''}" placeholder="HSN Code">
+                            <label>HSN Code *</label>
                         </div>
                     </td>
                     <td>
@@ -3832,10 +3830,14 @@
 
         function applyStoreMode(isInit) {
             let storeId = $('#store_id').val();
-            let isRM = (storeId == '1' || storeId == '2');
+            let storeText = ($('#store_id option:selected').text() || '').toUpperCase();
+            let isRM = (storeId == '1' || storeId == '2' || storeId == '15' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES') || storeText.includes('SCRAP'));
 
-            if (storeId == '1') {
+            if (isRM) {
                 $('#agent_container').hide();
+                if (!isInit) {
+                    $('#agent_id').val('').trigger('change.select2');
+                }
             } else {
                 $('#agent_container').show();
             }
@@ -3854,11 +3856,18 @@
                 $('#rm_table_header').show();
                 $('#store_stock_search_section').show();
                 $('#delivery_order_show_fields_section').hide();
+                $('#show_mrp_container').hide();
 
-                if (storeId == '1') {
+                if (storeId == '1' || storeText.includes('FABRIC')) {
                     $('.rm-style-col').show();
                 } else {
                     $('.rm-style-col').hide();
+                }
+
+                if (storeId == '15' || storeText.includes('SCRAP')) {
+                    $('.rm-art-col').hide();
+                } else {
+                    $('.rm-art-col').show();
                 }
 
                 loadStoreStockItems(storeId);
@@ -3876,6 +3885,7 @@
                 $('#fg_table_header').show();
                 $('#store_stock_search_section').hide();
                 $('#delivery_order_show_fields_section').show();
+                $('#show_mrp_container').show();
 
                 let currentHsn = $('#hsn_sac').val();
                 if (!currentHsn) {
@@ -3896,9 +3906,12 @@
             $('#item_details_total_qty').text('0.00');
 
             let newStoreId = $(this).val();
-            if (newStoreId == '1' || newStoreId == '2') {
+            let storeText = ($(this).find('option:selected').text() || '').toUpperCase();
+            let isRM = (newStoreId == '1' || newStoreId == '2' || storeText.includes('FABRIC') || storeText.includes('ACCESSORIES'));
+            if (isRM) {
                 $('#brand_id').val('').trigger('change.select2');
                 $('#so_ids').val([]).trigger('change.select2');
+                $('#agent_id').val('').trigger('change.select2');
             }
 
             if (typeof calculateTotals === 'function') {

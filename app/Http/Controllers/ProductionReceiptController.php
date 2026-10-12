@@ -18,6 +18,7 @@ use App\Models\Brand;
 use App\Models\Style;
 use App\Models\User;
 use App\Models\JobCardMatrixQuantity;
+use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -196,9 +197,9 @@ class ProductionReceiptController extends Controller
 
         $receipt = $id ? ProductionReceipt::with(['items'])->findOrFail($id) : null;
 
-        if ($receipt && $receipt->status === 'Posted') {
-            return redirect('production_receipts')->with('error', 'Cannot edit a Posted Production Receipt.');
-        }
+        // if ($receipt && $receipt->status === 'Posted') {
+        //     return redirect('production_receipts')->with('error', 'Cannot edit a Posted Production Receipt.');
+        // }
 
         $fullyReceivedJobCardIds = $this->getFullyReceivedJobCardIds($id);
 
@@ -235,7 +236,23 @@ class ProductionReceiptController extends Controller
         }
         $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('id','desc')->get();
-        $employees = User::where('status', 'Active')->where('id', '!=', 1)->orderBy('id','desc')->get();
+
+        $allowedRoleNames = ['WAREHOUSE EXECUTIVE', 'WAREHOUSE INCHARGE', 'WAREHOUSE MANAGER', 'STORE EXECUTIVE', 'STORE INCHARGE'];
+        $allowedRoleIds = Role::whereIn('name', $allowedRoleNames)->pluck('id')->toArray();
+
+        $employees = User::where('status', 'Active')
+            ->where('id', '!=', 1)
+            ->where(function($q) use ($allowedRoleIds, $allowedRoleNames, $receipt) {
+                $q->whereIn('role_id', $allowedRoleIds)
+                  ->orWhereHas('roles', function($rq) use ($allowedRoleNames) {
+                      $rq->whereIn('name', $allowedRoleNames);
+                  });
+                if ($receipt && $receipt->employee_id) {
+                    $q->orWhere('id', $receipt->employee_id);
+                }
+            })
+            ->orderBy('name', 'asc')
+            ->get();
 
         if ($request->isMethod('post')) {
             $rawJobCardInput = $request->job_card_id;
@@ -265,6 +282,7 @@ class ProductionReceiptController extends Controller
 
             $rules = [
                 'job_card_id' => 'required|exists:job_card_entries,id',
+                'employee_id' => 'required|exists:users,id',
                 'receipt_date' => 'required|date_format:d-m-Y',
                 'doc_date' => 'required|date_format:d-m-Y',
                 'warehouse_id' => $isCanvas ? 'nullable|exists:warehouses,id' : 'required|exists:warehouses,id',
@@ -300,13 +318,8 @@ class ProductionReceiptController extends Controller
                                 }
                             })->pluck('id')->toArray();
                     }
-                    $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
-                        ->whereIn('job_card_fabric_detail_id', $batchFabricIds)
-                        ->exists();
-                    $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
-                        ->whereIn('job_card_fabric_detail_id', $batchFabricIds)
-                        ->where('status', '!=', 'Completed')
-                        ->exists();
+                    $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)->whereIn('job_card_fabric_detail_id', $batchFabricIds)->exists();
+                    $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)->whereIn('job_card_fabric_detail_id', $batchFabricIds)->where('status', '!=', 'Completed')->exists();
                     if (!$hasTasks || $hasIncompleteTasks) {
                         return redirect()->back()->withInput()->withErrors([
                             'job_card_id' => 'Cannot create Production Receipt: All tasks for this Additional Batch must be assigned and Completed.'
@@ -360,12 +373,8 @@ class ProductionReceiptController extends Controller
                 if (!$receiptNo || ($receipt && $receipt->status !== 'Posted')) {
                     $existingSe = $receiptNo ? StockEntry::where('reference_document', $receiptNo)->first() : null;
                     if (!$receiptNo || ($existingSe && $existingSe->stockEntryItems()->where('qty_out', '>', 0)->exists())) {
-                        $lastReceipt = ProductionReceipt::where('receipt_no', 'like', 'RCPT-' . date('Y') . '-%')
-                            ->orderByRaw("CAST(SUBSTRING_INDEX(receipt_no, '-', -1) AS UNSIGNED) DESC")
-                            ->first();
-                        $lastStockRef = StockEntry::where('reference_document', 'like', 'RCPT-' . date('Y') . '-%')
-                            ->orderByRaw("CAST(SUBSTRING_INDEX(reference_document, '-', -1) AS UNSIGNED) DESC")
-                            ->first();
+                        $lastReceipt = ProductionReceipt::where('receipt_no', 'like', 'RCPT-' . date('Y') . '-%')->orderByRaw("CAST(SUBSTRING_INDEX(receipt_no, '-', -1) AS UNSIGNED) DESC")->first();
+                        $lastStockRef = StockEntry::where('reference_document', 'like', 'RCPT-' . date('Y') . '-%')->orderByRaw("CAST(SUBSTRING_INDEX(reference_document, '-', -1) AS UNSIGNED) DESC")->first();
 
                         $lastNum1 = $lastReceipt ? (int) substr(strrchr($lastReceipt->receipt_no, "-"), 1) : 0;
                         $lastNum2 = $lastStockRef ? (int) substr(strrchr($lastStockRef->reference_document, "-"), 1) : 0;
@@ -505,8 +514,7 @@ class ProductionReceiptController extends Controller
                 if ($receipt->warehouse_id && $receipt->job_card_id) {
                     $jobCard = JobCardEntry::find($receipt->job_card_id);
                     if ($jobCard && $jobCard->brand_id) {
-                        $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)
-                            ->where('brand_id', $jobCard->brand_id)
+                        $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)->where('brand_id', $jobCard->brand_id)
                             ->where('status', 'Active')
                             ->first();
                         if ($capObj && $capObj->capacity_pcs > 0) {
@@ -938,30 +946,36 @@ class ProductionReceiptController extends Controller
                 $rawMatId = null;
                 $uomId = $item->uom_id;
                 if ($isCanvas) {
-                    $rawMat = \App\Models\RawMaterial::where('store_category_id', 2)
-                        ->where(function($q) use ($item) {
-                            $q->where('name', $item->item_code)
-                              ->orWhere('name', $item->item_name)
-                              ->orWhere('name', $item->item_name . ' ' . $item->size . ' SIZE')
-                              ->orWhere('name', $item->item_name . ' ' . $item->size)
-                              ->orWhere('name', $item->description)
-                              ->orWhere('code', $item->art_no);
-                        })->first();
+                    $size = trim((string)($item->size ?? ''));
+                    $targetName = trim((string)($item->item_name ?: $item->item_code));
+                    $cleanBaseName = trim(preg_replace('/\b(36|38|40|42|44|46)\s*SIZE\b/i', '', $targetName));
 
-                    if (!$rawMat && $item->size) {
+                    $rawMat = null;
+                    if ($targetName !== '') {
                         $rawMat = \App\Models\RawMaterial::where('store_category_id', 2)
-                            ->where('name', 'like', "%{$item->item_name}%")
-                            ->where('name', 'like', "%{$item->size}%")
-                            ->first();
-                    }
+                            ->where(function($q) use ($targetName, $item) {
+                                $q->where('name', $targetName)
+                                  ->orWhere('code', $targetName);
+                                if (!empty($item->art_no)) {
+                                    $q->orWhere('code', $item->art_no)
+                                      ->orWhere('name', $item->art_no);
+                                }
+                            })->first();
 
-                    if (!$rawMat) {
-                        $rawMat = \App\Models\RawMaterial::where('name', 'like', "%{$item->item_name}%")->first();
+                        if (!$rawMat && $cleanBaseName !== '' && $size !== '') {
+                            $targetWithSize = $cleanBaseName . ' ' . $size . ' SIZE';
+                            $rawMat = \App\Models\RawMaterial::where('store_category_id', 2)
+                                ->where(function($q) use ($targetWithSize, $cleanBaseName, $size) {
+                                    $q->where('name', $targetWithSize)
+                                      ->orWhere('name', 'like', "%{$cleanBaseName}%{$size}%");
+                                })->first();
+                        }
                     }
 
                     if ($rawMat) {
                         $rawMatId = $rawMat->id;
                         $uomId = $rawMat->uom_id ?: $uomId;
+                        $itemCode = $rawMat->name;
                     } else {
                         // Default to NOS (UOM ID 3) if not found
                         $nosUom = \App\Models\Uom::whereIn('uom_code', ['NOS', 'PCS', 'NO'])->first();
@@ -977,7 +991,7 @@ class ProductionReceiptController extends Controller
                     'finished_item_code' => $itemCode,
                     'raw_material_id' => $rawMatId,
                     'item_id' => $isCanvas ? null : $item->item_id,
-                    'art_no' => $item->art_no,
+                    'art_no' => ($isCanvas && $rawMat && !empty($rawMat->code)) ? $rawMat->code : $item->art_no,
                     'size' => $item->size,
                     'color_id' => $item->color_id,
                     'store_category_id' => $isCanvas ? 2 : null,
@@ -1469,9 +1483,28 @@ class ProductionReceiptController extends Controller
                     }
 
                     if ($isCanvas) {
-                        $matchedRm = \App\Models\RawMaterial::where('name', $displayArtNo)->orWhere('code', $displayArtNo)->first();
-                        $itemCode = $matchedRm ? $matchedRm->name : $displayArtNo;
-                        $itemName = $matchedRm ? $matchedRm->name : $displayArtNo;
+                        $cleanBaseName = trim(preg_replace('/\b(36|38|40|42|44|46)\s*SIZE\b/i', '', $displayArtNo));
+
+                        $matchedRm = null;
+                        if (!empty($displayArtNo)) {
+                            $matchedRm = \App\Models\RawMaterial::where('store_category_id', 2)
+                                ->where(function($q) use ($displayArtNo) {
+                                    $q->where('name', $displayArtNo)
+                                      ->orWhere('code', $displayArtNo);
+                                })->first();
+
+                            if (!$matchedRm && $cleanBaseName !== '' && !empty($size)) {
+                                $targetWithSize = $cleanBaseName . ' ' . $size . ' SIZE';
+                                $matchedRm = \App\Models\RawMaterial::where('store_category_id', 2)
+                                    ->where(function($q) use ($targetWithSize, $cleanBaseName, $size) {
+                                        $q->where('name', $targetWithSize)
+                                          ->orWhere('name', 'like', "%{$cleanBaseName}%{$size}%");
+                                    })->first();
+                            }
+                        }
+
+                        $itemCode = $matchedRm ? $matchedRm->name : (!empty($size) && $cleanBaseName !== '' ? ($cleanBaseName . ' ' . $size . ' SIZE') : $displayArtNo);
+                        $itemName = $matchedRm ? $matchedRm->name : (!empty($size) && $cleanBaseName !== '' ? ($cleanBaseName . ' ' . $size . ' SIZE') : $displayArtNo);
                     }
 
                     $itemPrice = \App\Models\ItemPrice::where('status', 'Active')
@@ -1863,10 +1896,7 @@ class ProductionReceiptController extends Controller
 
         $capacityWarning = null;
         if ($receipt->warehouse_id && $receipt->jobCard && $receipt->jobCard->brand_id) {
-            $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)
-                ->where('brand_id', $receipt->jobCard->brand_id)
-                ->where('status', 'Active')
-                ->first();
+            $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)->where('brand_id', $receipt->jobCard->brand_id)->where('status', 'Active')->first();
             if ($capObj && $capObj->capacity_pcs > 0) {
                 $currentStock = (float) \App\Models\StockEntryItem::where('brand_id', $receipt->jobCard->brand_id)
                     ->where(function($q) use ($receipt) {

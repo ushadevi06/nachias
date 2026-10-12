@@ -248,22 +248,71 @@ $showPrice     = in_array('price', $showFields);
 
 $copies = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
 
-$colWidths = [
-    'sno' => 4,
-    'desc' => $showAmount ? 30 : 42,
-    'art' => 18,
-    'uom' => 6,
-    'size' => 6,
-    'qty' => 8,
-];
-if ($showMrp) {
-    $colWidths['mrp'] = 8;
-}
-if ($showPrice) {
-    $colWidths['price'] = 8;
-}
-if ($showAmount) {
-    $colWidths['amount'] = 12;
+$isFabricStore = ((int)$invoice->store_id === 1 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')));
+$isAccessoriesStore = ((int)$invoice->store_id === 2 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')));
+$isScrapStore = ((int)$invoice->store_id === 15 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'SCRAP')));
+$isRawMaterial = ($isFabricStore || $isAccessoriesStore || $isScrapStore);
+
+if ($isFabricStore) {
+    $colWidths = [
+        'sno' => 4,
+        'desc' => $showAmount ? 26 : 38,
+        'style' => 12,
+        'art' => 18,
+        'uom' => 6,
+        'qty' => 8,
+    ];
+    if ($showPrice) {
+        $colWidths['price'] = 8;
+    }
+    if ($showAmount) {
+        $colWidths['amount'] = 12;
+    }
+} elseif ($isScrapStore) {
+    $colWidths = [
+        'sno' => 4,
+        'desc' => $showAmount ? 56 : 68,
+        'uom' => 6,
+        'qty' => 8,
+    ];
+    if ($showPrice) {
+        $colWidths['price'] = 8;
+    }
+    if ($showAmount) {
+        $colWidths['amount'] = 12;
+    }
+} elseif ($isAccessoriesStore) {
+    $colWidths = [
+        'sno' => 4,
+        'desc' => $showAmount ? 36 : 48,
+        'art' => 20,
+        'uom' => 6,
+        'qty' => 8,
+    ];
+    if ($showPrice) {
+        $colWidths['price'] = 8;
+    }
+    if ($showAmount) {
+        $colWidths['amount'] = 12;
+    }
+} else {
+    $colWidths = [
+        'sno' => 4,
+        'desc' => $showAmount ? 30 : 42,
+        'art' => 18,
+        'uom' => 6,
+        'size' => 6,
+        'qty' => 8,
+    ];
+    if ($showMrp) {
+        $colWidths['mrp'] = 8;
+    }
+    if ($showPrice) {
+        $colWidths['price'] = 8;
+    }
+    if ($showAmount) {
+        $colWidths['amount'] = 12;
+    }
 }
 
 $totalW = array_sum($colWidths);
@@ -271,18 +320,37 @@ foreach ($colWidths as $key => $w) {
     $colWidths[$key] = round(($w / $totalW) * 100, 4);
 }
 
-$w_1_5 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['art'] + $colWidths['uom'] + $colWidths['size'];
-$w1_6 = $w_1_5 + $colWidths['qty'];
+if ($isFabricStore) {
+    $colsBeforeQty = 5;
+    $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0) + ($colWidths['style'] ?? 0) + ($colWidths['art'] ?? 0);
+    $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['qty'] ?? 0);
+} elseif ($isScrapStore) {
+    $colsBeforeQty = 3;
+    $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0);
+    $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['qty'] ?? 0);
+} elseif ($isAccessoriesStore) {
+    $colsBeforeQty = 4;
+    $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0) + ($colWidths['art'] ?? 0);
+    $w_5_6 = ($colWidths['uom'] ?? 0) + ($colWidths['qty'] ?? 0);
+} else {
+    $colsBeforeQty = 5;
+    $w_1_4 = ($colWidths['sno'] ?? 0) + ($colWidths['desc'] ?? 0) + ($colWidths['art'] ?? 0) + ($colWidths['uom'] ?? 0);
+    $w_5_6 = ($colWidths['size'] ?? 0) + ($colWidths['qty'] ?? 0);
+}
 
-$w_1_4 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['art'] + $colWidths['uom'];
-$w_5_6 = $colWidths['size'] + $colWidths['qty'];
+$w1_6 = 0;
+foreach ($colWidths as $key => $w) {
+    if (in_array($key, ['sno', 'desc', 'style', 'art', 'uom', 'size', 'qty'])) {
+        $w1_6 += $w;
+    }
+}
 
 $w_colsAfterQty = 0;
-if ($showMrp) $w_colsAfterQty += $colWidths['mrp'];
-if ($showPrice) $w_colsAfterQty += $colWidths['price'];
+if (!$isRawMaterial && $showMrp && isset($colWidths['mrp'])) $w_colsAfterQty += $colWidths['mrp'];
+if ($showPrice && isset($colWidths['price'])) $w_colsAfterQty += $colWidths['price'];
 
 $colsAfterQty = 0;
-if ($showMrp) $colsAfterQty++;
+if (!$isRawMaterial && $showMrp) $colsAfterQty++;
 if ($showPrice) $colsAfterQty++;
 //changed line 
 $logoPath = public_path('assets/images/jc_logo.png');
@@ -577,145 +645,215 @@ $totalChunks = count($pages);
         <table class="item-table" style="margin-top: 0;  font-size: 11px;">
             <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
-                    <th width="4%">S.No</th>
-                    <th width="{{ $showAmount ? '30%' : '42%' }}">Description</th>
-                    <th width="18%">Art</th>
-                    <th width="6%">UOM</th>
-                    <th width="6%">Size</th>
-                    <th width="8%">Qty</th>
-                    @if($showMrp)
-                    <th width="8%">MRP</th>
+                    <th width="{{ $colWidths['sno'] }}%">S.No</th>
+                    <th width="{{ $colWidths['desc'] }}%">Description</th>
+                    @if($isFabricStore)
+                    <th width="{{ $colWidths['style'] }}%">Style</th>
+                    @endif
+                    @if(!$isScrapStore)
+                    <th width="{{ $colWidths['art'] }}%">Art</th>
+                    @endif
+                    <th width="{{ $colWidths['uom'] }}%">UOM</th>
+                    @if(!$isRawMaterial)
+                    <th width="{{ $colWidths['size'] }}%">Size</th>
+                    @endif
+                    <th width="{{ $colWidths['qty'] }}%">Qty</th>
+                    @if(!$isRawMaterial && $showMrp)
+                    <th width="{{ $colWidths['mrp'] }}%">MRP</th>
                     @endif
                     @if($showPrice)
-                    <th width="8%">Price</th>
+                    <th width="{{ $colWidths['price'] }}%">Price</th>
                     @endif
                     @if($showAmount)
-                    <th width="12%">Amount</th>
+                    <th width="{{ $colWidths['amount'] }}%">Amount</th>
                     @endif
                 </tr>
             </thead>
             <tbody>
                 @foreach($chunk as $item)
-                    @php $rowCounter++; @endphp
-                    <tr>
-                        <td class="text-center">{{ $rowCounter }}</td>
-                        <td>
-                            @php
-                                $isRmInvoice = in_array((int)$invoice->store_id, [1, 2]) || ($item->stockEntryItem && $item->stockEntryItem->stock_type === 'raw_material');
-                                $soItem = null;
-                                if (!$isRmInvoice) {
-                                    $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
-                                        ->where('sku', $item->sku)
-                                        ->first();
+                    @php
+                        $rowCounter++;
+                        $brandName = '';
+                        $styleName = '';
+                        $sleeve = '';
+                        $itemName = '';
+
+                        $seItem = $item->stockEntryItem;
+                        if (!$seItem && $item->stock_entry_item_id) {
+                            $seItem = \App\Models\StockEntryItem::with(['rawMaterial', 'item', 'style', 'brand', 'uom'])->find($item->stock_entry_item_id);
+                        }
+                        if (!$seItem && !empty($item->stock_allocations)) {
+                            $allocs = is_array($item->stock_allocations) ? $item->stock_allocations : json_decode($item->stock_allocations, true);
+                            if (!empty($allocs) && is_array($allocs)) {
+                                $firstAlloc = reset($allocs);
+                                $allocSeId = $firstAlloc['stock_entry_item_id'] ?? null;
+                                if ($allocSeId) {
+                                    $seItem = \App\Models\StockEntryItem::with(['rawMaterial', 'item', 'style', 'brand', 'uom'])->find($allocSeId);
                                 }
-                                $codeToParse = '';
-                                if ($soItem) {
-                                    $codeToParse = $soItem->getAttributes()['item_name'] ?? '';
-                                    if (empty($codeToParse) || $codeToParse === '-') {
-                                        $codeToParse = $soItem->finished_item_code;
-                                    }
+                            }
+                        }
+
+                        $displayArtNo = $seItem ? ($seItem->art_no ?: $item->art_no) : $item->art_no;
+                        $uomDisplay = $item->uom ? ($item->uom->uom_code ?: $item->uom->uom_name) : ($seItem && $seItem->uom ? ($seItem->uom->uom_code ?: $seItem->uom->uom_name) : 'PCS');
+
+                        if ($isRawMaterial) {
+                            if ($seItem && $seItem->rawMaterial) {
+                                $itemName = $seItem->rawMaterial->name;
+                            } elseif ($seItem && $seItem->raw_material_id) {
+                                $rmObj = \DB::table('raw_materials')->where('id', $seItem->raw_material_id)->first();
+                                $itemName = $rmObj ? $rmObj->name : ($item->art_no ?: 'Raw Material');
+                            } elseif ($seItem && $seItem->item) {
+                                $itemName = $seItem->item->name ?: $seItem->item->code;
+                            } elseif ($item->item) {
+                                $itemName = $item->item->name ?: $item->item->code;
+                            } elseif (!empty($item->item_name)) {
+                                $itemName = $item->item_name;
+                            } else {
+                                $itemName = $item->art_no ?: 'Raw Material';
+                            }
+
+                            if ($seItem && $seItem->style) {
+                                $styleName = $seItem->style->style_name;
+                            } elseif ($item->item && $item->item->style) {
+                                $styleName = $item->item->style->style_name;
+                            } else {
+                                $styleName = '-';
+                            }
+                        } else {
+                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                                ->where('sku', $item->sku)
+                                ->first();
+                            
+                            $codeToParse = '';
+                            if ($soItem) {
+                                $codeToParse = $soItem->getAttributes()['item_name'] ?? '';
+                                if (empty($codeToParse) || $codeToParse === '-') {
+                                    $codeToParse = $soItem->finished_item_code;
+                                }
+                            }
+                            
+                            if (empty($codeToParse) || $codeToParse === '-') {
+                                if ($item->stockEntryItem) {
+                                    $codeToParse = $item->stockEntryItem->finished_item_code;
+                                } elseif ($item->item) {
+                                    $codeToParse = $item->item->code;
+                                }
+                            }
+                            
+                            if (empty($codeToParse) || $codeToParse === '-') {
+                                $codeToParse = $item->sku ?? '';
+                            }
+
+                            $resolved = false;
+                            $seItem = $item->stockEntryItem;
+                            if (!$seItem && $soItem && $soItem->stock_entry_item_id) {
+                                $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
+                            }
+
+                            if ($seItem) {
+                                if ($seItem->brand) {
+                                    $brandName = $seItem->brand->brand_name;
+                                }
+                                if ($seItem->style) {
+                                    $styleName = $seItem->style->style_name;
                                 }
                                 
-                                if (empty($codeToParse) || $codeToParse === '-') {
-                                    if ($item->stockEntryItem) {
-                                        $codeToParse = $item->stockEntryItem->finished_item_code;
-                                    } elseif ($item->item) {
-                                        $codeToParse = $item->item->code;
-                                    }
-                                }
-                                
-                                if (empty($codeToParse) || $codeToParse === '-') {
-                                    $codeToParse = $item->sku ?? '';
-                                }
-
-                                $brandName = '';
-                                $styleName = '';
-                                $sleeve = '';
-                                $resolved = false;
-
-                                if ($isRmInvoice) {
-                                    if ($item->stockEntryItem && $item->stockEntryItem->rawMaterial) {
-                                        $itemName = $item->stockEntryItem->rawMaterial->name;
-                                    } elseif ($item->stockEntryItem && $item->stockEntryItem->raw_material_id) {
-                                        $rmObj = \DB::table('raw_materials')->where('id', $item->stockEntryItem->raw_material_id)->first();
-                                        $itemName = $rmObj ? $rmObj->name : ($item->art_no ?: 'Raw Material');
-                                    } else {
-                                        $itemName = $item->art_no ?: 'Raw Material';
-                                    }
-                                    $resolved = true;
-                                }
-
-                                $seItem = $item->stockEntryItem;
-                                if (!$isRmInvoice && !$seItem && $soItem && $soItem->stock_entry_item_id) {
-                                    $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
-                                }
-
-                                if ($seItem) {
-                                    if ($seItem->brand) {
-                                        $brandName = $seItem->brand->brand_name;
-                                    }
-                                    if ($seItem->style) {
-                                        $styleName = $seItem->style->style_name;
-                                    }
-                                    
-                                    if (empty($brandName) && !empty($seItem->finished_item_code)) {
-                                        $seParts = explode('-', $seItem->finished_item_code);
-                                        if (count($seParts) > 0) {
-                                            $dbBrand = \App\Models\Brand::where('code', trim($seParts[0]))->first();
-                                            if ($dbBrand) {
-                                                $brandName = $dbBrand->brand_name;
-                                            }
+                                if (empty($brandName) && !empty($seItem->finished_item_code)) {
+                                    $seParts = explode('-', $seItem->finished_item_code);
+                                    if (count($seParts) > 0) {
+                                        $dbBrand = \App\Models\Brand::where('code', trim($seParts[0]))->first();
+                                        if ($dbBrand) {
+                                            $brandName = $dbBrand->brand_name;
                                         }
                                     }
+                                }
+                                
+                                if (!empty($brandName) || !empty($styleName)) {
+                                    $resolved = true;
+                                }
+                                if (empty($sleeve) && !empty($seItem->sleeve_type)) {
+                                    $sleeve = $seItem->sleeve_type;
+                                }
+                            }
+                            
+                            if (!empty($item->sleeve_type)) {
+                                $sleeveValUpper = strtoupper(trim($item->sleeve_type));
+                                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                    $sleeve = 'F/S';
+                                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                    $sleeve = 'H/S';
+                                } else {
+                                    $sleeve = $item->sleeve_type;
+                                }
+                            } elseif (!empty($sleeve)) {
+                                $sleeveValUpper = strtoupper(trim($sleeve));
+                                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                    $sleeve = 'F/S';
+                                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                    $sleeve = 'H/S';
+                                }
+                            }
+
+                            if ((empty($brandName) || empty($styleName)) && !empty($codeToParse) && $codeToParse !== '-') {
+                                $parts = explode('-', $codeToParse);
+                                
+                                if (count($parts) >= 2) {
+                                    $brandCode = trim($parts[0]);
+                                    $styleCode = trim($parts[1]);
                                     
+                                    $dbBrand = \App\Models\Brand::where('code', $brandCode)->first();
+                                    $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
+                                    
+                                    if ($dbBrand && empty($brandName)) {
+                                        $brandName = $dbBrand->brand_name;
+                                    }
+                                    if ($dbStyle && empty($styleName)) {
+                                        $styleName = $dbStyle->style_name;
+                                    }
                                     if (!empty($brandName) || !empty($styleName)) {
                                         $resolved = true;
                                     }
-                                    if (empty($sleeve) && !empty($seItem->sleeve_type)) {
-                                        $sleeve = $seItem->sleeve_type;
+                                    
+                                    if (empty($sleeve) && isset($parts[2])) {
+                                        $sleeveVal = trim($parts[2]);
+                                        $sleeveValUpper = strtoupper($sleeveVal);
+                                        if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                            $sleeve = 'F/S';
+                                        } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                            $sleeve = 'H/S';
+                                        } else {
+                                            $sleeve = $sleeveVal;
+                                        }
                                     }
                                 }
                                 
-                                if (!empty($item->sleeve_type)) {
-                                    $sleeveValUpper = strtoupper(trim($item->sleeve_type));
-                                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                        $sleeve = 'F/S';
-                                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                        $sleeve = 'H/S';
-                                    } else {
-                                        $sleeve = $item->sleeve_type;
+                                if ((empty($brandName) || empty($styleName)) && count($parts) >= 1) {
+                                    $mainCode = trim($parts[0]);
+                                    $dbBrand = null;
+                                    $brandCode = '';
+                                    $allBrands = \App\Models\Brand::all();
+                                    foreach ($allBrands as $brand) {
+                                        $bCode = trim($brand->code);
+                                        if (!empty($bCode) && stripos($mainCode, $bCode) === 0) {
+                                            $dbBrand = $brand;
+                                            $brandCode = $bCode;
+                                            break;
+                                        }
                                     }
-                                } elseif (!empty($sleeve)) {
-                                    $sleeveValUpper = strtoupper(trim($sleeve));
-                                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                        $sleeve = 'F/S';
-                                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                        $sleeve = 'H/S';
-                                    }
-                                }
-
-                                if ((empty($brandName) || empty($styleName)) && !empty($codeToParse) && $codeToParse !== '-') {
-                                    $parts = explode('-', $codeToParse);
                                     
-                                    if (count($parts) >= 2) {
-                                        $brandCode = trim($parts[0]);
-                                        $styleCode = trim($parts[1]);
-                                        
-                                        $dbBrand = \App\Models\Brand::where('code', $brandCode)->first();
-                                        $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
-                                        
-                                        if ($dbBrand && empty($brandName)) {
+                                    if ($dbBrand) {
+                                        if (empty($brandName)) {
                                             $brandName = $dbBrand->brand_name;
                                         }
+                                        $styleCode = substr($mainCode, strlen($brandCode));
+                                        $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
                                         if ($dbStyle && empty($styleName)) {
                                             $styleName = $dbStyle->style_name;
                                         }
-                                        if (!empty($brandName) || !empty($styleName)) {
-                                            $resolved = true;
-                                        }
+                                        $resolved = true;
                                         
-                                        if (empty($sleeve) && isset($parts[2])) {
-                                            $sleeveVal = trim($parts[2]);
+                                        if (empty($sleeve) && isset($parts[1])) {
+                                            $sleeveVal = trim($parts[1]);
                                             $sleeveValUpper = strtoupper($sleeveVal);
                                             if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
                                                 $sleeve = 'F/S';
@@ -726,65 +864,33 @@ $totalChunks = count($pages);
                                             }
                                         }
                                     }
-                                    
-                                    if ((empty($brandName) || empty($styleName)) && count($parts) >= 1) {
-                                        $mainCode = trim($parts[0]);
-                                        $dbBrand = null;
-                                        $brandCode = '';
-                                        $allBrands = \App\Models\Brand::all();
-                                        foreach ($allBrands as $brand) {
-                                            $bCode = trim($brand->code);
-                                            if (!empty($bCode) && stripos($mainCode, $bCode) === 0) {
-                                                $dbBrand = $brand;
-                                                $brandCode = $bCode;
-                                                break;
-                                            }
-                                        }
-                                        
-                                        if ($dbBrand) {
-                                            if (empty($brandName)) {
-                                                $brandName = $dbBrand->brand_name;
-                                            }
-                                            $styleCode = substr($mainCode, strlen($brandCode));
-                                            $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
-                                            if ($dbStyle && empty($styleName)) {
-                                                $styleName = $dbStyle->style_name;
-                                            }
-                                            $resolved = true;
-                                            
-                                            if (empty($sleeve) && isset($parts[1])) {
-                                                $sleeveVal = trim($parts[1]);
-                                                $sleeveValUpper = strtoupper($sleeveVal);
-                                                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                                    $sleeve = 'F/S';
-                                                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                                    $sleeve = 'H/S';
-                                                } else {
-                                                    $sleeve = $sleeveVal;
-                                                }
-                                            }
-                                        }
-                                    }
                                 }
+                            }
 
-                                if ($resolved) {
-                                    $itemName = trim($brandName . ' ' . $styleName . ' ' . $sleeve);
-                                } else {
-                                    $itemName = $codeToParse;
-                                }
-                            @endphp
+                            if ($resolved) {
+                                $itemName = trim($brandName . ' ' . $styleName . ' ' . $sleeve);
+                            } else {
+                                $itemName = $codeToParse;
+                            }
+                        }
+                    @endphp
+                    <tr>
+                        <td class="text-center">{{ $rowCounter }}</td>
+                        <td>
                             <div class="bold">{{ $itemName }}</div>
                         </td>
-                        <td class="text-center">
-                            @php
-                                $displayArtNo = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : $item->art_no;
-                            @endphp
-                            {{ $displayArtNo ?? '-' }}
-                        </td>
-                        <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
-                        <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
+                        @if($isFabricStore)
+                            <td class="text-center">{{ $styleName }}</td>
+                        @endif
+                        @if(!$isScrapStore)
+                            <td class="text-center">{{ $displayArtNo ?? '-' }}</td>
+                        @endif
+                        <td class="text-center">{{ $uomDisplay }}</td>
+                        @if(!$isRawMaterial)
+                            <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
+                        @endif
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
-                        @if($showMrp)
+                        @if(!$isRawMaterial && $showMrp)
                         <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
                         @endif
                         @if($showPrice)
@@ -801,11 +907,18 @@ $totalChunks = count($pages);
                         <tr>
                             <td class="text-center">&nbsp;</td>
                             <td>&nbsp;</td>
+                            @if($isFabricStore)
                             <td>&nbsp;</td>
+                            @endif
+                            @if(!$isScrapStore)
                             <td>&nbsp;</td>
+                            @endif
                             <td>&nbsp;</td>
+                            @if(!$isRawMaterial)
                             <td>&nbsp;</td>
-                            @if($showMrp)
+                            @endif
+                            <td>&nbsp;</td>
+                            @if(!$isRawMaterial && $showMrp)
                             <td>&nbsp;</td>
                             @endif
                             @if($showPrice)
@@ -821,17 +934,15 @@ $totalChunks = count($pages);
             @if($isLastChunk)
             <tbody>
                 <tr>
-                    <td style="border-top: none;"></td>
-                    <td style="border-top: none;"></td> 
-                    <td style="border-top: none;"></td> 
-                    <td style="border-top: none;"></td>
-                    <td style="border-top: none;"></td> 
+                    @for($k = 0; $k < $colsBeforeQty; $k++)
+                        <td style="border-top: none;"></td>
+                    @endfor
                     <td class="text-center bold" style="border-top: 1px solid #000000;">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
                     
-                    @if($showMrp && $showPrice)
+                    @if((!$isRawMaterial && $showMrp) && $showPrice)
                         <td style="border-top: none;"></td>
                         <td class="text-right bold" style="padding-right: 8px; vertical-align: middle; border-top: 1px solid #000000;">Gross</td>
-                    @elseif($showMrp || $showPrice)
+                    @elseif((!$isRawMaterial && $showMrp) || $showPrice)
                         <td class="text-right bold" style="padding-right: 8px; vertical-align: middle; border-top: 1px solid #000000;">Gross</td>
                     @endif
                     
@@ -842,7 +953,7 @@ $totalChunks = count($pages);
             </tbody>
             <tbody>
                 @php
-                    $totalColsCount = 6 + $colsAfterQty + ($showAmount ? 1 : 0);
+                    $totalColsCount = $colsBeforeQty + 1 + $colsAfterQty + ($showAmount ? 1 : 0);
                     $leftW = $showAmount ? $w1_6 : max(0, 100 - ($w_colsAfterQty + 15));
                     $midW = $w_colsAfterQty;
                     $rightW = $showAmount ? ($colWidths['amount'] ?? 15) : 15;
@@ -854,14 +965,17 @@ $totalChunks = count($pages);
                                 <!-- Left Side (IRN + Bank + UPI) -->
                                 <td style="width: {{ $leftW }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
                                     <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
+                                        @if(!$isRawMaterial && (!empty($invoice->irn) || !empty($invoice->eway_bill_no) || !empty($invoice->ack_no)))
                                         <tr>
                                             <td colspan="2" style="padding: 4px; vertical-align: top; border: none; border-bottom: 1px solid #000000;">
                                                 <div style="font-size: 11px;">
-                                                    IRN: {{ $invoice->irn ?? '' }}<br>
-                                                    Ack No.: {{ $invoice->ack_no ?? '' }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Eway Bill No. : {{ $invoice->eway_bill_no ?? '' }}
+                                                    @if(!empty($invoice->irn)) IRN: {{ $invoice->irn }}<br> @endif
+                                                    @if(!empty($invoice->ack_no)) Ack No.: {{ $invoice->ack_no }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; @endif
+                                                    @if(!empty($invoice->eway_bill_no)) Eway Bill No. : {{ $invoice->eway_bill_no }} @endif
                                                 </div>
                                             </td>
                                         </tr>
+                                        @endif
                                         <tr>
                                             <td style="width: {{ ($w_1_4 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; border: none; border-right: 1px solid #000000;">
                                                 <div style="font-size: 12px;">
@@ -1017,12 +1131,12 @@ $totalChunks = count($pages);
                 @foreach($taxSummary as $hsn => $summary)
                     <tr>
                         <td class="text-center">{{ $i++ }}</td>
-                        <td class="text-left">{{ $invoice->hsn_sac }}</td>
+                        <td class="text-left">{{ $summary['hsn'] ?? $invoice->hsn_sac }}</td>
                         <td class="text-right">{{ number_format($summary['taxable_value'], 2) }}</td>
                         @if(!$invoice->other_state)
-                        <td class="text-right">{{ $summary['cgst_rate'] }}</td>
+                        <td class="text-right">{{ number_format((float)$summary['cgst_rate'], 2) }}</td>
                         <td class="text-right">{{ number_format($summary['cgst_amount'], 2) }}</td>
-                        <td class="text-right">{{ $summary['sgst_rate'] }}</td>
+                        <td class="text-right">{{ number_format((float)$summary['sgst_rate'], 2) }}</td>
                         <td class="text-right">{{ number_format($summary['sgst_amount'], 2) }}</td>
                         <td class="text-center"></td>
                         <td class="text-right"></td>
@@ -1031,7 +1145,7 @@ $totalChunks = count($pages);
                         <td class="text-right"></td>
                         <td class="text-center"></td>
                         <td class="text-right"></td>
-                        <td class="text-right">{{ $summary['igst_rate'] }}</td>
+                        <td class="text-right">{{ number_format((float)$summary['igst_rate'], 2) }}</td>
                         <td class="text-right">{{ number_format($summary['igst_amount'], 2) }}</td>
                         @endif
                     </tr>
@@ -1041,7 +1155,7 @@ $totalChunks = count($pages);
                 <tr style="border-top: 1px solid #000000;">
                     <td class="text-center">&nbsp;</td>
                     <td class="text-right bold" style="padding-right: 8px;">Total</td>
-                    <td class="text-right bold">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td>
+                    <td class="text-right bold">{{ number_format(collect($taxSummary)->sum('taxable_value'), 2) }}</td>
                     @if(!$invoice->other_state)
                     <td>&nbsp;</td>
                     <td class="text-right bold">{{ number_format($invoice->cgst, 2) }}</td>

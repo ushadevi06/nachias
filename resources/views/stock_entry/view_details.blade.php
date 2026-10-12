@@ -64,18 +64,22 @@
                             </div>
 
                             @if($isRawMaterial)
+                            @php
+                                $hasStoreLocation = $stockEntry->stockEntryItems->contains(function ($item) {
+                                    return !empty($item->store_location_id) || (!empty($item->grnEntryItem) && !empty($item->grnEntryItem->store_location_id));
+                                });
+                            @endphp
                             <div class="col-md-12 mt-4">
                                 <h5>Stock Entry Items</h5>
                                 <div class="table-responsive">
                                     <table class="table table-bordered">
                                         <thead class="bg-light">
                                             <tr>
-                                                <th>Material / Category</th>
-                                                <th>Brand</th>
-                                                <th>Color</th>
+                                                <th>Material Name</th>
+                                                <th>Store Category</th>
+                                                @if($hasStoreLocation)
                                                 <th>Store Location</th>
-                                                <th>Art No</th>
-                                                <th>Style</th>
+                                                @endif
                                                 <th>UOM</th>
                                                 <th>Qty In</th>
                                                 <th>Unit Price</th>
@@ -85,15 +89,11 @@
                                         <tbody>
                                             @foreach($stockEntry->stockEntryItems as $item)
                                             <tr>
-                                                <td>
-                                                    {{ $item->rawMaterial->name ?? ($item->finished_item_code ?: '-') }} <br>
-                                                    <small class="text-muted">{{ $item->storeCategory->category_name ?? '-' }}</small>
-                                                </td>
-                                                <td>{{ $item->brand->brand_name ?? ($item->grnEntryItem->brand->brand_name ?? '-') }}</td>
-                                                <td>{{ $item->color->color_name ?? ($item->grnEntryItem->color->color_name ?? '-') }}</td>
+                                                <td>{{ $item->rawMaterial->name ?? ($item->finished_item_code ?: '-') }}</td>
+                                                <td>{{ $item->storeCategory->category_name ?? ($item->rawMaterial->storeCategory->category_name ?? '-') }}{{ ($item->storeCategory && $item->storeCategory->code) ? ' (' . $item->storeCategory->code . ')' : '' }}</td>
+                                                @if($hasStoreLocation)
                                                 <td>{{ $item->storeLocation->store_location ?? ($item->grnEntryItem->storeLocation->store_location ?? '-') }}</td>
-                                                <td>{{ $item->art_no ?: ($item->grnEntryItem->art_no ?? '-') }}</td>
-                                                <td>{{ $item->style->style_name ?? '-' }}</td>
+                                                @endif
                                                 <td>{{ $item->uom->uom_code ?? '-' }}</td>
                                                 <td class="text-success fw-bold">+{{ floatval($item->qty_in) }}</td>
                                                 <td>{{ $item->price > 0 ? '₹' . number_format($item->price, 2) : '-' }}</td>
@@ -103,7 +103,7 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <th colspan="7" class="text-end">Total:</th>
+                                                <th colspan="{{ $hasStoreLocation ? 4 : 3 }}" class="text-end">Total:</th>
                                                 <th class="text-success fw-bold">+{{ floatval($totalQtyIn) }}</th>
                                                 <th></th>
                                                 <th></th>
@@ -239,27 +239,48 @@
                                 <div class="text-muted">
                                     @if($stockEntry->reference_document)
                                         @php
-                                            $ext = pathinfo($stockEntry->reference_document, PATHINFO_EXTENSION);
+                                            $refDoc = $stockEntry->reference_document;
+                                            $filePath = public_path('uploads/stock_entries/' . $refDoc);
+                                            $hasPhysicalFile = file_exists($filePath) && !is_dir($filePath);
+                                            $ext = pathinfo($refDoc, PATHINFO_EXTENSION);
                                             $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                            $fileUrl = url('uploads/stock_entries/' . $stockEntry->reference_document);
+                                            $fileUrl = url('uploads/stock_entries/' . $refDoc);
+                                            $pr = $stockEntry->productionReceipt ?: \App\Models\ProductionReceipt::where('receipt_no', $refDoc)->first();
+                                            $isCanvasAccessories = false;
+                                            if ($pr && $pr->jobCard && $pr->jobCard->brand && in_array(strtoupper(trim($pr->jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+                                                $isCanvasAccessories = true;
+                                            }
+                                            if (!$isCanvasAccessories && (str_contains(strtoupper($refDoc), 'CAS') || str_contains(strtoupper($refDoc), 'CANVAS'))) {
+                                                $isCanvasAccessories = true;
+                                            }
                                         @endphp
-                                        <div class="d-inline-flex align-items-center border rounded shadow-sm">
-                                            @if($isImage)
-                                                <img src="{{ $fileUrl }}" class="rounded cursor-pointer shadow-sm view-image border" data-image="{{ $fileUrl }}" width="50" height="50" style="object-fit: cover;" alt="Reference">
-                                            @else
-                                                <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
-                                                    @if(strtolower($ext) == 'pdf')
-                                                        <i class="ri i-file-pdf-fill text-danger fs-1"></i>
-                                                    @else
-                                                        <i class="ri ri-file-text-fill text-primary fs-1"></i>
-                                                    @endif
-                                                    <div class="ms-2">
-                                                        <div class="fw-bold text-dark small text-uppercase">{{ $ext }} Document</div>
-                                                        <div class="text-muted small" style="font-size: 10px;">Click to view</div>
-                                                    </div>
-                                                </a>
-                                            @endif
-                                        </div>
+                                        @if($hasPhysicalFile)
+                                            <div class="d-inline-flex align-items-center border rounded shadow-sm p-1 bg-white">
+                                                @if($isImage)
+                                                    <img src="{{ $fileUrl }}" class="rounded cursor-pointer shadow-sm view-image border" data-image="{{ $fileUrl }}" width="50" height="50" style="object-fit: cover;" alt="Reference">
+                                                @else
+                                                    <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2 py-1">
+                                                        @if(strtolower($ext) == 'pdf')
+                                                            <i class="ri ri-file-pdf-fill text-danger fs-3"></i>
+                                                        @else
+                                                            <i class="ri ri-file-text-fill text-primary fs-3"></i>
+                                                        @endif
+                                                        <div class="ms-2">
+                                                            <div class="fw-bold text-dark small text-uppercase">{{ $ext ?: 'File' }} Document</div>
+                                                            <div class="text-muted small" style="font-size: 10px;">Click to view file</div>
+                                                        </div>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        @elseif($isCanvasAccessories)
+                                            <span class="text-muted">{{ $refDoc }}</span>
+                                        @elseif($pr)
+                                            <a href="{{ url('production_receipts/view/' . $pr->id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 d-inline-flex align-items-center" title="View Production Receipt">
+                                                <i class="ri ri-receipt-line me-1"></i> {{ $pr->receipt_no }} (View Receipt)
+                                            </a>
+                                        @else
+                                            <span class="text-muted">{{ $refDoc }}</span>
+                                        @endif
                                     @else
                                         <span class="text-muted small">No document attached</span>
                                     @endif

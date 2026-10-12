@@ -73,33 +73,63 @@ class OrderaxeService
         
         $latestOrder = \App\Models\SalesOrder::whereNotNull('orderaxe_id')->orderBy('id', 'desc')->first();
         if ($latestOrder && $latestOrder->created_at) {
-            $lastTimestamp = (strtotime($latestOrder->created_at) - ($bufferDays * 24 * 60 * 60)) * 1000;
+            $currentTimestamp = (strtotime($latestOrder->created_at) - ($bufferDays * 24 * 60 * 60)) * 1000;
         } else {
-            $lastTimestamp = 0;
+            $currentTimestamp = 0;
         }
 
-        $orders = $this->fetchOrders($lastTimestamp, $limit);
-
-        if (!$orders) {
-            return ['synced' => 0, 'skipped' => 0, 'failed' => 0];
-        }
-
-        $syncCount = 0;
+        $createdCount = 0;
+        $updatedCount = 0;
         $skipCount = 0;
         $failCount = 0;
+        $totalProcessed = 0;
 
-        foreach ($orders as $orderData) {
-            $status = $this->processOrder($orderData);
-            if ($status === 'synced') {
-                $syncCount++;
-            } elseif ($status === 'skipped') {
-                $skipCount++;
-            } else {
-                $failCount++;
+        while ($totalProcessed < $limit) {
+            $orders = $this->fetchOrders($currentTimestamp, 100);
+
+            if (!$orders || empty($orders)) {
+                break;
             }
+
+            $maxTimestamp = $currentTimestamp;
+            foreach ($orders as $orderData) {
+                $status = $this->processOrder($orderData);
+                if ($status === 'created') {
+                    $createdCount++;
+                } elseif ($status === 'updated' || $status === 'synced') {
+                    $updatedCount++;
+                } elseif ($status === 'skipped') {
+                    $skipCount++;
+                } else {
+                    $failCount++;
+                }
+                $totalProcessed++;
+
+                $transMs = $orderData['transfer_to_erp_on'] ?? $orderData['submitted_on'] ?? $orderData['created_at'] ?? $orderData['order_date'] ?? 0;
+                if ($transMs > $maxTimestamp) {
+                    $maxTimestamp = $transMs;
+                }
+
+                if ($totalProcessed >= $limit) {
+                    break;
+                }
+            }
+
+            if ($maxTimestamp <= $currentTimestamp) {
+                break;
+            }
+            $currentTimestamp = $maxTimestamp + 1;
         }
 
-        return ['synced' => $syncCount, 'skipped' => $skipCount, 'failed' => $failCount];
+        $syncCount = $createdCount + $updatedCount;
+
+        return [
+            'synced' => $syncCount,
+            'created' => $createdCount,
+            'updated' => $updatedCount,
+            'skipped' => $skipCount,
+            'failed' => $failCount
+        ];
     }
 
     protected function processOrder($orderData)
@@ -148,12 +178,7 @@ class OrderaxeService
             $existingOrder = SalesOrder::where('order_no', $orderNo)->first();
             
             if ($existingOrder) {
-                $updateData = ['request_date' => $requestDate];
-                if (!empty($deliveryDate)) {
-                    $updateData['delivery_date'] = $deliveryDate;
-                }
-                $existingOrder->update($updateData);
-                return 'synced';
+                return 'skipped';
             }
 
             $customerData = $orderData['retailer'] ?? [];
@@ -163,12 +188,10 @@ class OrderaxeService
             $gstTin = trim($customerData['gst_tin'] ?? ($customerData['org']['gst_tin'] ?? ''));
             $customer = null;
 
-            // 1. Match by Reference ID / Customer Code
             if (!empty($referenceId)) {
                 $customer = Customer::where('code', $referenceId)->first();
             }
 
-            // 2. Match by Customer Name + City / Branch
             if (!$customer && !empty($customerName)) {
                 $cleanedCustomerName = trim(preg_replace('/\s*\(.*\)/', '', $customerName));
                 
@@ -186,7 +209,6 @@ class OrderaxeService
                     })->first();
                 }
 
-                // 3. Match by GSTIN + City
                 if (!$customer && !empty($gstTin)) {
                     if (!empty($cityName)) {
                         $trimmedCity = preg_replace('/(thram|tram)$/i', '', $cityName);
@@ -205,12 +227,10 @@ class OrderaxeService
                     }
                 }
 
-                // 4. Exact Name Match
                 if (!$customer) {
                     $customer = Customer::whereRaw('LOWER(name) = ?', [strtolower($cleanedCustomerName)])->first();
                 }
 
-                // 5. Fallback Partial Name Match
                 if (!$customer) {
                     $customer = Customer::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cleanedCustomerName) . '%'])->first();
                 }
@@ -351,9 +371,7 @@ class OrderaxeService
                             $stockEntryItemQuery->whereIn('sleeve_type', $sleeveDbValues);
                         }
 
-                        $stockEntryItem = $stockEntryItemQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')
-                            ->orderBy('id', 'desc')
-                            ->first();
+                        $stockEntryItem = $stockEntryItemQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')->orderBy('id', 'desc')->first();
                         
                         if ($stockEntryItem) {
                             $artNo = $stockEntryItem->art_no;
@@ -381,11 +399,7 @@ class OrderaxeService
                         }
 
                         if ($finishedItemCode && empty($itemData['price']) && empty($itemData['rate'])) {
-                            $itemPrice = ItemPrice::where('finished_item_code', $finishedItemCode)
-                                ->where('status', 'Active')
-                                ->where('effective_from', '<=', date('Y-m-d'))
-                                ->orderBy('effective_from', 'desc')
-                                ->first();
+                            $itemPrice = ItemPrice::where('finished_item_code', $finishedItemCode)->where('status', 'Active')->where('effective_from', '<=', date('Y-m-d'))->orderBy('effective_from', 'desc')->first();
 
                             if ($itemPrice) {
                                 $rate = $itemPrice->selling_price;
@@ -476,7 +490,7 @@ class OrderaxeService
             }
 
             DB::commit();
-            return 'synced';
+            return 'created';
 
         } catch (\Exception $e) {
             DB::rollBack();

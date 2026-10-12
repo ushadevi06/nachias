@@ -150,8 +150,8 @@
             line-height: 1.4;
         }
         .qr-section {
-            padding: 6px 16px;
-            margin-bottom: auto;
+            padding: 8px 16px;
+            flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;

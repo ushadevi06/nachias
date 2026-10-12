@@ -143,7 +143,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4" id="employee_id_wrapper">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="employee_id" id="employee_id" class="form-select select2" data-placeholder="Select Responsible Person">
+                                    <select name="employee_id" id="employee_id" class="form-select select2 @error('employee_id') is-invalid @enderror" data-placeholder="Select Responsible Person">
                                         <option value="">Select Responsible Person</option>
                                         @foreach($employees as $employee)
                                             <option value="{{ $employee->id }}" {{ old('employee_id', $receipt->employee_id ?? '') == $employee->id ? 'selected' : '' }}>
@@ -151,8 +151,9 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <label for="employee_id">Responsible Person (Employee)</label>
+                                    <label for="employee_id">Responsible Person (Employee) <span class="text-danger">*</span></label>
                                 </div>
+                                @error('employee_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">

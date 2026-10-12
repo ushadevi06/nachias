@@ -161,7 +161,9 @@ class SalesOrder extends Model
         $setting = Setting::first();
         $prefix = ($setting && $setting->so_prefix) ? $setting->so_prefix : 'SO-';
         
-        $lastSo = self::where('so_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
+        $lastSo = self::where('so_no', 'like', $prefix . '%')
+            ->orderByRaw('CAST(SUBSTRING(so_no, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+            ->first();
         if ($lastSo) {
             $lastNumStr = substr($lastSo->so_no, strlen($prefix));
             $lastNum = is_numeric($lastNumStr) ? intval($lastNumStr) : 0;

@@ -86,7 +86,7 @@
             text-transform: uppercase;
             color: #000;
             line-height: 1.1;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
         .customer-address {
             font-size: 14px;
@@ -160,8 +160,8 @@
             font-family: 'Montserrat', 'Segoe UI', sans-serif;
         }
         .qr-section {
-            padding: 6px 16px;
-            margin-bottom: auto;
+            padding: 8px 16px;
+            flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;

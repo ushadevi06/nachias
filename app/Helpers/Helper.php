@@ -42,7 +42,7 @@ if (!function_exists('addLog')) {
         }
 
         \App\Models\Log::create([
-            'user_id'     => auth()->id(),
+            'user_id'     => auth()->id() ?? 1,
             'action_type' => $action,
             'module'      => $module,
             'table_name'  => $table,

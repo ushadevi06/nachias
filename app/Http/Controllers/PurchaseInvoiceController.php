@@ -860,10 +860,34 @@ class PurchaseInvoiceController extends Controller
                 return null;
             }
 
+            $isFabric = (intval($item->store_category_id) === 1);
+            $poCgst = floatval($purchaseOrder->cgst_percent ?? 0);
+            $poSgst = floatval($purchaseOrder->sgst_percent ?? 0);
+            $poIgst = floatval($purchaseOrder->igst_percent ?? 0);
+            if ($poIgst <= 0 && ($poCgst + $poSgst) > 0) {
+                $poIgst = $poCgst + $poSgst;
+            }
+            if ($poCgst <= 0 && $poSgst <= 0 && $poIgst > 0) {
+                $poCgst = round($poIgst / 2, 2);
+                $poSgst = round($poIgst / 2, 2);
+            }
+
+            $itemCgst = floatval($item->cgst_percent ?? 0);
+            $itemSgst = floatval($item->sgst_percent ?? 0);
+            $itemIgst = floatval($item->igst_percent ?? 0);
+            if ($itemIgst <= 0 && ($itemCgst + $itemSgst) > 0) {
+                $itemIgst = $itemCgst + $itemSgst;
+            }
+            if ($itemCgst <= 0 && $itemSgst <= 0 && $itemIgst > 0) {
+                $itemCgst = round($itemIgst / 2, 2);
+                $itemSgst = round($itemIgst / 2, 2);
+            }
+
             return [
                 'id' => $item->id,
                 'store_category_id' => $item->store_category_id,
                 'store_category_name' => $item->storeCategory->category_name ?? '-',
+                'is_fabric' => $isFabric ? 1 : 0,
                 'raw_material_id' => $item->raw_material_id,
                 'raw_material_name' => $item->rawMaterial->name,
                 'art_no' => $item->supplier_design_name,
@@ -882,12 +906,18 @@ class PurchaseInvoiceController extends Controller
                 'uom_code' => $item->uom->uom_code,
                 'rate' => $item->rate,
                 'amount' => $item->amount,
-                'cgst_percent' => $item->cgst_percent ?? $purchaseOrder->cgst_percent ?? 0,
+                'cgst_percent' => $isFabric ? $poCgst : $itemCgst,
                 'cgst_amount' => $item->cgst_amount ?? 0,
-                'sgst_percent' => $item->sgst_percent ?? $purchaseOrder->sgst_percent ?? 0,
+                'sgst_percent' => $isFabric ? $poSgst : $itemSgst,
                 'sgst_amount' => $item->sgst_amount ?? 0,
-                'igst_percent' => $item->igst_percent ?? $purchaseOrder->igst_percent ?? 0,
+                'igst_percent' => $isFabric ? $poIgst : $itemIgst,
                 'igst_amount' => $item->igst_amount ?? 0,
+                'po_cgst_percent' => $poCgst,
+                'po_sgst_percent' => $poSgst,
+                'po_igst_percent' => $poIgst,
+                'item_cgst_percent' => $itemCgst,
+                'item_sgst_percent' => $itemSgst,
+                'item_igst_percent' => $itemIgst,
             ];
         })->filter()->values();
 
@@ -988,10 +1018,38 @@ class PurchaseInvoiceController extends Controller
                     ?? $item->rawMaterial->hsn_code 
                     ?? '';
 
+                $isFabric = (intval($item->store_category_id) === 1);
+                $poCgst = floatval($purchaseOrder->cgst_percent ?? 0);
+                $poSgst = floatval($purchaseOrder->sgst_percent ?? 0);
+                $poIgst = floatval($purchaseOrder->igst_percent ?? 0);
+                if ($poIgst <= 0 && ($poCgst + $poSgst) > 0) {
+                    $poIgst = $poCgst + $poSgst;
+                }
+                if ($poCgst <= 0 && $poSgst <= 0 && $poIgst > 0) {
+                    $poCgst = round($poIgst / 2, 2);
+                    $poSgst = round($poIgst / 2, 2);
+                }
+
+                $itemCgst = floatval($item->cgst_percent ?? 0);
+                $itemSgst = floatval($item->sgst_percent ?? 0);
+                $itemIgst = floatval($item->igst_percent ?? 0);
+                if ($itemIgst <= 0 && ($itemCgst + $itemSgst) > 0) {
+                    $itemIgst = $itemCgst + $itemSgst;
+                }
+                if ($itemCgst <= 0 && $itemSgst <= 0 && $itemIgst > 0) {
+                    $itemCgst = round($itemIgst / 2, 2);
+                    $itemSgst = round($itemIgst / 2, 2);
+                }
+
+                $calcCgst = $isFabric ? $poCgst : $itemCgst;
+                $calcSgst = $isFabric ? $poSgst : $itemSgst;
+                $calcIgst = $isFabric ? $poIgst : $itemIgst;
+
                 return [
                     'id' => $item->id,
                     'store_category_id' => $item->store_category_id,
                     'store_category_name' => $item->storeCategory->category_name ?? '-',
+                    'is_fabric' => $isFabric ? 1 : 0,
                     'raw_material_id' => $item->raw_material_id,
                     'raw_material_name' => $item->rawMaterial->name,
                     'art_no' => $item->supplier_design_name,
@@ -1010,13 +1068,19 @@ class PurchaseInvoiceController extends Controller
                     'uom_code' => $item->uom->uom_code,
                     'rate' => $existingInvItem->rate ?? $item->rate,
                     'amount' => $item->amount,
-                    'cgst_percent' => $existingInvItem->cgst_percent ?? $item->cgst_percent ?? $purchaseOrder->cgst_percent ?? 0,
+                    'cgst_percent' => ($existingInvItem && $existingInvItem->cgst_percent > 0) ? $existingInvItem->cgst_percent : $calcCgst,
                     'cgst_amount' => $existingInvItem->cgst_amount ?? $item->cgst_amount ?? 0,
-                    'sgst_percent' => $existingInvItem->sgst_percent ?? $item->sgst_percent ?? $purchaseOrder->sgst_percent ?? 0,
+                    'sgst_percent' => ($existingInvItem && $existingInvItem->sgst_percent > 0) ? $existingInvItem->sgst_percent : $calcSgst,
                     'sgst_amount' => $existingInvItem->sgst_amount ?? $item->sgst_amount ?? 0,
-                    'igst_percent' => $existingInvItem->igst_percent ?? $item->igst_percent ?? $purchaseOrder->igst_percent ?? 0,
+                    'igst_percent' => ($existingInvItem && $existingInvItem->igst_percent > 0) ? $existingInvItem->igst_percent : $calcIgst,
                     'igst_amount' => $existingInvItem->igst_amount ?? $item->igst_amount ?? 0,
-                    'po_number' => $purchaseOrder->po_number
+                    'po_number' => $purchaseOrder->po_number,
+                    'po_cgst_percent' => $poCgst,
+                    'po_sgst_percent' => $poSgst,
+                    'po_igst_percent' => $poIgst,
+                    'item_cgst_percent' => $itemCgst,
+                    'item_sgst_percent' => $itemSgst,
+                    'item_igst_percent' => $itemIgst,
                 ];
             })->filter();
 

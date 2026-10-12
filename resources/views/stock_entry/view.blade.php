@@ -8,35 +8,50 @@
                     <h4 class="mb-0">Stock Entry</h4>
                     <div class="d-flex gap-2">
                         @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials') || auth()->user()->can('create stock-entry-finished-goods'))
-                            <button type="button" class="btn btn-secondary" id="import-stock-btn" data-bs-toggle="modal"
-                                data-bs-target="#importModal" style="display: none;">
-                                <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
-                            </button>
+                            <div class="btn-group" id="import-dropdown-group" style="display: none;">
+                                <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="import-stock-btn">
+                                    <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border">
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center py-2" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#importModal">
+                                            <i class="ri-file-list-3-line me-2 text-primary fs-5"></i>
+                                            <div>
+                                                <div class="fw-bold">Raw Materials</div>
+                                                <small class="text-muted">Fabric / Accessories</small>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center py-2" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#scrapImportModal">
+                                            <i class="ri-recycle-line me-2 text-warning fs-5"></i>
+                                            <div>
+                                                <div class="fw-bold">Scrap Materials</div>
+                                                <small class="text-muted">Scrap Store Stocks (KGS)</small>
+                                            </div>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-secondary" id="import-fg-direct-btn" data-bs-toggle="modal" data-bs-target="#importModal" style="display: none;"><i class="menu-icon icon-base ri ri-upload-2-line"></i> Import </button>
                         @endif
                         @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods') || auth()->user()->can('view stock-entry-raw-materials'))
                             <div id="stock-export-filter-box" class="d-flex align-items-center gap-2">
-                                <input type="text" id="stock_export_date" class="form-control form-control-sm"
-                                    style="width: 140px;" placeholder="Select Date" title="Select Date">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="stock_export_reset_btn"
-                                    title="Reset Date Filter"><i class="ri ri-refresh-line"></i></button>
+                                <input type="text" id="stock_export_date" class="form-control form-control-sm" style="width: 140px;" placeholder="Select Date" title="Select Date">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="stock_export_reset_btn" title="Reset Date Filter"><i class="ri ri-refresh-line"></i></button>
                             </div>
                         @endif
                         @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods'))
-                            <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success disabled"
-                                id="export-finished-goods-btn" style="display: none; pointer-events: none; opacity: 0.5;"
-                                tabindex="-1" aria-disabled="true">
+                            <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success disabled" id="export-finished-goods-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1" aria-disabled="true">
                                 <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export
                             </a>
-                            <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary disabled"
-                                id="export-barcode-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1"
-                                aria-disabled="true">
+                            <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary disabled" id="export-barcode-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1" aria-disabled="true">
                                 <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export Barcode
                             </a>
                         @endif
                         @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-raw-materials'))
-                            <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success disabled"
-                                id="export-raw-materials-btn" style="display: none; pointer-events: none; opacity: 0.5;"
-                                tabindex="-1" aria-disabled="true">
+                            <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success disabled" id="export-raw-materials-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1" aria-disabled="true">
                                 <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export
                             </a>
                         @endif
@@ -55,15 +70,12 @@
                     <div class="card-body">
                         <!-- Tabs Section -->
                         <div class="d-flex justify-content-center mb-4">
-                            <div class="nav nav-pills custom-segment-tabs p-1 rounded-pill bg-light" id="stockEntryTabs"
-                                role="tablist">
+                            <div class="nav nav-pills custom-segment-tabs p-1 rounded-pill bg-light" id="stockEntryTabs" role="tablist">
                                 @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-raw-materials'))
-                                    <button class="nav-link rounded-pill px-4 fw-bold" id="raw-material-tab" type="button"
-                                        data-entry-type="Raw Material">Raw Materials</button>
+                                    <button class="nav-link rounded-pill px-4 fw-bold" id="raw-material-tab" type="button" data-entry-type="Raw Material">Raw Materials</button>
                                 @endif
                                 @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods'))
-                                    <button class="nav-link rounded-pill px-4 fw-bold" id="finished-goods-tab" type="button"
-                                        data-entry-type="Finished Goods">Finished Goods</button>
+                                    <button class="nav-link rounded-pill px-4 fw-bold" id="finished-goods-tab" type="button" data-entry-type="Finished Goods">Finished Goods</button>
                                 @endif
                             </div>
                         </div>
@@ -92,6 +104,19 @@
                                 color: #696cff !important;
                                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
                             }
+
+                            #import-stock-btn.dropdown-toggle,
+                            #import-stock-btn.dropdown-toggle:hover,
+                            #import-stock-btn.dropdown-toggle:focus,
+                            #import-stock-btn.dropdown-toggle:active,
+                            #import-stock-btn.dropdown-toggle.show,
+                            .show > #import-stock-btn.btn-secondary,
+                            .show > #import-stock-btn.dropdown-toggle {
+                                background-color: #8592a3 !important;
+                                border-color: #8592a3 !important;
+                                color: #ffffff !important;
+                                box-shadow: none !important;
+                            }
                         </style>
 
                         <!-- Finished Goods Filter Options -->
@@ -101,8 +126,7 @@
                                     <h5 class="mb-0">Filter</h5>
                                 </div>
                                 <div class="col-md-4 col-lg-3">
-                                    <select name="fg_warehouse_id" id="fg_warehouse_id" class="form-select select2"
-                                        data-placeholder="Select Warehouse">
+                                    <select name="fg_warehouse_id" id="fg_warehouse_id" class="form-select select2" data-placeholder="Select Warehouse">
                                         <option value="">Select Warehouse</option>
                                         @foreach($warehouses ?? [] as $wh)
                                             <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
@@ -110,8 +134,7 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4 col-lg-3">
-                                    <select name="fg_store_type_id" id="fg_store_type_id" class="form-select select2"
-                                        data-placeholder="Select Store Type">
+                                    <select name="fg_store_type_id" id="fg_store_type_id" class="form-select select2" data-placeholder="Select Store Type">
                                         <option value="">Select Store Type</option>
                                         @foreach($storeTypes ?? [] as $st)
                                             <option value="{{ $st->id }}">{{ $st->store_type_name }}</option>
@@ -120,8 +143,7 @@
                                 </div>
                                 <div class="col-md-4 col-lg-3 d-flex gap-2">
                                     <!-- <button type="button" id="fg_filter_btn" class="btn btn-primary text-uppercase">Filter</button> -->
-                                    <button type="button" id="fg_reset_btn"
-                                        class="btn btn-secondary text-uppercase">Reset</button>
+                                    <button type="button" id="fg_reset_btn" class="btn btn-secondary text-uppercase">Reset</button>
                                 </div>
                             </div>
                         </div>
@@ -137,6 +159,7 @@
                                         <th>GRN No.</th>
                                         <th>Job Card No.</th>
                                         <th>Warehouse</th>
+                                        <th>Store Category</th>
                                         <th>Store Type</th>
                                         <th>Item Name</th>
                                         <th>Art No.</th>
@@ -170,19 +193,15 @@
                         <div id="adjustment-alert-container"></div>
                         <div class="mb-3">
                             <div class="input-group input-group-merge">
-                                <span class="input-group-text" id="basic-addon-search31"><i
-                                        class="ri-search-line"></i></span>
-                                <input type="text" id="adjustment-search" class="form-control"
-                                    placeholder="Search by Category, Material or Art No..." aria-label="Search..."
-                                    aria-describedby="basic-addon-search31">
+                                <span class="input-group-text" id="basic-addon-search31"><i class="ri ri-search-line"></i></span>
+                                <input type="text" id="adjustment-search" class="form-control" placeholder="Search by Category, Material or Art No..." aria-label="Search..." aria-describedby="basic-addon-search31">
                             </div>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-bordered table-sm" id="adjustment-table">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th style="width: 40px;"><input type="checkbox" class="form-check-input"
-                                                id="check-all"></th>
+                                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="check-all"></th>
                                         <th>Category</th>
                                         <th>Material</th>
                                         <th>Art No</th>
@@ -223,13 +242,10 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="import_file" class="form-label">Upload File (CSV, Excel)</label>
-                            <input class="form-control" type="file" id="import_file" name="import_file"
-                                accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                                required>
+                            <input class="form-control" type="file" id="import_file" name="import_file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
                         </div>
                         <div class="mb-3">
-                            <a href="{{ url('stock_entries/download-raw-material-sample') }}"
-                                class="btn btn-sm btn-outline-info" id="import-sample-link">
+                            <a href="{{ url('stock_entries/download-raw-material-sample') }}" class="btn btn-sm btn-outline-info" id="import-sample-link">
                                 <i class="ri ri-download-2-line"></i> Download Sample Format
                             </a>
                         </div>
@@ -237,6 +253,39 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-primary">Import</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scrap Import Modal -->
+    <div class="modal fade" id="scrapImportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center">
+                        <i class="ri ri-recycle-line text-warning me-2 fs-4"></i> Import Scrap Materials Stock
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ url('stock_entries/import-scrap-materials') }}" method="POST" enctype="multipart/form-data"
+                    id="scrap-import-stock-form">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="scrap_import_file" class="form-label">Upload Scrap File (CSV, Excel)</label>
+                            <input class="form-control" type="file" id="scrap_import_file" name="import_file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
+                        </div>
+                        <div class="mb-3">
+                            <a href="{{ url('stock_entries/download-scrap-material-sample') }}" class="btn btn-sm btn-outline-info">
+                                <i class="ri ri-download-2-line"></i> Download Scrap Sample Format
+                            </a>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Import Scrap Stock</button>
                     </div>
                 </form>
             </div>
@@ -317,6 +366,10 @@
                     data: 'warehouse',
                     name: 'warehouse',
                     visible: false
+                },
+                {
+                    data: 'store_category',
+                    name: 'store_category'
                 },
                 {
                     data: 'store_type',
@@ -430,10 +483,11 @@
                     $('#fg-filter-box').show();
                     $('#add-stock-entry-btn').hide();
                     updateImportModal('Finished Goods');
+                    $('#import-dropdown-group').hide();
                     @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-finished-goods'))
-                        $('#import-stock-btn').show();
+                        $('#import-fg-direct-btn').show();
                     @else
-                        $('#import-stock-btn').hide();
+                        $('#import-fg-direct-btn').hide();
                     @endif
                     $('#export-finished-goods-btn').show();
                     $('#export-barcode-btn').show();
@@ -443,24 +497,26 @@
                     table.column(3).visible(false); // GRN No
                     table.column(4).visible(true);  // Job Card No
                     table.column(5).visible(true);  // Warehouse
-                    table.column(6).visible(true);  // Store Type
-                    table.column(7).visible(true);  // Item Name
-                    table.column(8).visible(true);  // Art No
-                    table.column(9).visible(true);  // Fabric Type
-                    table.column(10).visible(true); // Sleeve Type
-                    table.column(11).visible(true); // Size
-                    table.column(12).visible(true); // SKU
-                    table.column(13).visible(true); // Total Qty
-                    table.column(14).visible(true); // Action
+                    table.column(6).visible(false); // Store Category
+                    table.column(7).visible(true);  // Store Type
+                    table.column(8).visible(true);  // Item Name
+                    table.column(9).visible(true);  // Art No
+                    table.column(10).visible(true); // Fabric Type
+                    table.column(11).visible(true); // Sleeve Type
+                    table.column(12).visible(true); // Size
+                    table.column(13).visible(true); // SKU
+                    table.column(14).visible(true); // Total Qty
+                    table.column(15).visible(true); // Action
                 } else {
                     $('.filter-box').show();
                     $('#fg-filter-box').hide();
+                    $('#import-fg-direct-btn').hide();
 
                     @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials'))
-                        $('#import-stock-btn').show();
+                        $('#import-dropdown-group').show();
                         $('#add-stock-entry-btn').show();
                     @else
-                        $('#import-stock-btn').hide();
+                        $('#import-dropdown-group').hide();
                         $('#add-stock-entry-btn').hide();
                     @endif
 
@@ -473,15 +529,16 @@
                     table.column(3).visible(true);  // GRN No
                     table.column(4).visible(true);  // Job Card No
                     table.column(5).visible(false); // Warehouse
-                    table.column(6).visible(false); // Store Type
-                    table.column(7).visible(false); // Item Name
-                    table.column(8).visible(false); // Art No
-                    table.column(9).visible(false); // Fabric Type
-                    table.column(10).visible(false); // Sleeve Type
-                    table.column(11).visible(false); // Size
-                    table.column(12).visible(false); // SKU
-                    table.column(13).visible(true); // Total Qty
-                    table.column(14).visible(true); // Action
+                    table.column(6).visible(true);  // Store Category
+                    table.column(7).visible(false); // Store Type
+                    table.column(8).visible(false); // Item Name
+                    table.column(9).visible(false); // Art No
+                    table.column(10).visible(false);// Fabric Type
+                    table.column(11).visible(false);// Sleeve Type
+                    table.column(12).visible(false);// Size
+                    table.column(13).visible(false);// SKU
+                    table.column(14).visible(true); // Total Qty
+                    table.column(15).visible(true); // Action
                 }
 
                 updateExportButtonsState();

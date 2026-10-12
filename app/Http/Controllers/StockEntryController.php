@@ -25,6 +25,7 @@ use App\Exports\BarcodeExport;
 use App\Exports\RawMaterialStockExport;
 use App\Imports\RawMaterialStockImport;
 use App\Imports\FinishedGoodsStockImport;
+use App\Imports\ScrapStockImport;
 
 
 class StockEntryController extends Controller
@@ -324,11 +325,14 @@ class StockEntryController extends Controller
                         }
                     }
 
-                    $categoryDisplay = $firstItem && $firstItem->storeCategory ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>' : '-';
+                    $categoryDisplay = '-';
+                    if ($firstItem && $firstItem->storeCategory) {
+                        $catName = $firstItem->storeCategory->category_name;
+                        $catCode = $firstItem->storeCategory->code ? " ({$firstItem->storeCategory->code})" : "";
+                        $categoryDisplay = $catName . $catCode;
+                    }
 
-                    $storeTypeDisplay = $firstItem && $firstItem->storeType
-                        ? $firstItem->storeType->store_type_name
-                        : ($entry->storeType ? $entry->storeType->store_type_name : '-');
+                    $storeTypeDisplay = $firstItem && $firstItem->storeType  ? $firstItem->storeType->store_type_name : ($entry->storeType ? $entry->storeType->store_type_name : '-');
 
                     $artNo = $firstItem ? ($firstItem->art_no ?: '-') : '-';
 
@@ -383,8 +387,8 @@ class StockEntryController extends Controller
             ]);
         }
 
-        $warehouses = Warehouse::where('status', 'Active')->orderBy('warehouse_name')->get();
-        $storeTypes = StoreType::where('status', 'Active')->orderBy('store_type_name')->get();
+        $warehouses = Warehouse::where('status', 'Active')->orderBy('id','desc')->get();
+        $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->get();
 
         return view('stock_entry.view', compact('warehouses', 'storeTypes'));
     }
@@ -847,6 +851,68 @@ class StockEntryController extends Controller
         } catch (\Exception $e) {
             return redirect('stock_entries?tab=finished_goods')->with('error', $e->getMessage());
         }
+    }
+
+    public function importScrapMaterials(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create stock-entry-raw-materials')) {
+            return unauthorizedRedirect();
+        }
+
+        $request->validate([
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+        ]);
+
+        try {
+            Excel::import(new ScrapStockImport, $request->file('import_file'));
+            return redirect('stock_entries?tab=raw_materials')->with('success', 'Scrap Materials Stock imported successfully.');
+        } catch (ValidationException $e) {
+            $errorMessages = [];
+            foreach ($e->errors() as $messages) {
+                if (is_array($messages)) {
+                    $errorMessages = array_merge($errorMessages, $messages);
+                } else {
+                    $errorMessages[] = $messages;
+                }
+            }
+            return redirect('stock_entries?tab=raw_materials')->with('error', implode('<br>', $errorMessages));
+        } catch (\Exception $e) {
+            LaravelLog::error('Scrap material stock import failed', ['exception' => $e]);
+            return redirect('stock_entries?tab=raw_materials')->with('error', $e->getMessage());
+        }
+    }
+
+    public function downloadScrapMaterialSample()
+    {
+        $headers = [
+            'Stock Date',
+            'Store Category',
+            'Scrap Material Name',
+            'UOM',
+            'Qty In',
+            'Price',
+            'Remarks'
+        ];
+
+        $callback = function () use ($headers) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($file, $headers);
+            fputcsv($file, [
+                date('d-m-Y'),
+                'SCRAP STORE',
+                'CANVAS WASTE',
+                'KGS',
+                '100.50',
+                '45.00',
+                'Sample scrap remarks'
+            ]);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'Scrap_Store_Stock_Sample.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function downloadRawMaterialSample()

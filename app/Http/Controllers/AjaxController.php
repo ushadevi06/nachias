@@ -310,4 +310,69 @@ class AjaxController extends Controller
 
         return response()->json(['results' => $formatted]);
     }
+
+    public function searchCustomers(Request $request)
+    {
+        $search = trim($request->get('q', ''));
+        $query = Customer::with(['city:id,city_name', 'place:id,place_name', 'state:id,state_name'])
+            ->where('status', 'Active');
+
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('mobile_no', 'like', "%{$search}%")
+                  ->orWhereHas('city', function ($cq) use ($search) {
+                      $cq->where('city_name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('place', function ($pq) use ($search) {
+                      $pq->where('place_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $customers = $query->orderBy('id', 'desc')->limit(30)->get();
+
+        $results = $customers->map(function($c) {
+            $name = trim($c->name);
+            $cityName = trim($c->city->city_name ?? ($c->place->place_name ?? ''));
+            $code = trim($c->code ?? '');
+
+            $displayText = $name;
+            if ($cityName !== '') {
+                $cleanName = strtoupper(preg_replace('/[^A-Z0-9]/', '', $name));
+                $cleanCity = strtoupper(preg_replace('/[^A-Z0-9]/', '', $cityName));
+                if ($cleanCity !== '' && !str_contains($cleanName, $cleanCity)) {
+                    $displayText .= " - {$cityName}";
+                }
+            }
+            if ($code !== '') {
+                $displayText .= " ({$code})";
+            }
+
+            $addressParts = array_filter([
+                $c->address_line_1,
+                $c->address_line_2,
+                $c->address_line_3,
+                $cityName,
+                $c->pincode ? ('PIN - ' . $c->pincode) : ''
+            ]);
+
+            return [
+                'id' => $c->id,
+                'text' => $displayText,
+                'name' => $c->name,
+                'code' => $c->code,
+                'city' => $cityName,
+                'mobile' => $c->mobile_no,
+                'state_id' => $c->state_id,
+                'pincode' => $c->pincode ?: ($c->zip_code ?: ''),
+                'sales_discount' => (float)($c->sales_discount ?? 0),
+                'box_discount_amount' => (float)($c->box_discount_amount ?? 0),
+                'address' => implode(', ', $addressParts)
+            ];
+        });
+
+        return response()->json(['results' => $results]);
+    }
 }

@@ -1086,8 +1086,8 @@ class SalesOrderController extends Controller
         $limit = $request->query('limit', 1000);
         $result = $orderaxeService->syncOrders($limit);
 
-        if ($result['synced'] > 0 || $result['skipped'] > 0 || $result['failed'] > 0) {
-            $msg = "OrderAxe Order Synced Successfully";
+        if (($result['created'] ?? 0) > 0) {
+            $msg = "OrderAxe Synced Successfully: {$result['created']} new orders synced.";
             return redirect('sales_orders')->with('success', $msg);
         }
 
@@ -1125,11 +1125,12 @@ class SalesOrderController extends Controller
             $limit = $request->query('limit', 1000);
             $rewindDays = $request->query('rewind') ?? $request->query('rewind_days') ?? ($request->has('reset') ? 7 : null);
             $result = $service->syncOrders((int)$limit, $rewindDays);
-            if ($result['synced'] > 0 || $result['skipped'] > 0 || $result['failed'] > 0) {
-                $msg = "OrderAxe Order Synced Successfully";
+            
+            if (($result['created'] ?? 0) > 0) {
+                $msg = "OrderAxe Synced Successfully: {$result['created']} new orders synced.";
                 return redirect('sales_orders')->with('success', $msg);
             } else {
-                return redirect('sales_orders')->with('info', 'No new orders found to sync from Orderaxe');
+                return redirect('sales_orders')->with('info', 'No new orders found to sync from Orderaxe.');
             }
         } catch (\Exception $e) {
             return redirect('sales_orders')->with('error', 'Sync failed: ' . $e->getMessage());

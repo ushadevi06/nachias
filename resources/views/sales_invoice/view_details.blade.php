@@ -24,7 +24,7 @@
                                 </li>
                             </ul>
                         </div>
-                        @if(!in_array((int)$invoice->store_id, [1, 2]))
+                        @if(!in_array((int)$invoice->store_id, [1, 2, 15]))
                         <div class="dropdown">
                             <button class="btn btn-primary dropdown-toggle" type="button" id="deliveryOrderDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="ri ri-truck-line back-arrow"></i>Delivery Order
@@ -45,7 +45,7 @@
                                 <li><a class="dropdown-item" href="{{ url('sales_invoices/courier-sticker/' . $invoice->id) }}" target="_blank">Courier Sticker</a></li>
                             </ul>
                         </div>
-                        @if(!in_array((int)$invoice->store_id, [1, 2]))
+                        @if(!in_array((int)$invoice->store_id, [1, 2, 15]))
                             @if($invoice->irn || $invoice->eway_bill_no)
                             <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#einvoiceDetailsModal">
                                 <i class="ri ri-receipt-line"></i> E-INVOICE Details
@@ -113,9 +113,10 @@
                 <div class="card detail-card">
                     <div class="card-body">
                         @php
-                            $isFabricStore = ((int)$invoice->store_id === 1);
-                            $isAccessoriesStore = ((int)$invoice->store_id === 2);
-                            $isRawMaterial = ($isFabricStore || $isAccessoriesStore);
+                            $isFabricStore = ((int)$invoice->store_id === 1 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')));
+                            $isAccessoriesStore = ((int)$invoice->store_id === 2 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')));
+                            $isScrapStore = ((int)$invoice->store_id === 15 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'SCRAP')));
+                            $isRawMaterial = ($isFabricStore || $isAccessoriesStore || $isScrapStore);
                         @endphp
                         <div class="row g-4">
                             <div class="col-lg-12">
@@ -159,7 +160,19 @@
                             
                             <div class="col-md-4">
                                 <label class="detail-title">Delivery Address:</label>
-                                <div class="text-muted">{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address ?? '-'))) !!}</div>
+                                @php
+                                    $displayAddr = \App\Models\SalesInvoice::cleanAddress($invoice->delivery_address ?? '');
+                                    if (empty($displayAddr) && $invoice->customer) {
+                                        $displayAddr = implode(",\n", array_filter([
+                                            $invoice->customer->address_line_1,
+                                            $invoice->customer->address_line_2,
+                                            $invoice->customer->address_line_3,
+                                            $invoice->customer->city->city_name ?? ($invoice->customer->place->place_name ?? ''),
+                                            $invoice->customer->pincode ? ('PIN - ' . $invoice->customer->pincode) : ''
+                                        ]));
+                                    }
+                                @endphp
+                                <div class="text-muted">{!! !empty($displayAddr) ? nl2br(e($displayAddr)) : '-' !!}</div>
                             </div>
                             
                             <div class="col-md-4">
@@ -219,9 +232,10 @@
                             <div class="col-lg-12">
                                 <div class="table-responsive">
                                     @php
-                                        $isFabricStore = ((int)$invoice->store_id === 1);
-                                        $isAccessoriesStore = ((int)$invoice->store_id === 2);
-                                        $isRawMaterial = ($isFabricStore || $isAccessoriesStore);
+                                        $isFabricStore = ((int)$invoice->store_id === 1 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'FABRIC')));
+                                        $isAccessoriesStore = ((int)$invoice->store_id === 2 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'ACCESSORIES')));
+                                        $isScrapStore = ((int)$invoice->store_id === 15 || ($invoice->store && str_contains(strtoupper($invoice->store->store_type_name), 'SCRAP')));
+                                        $isRawMaterial = ($isFabricStore || $isAccessoriesStore || $isScrapStore);
                                     @endphp
                                     <table class="table table-bordered table-hover text-nowrap align-middle">
                                         <thead class="table-light">
@@ -232,7 +246,9 @@
                                                     @if($isFabricStore)
                                                         <th>Style</th>
                                                     @endif
+                                                    @if(!$isScrapStore)
                                                     <th>Art No</th>
+                                                    @endif
                                                     <th>UOM</th>
                                                     <th>HSN Code</th>
                                                     <th class="text-end">Quantity</th>
@@ -261,67 +277,99 @@
                                                     $itemName = '';
                                                     $sleeveType = $item->sleeve_type;
 
-                                                    if ($item->item) {
-                                                        if ($item->item->brand) {
-                                                            $brandName = $item->item->brand->brand_name;
-                                                        } elseif ($item->brandCategory) {
+                                                    $seItem = $item->stockEntryItem;
+                                                    if (!$seItem && $item->stock_entry_item_id) {
+                                                        $seItem = \App\Models\StockEntryItem::with(['rawMaterial', 'item', 'style', 'brand', 'uom'])->find($item->stock_entry_item_id);
+                                                    }
+                                                    if (!$seItem && !empty($item->stock_allocations)) {
+                                                        $allocs = is_array($item->stock_allocations) ? $item->stock_allocations : json_decode($item->stock_allocations, true);
+                                                        if (!empty($allocs) && is_array($allocs)) {
+                                                            $firstAlloc = reset($allocs);
+                                                            $allocSeId = $firstAlloc['stock_entry_item_id'] ?? null;
+                                                            if ($allocSeId) {
+                                                                $seItem = \App\Models\StockEntryItem::with(['rawMaterial', 'item', 'style', 'brand', 'uom'])->find($allocSeId);
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if ($isRawMaterial) {
+                                                        if ($seItem && $seItem->rawMaterial) {
+                                                            $itemName = $seItem->rawMaterial->name;
+                                                        } elseif ($seItem && $seItem->raw_material_id) {
+                                                            $rm = \DB::table('raw_materials')->where('id', $seItem->raw_material_id)->first();
+                                                            $itemName = $rm ? $rm->name : ($item->art_no ?: 'Raw Material');
+                                                        } elseif ($seItem && $seItem->item) {
+                                                            $itemName = $seItem->item->name ?: $seItem->item->code;
+                                                        } elseif ($item->item) {
+                                                            $itemName = $item->item->name ?: $item->item->code;
+                                                        } elseif (!empty($item->item_name)) {
+                                                            $itemName = $item->item_name;
+                                                        } else {
+                                                            $itemName = $item->art_no ?: 'Raw Material';
+                                                        }
+                                                    } else {
+                                                        if ($item->item) {
+                                                            if ($item->item->brand) {
+                                                                $brandName = $item->item->brand->brand_name;
+                                                            } elseif ($item->brandCategory) {
+                                                                $brandName = $item->brandCategory->name;
+                                                            }
+
+                                                            if ($item->item->style) {
+                                                                $itemName = $item->item->style->style_name;
+                                                            } else {
+                                                                $itemName = $item->item->name;
+                                                            }
+                                                        } elseif ($seItem) {
+                                                            if ($seItem->rawMaterial) {
+                                                                $brandName = $seItem->rawMaterial->name;
+                                                                $itemName = $seItem->rawMaterial->name;
+                                                            } elseif ($seItem->raw_material_id) {
+                                                                $rm = \DB::table('raw_materials')->where('id', $seItem->raw_material_id)->first();
+                                                                $brandName = $rm ? $rm->name : ($item->art_no ?: 'Raw Material');
+                                                                $itemName = $brandName;
+                                                            } elseif ($seItem->item) {
+                                                                $sItem = $seItem->item;
+                                                                if ($sItem->brand) {
+                                                                    $brandName = $sItem->brand->brand_name;
+                                                                } elseif ($sItem->brandCategory) {
+                                                                    $brandName = $sItem->brandCategory->name;
+                                                                }
+
+                                                                if ($sItem->style) {
+                                                                    $itemName = $sItem->style->style_name;
+                                                                } else {
+                                                                    $itemName = $sItem->name;
+                                                                }
+                                                            } else {
+                                                                $brandName = $seItem->finished_item_code;
+                                                            }
+
+                                                            if (empty($sleeveType)) {
+                                                                $sleeveType = $seItem->sleeve_type;
+                                                            }
+                                                        }
+
+                                                        if (empty($brandName) && $item->brandCategory) {
                                                             $brandName = $item->brandCategory->name;
                                                         }
-
-                                                        if ($item->item->style) {
-                                                            $itemName = $item->item->style->style_name;
-                                                        } else {
-                                                            $itemName = $item->item->name;
+                                                        if (empty($itemName) && !empty($item->art_no)) {
+                                                            $itemName = $item->art_no;
                                                         }
-                                                    } elseif ($item->stockEntryItem) {
-                                                        if ($item->stockEntryItem->rawMaterial) {
-                                                            $brandName = $item->stockEntryItem->rawMaterial->name;
-                                                            $itemName = $item->stockEntryItem->rawMaterial->name;
-                                                        } elseif ($item->stockEntryItem->raw_material_id) {
-                                                            $rm = \DB::table('raw_materials')->where('id', $item->stockEntryItem->raw_material_id)->first();
-                                                            $brandName = $rm ? $rm->name : ($item->art_no ?: 'Raw Material');
-                                                            $itemName = $brandName;
-                                                        } elseif ($item->stockEntryItem->item) {
-                                                            $seItem = $item->stockEntryItem->item;
-                                                            if ($seItem->brand) {
-                                                                $brandName = $seItem->brand->brand_name;
-                                                            } elseif ($seItem->brandCategory) {
-                                                                $brandName = $seItem->brandCategory->name;
-                                                            }
-
-                                                            if ($seItem->style) {
-                                                                $itemName = $seItem->style->style_name;
-                                                            } else {
-                                                                $itemName = $seItem->name;
-                                                            }
-                                                        } else {
-                                                            $brandName = $item->stockEntryItem->finished_item_code;
-                                                        }
-
-                                                        if (empty($sleeveType)) {
-                                                            $sleeveType = $item->stockEntryItem->sleeve_type;
-                                                        }
-                                                    }
-
-                                                    if (empty($brandName) && $item->brandCategory) {
-                                                        $brandName = $item->brandCategory->name;
-                                                    }
-                                                    if (empty($itemName) && !empty($item->art_no)) {
-                                                        $itemName = $item->art_no;
                                                     }
 
                                                     $uomDisplay = '-';
                                                     if ($item->uom) {
                                                         $uomDisplay = $item->uom->uom_code ?: $item->uom->uom_name;
-                                                    } elseif ($item->stockEntryItem && $item->stockEntryItem->uom) {
-                                                        $uomDisplay = $item->stockEntryItem->uom->uom_code ?: $item->stockEntryItem->uom->uom_name;
+                                                    } elseif ($seItem && $seItem->uom) {
+                                                        $uomDisplay = $seItem->uom->uom_code ?: $seItem->uom->uom_name;
                                                     } elseif (!empty($item->uom_id)) {
                                                         $uomModel = \App\Models\Uom::find($item->uom_id);
                                                         $uomDisplay = $uomModel ? ($uomModel->uom_code ?: $uomModel->uom_name) : $item->uom_id;
                                                     }
 
-                                                    $displayArtNo = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : $item->art_no;
-                                                    $styleName = ($item->stockEntryItem && $item->stockEntryItem->style) ? $item->stockEntryItem->style->style_name : '-';
+                                                    $displayArtNo = $seItem ? ($seItem->art_no ?: $item->art_no) : $item->art_no;
+                                                    $styleName = ($seItem && $seItem->style) ? $seItem->style->style_name : '-';
                                                 @endphp
 
                                                 @if($isRawMaterial)
@@ -333,7 +381,9 @@
                                                         @if($isFabricStore)
                                                             <td><span class="badge bg-label-info">{{ $styleName }}</span></td>
                                                         @endif
+                                                        @if(!$isScrapStore)
                                                         <td>{{ $displayArtNo ?? '-' }}</td>
+                                                        @endif
                                                         <td>{{ $uomDisplay }}</td>
                                                         <td>{{ $item->hsn_sac ?? '-' }}</td>
                                                         <td class="text-end">{{ number_format($item->quantity, 2) }}</td>
@@ -345,7 +395,11 @@
                                                         <td>{{ $index + 1 }}</td>
                                                         <td>
                                                             <div class="fw-bold">{{ $brandName ?: '-' }}</div>
-                                                            <div class="small text-muted">{{ $itemName ?: '' }} {{ $sleeveType ? '(' . $sleeveType . ')' : '' }}</div>
+                                                            @if(!empty($itemName) && $itemName !== $brandName)
+                                                                <div class="small text-muted">{{ $itemName }} {{ $sleeveType ? '(' . $sleeveType . ')' : '' }}</div>
+                                                            @elseif(!empty($sleeveType))
+                                                                <div class="small text-muted">({{ $sleeveType }})</div>
+                                                            @endif
                                                             @if(!empty($item->sku))
                                                                 <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
                                                             @endif
@@ -407,12 +461,14 @@
                                                         (GST/IGST)</label>
                                                 </div>
                                             </div>
+                                            @if(!$isRawMaterial)
                                             <div class="col-md-4 col-lg-3">
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="checkbox" id="showMrp" {{ is_array($invoice->show_fields) && in_array('mrp', $invoice->show_fields) ? 'checked' : '' }} disabled>
                                                     <label class="form-check-label" for="showMrp">Show MRP</label>
                                                 </div>
                                             </div>
+                                            @endif
 
                                             <div class="col-md-4 col-lg-3">
                                                 <div class="form-check form-check-inline">
@@ -525,7 +581,7 @@
                                             <div class="d-flex justify-content-between mb-2 pt-2 border-top">
                                                 <label class="detail-title">Tax Amount:</label>
                                                 <div class="text-muted fw-bold">
-                                                    ₹{{ number_format($invoice->tax_amount, 2) }}</div>
+                                                    ₹{{ number_format(!$invoice->other_state ? ((float)$invoice->cgst + (float)$invoice->sgst) : (float)$invoice->igst, 2) }}</div>
                                             </div>
                                             {{-- @if($invoice->post_gst_charges > 0)
                                             <div class="d-flex justify-content-between mb-2">
