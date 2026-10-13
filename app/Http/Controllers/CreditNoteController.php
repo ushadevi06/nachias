@@ -506,7 +506,6 @@ class CreditNoteController extends Controller
         $salesInvoiceItemIds = $invoices->flatMap->items->pluck('id')->toArray();
         $stockEntryItemIds = $invoices->flatMap->items->pluck('stock_entry_item_id')->filter()->unique()->toArray();
 
-        // 1. Bulk query for Already Returned quantities
         $returnedQuantities = DB::table('credit_note_items')
             ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
             ->whereIn('credit_note_items.sales_invoice_item_id', $salesInvoiceItemIds)
@@ -521,7 +520,6 @@ class CreditNoteController extends Controller
             ->pluck('total_returned', 'sales_invoice_item_id')
             ->toArray();
 
-        // 2. Bulk query for Sales Order UOM
         $soItemsUom = [];
         if (!empty($stockEntryItemIds)) {
             $soItemsUom = \App\Models\SalesOrderItem::whereIn('stock_entry_item_id', $stockEntryItemIds)->whereNotNull('uom_id')->pluck('uom_id', 'stock_entry_item_id')->toArray();
@@ -918,7 +916,7 @@ class CreditNoteController extends Controller
                                         'brand_id' => $origStockItem->brand_id,
                                         'sleeve_type' => $origStockItem->sleeve_type,
                                         'store_location_id' => $origStockItem->store_location_id,
-                                        'store_type_id' => 6, // DAMAGE GOODS STORE
+                                        'store_type_id' => 6, 
                                         'warehouse_id' => $origStockItem->warehouse_id,
                                         'uom_id' => $origStockItem->uom_id,
                                         'qty_in' => $item->quantity,
@@ -931,7 +929,6 @@ class CreditNoteController extends Controller
                                 $remainingToRevert = (float)$item->quantity;
                                 $origStockItem = \App\Models\StockEntryItem::find($salesInvoiceItem->stock_entry_item_id);
 
-                                // 1. Try stock_allocations from sales_invoice_item
                                 $allocations = !empty($salesInvoiceItem->stock_allocations) && is_array($salesInvoiceItem->stock_allocations) ? $salesInvoiceItem->stock_allocations : [];
                                 if (!empty($allocations)) {
                                     $reversedAlloc = array_reverse($allocations);
@@ -950,14 +947,8 @@ class CreditNoteController extends Controller
                                     }
                                 }
 
-                                // 2. Fallback to matching sibling rows if still remaining (or legacy row)
                                 if ($remainingToRevert > 0 && $origStockItem) {
-                                    $stockQuery = \App\Models\StockEntryItem::where('stock_type', 'finished_goods')
-                                        ->whereNull('deleted_at')
-                                        ->where('warehouse_id', $origStockItem->warehouse_id)
-                                        ->where('store_type_id', $origStockItem->store_type_id)
-                                        ->where('art_no', $origStockItem->art_no)
-                                        ->where('size', $origStockItem->size);
+                                    $stockQuery = \App\Models\StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->where('warehouse_id', $origStockItem->warehouse_id)->where('store_type_id', $origStockItem->store_type_id)->where('art_no', $origStockItem->art_no)->where('size', $origStockItem->size);
 
                                     if (!empty($origStockItem->sku)) {
                                         $stockQuery->where('sku', $origStockItem->sku);
@@ -975,7 +966,6 @@ class CreditNoteController extends Controller
                                     }
                                 }
 
-                                // 3. If there is still extra quantity that couldn't be deducted from qty_out, create new stock item so qty_out is NEVER negative!
                                 if ($remainingToRevert > 0 && $origStockItem) {
                                     \App\Models\StockEntryItem::create([
                                         'stock_entry_id' => $origStockItem->stock_entry_id,
@@ -1001,10 +991,13 @@ class CreditNoteController extends Controller
                             }
                         }
                     } elseif ($item->stock_entry_item_id) {
-                        // Direct Return: transfer from RETURN GOODS STORE (14) to FINISHED GOODS (3) or DAMAGE STORE (6)
                         $origStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
                         if ($origStockItem) {
-                            $origStockItem->increment('qty_out', $item->quantity);
+                            $availToDeduct = max(0, (float)$origStockItem->qty_in - (float)$origStockItem->qty_out);
+                            $deductQty = min($availToDeduct, (float)$item->quantity);
+                            if ($deductQty > 0) {
+                                $origStockItem->increment('qty_out', $deductQty);
+                            }
                             $targetStoreTypeId = $isDamage ? 6 : 3;
 
                             \App\Models\StockEntryItem::create([
@@ -1045,8 +1038,9 @@ class CreditNoteController extends Controller
                         }
                     } elseif ($item->stock_entry_item_id) {
                         $origStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
-                        if ($origStockItem) {
-                            $origStockItem->decrement('qty_out', $item->quantity);
+                        if ($origStockItem && $origStockItem->qty_out > 0) {
+                            $revertQty = min((float)$origStockItem->qty_out, (float)$item->quantity);
+                            $origStockItem->decrement('qty_out', $revertQty);
                             $targetStoreTypeId = $isDamage ? 6 : 3;
 
                             \App\Models\StockEntryItem::where('stock_entry_id', $origStockItem->stock_entry_id)->where('store_type_id', $targetStoreTypeId)->where('art_no', $origStockItem->art_no)->where('size', $origStockItem->size)->where('qty_in', $item->quantity)->where('qty_out', 0)->latest('id')->first()?->delete();

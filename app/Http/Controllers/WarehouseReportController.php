@@ -2039,9 +2039,10 @@ class WarehouseReportController extends Controller
                         DB::raw("DATE_FORMAT(inv_date, '%b %Y') as period"),
                         DB::raw("YEAR(inv_date) as yr"),
                         DB::raw("MONTH(inv_date) as mn"),
+                        DB::raw("SUM(sub_total) as total_sales"),
                         DB::raw("SUM(CASE WHEN discount = 0 THEN sub_total ELSE 0 END) as regular_sales"),
                         DB::raw("SUM(CASE WHEN discount > 0 THEN sub_total ELSE 0 END) as discount_sales_raw"),
-                        DB::raw("SUM(discount) as total_discount"),
+                        DB::raw("SUM(discount) as discount_amount"),
                         DB::raw("SUM(sub_total - discount) as net_revenue")
                     )
                     ->whereNull('deleted_at');
@@ -2053,7 +2054,7 @@ class WarehouseReportController extends Controller
                     $query->where('inv_date', '<=', date('Y-m-d', strtotime($request->to_date)));
                 }
                 if ($request->store_id) {
-                    $query->where('store_location_id', $request->store_id);
+                    $query->where('store_id', $request->store_id);
                 }
                 if ($request->customer_id) {
                     $query->where('customer_id', $request->customer_id);
@@ -2092,13 +2093,13 @@ class WarehouseReportController extends Controller
                 $data = [];
                 
                 foreach ($regularDiscount as $item) {
-                    $discount_sales = $item->discount_sales_raw - $item->total_discount;
-                    $discount_pc = $item->discount_sales_raw > 0 ? ($item->total_discount / $item->discount_sales_raw) * 100 : 0;
+                    $discount_pc = $item->discount_sales_raw > 0 ? ($item->discount_amount / $item->discount_sales_raw) * 100 : 0;
                     
                     $data[] = [
                         'period' => '<strong>' . $item->period . '</strong>',
+                        'total_sales' => '₹' . number_format($item->total_sales ?? 0, 2),
                         'regular_sales' => '₹' . number_format($item->regular_sales ?? 0, 2),
-                        'discount_sales' => '₹' . number_format($discount_sales ?? 0, 2),
+                        'discount_amount' => '₹' . number_format($item->discount_amount ?? 0, 2),
                         'discount_pc' => '<span class="text-danger">' . number_format($discount_pc, 1) . '%</span>',
                         'net_revenue' => '<span class="text-success fw-bold">₹' . number_format($item->net_revenue ?? 0, 2) . '</span>'
                     ];
@@ -2358,11 +2359,15 @@ class WarehouseReportController extends Controller
 
                 $orderItems = $orderQuery->get();
 
+                // Pre-build brand map — resolve each unique art_no combo only once
+                $brandMap = $this->buildArtNoBrandMap($orderItems, $allBrands);
+
                 $brandSoTotals = [];
                 $soIdsList = [];
 
                 foreach ($orderItems as $item) {
-                    $resolved = $this->resolveBrandFromOrderItem($item, $allBrands);
+                    $resolved = $brandMap[spl_object_id($item)] ?? null;
+
                     if (!$resolved || empty($resolved['name']) || strtolower($resolved['name']) === 'uncategorized') {
                         continue; 
                     }
@@ -3516,6 +3521,31 @@ class WarehouseReportController extends Controller
         return null;
     }
 
+    protected function buildArtNoBrandMap($orderItems, $allBrands)
+    {
+        $map = []; 
+        $artNoMap = [];
+
+        foreach ($orderItems as $item) {
+            if (!empty($item->stock_brand_name)) {
+                $artNoMap[spl_object_id($item)] = ['name' => trim($item->stock_brand_name), 'id' => $item->stock_brand_id ?? null];
+                continue;
+            }
+            if (!empty($item->cat_brand_name)) {
+                $artNoMap[spl_object_id($item)] = ['name' => trim($item->cat_brand_name), 'id' => null];
+                continue;
+            }
+
+            $cacheKey = ($item->art_no ?? '') . '|||' . ($item->sku ?? '') . '|||' . ($item->item_name ?? '') . '|||' . ($item->category_name ?? '');
+            if (!array_key_exists($cacheKey, $map)) {
+                $map[$cacheKey] = $this->resolveBrandFromOrderItem($item, $allBrands);
+            }
+            $artNoMap[spl_object_id($item)] = $map[$cacheKey];
+        }
+
+        return $artNoMap;
+    }
+
     public function getBrandwiseLostSalesOrders(Request $request)
     {
         $draw = intval($request->draw);
@@ -3578,11 +3608,15 @@ class WarehouseReportController extends Controller
 
         $orderItems = $orderQuery->get();
 
+        // Pre-build brand map — resolve each unique art_no combo only once
+        $brandMap = $this->buildArtNoBrandMap($orderItems, $allBrands);
+
         $soMap = [];
         $matchedSoIds = [];
 
         foreach ($orderItems as $item) {
-            $resolved = $this->resolveBrandFromOrderItem($item, $allBrands);
+            $resolved = $brandMap[spl_object_id($item)] ?? null;
+
             if (!$resolved || empty($resolved['name']) || strtolower($resolved['name']) === 'uncategorized') {
                 continue;
             }
@@ -3593,29 +3627,40 @@ class WarehouseReportController extends Controller
                 continue;
             }
 
-            $soId = $item->so_id;
-            $matchedSoIds[] = $soId;
+            $soId    = $item->so_id;
+            $artNo   = trim($item->art_no ?? '');
+            $ordQ    = floatval($item->qty ?? 0);
+            $ordAmt  = floatval($item->amount ?? 0);
+            $normArtNo = strtoupper(preg_replace('/\s+/', '', $artNo));
 
             if (!isset($soMap[$soId])) {
+                $matchedSoIds[] = $soId;
                 $reasonText = !empty($item->reason_for_delay) ? trim($item->reason_for_delay) : '-';
-
                 $soMap[$soId] = [
-                    'so_id' => $soId,
-                    'so_no' => $item->so_no,
+                    'so_id'           => $soId,
+                    'so_no'           => $item->so_no,
                     'orderaxe_ref_id' => $item->orderaxe_ref_id ?? $item->order_no,
-                    'is_orderaxe' => !empty($item->orderaxe_id) || !empty($item->orderaxe_ref_id),
-                    'customer' => $item->customer_name ?? '-',
-                    'so_date' => date('d M Y', strtotime($item->so_date)),
-                    'reason' => $reasonText,
-                    'ordered_qty' => 0,
-                    'ordered_value' => 0,
-                    'items' => []
+                    'is_orderaxe'     => !empty($item->orderaxe_id) || !empty($item->orderaxe_ref_id),
+                    'customer'        => $item->customer_name ?? '-',
+                    'so_date'         => date('d M Y', strtotime($item->so_date)),
+                    'reason'          => $reasonText,
+                    'ordered_qty'     => 0,
+                    'ordered_value'   => 0,
+                    'so_art_nos'      => [],   // normalized art_no => total qty
+                    'art_rates'       => [],   // normalized art_no => unit rate
                 ];
             }
 
-            $soMap[$soId]['ordered_qty'] += floatval($item->qty ?? 0);
-            $soMap[$soId]['ordered_value'] += floatval($item->amount ?? 0);
-            $soMap[$soId]['items'][] = $item;
+            $soMap[$soId]['ordered_qty']   += $ordQ;
+            $soMap[$soId]['ordered_value'] += $ordAmt;
+
+            if (!empty($normArtNo)) {
+                $soMap[$soId]['so_art_nos'][$normArtNo] = ($soMap[$soId]['so_art_nos'][$normArtNo] ?? 0) + $ordQ;
+                // store rate for lost value calc (last rate wins per art_no, acceptable)
+                if ($ordQ > 0) {
+                    $soMap[$soId]['art_rates'][$normArtNo] = $ordAmt / $ordQ;
+                }
+            }
         }
 
         $invoicedArtNosMap = [];
@@ -3634,37 +3679,44 @@ class WarehouseReportController extends Controller
                 ->get();
 
             foreach ($invoices as $inv) {
-                $invoicedArtNosMap[$inv->so_id][$inv->art_no] = floatval($inv->invoiced_qty ?? 0);
+                $normalizedArtNo = strtoupper(preg_replace('/\s+/', '', trim($inv->art_no)));
+                $invoicedArtNosMap[$inv->so_id][$normalizedArtNo] = ($invoicedArtNosMap[$inv->so_id][$normalizedArtNo] ?? 0) + floatval($inv->invoiced_qty ?? 0);
             }
         }
 
         $allOrders = [];
         $orderSno = 1;
         foreach ($soMap as $soId => $data) {
-            $soInvQty = 0;
+            $soInvQty  = 0;
             $lostValue = 0;
-            $pendingArtNosList = [];
+            $soArtNos  = $data['so_art_nos'];   // already normalized
+            $artRates  = $data['art_rates'];
 
-            foreach ($data['items'] as $i) {
-                $artNo = $i->art_no;
-                $ordQ = floatval($i->qty ?? 0);
-                $ordAmt = floatval($i->amount ?? 0);
-                $rate = $ordQ > 0 ? ($ordAmt / $ordQ) : 0;
-
-                $invQ = floatval($invoicedArtNosMap[$soId][$artNo] ?? 0);
+            // Calc invoiced qty (only for art_nos in SO)
+            foreach ($soArtNos as $normArt => $ordQ) {
+                $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
                 $effectiveInvQ = min($ordQ, $invQ);
                 $soInvQty += $effectiveInvQ;
 
                 $itemPending = max(0, $ordQ - $invQ);
+                $rate = $artRates[$normArt] ?? 0;
                 $lostValue += ($itemPending * $rate);
+            }
 
-                if ($itemPending > 0 && !empty($artNo)) {
-                    $pendingArtNosList[] = $artNo;
+            // Open Order Qty: invoice items NOT in SO, or excess over SO qty
+            $openOrderQty = 0;
+            if (!empty($invoicedArtNosMap[$soId])) {
+                foreach ($invoicedArtNosMap[$soId] as $invNormArtNo => $invQ) {
+                    if (!isset($soArtNos[$invNormArtNo])) {
+                        $openOrderQty += $invQ;
+                    } elseif ($invQ > $soArtNos[$invNormArtNo]) {
+                        $openOrderQty += ($invQ - $soArtNos[$invNormArtNo]);
+                    }
                 }
             }
 
             $totalOrdQty = $data['ordered_qty'];
-            $pendingQty = max(0, $totalOrdQty - $soInvQty);
+            $pendingQty  = max(0, $totalOrdQty - $soInvQty);
 
             if ($pendingQty <= 0) {
                 continue;
@@ -3679,11 +3731,16 @@ class WarehouseReportController extends Controller
 
             $allOrders[] = [
                 'sno' => $orderSno++,
+                'so_id' => $soId,
+                'so_no_plain' => $data['so_no'],
                 'so_no' => $soNoHtml,
                 'customer' => htmlspecialchars($data['customer']),
                 'so_date' => $data['so_date'],
                 'ordered_qty' => number_format($totalOrdQty, 0),
                 'invoiced_qty' => '<span class="text-primary fw-bold">' . number_format($soInvQty, 0) . '</span>',
+                'open_order_qty' => $openOrderQty > 0
+                    ? '<span class="text-info fw-bold">' . number_format($openOrderQty, 0) . '</span>'
+                    : '<span class="text-muted">0</span>',
                 'lost_qty' => '<span class="text-danger fw-bold">' . number_format($pendingQty, 0) . '</span>',
                 'lost_value' => '<span class="text-danger fw-bold">₹' . number_format($lostValue, 2) . '</span>',
                 'reason' => $reasonHtml,
@@ -3703,8 +3760,209 @@ class WarehouseReportController extends Controller
         ]);
     }
 
+    public function getLostItemsDetail(Request $request, $so_id = null)
+    {
+        $soId = $so_id ?: $request->so_id;
+        $so = DB::table('sales_orders')
+            ->leftJoin('customers', 'sales_orders.customer_id', '=', 'customers.id')
+            ->where('sales_orders.id', $soId)
+            ->whereNull('sales_orders.deleted_at')
+            ->first([
+                'sales_orders.id',
+                'sales_orders.so_no',
+                'sales_orders.so_date',
+                'customers.name as customer_name'
+            ]);
+
+        if (!$so) {
+            return response()->json([
+                'draw' => intval($request->draw ?? 1),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'status' => false,
+                'message' => 'Sales Order not found'
+            ], 404);
+        }
+
+        $soItems = DB::table('sales_order_items')
+            ->leftJoin('stock_entry_items', 'sales_order_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+            ->leftJoin('colors', 'sales_order_items.color_id', '=', 'colors.id')
+            ->where('sales_order_items.sale_order_id', $soId)
+            ->whereNull('sales_order_items.deleted_at')
+            ->select(
+                'sales_order_items.art_no',
+                'sales_order_items.item_name',
+                'sales_order_items.sku',
+                'sales_order_items.sleeve',
+                'sales_order_items.qty',
+                'sales_order_items.api_color',
+                'sales_order_items.size_id',
+                'sales_order_items.category_name',
+                'colors.color_name',
+                'stock_entry_items.size as stock_size',
+                'stock_entry_items.sleeve_type as stock_sleeve',
+                'stock_entry_items.barcode'
+            )
+            ->get();
+
+        $soArtNos = [];
+        foreach ($soItems as $item) {
+            $norm = strtoupper(preg_replace('/\s+/', '', trim($item->art_no ?? '')));
+            if (!empty($norm)) {
+                $soArtNos[$norm] = ($soArtNos[$norm] ?? 0) + floatval($item->qty);
+            }
+        }
+
+        $invRows = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->where('sales_invoices.so_id', $soId)
+            ->whereNull('sales_invoices.deleted_at')
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->select(
+                'sales_invoice_items.sku',
+                'sales_invoice_items.art_no',
+                'sales_invoice_items.quantity'
+            )
+            ->get();
+
+        $invSkuPool = [];
+        $invArtNoPool = [];
+
+        foreach ($invRows as $row) {
+            $sku = trim($row->sku ?? '');
+            $q = floatval($row->quantity ?? 0);
+            if (!empty($sku)) {
+                $invSkuPool[$sku] = ($invSkuPool[$sku] ?? 0) + $q;
+            }
+            $norm = strtoupper(preg_replace('/\s+/', '', trim($row->art_no ?? '')));
+            if (!empty($norm)) {
+                $invArtNoPool[$norm] = ($invArtNoPool[$norm] ?? 0) + $q;
+            }
+        }
+
+        $lostItems = [];
+        $itemSno = 1;
+        $totalLostQty = 0;
+
+        foreach ($soItems as $item) {
+            $sku = trim($item->barcode ?: ($item->sku ?: ''));
+            $norm = strtoupper(preg_replace('/\s+/', '', trim($item->art_no ?? '')));
+            $soQ = floatval($item->qty ?? 0);
+
+            // 1. Deduct by exact SKU (barcode) if available in invoice
+            $usedFromSku = 0;
+            if (!empty($sku) && isset($invSkuPool[$sku]) && $invSkuPool[$sku] > 0) {
+                $usedFromSku = min($soQ, $invSkuPool[$sku]);
+                $invSkuPool[$sku] -= $usedFromSku;
+                if (!empty($norm) && isset($invArtNoPool[$norm])) {
+                    $invArtNoPool[$norm] = max(0, $invArtNoPool[$norm] - $usedFromSku);
+                }
+            }
+
+            $remQ = $soQ - $usedFromSku;
+
+            // 2. If any remaining, deduct from normalized Art No pool
+            if ($remQ > 0 && !empty($norm) && isset($invArtNoPool[$norm]) && $invArtNoPool[$norm] > 0) {
+                $usedFromArt = min($remQ, $invArtNoPool[$norm]);
+                $invArtNoPool[$norm] -= $usedFromArt;
+                $remQ -= $usedFromArt;
+            }
+
+            if ($remQ > 0) {
+                $row = $this->buildLostItemRow($item, $remQ, $itemSno++);
+                $lostItems[] = $row;
+                $totalLostQty += $remQ;
+            }
+        }
+
+        $search = $request->search['value'] ?? '';
+        $filteredItems = $lostItems;
+        if (!empty($search)) {
+            $searchLower = strtolower($search);
+            $filteredItems = array_values(array_filter($lostItems, function($it) use ($searchLower) {
+                return (str_contains(strtolower($it['art_no_raw'] ?? ''), $searchLower))
+                    || (str_contains(strtolower($it['description'] ?? ''), $searchLower))
+                    || (str_contains(strtolower($it['barcode_raw'] ?? ''), $searchLower))
+                    || (str_contains(strtolower($it['color'] ?? ''), $searchLower))
+                    || (str_contains(strtolower($it['size'] ?? ''), $searchLower))
+                    || (str_contains(strtolower($it['sleeve'] ?? ''), $searchLower));
+            }));
+        }
+
+        $draw = intval($request->draw ?? 1);
+        $start = intval($request->start ?? 0);
+        $rawLen = intval($request->length ?? 10);
+        $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
+        $pagedItems = $length != -1 ? array_slice($filteredItems, $start, $length) : $filteredItems;
+
+        return response()->json([
+            'draw'            => $draw,
+            'recordsTotal'    => count($lostItems),
+            'recordsFiltered' => count($filteredItems),
+            'data'            => $pagedItems,
+            'total_lost_qty'  => number_format($totalLostQty, 0),
+            'so_no'           => $so->so_no,
+            'customer'        => $so->customer_name ?? '-',
+            'so_date'         => $so->so_date ? date('d-m-Y', strtotime($so->so_date)) : '-',
+            'status'          => true,
+            'items'           => $lostItems,
+        ]);
+    }
+
+    private function buildLostItemRow($item, $qty, $sno = 1)
+    {
+        $rawSleeve = $item->sleeve ?: ($item->stock_sleeve ?? '');
+        if (!empty($rawSleeve) && is_string($rawSleeve) && str_starts_with(trim($rawSleeve), '[')) {
+            $decoded = json_decode($rawSleeve, true);
+            $rawSleeve = is_array($decoded) && !empty($decoded) ? $decoded[0] : $rawSleeve;
+        }
+        $sleeveUpper = strtoupper(trim((string)$rawSleeve));
+        if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL' || $sleeveUpper === 'FULL SLEEVE') {
+            $sleeveFormatted = 'Full';
+        } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF' || $sleeveUpper === 'HALF SLEEVE') {
+            $sleeveFormatted = 'Half';
+        } else {
+            $sleeveFormatted = $rawSleeve ?: '-';
+        }
+
+        $color = !empty($item->color_name) ? $item->color_name : (!empty($item->api_color) ? $item->api_color : '-');
+        $size = !empty($item->size_id) ? $item->size_id : (!empty($item->stock_size) ? $item->stock_size : '-');
+        $barcode = !empty($item->barcode) ? $item->barcode : (!empty($item->sku) ? $item->sku : '-');
+        $artNo = !empty($item->art_no) ? $item->art_no : '-';
+
+        $formattedCategory = null;
+        if (!empty($item->category_name)) {
+            $catStr = str_replace([' ', '_'], '-', trim($item->category_name));
+            $parts = array_filter(explode('-', $catStr));
+            $formattedParts = array_map(function($p) {
+                $pUpper = strtoupper($p);
+                if ($pUpper === 'FS' || $pUpper === 'F/S') return 'F/S';
+                if ($pUpper === 'HS' || $pUpper === 'H/S') return 'H/S';
+                return ucfirst(strtolower($p));
+            }, $parts);
+            $formattedCategory = implode('-', $formattedParts);
+        }
+        $desc = $formattedCategory ?: ($item->item_name ?: ($item->sku ?: '-'));
+
+        return [
+            'sno'         => $sno,
+            'art_no'      => '<span class="fw-bold text-primary">' . htmlspecialchars($artNo) . '</span>',
+            'art_no_raw'  => $artNo,
+            'description' => htmlspecialchars($desc),
+            'barcode'     => '<span class="badge bg-label-secondary font-monospace">' . htmlspecialchars($barcode) . '</span>',
+            'barcode_raw' => $barcode,
+            'color'       => htmlspecialchars($color),
+            'size'        => '<span class="badge bg-label-info">' . htmlspecialchars($size) . '</span>',
+            'sleeve'      => '<span class="badge bg-label-secondary">' . htmlspecialchars($sleeveFormatted) . '</span>',
+            'qty'         => '<span class="text-danger fw-bold">' . number_format($qty, 0) . '</span>',
+            'qty_raw'     => $qty,
+        ];
+    }
+
     public function getUrgentOrderDetails($id)
     {
+
         $so = SalesOrder::with(['customer', 'items.stockEntryItem', 'items.size', 'items.color'])->find($id);
 
         if (!$so) {
@@ -3807,7 +4065,7 @@ class WarehouseReportController extends Controller
             ->leftJoin('styles', 'stock_entry_items.style_id', '=', 'styles.id')
             ->select(
                 'stock_entry_items.art_no',
-                'stock_entry_items.finished_item_code',
+                DB::raw('MAX(stock_entry_items.finished_item_code) as finished_item_code'),
                 'stock_entry_items.size',
                 'stock_entry_items.sleeve_type',
                 DB::raw('MAX(styles.style_name) as style_name'),
@@ -3845,7 +4103,6 @@ class WarehouseReportController extends Controller
 
         $stockItems = $stockItemsQuery->groupBy(
             'stock_entry_items.art_no',
-            'stock_entry_items.finished_item_code',
             'stock_entry_items.size',
             'stock_entry_items.sleeve_type'
         )->get();
@@ -4083,6 +4340,13 @@ class WarehouseReportController extends Controller
             return $makeKey($item->art_no, $item->sleeve_type, $item->size);
         });
 
+        $totOpStock = 0;
+        $totInward = 0;
+        $totSales = 0;
+        $totClosing = 0;
+        $totSalesReturn = 0;
+        $totNetClosing = 0;
+
         $allItems = [];
         foreach ($stockItems as $item) {
             $key = $makeKey($item->art_no, $item->sleeve_type, $item->size);
@@ -4103,6 +4367,13 @@ class WarehouseReportController extends Controller
             if ($opStock == 0 && $inward == 0 && $sales == 0 && $closing == 0 && $salesReturn == 0 && $netClosing == 0) {
                 continue;
             }
+
+            $totOpStock += $opStock;
+            $totInward += $inward;
+            $totSales += $sales;
+            $totClosing += $closing;
+            $totSalesReturn += $salesReturn;
+            $totNetClosing += $netClosing;
 
             $artNoClean = (string)($item->art_no ?? '');
             $artNoSafe = addslashes($artNoClean);
@@ -4130,11 +4401,208 @@ class WarehouseReportController extends Controller
 
         $pagedData = $length != -1 ? array_slice($allItems, $start, $length) : $allItems;
 
+        if ($brandId) {
+            $brandCurrStockQuery = DB::table('stock_entry_items')
+                ->leftJoin('brands', function($join) {
+                    $join->on(function($query) {
+                        $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                            ->orOn(function($sub) {
+                                $sub->whereNull('stock_entry_items.brand_id')
+                                    ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                    ->whereRaw("NOT EXISTS (
+                                        SELECT 1 FROM brands b2 
+                                        WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                                        AND LENGTH(b2.code) > LENGTH(brands.code)
+                                    )");
+                            });
+                    });
+                })
+                ->where('stock_entry_items.stock_type', 'finished_goods')
+                ->whereNull('stock_entry_items.deleted_at')
+                ->where('brands.id', $brandId);
+            if ($storeId) $brandCurrStockQuery->where('stock_entry_items.store_location_id', $storeId);
+            if ($warehouseId) $brandCurrStockQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+            $bCurrStock = floatval($brandCurrStockQuery->sum(DB::raw('stock_entry_items.qty_in - stock_entry_items.qty_out')));
+
+            $inwQuery = DB::table('stock_entry_items')
+                ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
+                ->leftJoin('brands', function($join) {
+                    $join->on(function($query) {
+                        $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                            ->orOn(function($sub) {
+                                $sub->whereNull('stock_entry_items.brand_id')
+                                    ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                    ->whereRaw("NOT EXISTS (
+                                        SELECT 1 FROM brands b2 
+                                        WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                                        AND LENGTH(b2.code) > LENGTH(brands.code)
+                                    )");
+                            });
+                    });
+                })
+                ->where('stock_entry_items.stock_type', 'finished_goods')
+                ->where('stock_entry_items.qty_in', '>', 0)
+                ->whereNull('stock_entry_items.deleted_at')
+                ->whereBetween(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), [$fromDate, $toDate])
+                ->where('brands.id', $brandId);
+            if ($storeId) $inwQuery->where('stock_entry_items.store_location_id', $storeId);
+            if ($warehouseId) $inwQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+            $brandInward = floatval($inwQuery->sum('stock_entry_items.qty_in'));
+
+            $inwTillNowQuery = DB::table('stock_entry_items')
+                ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
+                ->leftJoin('brands', function($join) {
+                    $join->on(function($query) {
+                        $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                            ->orOn(function($sub) {
+                                $sub->whereNull('stock_entry_items.brand_id')
+                                    ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                    ->whereRaw("NOT EXISTS (
+                                        SELECT 1 FROM brands b2 
+                                        WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                                        AND LENGTH(b2.code) > LENGTH(brands.code)
+                                    )");
+                            });
+                    });
+                })
+                ->where('stock_entry_items.stock_type', 'finished_goods')
+                ->where('stock_entry_items.qty_in', '>', 0)
+                ->whereNull('stock_entry_items.deleted_at')
+                ->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '>=', $fromDate)
+                ->where('brands.id', $brandId);
+            if ($storeId) $inwTillNowQuery->where('stock_entry_items.store_location_id', $storeId);
+            if ($warehouseId) $inwTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+            $bInwTillNow = floatval($inwTillNowQuery->sum('stock_entry_items.qty_in'));
+
+            $salesQuery = DB::table('sales_invoice_items')
+                ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+                ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                ->leftJoin('brands', function($join) {
+                    $join->on(function($query) {
+                        $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                            ->orOn(function($sub) {
+                                $sub->whereNull('stock_entry_items.brand_id')
+                                    ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                    ->whereRaw("NOT EXISTS (
+                                        SELECT 1 FROM brands b2 
+                                        WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                        AND LENGTH(b2.code) > LENGTH(brands.code)
+                                    )");
+                            });
+                    });
+                })
+                ->whereNull('sales_invoices.deleted_at')
+                ->whereNull('sales_invoice_items.deleted_at')
+                ->whereBetween('sales_invoices.inv_date', [$fromDate, $toDate])
+                ->where('brands.id', $brandId);
+            if ($storeId) $salesQuery->where('sales_invoices.store_location_id', $storeId);
+            if ($warehouseId) $salesQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+            $brandSales = floatval($salesQuery->sum('sales_invoice_items.quantity'));
+
+            $salesTillNowQuery = DB::table('sales_invoice_items')
+                ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+                ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                ->leftJoin('brands', function($join) {
+                    $join->on(function($query) {
+                        $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                            ->orOn(function($sub) {
+                                $sub->whereNull('stock_entry_items.brand_id')
+                                    ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                    ->whereRaw("NOT EXISTS (
+                                        SELECT 1 FROM brands b2 
+                                        WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                        AND LENGTH(b2.code) > LENGTH(brands.code)
+                                    )");
+                            });
+                    });
+                })
+                ->whereNull('sales_invoices.deleted_at')
+                ->whereNull('sales_invoice_items.deleted_at')
+                ->where('sales_invoices.inv_date', '>=', $fromDate)
+                ->where('brands.id', $brandId);
+            if ($storeId) $salesTillNowQuery->where('sales_invoices.store_location_id', $storeId);
+            if ($warehouseId) $salesTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+            $bSalTillNow = floatval($salesTillNowQuery->sum('sales_invoice_items.quantity'));
+
+            $retQuery = DB::table('credit_note_items')
+                ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
+                ->leftJoin('sales_invoice_items', 'credit_note_items.sales_invoice_item_id', '=', 'sales_invoice_items.id')
+                ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                ->leftJoin('brands', function($join) {
+                    $join->on(function($query) {
+                        $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                            ->orOn(function($sub) {
+                                $sub->whereNull('stock_entry_items.brand_id')
+                                    ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                    ->whereRaw("NOT EXISTS (
+                                        SELECT 1 FROM brands b2 
+                                        WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                        AND LENGTH(b2.code) > LENGTH(brands.code)
+                                    )");
+                            });
+                    });
+                })
+                ->whereNull('credit_notes.deleted_at')
+                ->whereNull('credit_note_items.deleted_at')
+                ->whereBetween('credit_notes.note_date', [$fromDate, $toDate])
+                ->where('brands.id', $brandId);
+            if ($warehouseId) $retQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+            $brandReturns = floatval($retQuery->sum('credit_note_items.quantity'));
+
+            $retTillNowQuery = DB::table('credit_note_items')
+                ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
+                ->leftJoin('sales_invoice_items', 'credit_note_items.sales_invoice_item_id', '=', 'sales_invoice_items.id')
+                ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                ->leftJoin('brands', function($join) {
+                    $join->on(function($query) {
+                        $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                            ->orOn(function($sub) {
+                                $sub->whereNull('stock_entry_items.brand_id')
+                                    ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                    ->whereRaw("NOT EXISTS (
+                                        SELECT 1 FROM brands b2 
+                                        WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                        AND LENGTH(b2.code) > LENGTH(brands.code)
+                                    )");
+                            });
+                    });
+                })
+                ->whereNull('credit_notes.deleted_at')
+                ->whereNull('credit_note_items.deleted_at')
+                ->where('credit_notes.note_date', '>=', $fromDate)
+                ->where('brands.id', $brandId);
+            if ($warehouseId) $retTillNowQuery->where('stock_entry_items.warehouse_id', $warehouseId);
+            $bRetTillNow = floatval($retTillNowQuery->sum('credit_note_items.quantity'));
+
+            $brandOpStock = max(0, $bCurrStock - $bInwTillNow + $bSalTillNow - $bRetTillNow);
+            $brandClosing = $brandOpStock + $brandInward - $brandSales;
+            $brandNetClosing = $brandClosing + $brandReturns;
+
+            $brandTotals = [
+                'op_stock' => number_format($brandOpStock, 0),
+                'inward' => number_format($brandInward, 0),
+                'sales' => number_format($brandSales, 0),
+                'closing' => number_format($brandClosing, 0),
+                'sales_return' => number_format($brandReturns, 0),
+                'net_closing' => number_format($brandNetClosing, 0),
+            ];
+        } else {
+            $brandTotals = [
+                'op_stock' => number_format($totOpStock, 0),
+                'inward' => number_format($totInward, 0),
+                'sales' => number_format($totSales, 0),
+                'closing' => number_format($totClosing, 0),
+                'sales_return' => number_format($totSalesReturn, 0),
+                'net_closing' => number_format($totNetClosing, 0),
+            ];
+        }
+
         return response()->json([
             'draw' => $draw,
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data' => $pagedData,
+            'totals' => $brandTotals
         ]);
     }
 

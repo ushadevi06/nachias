@@ -191,17 +191,27 @@ function drillDownToStockInwardSalesDetails(brandId, brandName) {
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10,
         drawCallback: function (settings) {
-            var api = this.api();
-            var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/<[^>]*>/g, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
-            };
-            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
-            $('#sub_total_op_stock').html(fmt(api.column(4, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
-            $('#sub_total_inward').html(fmt(api.column(5, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
-            $('#sub_total_sales').html(fmt(api.column(6, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
-            $('#sub_total_closing').html(fmt(api.column(7, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
-            $('#sub_total_sales_return').html(fmt(api.column(8, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
-            $('#sub_total_net_closing').html(fmt(api.column(9, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+            var json = settings.json;
+            if (json && json.totals) {
+                $('#sub_total_op_stock').html(json.totals.op_stock);
+                $('#sub_total_inward').html(json.totals.inward);
+                $('#sub_total_sales').html(json.totals.sales);
+                $('#sub_total_closing').html(json.totals.closing);
+                $('#sub_total_sales_return').html(json.totals.sales_return);
+                $('#sub_total_net_closing').html(json.totals.net_closing);
+            } else {
+                var api = this.api();
+                var intVal = function (i) {
+                    return typeof i === 'string' ? i.replace(/<[^>]*>/g, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                };
+                var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+                $('#sub_total_op_stock').html(fmt(api.column(4, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+                $('#sub_total_inward').html(fmt(api.column(5, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+                $('#sub_total_sales').html(fmt(api.column(6, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+                $('#sub_total_closing').html(fmt(api.column(7, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+                $('#sub_total_sales_return').html(fmt(api.column(8, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+                $('#sub_total_net_closing').html(fmt(api.column(9, { page: 'current' }).data().reduce(function(a,b){ return intVal(a)+intVal(b); }, 0)));
+            }
         }
     });
 }

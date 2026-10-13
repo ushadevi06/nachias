@@ -3,8 +3,9 @@
         <thead>
             <tr>
                 <th>Period</th>
+                <th class="text-end">Total Sales</th>
                 <th class="text-end">Regular Sales</th>
-                <th class="text-end">Discount Sales</th>
+                <th class="text-end">Discount Amount</th>
                 <th class="text-center">Discount %</th>
                 <th class="text-end">Net Revenue</th>
             </tr>
@@ -14,8 +15,9 @@
         <tfoot class="table-light border-top" id="regularDiscountTfoot">
             <tr class="bg-light fw-bold">
                 <th class="fw-bold text-start">TOTAL</th>
+                <th class="text-end fw-bold text-dark" id="regFootTotalSales">₹0.00</th>
                 <th class="text-end fw-bold text-primary" id="regFootSales">₹0.00</th>
-                <th class="text-end fw-bold text-warning" id="regFootDiscount">₹0.00</th>
+                <th class="text-end fw-bold text-danger" id="regFootDiscount">₹0.00</th>
                 <th></th>
                 <th class="text-end fw-bold text-success" id="regFootNet">₹0.00</th>
             </tr>
@@ -44,8 +46,9 @@ window.initRegularDiscountTable = function() {
         },
         columns: [
             { data: 'period', name: 'period', className: 'text-center' },
+            { data: 'total_sales', name: 'total_sales', className: 'text-end fw-semibold' },
             { data: 'regular_sales', name: 'regular_sales', className: 'text-end' },
-            { data: 'discount_sales', name: 'discount_sales', className: 'text-end' },
+            { data: 'discount_amount', name: 'discount_amount', className: 'text-end text-danger' },
             { data: 'discount_pc', name: 'discount_pc', className: 'text-center', orderable: false },
             { data: 'net_revenue', name: 'net_revenue', className: 'text-end' }
         ],
@@ -55,12 +58,18 @@ window.initRegularDiscountTable = function() {
         drawCallback: function (settings) {
             var api = this.api();
             var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                if (typeof i === 'number') return i;
+                if (typeof i === 'string') {
+                    var val = parseFloat(i.replace(/<[^>]*>/g, '').replace(/[^\d.-]/g, ''));
+                    return isNaN(val) ? 0 : val;
+                }
+                return 0;
             };
             var cur = function (num) { return '₹' + parseFloat(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-            $('#regFootSales').html(cur(api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#regFootDiscount').html(cur(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#regFootNet').html(cur(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#regFootTotalSales').html(cur(api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#regFootSales').html(cur(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#regFootDiscount').html(cur(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#regFootNet').html(cur(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         }
     });
 };

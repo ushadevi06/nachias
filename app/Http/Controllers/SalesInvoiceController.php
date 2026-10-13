@@ -1358,6 +1358,9 @@ class SalesInvoiceController extends Controller
                                   ->orWhere('barcode', $item->sku);
                             })
                             ->where('stock_type', 'finished_goods')
+                            ->where(function($sq) {
+                                $sq->whereNull('store_type_id')->orWhereNotIn('store_type_id', [6, 14]);
+                            })
                             ->whereNull('deleted_at');
                         if ($item->size_id) {
                             $stockQtyQuery->where('size', $item->size_id);
@@ -1606,6 +1609,9 @@ class SalesInvoiceController extends Controller
                           ->orWhere('barcode', $item->sku);
                     })
                     ->where('stock_type', 'finished_goods')
+                    ->where(function($sq) {
+                        $sq->whereNull('store_type_id')->orWhereNotIn('store_type_id', [6, 14]);
+                    })
                     ->whereNull('deleted_at');
                 if ($item->size_id) {
                     $stockQtyQuery->where('size', $item->size_id);
@@ -2577,28 +2583,10 @@ class SalesInvoiceController extends Controller
             if ($item->size) $displayName .= " - " . $item->size;
             if ($item->sleeve_type) $displayName .= " - " . $item->sleeve_type;
             
-            $itemPrice = \DB::table('item_prices')
-                ->where('finished_item_code', $item->finished_item_code)
-                ->where('art_no', $item->art_no)
-                ->where('size', $item->size)
-                ->where('status', 'Active')
-                ->whereNull('deleted_at')
-                ->whereDate('effective_from', '<=', now())
-                ->orderBy('effective_from', 'desc')
-                ->orderBy('id', 'desc')
-                ->first();
+            $itemPrice = \DB::table('item_prices')->where('finished_item_code', $item->finished_item_code)->where('art_no', $item->art_no)->where('size', $item->size)->where('status', 'Active')->whereNull('deleted_at')->whereDate('effective_from', '<=', now())->orderBy('effective_from', 'desc')->orderBy('id', 'desc')->first();
 
             if (!$itemPrice) {
-                $itemPrice = \DB::table('item_prices')
-                    ->where('finished_item_code', $item->finished_item_code)
-                    ->where('art_no', $item->art_no)
-                    ->whereNull('size')
-                    ->where('status', 'Active')
-                    ->whereNull('deleted_at')
-                    ->whereDate('effective_from', '<=', now())
-                    ->orderBy('effective_from', 'desc')
-                    ->orderBy('id', 'desc')
-                    ->first();
+                $itemPrice = \DB::table('item_prices')->where('finished_item_code', $item->finished_item_code)->where('art_no', $item->art_no)->whereNull('size')->where('status', 'Active')->whereNull('deleted_at')->whereDate('effective_from', '<=', now())->orderBy('effective_from', 'desc')->orderBy('id', 'desc')->first();
             }
 
             $mrp = $itemPrice ? $itemPrice->selling_price : 0;
@@ -2670,6 +2658,7 @@ class SalesInvoiceController extends Controller
             }
         }
 
+        $targetStoreId = (int)(request()->input('store_id') ?: ($invoiceId ? SalesInvoice::where('id', $invoiceId)->value('store_id') : 3));
         $requiredQuantities = [];
         foreach ($items as $item) {
             $sku = $item['sku'] ?? null;
@@ -2725,7 +2714,15 @@ class SalesInvoiceController extends Controller
             $requiredQuantities[$identifier]['qty'] += (float)($item['quantity'] ?? 0);
             
             if (!$stockEntryItemId) {
-                $stockQuery = clone StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at');
+                $stockQuery = clone StockEntryItem::where('stock_type', 'finished_goods')
+                    ->whereNull('deleted_at')
+                    ->where(function($sq) use ($targetStoreId) {
+                        if ($targetStoreId) {
+                            $sq->where('store_type_id', $targetStoreId)->orWhereNull('store_type_id');
+                        } else {
+                            $sq->whereNull('store_type_id')->orWhereNotIn('store_type_id', [6, 14]);
+                        }
+                    });
                 if (!empty($item['sku'])) {
                     $stockQuery->where(function ($q) use ($item) {
                         $q->where('sku', $item['sku'])->orWhere('barcode', $item['sku']);
@@ -2770,9 +2767,7 @@ class SalesInvoiceController extends Controller
 
         foreach ($requiredQuantities as $req) {
             if (!empty($req['is_raw_material'])) {
-                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')
-                    ->whereNull('deleted_at')
-                    ->where('raw_material_id', $req['raw_material_id']);
+                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')->whereNull('deleted_at')->where('raw_material_id', $req['raw_material_id']);
 
                 if (!empty($req['store_type_id'])) {
                     $rawQuery->where('store_type_id', $req['store_type_id']);
@@ -2815,6 +2810,13 @@ class SalesInvoiceController extends Controller
 
             $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
                 ->whereNull('deleted_at')
+                ->where(function($sq) use ($targetStoreId) {
+                    if ($targetStoreId) {
+                        $sq->where('store_type_id', $targetStoreId)->orWhereNull('store_type_id');
+                    } else {
+                        $sq->whereNull('store_type_id')->orWhereNotIn('store_type_id', [6, 14]);
+                    }
+                })
                 ->where(function ($q) use ($req) {
                     $q->where('sku', $req['sku'])->orWhere('barcode', $req['sku']);
                 });
@@ -2900,6 +2902,8 @@ class SalesInvoiceController extends Controller
 
     private function adjustStock($salesInvoiceId, $revert = false, $oldQuantities = [])
     {
+        $salesInvoice = SalesInvoice::find($salesInvoiceId);
+        $targetStoreId = (int)($salesInvoice?->store_id ?: (request()->input('store_id') ?: 3));
         $items = SalesInvoiceItem::where('sales_invoice_id', $salesInvoiceId)->get();
         foreach ($items as $item) {
             $stockEntryItemId = $item->stock_entry_item_id;
@@ -2909,6 +2913,13 @@ class SalesInvoiceController extends Controller
                 if (!empty($item->sku)) {
                     $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
                         ->whereNull('deleted_at')
+                        ->where(function($sq) use ($targetStoreId) {
+                            if ($targetStoreId) {
+                                $sq->where('store_type_id', $targetStoreId)->orWhereNull('store_type_id');
+                            } else {
+                                $sq->whereNull('store_type_id')->orWhereNotIn('store_type_id', [6, 14]);
+                            }
+                        })
                         ->where(function ($q) use ($item) {
                             $q->where('sku', $item->sku)
                               ->orWhere('barcode', $item->sku);
@@ -2941,6 +2952,13 @@ class SalesInvoiceController extends Controller
                     if ($finishedItemCode) {
                         $stockQuery3 = StockEntryItem::where('stock_type', 'finished_goods')
                             ->whereNull('deleted_at')
+                            ->where(function($sq) use ($targetStoreId) {
+                                if ($targetStoreId) {
+                                    $sq->where('store_type_id', $targetStoreId)->orWhereNull('store_type_id');
+                                } else {
+                                    $sq->whereNull('store_type_id')->orWhereNotIn('store_type_id', [6, 14]);
+                                }
+                            })
                             ->where(function ($q) use ($finishedItemCode) {
                                 $q->where('finished_item_code', $finishedItemCode)
                                   ->orWhere('art_no', $finishedItemCode);
@@ -3008,9 +3026,7 @@ class SalesInvoiceController extends Controller
         if ($item->stock_entry_item_id) {
             $rawStItem = StockEntryItem::find($item->stock_entry_item_id);
             if ($rawStItem && $rawStItem->stock_type === 'raw_material') {
-                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')
-                    ->whereNull('deleted_at')
-                    ->where('raw_material_id', $rawStItem->raw_material_id);
+                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')->whereNull('deleted_at')->where('raw_material_id', $rawStItem->raw_material_id);
 
                 if (!empty($rawStItem->store_type_id)) {
                     $rawQuery->where('store_type_id', $rawStItem->store_type_id);
@@ -3025,9 +3041,7 @@ class SalesInvoiceController extends Controller
                     $rawQuery->where('art_no', $rawStItem->art_no);
                 }
 
-                $availableRawItems = $rawQuery->orderByRaw('CASE WHEN id = ' . (int)$rawStItem->id . ' THEN 0 ELSE 1 END')
-                    ->orderBy('id', 'asc')
-                    ->get();
+                $availableRawItems = $rawQuery->orderByRaw('CASE WHEN id = ' . (int)$rawStItem->id . ' THEN 0 ELSE 1 END')->orderBy('id', 'asc')->get();
 
                 $remaining = (float)$quantityToDeduct;
                 $allocations = !empty($item->stock_allocations) && is_array($item->stock_allocations) ? $item->stock_allocations : [];
@@ -3083,8 +3097,18 @@ class SalesInvoiceController extends Controller
             }
         }
 
+        $salesInvoice = SalesInvoice::find($item->sales_invoice_id);
+        $targetStoreId = (int)($salesInvoice?->store_id ?: 3);
+
         $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
             ->whereNull('deleted_at')
+            ->where(function($sq) use ($targetStoreId) {
+                if ($targetStoreId) {
+                    $sq->where('store_type_id', $targetStoreId)->orWhereNull('store_type_id');
+                } else {
+                    $sq->whereNull('store_type_id')->orWhereNotIn('store_type_id', [6, 14]);
+                }
+            })
             ->where(function ($q) use ($item) {
                 if (!empty($item->sku)) {
                     $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
@@ -3206,9 +3230,7 @@ class SalesInvoiceController extends Controller
         if ($remaining > 0) {
             $rawStItem = $item->stock_entry_item_id ? StockEntryItem::find($item->stock_entry_item_id) : null;
             if ($rawStItem && $rawStItem->stock_type === 'raw_material') {
-                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')
-                    ->whereNull('deleted_at')
-                    ->where('raw_material_id', $rawStItem->raw_material_id);
+                $rawQuery = StockEntryItem::where('stock_type', 'raw_material')->whereNull('deleted_at')->where('raw_material_id', $rawStItem->raw_material_id);
 
                 if (!empty($rawStItem->store_type_id)) {
                     $rawQuery->where('store_type_id', $rawStItem->store_type_id);

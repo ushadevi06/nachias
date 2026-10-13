@@ -234,7 +234,7 @@ class ProductionReceiptController extends Controller
                 $receiptsSummary[$jcId]['base'] = ($receiptsSummary[$jcId]['base'] ?? 0) + $qty;
             }
         }
-        $notAllowedStores = StoreType::whereIn('store_type_name', ['FABRIC','SCRAP STORE'])->get();
+        $notAllowedStores = StoreType::whereIn('store_type_name', ['FABRIC','SCRAP STORE','RETURN GOODS STORE'])->get();
         $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->whereNotIn('id', $notAllowedStores->pluck('id'))->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('id','desc')->get();
 
@@ -319,15 +319,15 @@ class ProductionReceiptController extends Controller
                                 }
                             })->pluck('id')->toArray();
                     }
-                    $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)->whereIn('job_card_fabric_detail_id', $batchFabricIds)->exists();
-                    $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)->whereIn('job_card_fabric_detail_id', $batchFabricIds)->where('status', '!=', 'Completed')->exists();
+                    $hasTasks = Task::where('job_card_entry_id', $request->job_card_id)->whereIn('job_card_fabric_detail_id', $batchFabricIds)->exists();
+                    $hasIncompleteTasks = Task::where('job_card_entry_id', $request->job_card_id)->whereIn('job_card_fabric_detail_id', $batchFabricIds)->where('status', '!=', 'Completed')->exists();
                     if (!$hasTasks || $hasIncompleteTasks) {
                         return redirect()->back()->withInput()->withErrors([
                             'job_card_id' => 'Cannot create Production Receipt: All tasks for this Additional Batch must be assigned and Completed.'
                         ]);
                     }
                 } else {
-                    $hasTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
+                    $hasTasks = Task::where('job_card_entry_id', $request->job_card_id)
                         ->where(function($q) {
                             $q->whereNull('is_additional')->orWhere('is_additional', 0);
                         })
@@ -335,7 +335,7 @@ class ProductionReceiptController extends Controller
                             $q->whereNull('job_card_fabric_detail_id')->orWhere('job_card_fabric_detail_id', 0);
                         })
                         ->exists();
-                    $hasIncompleteTasks = \App\Models\Task::where('job_card_entry_id', $request->job_card_id)
+                    $hasIncompleteTasks = Task::where('job_card_entry_id', $request->job_card_id)
                         ->where(function($q) {
                             $q->whereNull('is_additional')->orWhere('is_additional', 0);
                         })
@@ -515,11 +515,9 @@ class ProductionReceiptController extends Controller
                 if ($receipt->warehouse_id && $receipt->job_card_id) {
                     $jobCard = JobCardEntry::find($receipt->job_card_id);
                     if ($jobCard && $jobCard->brand_id) {
-                        $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)->where('brand_id', $jobCard->brand_id)
-                            ->where('status', 'Active')
-                            ->first();
+                        $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)->where('brand_id', $jobCard->brand_id)->where('status', 'Active')->first();
                         if ($capObj && $capObj->capacity_pcs > 0) {
-                            $currentStock = (float) \App\Models\StockEntryItem::where('brand_id', $jobCard->brand_id)
+                            $currentStock = (float) StockEntryItem::where('brand_id', $jobCard->brand_id)
                                 ->where(function($q) use ($receipt) {
                                     $q->where('warehouse_id', $receipt->warehouse_id)
                                       ->orWhereHas('stockEntry', function($se) use ($receipt) {
@@ -823,9 +821,7 @@ class ProductionReceiptController extends Controller
 
             StockEntryItem::where('stock_entry_id', $stockEntry->id)->forceDelete();
         } else {
-            $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
-                                   ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
-                                   ->first();
+            $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')->first();
             $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
             $stockEntryNo = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
@@ -1138,7 +1134,7 @@ class ProductionReceiptController extends Controller
                 return null;
             }
 
-            $stockItem = \App\Models\StockEntryItem::where('art_no', $normalizedArtNo)->orderByDesc('id')->first();
+            $stockItem = StockEntryItem::where('art_no', $normalizedArtNo)->orderByDesc('id')->first();
             if ($stockItem && $stockItem->store_category_id) {
                 return $stockItem->store_category_id;
             }
@@ -1899,7 +1895,7 @@ class ProductionReceiptController extends Controller
         if ($receipt->warehouse_id && $receipt->jobCard && $receipt->jobCard->brand_id) {
             $capObj = \App\Models\WarehouseBrandCapacity::where('warehouse_id', $receipt->warehouse_id)->where('brand_id', $receipt->jobCard->brand_id)->where('status', 'Active')->first();
             if ($capObj && $capObj->capacity_pcs > 0) {
-                $currentStock = (float) \App\Models\StockEntryItem::where('brand_id', $receipt->jobCard->brand_id)
+                $currentStock = (float) StockEntryItem::where('brand_id', $receipt->jobCard->brand_id)
                     ->where(function($q) use ($receipt) {
                         $q->where('warehouse_id', $receipt->warehouse_id)
                           ->orWhereHas('stockEntry', function($se) use ($receipt) {
