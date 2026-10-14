@@ -1717,9 +1717,10 @@
 
                     $row.find('.igst_percent').val(itemIgstPercent);
                     let igstAmount = (rowTaxable * itemIgstPercent) / 100;
-                    $row.find('.igst_amount').val(igstAmount.toFixed(2));
+                    let roundedIgst = parseFloat(igstAmount.toFixed(2));
+                    $row.find('.igst_amount').val(roundedIgst.toFixed(2));
                     $row.find('.cgst_amount, .sgst_amount').val('0.00');
-                    totalRowIgst += igstAmount;
+                    totalRowIgst += roundedIgst;
                 } else {
                     let itemCgstPercent = 0;
                     let itemSgstPercent = 0;
@@ -1749,11 +1750,13 @@
                     $row.find('.sgst_percent').val(itemSgstPercent);
                     let cgstAmount = (rowTaxable * itemCgstPercent) / 100;
                     let sgstAmount = (rowTaxable * itemSgstPercent) / 100;
-                    $row.find('.cgst_amount').val(cgstAmount.toFixed(2));
-                    $row.find('.sgst_amount').val(sgstAmount.toFixed(2));
+                    let roundedCgst = parseFloat(cgstAmount.toFixed(2));
+                    let roundedSgst = parseFloat(sgstAmount.toFixed(2));
+                    $row.find('.cgst_amount').val(roundedCgst.toFixed(2));
+                    $row.find('.sgst_amount').val(roundedSgst.toFixed(2));
                     $row.find('.igst_amount').val('0.00');
-                    totalRowCgst += cgstAmount;
-                    totalRowSgst += sgstAmount;
+                    totalRowCgst += roundedCgst;
+                    totalRowSgst += roundedSgst;
                 }
             });
 
@@ -1761,6 +1764,7 @@
 
             if (taxableAmount >= 0) {
                 if (otherState === 'Y') {
+                    totalRowIgst = parseFloat(totalRowIgst.toFixed(2));
                     $('#igst_amt').text(totalRowIgst.toFixed(2));
                     $('#igst_amount_input').val(totalRowIgst.toFixed(2));
 
@@ -1771,6 +1775,8 @@
 
                     taxAmount = totalRowIgst;
                 } else {
+                    totalRowCgst = parseFloat(totalRowCgst.toFixed(2));
+                    totalRowSgst = parseFloat(totalRowSgst.toFixed(2));
                     $('#cgst_amt').text(totalRowCgst.toFixed(2));
                     $('#sgst_amt').text(totalRowSgst.toFixed(2));
 
@@ -1780,7 +1786,7 @@
                     $('#igst_amt').text("0.00");
                     $('#igst_amount_input').val("0.00");
 
-                    taxAmount = totalRowCgst + totalRowSgst;
+                    taxAmount = parseFloat((totalRowCgst + totalRowSgst).toFixed(2));
                 }
             } else {
                 $('#igst_amt').text("0.00");
@@ -1791,6 +1797,7 @@
                 $('#sgst_amount_input').val("0.00");
             }
 
+            taxAmount = parseFloat(taxAmount.toFixed(2));
             $('#tax_amount').text(taxAmount.toFixed(2));
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
@@ -1802,17 +1809,17 @@
             $('#post_gst_total_display').text(postGstCharges.toFixed(2));
             $('#other_charges_input').val(postGstCharges.toFixed(2));
 
-            // let totalBeforeRoundOff = parseFloat((dispTaxableAmt + taxAmount + postGstCharges).toFixed(2));
-            let totalBeforeRoundOff = dispTaxableAmt + taxAmount + postGstCharges;
+            let totalBeforeRoundOff = parseFloat((dispTaxableAmt + taxAmount + postGstCharges).toFixed(2));
 
             let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
+            roundOffAmount = parseFloat(roundOffAmount.toFixed(2));
             let roundOffType = $('input[name="round_off_type"]:checked').val();
             let finalTotal = 0;
 
             if (roundOffType === 'Add') {
-                finalTotal = totalBeforeRoundOff + roundOffAmount;
+                finalTotal = parseFloat((totalBeforeRoundOff + roundOffAmount).toFixed(2));
             } else {
-                finalTotal = totalBeforeRoundOff - roundOffAmount;
+                finalTotal = parseFloat((totalBeforeRoundOff - roundOffAmount).toFixed(2));
             }
 
             if (finalTotal < 0) {

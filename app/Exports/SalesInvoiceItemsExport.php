@@ -30,7 +30,10 @@ class SalesInvoiceItemsExport implements FromCollection, WithHeadings, WithMappi
                   ->orWhere(function($q2) {
                       $q2->whereNull('irn')
                          ->whereHas('customer', function($q3) {
-                             $q3->where('name', 'like', '%CASH%');
+                             $q3->where('name', 'like', '%CASH%')
+                                ->orWhere('name', 'like', '%ARUMUGAM%')
+                                ->orWhere('name', 'like', '%SRIVARSAN%')
+                                ->orWhereIn('code', ['7011', '7012']);
                          });
                   });
             })->orderBy('id', 'asc');
@@ -43,7 +46,7 @@ class SalesInvoiceItemsExport implements FromCollection, WithHeadings, WithMappi
         }
         if (!empty($this->filters['inv_no'])) {
             $rawSearchInv = $this->filters['inv_no'];
-            $dbInvNo = \App\Models\SalesInvoice::formatDbInvNo($rawSearchInv);
+            $dbInvNo = SalesInvoice::formatDbInvNo($rawSearchInv);
             $query->where(function($q) use ($rawSearchInv, $dbInvNo) {
                 $q->where('inv_no', 'like', "%{$dbInvNo}%")
                   ->orWhere('inv_no', 'like', "%{$rawSearchInv}%");
@@ -122,12 +125,12 @@ class SalesInvoiceItemsExport implements FromCollection, WithHeadings, WithMappi
         return [
             $this->count,
             $nameOfItem,
-            '', // Barcode
-            'PCS', // UOM
-            $inv->hsn_sac, // HS Code
+            '', 
+            'PCS', 
+            $inv->hsn_sac, 
             $gstPercent,
-            $sleeveType, // Class2
-            'FINISHED GOODS', // Class3
+            $sleeveType, 
+            'FINISHED GOODS', 
             $brandName . ' (FG)', // Class1
             $item->art_no, // Art
             $item->art_no . ' ' . $sleeveType, // Sub Group3

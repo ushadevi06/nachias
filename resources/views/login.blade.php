@@ -4,477 +4,387 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIKO Garments ERP &bull; Login</title>
+    <title>Nachias Garments ERP &bull; Login</title>
     <link rel="icon" type="image/jpeg" href="{{ url('assets/images/fav.jpeg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Public+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url('assets/css/core.css') }}">
-    <link rel="stylesheet" href="{{ url('assets/css/demo.css') }}">
-    <link rel="stylesheet" href="{{ url('assets/fonts/iconify-icons.css') }}">
-    <link rel="stylesheet" href="{{ url('assets/css/node-waves.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --niko-purple-primary: #6352e8;
-            --niko-purple-hover: #503ee0;
-            --niko-purple-dark: #372385;
-            --niko-purple-soft: #f3f1fd;
-            --niko-purple-border: #e7e3f8;
-            --niko-text-dark: #191235;
-            --niko-text-muted: #6e6888;
-            --niko-input-bg: #ffffff;
-            --niko-input-border: #e2def2;
+            --nachias-purple: #5c38ee;
+            --nachias-purple-dark: #4524c7;
+            --nachias-purple-soft: #f4f2fe;
+            --nachias-purple-border: #eae4f8;
+            --nachias-navy-title: #130b35;
+            --nachias-navy-text: #2a2250;
+            --nachias-text-muted: #6a6486;
+            --nachias-input-border: #e2ddf2;
+            --nachias-page-bg: #f4f6fc;
         }
 
         * {
             box-sizing: border-box;
-        }
-
-        body, html {
             margin: 0;
             padding: 0;
+        }
+
+        html, body {
             width: 100%;
-            height: 100%;
-            font-family: 'Plus Jakarta Sans', 'Public Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #0d0822;
+            min-height: 100vh;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--nachias-page-bg);
+            background-image: 
+                radial-gradient(circle at 10% 15%, rgba(225, 215, 255, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 88% 25%, rgba(210, 225, 255, 0.45) 0%, transparent 40%),
+                radial-gradient(circle at 50% 90%, rgba(240, 235, 255, 0.5) 0%, transparent 50%);
+            color: var(--nachias-navy-title);
             overflow-x: hidden;
         }
 
-        /* Master Full-Screen Split Layout */
-        .login-master-container {
-            position: relative;
-            width: 100%;
-            min-height: 100vh;
-            display: flex;
-            background-color: #0d0822;
-            overflow: hidden;
-        }
-
-        /* LEFT COLUMN (60% Desktop): Hero Factory Visual + Storytelling */
-        .login-left-pane {
-            position: relative;
-            width: 60%;
+        /* Master Full-Height Layout */
+        .page-layout-wrapper {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            overflow: hidden;
-            background-color: #0d0822;
-        }
-
-        /* Background Factory Image Layer */
-        .left-bg-image {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center 30%;
-            display: block;
-            filter: contrast(1.04) saturate(1.08);
-            z-index: 1;
-        }
-
-        /* Left Gradient Overlays for Readability & Depth */
-        .left-bg-gradient {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, 
-                rgba(13, 8, 34, 0.65) 0%, 
-                rgba(13, 8, 34, 0.15) 30%, 
-                rgba(13, 8, 34, 0.25) 55%, 
-                rgba(13, 8, 34, 0.85) 80%, 
-                rgba(10, 6, 26, 0.98) 100%),
-                linear-gradient(90deg, 
-                rgba(13, 8, 34, 0.6) 0%, 
-                rgba(13, 8, 34, 0.2) 40%, 
-                rgba(13, 8, 34, 0.1) 70%, 
-                rgba(13, 8, 34, 0.5) 100%);
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        /* Foreground Content on Left */
-        .left-content-wrap {
+            padding: 1.5rem 3rem 1.25rem;
             position: relative;
-            z-index: 4;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100%;
-            min-height: 100vh;
-            padding: 2.75rem 3.5rem 2rem 3.5rem;
         }
 
-        /* Top-Left Brand Logo Block */
-        .hero-brand-header {
+        /* ============================================== */
+        /* TOP HEADER                                     */
+        /* ============================================== */
+        .top-navbar {
             display: flex;
             align-items: center;
-            gap: 14px;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1520px;
+            margin: 0 auto 1.2rem auto;
         }
 
-        .hexagon-logo-badge {
-            width: 50px;
-            height: 50px;
-            position: relative;
+        .brand-header-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .header-shield-emblem {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #000000;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid rgba(255, 255, 255, 0.85);
-            border-radius: 14px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-            padding: 8px;
-        }
-
-        .hero-brand-name {
-            font-size: 1.85rem;
-            font-weight: 800;
-            letter-spacing: 4px;
             color: #ffffff;
-            line-height: 1;
-            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
         }
 
-        .hero-brand-tagline {
-            font-size: 0.68rem;
+        .header-shield-emblem svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .header-brand-texts {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-brand-name {
+            font-size: 1.95rem;
+            font-weight: 800;
+            color: var(--nachias-navy-title);
+            line-height: 1;
+            letter-spacing: -0.6px;
+        }
+
+        .header-brand-sub {
+            font-size: 0.65rem;
             font-weight: 700;
-            letter-spacing: 2px;
-            color: rgba(230, 222, 255, 0.85);
+            letter-spacing: 2.2px;
+            color: #1e1346;
             text-transform: uppercase;
             margin-top: 4px;
         }
 
-        /* Left Mid Hero Headline Area */
-        .hero-headline-area {
-            max-width: 540px;
-            margin-top: auto;
-            margin-bottom: 2.5rem;
+        .top-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            font-size: 0.88rem;
+            color: var(--nachias-text-muted);
         }
 
-        .fabric-pill-tag {
-            display: inline-block;
+        .top-slogan-text {
+            font-weight: 500;
+            color: #554e73;
+        }
+
+        .nav-vertical-pipe {
+            width: 1px;
+            height: 18px;
+            background: #d8d3e8;
+        }
+
+        .lang-selector-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+            color: var(--nachias-navy-title);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+
+        .lang-selector-pill:hover {
+            background: rgba(92, 56, 238, 0.08);
+        }
+
+        /* ============================================== */
+        /* MAIN 3-COLUMN HERO COMPOSITION                 */
+        /* ============================================== */
+        .hero-layout-grid {
+            width: 100%;
+            max-width: 1520px;
+            margin: auto auto;
+            display: grid;
+            grid-template-columns: 1.15fr 0.95fr 0.9fr;
+            gap: 2rem;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ---------------------------------------------- */
+        /* COLUMN 1: Story, Workflow Pills & Factory      */
+        /* ---------------------------------------------- */
+        .hero-left-panel {
+            display: flex;
+            flex-direction: column;
+            padding-right: 0.5rem;
+        }
+
+        .category-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             font-size: 0.72rem;
             font-weight: 800;
-            letter-spacing: 2px;
+            letter-spacing: 2.5px;
             text-transform: uppercase;
-            color: #a999ff;
+            color: var(--nachias-purple);
             margin-bottom: 0.85rem;
         }
 
-        .hero-main-title {
-            font-size: 2.85rem;
+        .category-eyebrow::before {
+            content: '';
+            width: 22px;
+            height: 2.5px;
+            background: var(--nachias-purple);
+            border-radius: 2px;
+        }
+
+        .hero-main-heading {
+            font-size: 2.9rem;
             font-weight: 800;
-            color: #ffffff;
-            line-height: 1.15;
-            letter-spacing: -0.025em;
-            margin: 0 0 0.85rem 0;
-            text-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+            line-height: 1.12;
+            color: var(--nachias-navy-title);
+            letter-spacing: -1px;
+            margin-bottom: 0.85rem;
         }
 
-        .hero-main-title .gradient-word {
-            background: linear-gradient(135deg, #a796ff 0%, #7663f7 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .headline-purple-highlight {
+            color: var(--nachias-purple);
+            display: inline-block;
         }
 
-        .hero-main-desc {
-            font-size: 1rem;
-            line-height: 1.55;
-            color: rgba(235, 230, 255, 0.88);
-            margin: 0;
-            max-width: 440px;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        .hero-sub-description {
+            font-size: 0.94rem;
+            line-height: 1.6;
+            color: var(--nachias-text-muted);
+            max-width: 480px;
+            margin-bottom: 1.4rem;
         }
 
-        /* Handwritten Cursive Script Slogan */
-        .script-quote-floating {
-            position: absolute;
-            top: 15%;
-            right: 8%;
-            font-family: 'Caveat', cursive;
-            font-size: 1.85rem;
-            font-weight: 700;
-            color: #ffffff;
-            line-height: 1.1;
-            text-align: right;
-            transform: rotate(-8deg);
-            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-            pointer-events: none;
-            z-index: 3;
-            opacity: 0.92;
-        }
-
-        /* Bottom Curved Workflow Glass Panel */
-        .bottom-workflow-glass {
-            position: relative;
-            background: linear-gradient(180deg, rgba(20, 12, 45, 0.65) 0%, rgba(14, 8, 34, 0.92) 100%);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 20px;
-            padding: 1.4rem 1.6rem 1rem 1.6rem;
-            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
-        }
-
-        .workflow-cards-grid {
+        /* 4 Feature Columns */
+        .features-grid-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
+            gap: 0.65rem;
+            margin-bottom: 1.4rem;
         }
 
-        .wf-card-item {
+        .feature-card-item {
+            background: #ffffff;
+            border: 1px solid var(--nachias-purple-border);
+            border-radius: 12px;
+            padding: 0.75rem 0.65rem;
             display: flex;
             flex-direction: column;
+            gap: 3px;
+            box-shadow: 0 4px 14px rgba(35, 18, 90, 0.03);
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .feature-card-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--nachias-purple);
+            box-shadow: 0 8px 20px rgba(92, 56, 238, 0.1);
+        }
+
+        .feature-icon-row {
+            display: flex;
+            align-items: center;
             gap: 6px;
+            color: var(--nachias-purple);
+            margin-bottom: 2px;
         }
 
-        .wf-card-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .wf-icon-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #c4b6ff;
+        .feature-icon-row svg {
+            width: 17px;
+            height: 17px;
             flex-shrink: 0;
         }
 
-        .wf-card-title {
-            font-size: 0.74rem;
-            font-weight: 800;
-            letter-spacing: 1.4px;
-            color: #ffffff;
-            text-transform: uppercase;
-        }
-
-        .wf-card-sub {
-            font-size: 0.7rem;
-            line-height: 1.35;
-            color: rgba(215, 206, 245, 0.75);
-            margin: 0;
-        }
-
-        .bottom-company-subline {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 1rem;
-            padding-top: 0.75rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 0.68rem;
-            letter-spacing: 2px;
-            color: rgba(215, 206, 245, 0.6);
-            text-transform: uppercase;
+        .feature-title-text {
+            font-size: 0.82rem;
             font-weight: 700;
+            color: var(--nachias-navy-title);
         }
 
-        .bottom-company-subline::before {
-            content: '';
-            display: inline-block;
-            width: 24px;
-            height: 1.5px;
-            background: #7d6cf0;
+        .feature-sub-desc {
+            font-size: 0.68rem;
+            color: var(--nachias-text-muted);
+            line-height: 1.25;
         }
 
-        /* RIGHT COLUMN (40% Desktop): Luxury Satin Silk Fabric + Floating Card */
-        .login-right-pane {
+        /* Standalone Women Stitching Factory Image Card */
+        .factory-stitching-wrap {
             position: relative;
-            width: 40%;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2.5rem 3.5rem;
-            background: linear-gradient(135deg, #f8f6fd 0%, #ece8f9 50%, #dfd8f5 100%);
+            width: 100%;
+            border-radius: 18px 80px 18px 18px;
             overflow: hidden;
-            z-index: 5;
+            box-shadow: 0 16px 36px rgba(25, 15, 60, 0.08);
+            border: 1px solid rgba(225, 218, 245, 0.6);
+            background: #ffffff;
         }
 
-        /* Satin Silk Wave Layers in Background of Right Pane */
-        .satin-wave-top {
-            position: absolute;
-            top: -15%;
-            right: -20%;
-            width: 140%;
-            height: 80%;
-            background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.95) 0%, rgba(235, 228, 252, 0.7) 45%, rgba(195, 180, 245, 0.35) 85%);
-            transform: rotate(-18deg);
-            pointer-events: none;
-            z-index: 1;
+        .factory-stitching-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 18px 80px 18px 18px;
+            transition: transform 0.35s ease;
         }
 
-        .satin-wave-bottom {
-            position: absolute;
-            bottom: -20%;
-            right: -10%;
-            width: 130%;
-            height: 70%;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(220, 208, 250, 0.7) 50%, rgba(180, 160, 235, 0.5) 100%);
-            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-            pointer-events: none;
-            z-index: 1;
+        .factory-stitching-wrap:hover .factory-stitching-img {
+            transform: scale(1.02);
         }
 
-        /* Top-Right Secure Workspace Badge */
-        .secure-badge-corner {
-            position: absolute;
-            top: 2rem;
-            right: 2.5rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: #4c4270;
-            background: rgba(255, 255, 255, 0.75);
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(8px);
-            padding: 6px 14px;
-            border-radius: 999px;
-            box-shadow: 0 4px 12px rgba(99, 82, 232, 0.08);
-            z-index: 6;
-        }
-
-        .secure-green-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #10b981;
-            box-shadow: 0 0 8px #10b981;
-            display: inline-block;
-        }
-
-        /* Decorative Shirt Button at Bottom Right Corner */
-        .satin-button-decor {
-            position: absolute;
-            bottom: 2rem;
-            right: 2rem;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e2daf5 70%, #bcb0df 100%);
-            border: 1.5px solid #ffffff;
-            box-shadow: 0 6px 14px rgba(80, 60, 150, 0.25);
+        /* ---------------------------------------------- */
+        /* COLUMN 2: Elevated Central Login Card          */
+        /* ---------------------------------------------- */
+        .hero-center-panel {
             display: flex;
-            align-items: center;
             justify-content: center;
-            gap: 4px;
-            pointer-events: none;
-            z-index: 2;
         }
 
-        .satin-button-decor::before, .satin-button-decor::after {
-            content: '';
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: #8b79b5;
-        }
-
-        /* FLOATING WHITE CARD MATCHING MOCKUP */
-        .mockup-floating-card {
-            position: relative;
-            z-index: 10;
+        .central-login-card {
             width: 100%;
             max-width: 440px;
             background: #ffffff;
-            border-radius: 26px;
-            padding: 2.75rem 2.5rem;
-            box-shadow: 0 25px 60px rgba(45, 25, 95, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            padding: 2.25rem 2.15rem 1.85rem;
+            box-shadow: 0 24px 60px rgba(45, 26, 120, 0.08), 0 2px 10px rgba(0, 0, 0, 0.02);
+            border: 1px solid var(--nachias-purple-border);
+            position: relative;
+            z-index: 10;
         }
 
-        /* Card Logo Header (Centered Hexagon Emblem) */
-        .card-brand-center {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            margin-bottom: 1.6rem;
-        }
-
-        .card-hexagon-emblem {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            background: #ffffff;
-            border: 2px solid #5846e0;
+        .card-brand-top {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px;
-            box-shadow: 0 8px 20px rgba(99, 82, 232, 0.16);
-            margin-bottom: 0.75rem;
+            gap: 12px;
+            margin-bottom: 1.35rem;
         }
 
-        .card-niko-title {
+        .card-shield-black {
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            flex-shrink: 0;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+
+        .card-shield-black svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .card-brand-texts {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-brand-title-purple {
             font-size: 1.85rem;
             font-weight: 800;
-            letter-spacing: 4px;
-            color: #2b1c78;
+            color: var(--nachias-purple);
             line-height: 1;
-            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            letter-spacing: -0.5px;
         }
 
-        .card-niko-subtitle {
-            font-size: 0.68rem;
+        .card-brand-sub-caps {
+            font-size: 0.58rem;
             font-weight: 700;
-            letter-spacing: 2px;
-            color: #7d759e;
+            letter-spacing: 1.8px;
+            color: #1e1346;
             text-transform: uppercase;
-            margin-top: 5px;
+            margin-top: 3px;
         }
 
-        /* Welcome Text */
-        .card-heading-title {
-            font-size: 1.65rem;
+        .card-welcome-header {
+            text-align: left;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-welcome-title {
+            font-size: 1.55rem;
             font-weight: 800;
-            color: #1a1235;
-            margin: 0 0 0.35rem 0;
-            letter-spacing: -0.02em;
+            color: var(--nachias-navy-title);
+            margin-bottom: 0.2rem;
+            letter-spacing: -0.5px;
         }
 
-        .card-heading-title .purple-back {
-            color: #6352e8;
-        }
-
-        .card-heading-desc {
-            font-size: 0.88rem;
-            color: #736d8d;
-            margin: 0 0 1.6rem 0;
+        .card-welcome-sub {
+            font-size: 0.85rem;
+            color: var(--nachias-text-muted);
         }
 
         /* Form Inputs */
-        .field-wrap-box {
+        .form-input-group {
             position: relative;
-            margin-bottom: 1.15rem;
+            margin-bottom: 0.95rem;
         }
 
-        .field-icon-left {
+        .input-icon-prefix {
             position: absolute;
-            left: 16px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
-            color: #9c95b2;
+            color: #9d96b8;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -482,34 +392,47 @@
             z-index: 2;
         }
 
-        .field-input-control {
+        .input-icon-prefix svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .custom-text-input {
             width: 100%;
-            height: 50px;
-            padding: 0 46px 0 48px;
-            background-color: #ffffff;
-            border: 1.5px solid var(--niko-input-border);
+            height: 48px;
+            padding: 0 16px 0 44px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--nachias-navy-title);
+            background: #ffffff;
+            border: 1.5px solid var(--nachias-input-border);
             border-radius: 12px;
-            font-size: 0.94rem;
-            color: #1b1236;
-            transition: all 0.2s ease-in-out;
             outline: none;
+            transition: all 0.18s ease;
         }
 
-        .field-input-control::placeholder {
-            color: #a7a0bd;
+        .custom-text-input::placeholder {
+            color: #a49ebf;
+            font-weight: 400;
         }
 
-        .field-input-control:focus {
-            border-color: var(--niko-purple-primary);
-            box-shadow: 0 0 0 4px rgba(99, 82, 232, 0.14);
+        .custom-text-input:focus {
+            border-color: var(--nachias-purple);
+            box-shadow: 0 0 0 3.5px rgba(92, 56, 238, 0.12);
         }
 
-        .field-icon-eye {
+        .custom-text-input.is-invalid {
+            border-color: #ea5455;
+            background-color: #fff9f9;
+        }
+
+        .password-toggle-suffix {
             position: absolute;
-            right: 15px;
+            right: 14px;
             top: 50%;
             transform: translateY(-50%);
-            color: #9c95b2;
+            color: #9d96b8;
             cursor: pointer;
             padding: 4px;
             display: flex;
@@ -519,29 +442,39 @@
             transition: color 0.15s;
         }
 
-        .field-icon-eye:hover {
-            color: var(--niko-purple-primary);
+        .password-toggle-suffix:hover {
+            color: var(--nachias-purple);
         }
 
-        /* Remember Me & Forgot Password Row */
-        .options-row-wrap {
+        .password-toggle-suffix svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Options Row */
+        .form-options-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin: 0.5rem 0 1.5rem 0;
+            margin: 0.35rem 0 1.2rem 0;
+            font-size: 0.84rem;
         }
 
-        .check-container {
-            display: flex;
+        .checkbox-container-label {
+            display: inline-flex;
             align-items: center;
+            gap: 8px;
             cursor: pointer;
+            user-select: none;
+            color: #3f3760;
+            font-weight: 500;
         }
 
-        .purple-check-box {
+        .purple-checkbox-control {
             width: 18px;
             height: 18px;
             border-radius: 5px;
-            border: 1.5px solid #cbc4e6;
+            border: 1.5px solid #cac2e6;
             appearance: none;
             -webkit-appearance: none;
             outline: none;
@@ -549,16 +482,16 @@
             margin: 0;
             display: grid;
             place-content: center;
-            background-color: #ffffff;
-            transition: all 0.18s ease;
+            background: #ffffff;
+            transition: all 0.15s;
         }
 
-        .purple-check-box:checked {
-            background-color: var(--niko-purple-primary);
-            border-color: var(--niko-purple-primary);
+        .purple-checkbox-control:checked {
+            background-color: var(--nachias-purple);
+            border-color: var(--nachias-purple);
         }
 
-        .purple-check-box:checked::before {
+        .purple-checkbox-control:checked::before {
             content: '';
             width: 9px;
             height: 5px;
@@ -567,450 +500,573 @@
             transform: rotate(-45deg) translate(1px, -1px);
         }
 
-        .check-label-text {
-            margin-left: 9px;
-            font-size: 0.88rem;
-            color: #4b446a;
-            user-select: none;
-        }
-
-        .forgot-link-btn {
-            font-size: 0.85rem;
+        .forgot-link-anchor {
             font-weight: 600;
-            color: #6352e8;
+            color: var(--nachias-purple);
             text-decoration: none;
-            transition: color 0.18s;
+            transition: color 0.15s;
         }
 
-        .forgot-link-btn:hover {
-            color: #4b36d0;
+        .forgot-link-anchor:hover {
+            color: var(--nachias-purple-dark);
             text-decoration: underline;
         }
 
-        /* Sign In Button (SIGN IN ->) */
-        .btn-submit-mockup {
+        /* Sign In Button */
+        .btn-submit-signin {
             width: 100%;
-            height: 50px;
+            height: 48px;
             border: none;
             border-radius: 12px;
-            background: linear-gradient(135deg, #6b5be8 0%, #5440de 100%);
+            background: linear-gradient(135deg, #6438ee 0%, #4a22db 100%);
             color: #ffffff;
+            font-family: inherit;
             font-size: 0.95rem;
             font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             cursor: pointer;
-            box-shadow: 0 8px 24px rgba(99, 82, 232, 0.42);
-            transition: all 0.22s ease-in-out;
+            box-shadow: 0 8px 22px rgba(92, 56, 238, 0.35);
+            transition: all 0.2s ease;
         }
 
-        .btn-submit-mockup:hover {
-            background: linear-gradient(135deg, #7666ee 0%, #4a34d0 100%);
-            box-shadow: 0 10px 28px rgba(99, 82, 232, 0.52);
+        .btn-submit-signin:hover {
+            background: linear-gradient(135deg, #7047f5 0%, #3f18cb 100%);
+            box-shadow: 0 10px 26px rgba(92, 56, 238, 0.45);
             transform: translateY(-1px);
         }
 
-        .btn-submit-mockup:active {
+        .btn-submit-signin:active {
             transform: translateY(0);
-            box-shadow: 0 4px 12px rgba(99, 82, 232, 0.3);
+            box-shadow: 0 4px 12px rgba(92, 56, 238, 0.25);
+        }
+
+        .btn-submit-signin svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2.4;
+            transition: transform 0.18s ease;
+        }
+
+        .btn-submit-signin:hover svg {
+            transform: translateX(3px);
         }
 
         /* OR Divider */
-        .or-divider-wrap {
+        .or-divider-box {
             display: flex;
             align-items: center;
-            margin: 1.5rem 0 1.25rem 0;
-            color: #b0a9c8;
-            font-size: 0.76rem;
+            text-align: center;
+            margin: 1.15rem 0;
+            color: #a7a0c0;
+            font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 1px;
-            text-transform: uppercase;
         }
 
-        .or-divider-wrap::before, .or-divider-wrap::after {
+        .or-divider-box::before,
+        .or-divider-box::after {
             content: '';
             flex: 1;
-            height: 1px;
-            background-color: #eeeaf8;
+            border-bottom: 1px solid #e8e3f4;
         }
 
-        .or-divider-wrap span {
-            padding: 0 14px;
+        .or-divider-box span {
+            padding: 0 12px;
         }
 
-        /* Trust Security Pill Badge */
-        .trust-security-pill {
-            background-color: #f7f5fd;
-            border: 1px solid #e7e2f8;
-            border-radius: 12px;
-            padding: 10px 16px;
+        /* Bottom Security Panel */
+        .security-trust-box {
+            background: var(--nachias-purple-soft);
+            border: 1px solid var(--nachias-purple-border);
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .trust-icon-box {
-            color: #6352e8;
+        .trust-shield-icon {
+            color: var(--nachias-purple);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
 
-        .trust-title {
+        .trust-shield-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .trust-text-stack {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            line-height: 1.3;
+        }
+
+        .trust-heading {
             font-size: 0.82rem;
             font-weight: 700;
-            color: #2e2354;
-            margin: 0;
-            line-height: 1.2;
+            color: var(--nachias-navy-title);
         }
 
-        .trust-sub {
-            font-size: 0.72rem;
-            color: #79719c;
-            margin: 2px 0 0 0;
+        .trust-subtext {
+            font-size: 0.7rem;
+            color: var(--nachias-text-muted);
+            margin-top: 1px;
         }
 
-        /* Card Copyright Footer */
-        .card-bottom-copy {
-            margin-top: 1.6rem;
-            text-align: center;
-            font-size: 0.76rem;
-            color: #928ca8;
-        }
-
-        /* Error Messages */
-        .error-feedback-alert {
+        /* Error Feedback */
+        .error-alert-badge {
+            background: #fff5f5;
+            border: 1px solid #ffd1d1;
+            color: #d32f2f;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
-            color: #e53e3e;
-            font-size: 0.84rem;
-            margin-top: 0.85rem;
-            font-weight: 600;
+            gap: 8px;
+            margin-top: 0.75rem;
         }
 
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-            .login-left-pane {
-                width: 55%;
+        /* ---------------------------------------------- */
+        /* COLUMN 3: Standalone Finished Shirt Showcase   */
+        /* ---------------------------------------------- */
+        .hero-right-panel {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .shirt-showcase-container {
+            position: relative;
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shirt-product-img {
+            width: 100%;
+            height: auto;
+            max-height: 540px;
+            object-fit: contain;
+            filter: drop-shadow(0 20px 40px rgba(35, 20, 80, 0.12));
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .shirt-showcase-container:hover .shirt-product-img {
+            transform: translateY(-4px) scale(1.01);
+        }
+
+        /* ============================================== */
+        /* FOOTER                                         */
+        /* ============================================== */
+        .page-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1520px;
+            margin: 1.5rem auto 0 auto;
+            padding: 0.6rem 0;
+            border-top: 1px solid rgba(215, 208, 235, 0.5);
+            font-size: 0.75rem;
+            color: var(--nachias-text-muted);
+        }
+
+        .footer-company-text {
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: #554e73;
+        }
+
+        .footer-powered-by {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-weight: 500;
+        }
+
+        .footer-shield-icon {
+            width: 16px;
+            height: 16px;
+            color: var(--nachias-purple);
+        }
+
+        /* ============================================== */
+        /* RESPONSIVE BREAKPOINTS                         */
+        /* ============================================== */
+        @media (max-width: 1280px) {
+            .page-layout-wrapper {
+                padding: 1.25rem 2rem 1rem;
             }
-            .login-right-pane {
-                width: 45%;
-                padding: 2rem 2.5rem;
+            .hero-layout-grid {
+                gap: 1.5rem;
+                grid-template-columns: 1.1fr 1fr 0.85fr;
             }
-            .hero-main-title {
-                font-size: 2.35rem;
+            .hero-main-heading {
+                font-size: 2.45rem;
+            }
+            .features-grid-row {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
         @media (max-width: 991.98px) {
-            .login-master-container {
-                flex-direction: column;
+            .hero-layout-grid {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+                margin: 1rem auto;
             }
-            .login-left-pane {
+            .hero-right-panel {
                 display: none;
             }
-            .login-right-pane {
-                width: 100%;
-                min-height: 100vh;
-                padding: 2.5rem 1.5rem;
+            .hero-left-panel {
+                text-align: center;
+                align-items: center;
+                padding-right: 0;
             }
-            .mockup-floating-card {
-                padding: 2.2rem 1.8rem;
+            .hero-sub-description {
+                max-width: 100%;
+            }
+            .features-grid-row {
+                max-width: 500px;
+                width: 100%;
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .factory-stitching-wrap {
+                max-width: 500px;
+                border-radius: 18px;
+            }
+            .factory-stitching-img {
+                border-radius: 18px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .page-layout-wrapper {
+                padding: 1rem 1.25rem;
+            }
+            .top-slogan-text, .nav-vertical-pipe {
+                display: none;
+            }
+            .hero-main-heading {
+                font-size: 2rem;
+            }
+            .features-grid-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .central-login-card {
+                padding: 1.75rem 1.35rem;
+            }
+            .page-footer-bar {
+                flex-direction: column;
+                gap: 6px;
+                text-align: center;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="login-master-container">
+    <div class="page-layout-wrapper">
         <!-- ============================================== -->
-        <!-- LEFT COLUMN: Factory Hero Storytelling         -->
+        <!-- TOP HEADER (Real Direct HTML Words & Logo)    -->
         <!-- ============================================== -->
-        <div class="login-left-pane">
-            <!-- Photorealistic Garment Factory Image -->
-            <img 
-                src="{{ url('assets/images/login.png') }}?v={{ filemtime(public_path('assets/images/login.png')) }}" 
-                alt="NIKO Shirt Manufacturing Production Floor" 
-                class="left-bg-image" 
-            />
+        <header class="top-navbar">
+            <a href="{{ url('/') }}" class="brand-header-link">
+                <div class="header-shield-emblem">
+                    <!-- Black Shield Spade Logo SVG -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <path d="M12 8v8"></path>
+                        <path d="M9.5 12l2.5-3 2.5 3"></path>
+                        <circle cx="12" cy="17" r="1" fill="currentColor"></circle>
+                    </svg>
+                </div>
+                <div class="header-brand-texts">
+                    <span class="header-brand-name">Nachias</span>
+                    <span class="header-brand-sub">GARMENTS ERP &bull; MANUFACTURING</span>
+                </div>
+            </a>
 
-            <!-- Cinematic Vignette & Deep Lighting Gradient -->
-            <div class="left-bg-gradient"></div>
-
-            <!-- Handwritten Script Floating Slogan (From Mockup) -->
-            <div class="script-quote-floating">
-                Better Shirts,<br>Brighter Future
+            <div class="top-nav-right">
+                <span class="top-slogan-text">Build Better. Manufacture Smarter.</span>
             </div>
-
-            <!-- Foreground Content Overlay -->
-            <div class="left-content-wrap">
-                <!-- Top-Left Branding -->
-                <div class="hero-brand-header">
-                    <div class="hexagon-logo-badge">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2z"></path>
-                            <path d="M12 7l4 2.5v5l-4 2.5-4-2.5v-5l4-2.5z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="hero-brand-name">NIKO</div>
-                        <div class="hero-brand-tagline">GARMENTS ERP &bull; NACHIAS</div>
-                    </div>
-                </div>
-
-                <!-- Mid-Bottom Hero Headline -->
-                <div class="hero-headline-area">
-                    <span class="fabric-pill-tag">From Fabric to Fashion</span>
-                    <h1 class="hero-main-title">
-                        Crafting<br>
-                        <span class="gradient-word">Quality,</span><br>
-                        Together.
-                    </h1>
-                    <p class="hero-main-desc">
-                        One connected workspace for every stitch, every order, every delivery.
-                    </p>
-                </div>
-
-                <!-- Bottom Workflow Metric Cards (4 Cards) -->
-                <div class="bottom-workflow-glass">
-                    <div class="workflow-cards-grid">
-                        <!-- 1. Cutting -->
-                        <div class="wf-card-item">
-                            <div class="wf-card-header">
-                                <span class="wf-icon-circle">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="6" cy="6" r="3"></circle>
-                                        <circle cx="6" cy="18" r="3"></circle>
-                                        <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
-                                        <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
-                                        <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
-                                    </svg>
-                                </span>
-                                <span class="wf-card-title">CUTTING</span>
-                            </div>
-                            <p class="wf-card-sub">Smart Planning<br>Less Waste</p>
-                        </div>
-
-                        <!-- 2. Production -->
-                        <div class="wf-card-item">
-                            <div class="wf-card-header">
-                                <span class="wf-icon-circle">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M20.38 3.46L16 2a4 4 0 0 0-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path>
-                                    </svg>
-                                </span>
-                                <span class="wf-card-title">PRODUCTION</span>
-                            </div>
-                            <p class="wf-card-sub">On Time<br>Every Time</p>
-                        </div>
-
-                        <!-- 3. Quality -->
-                        <div class="wf-card-item">
-                            <div class="wf-card-header">
-                                <span class="wf-icon-circle">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                    </svg>
-                                </span>
-                                <span class="wf-card-title">QUALITY</span>
-                            </div>
-                            <p class="wf-card-sub">Standards<br>You Can Trust</p>
-                        </div>
-
-                        <!-- 4. Dispatch -->
-                        <div class="wf-card-item">
-                            <div class="wf-card-header">
-                                <span class="wf-icon-circle">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="1" y="3" width="15" height="13"></rect>
-                                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-                                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
-                                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
-                                    </svg>
-                                </span>
-                                <span class="wf-card-title">DISPATCH</span>
-                            </div>
-                            <p class="wf-card-sub">On Track<br>To Your Door</p>
-                        </div>
-                    </div>
-
-                    <!-- Bottom Subline -->
-                    <div class="bottom-company-subline">
-                        NACHIAS FASHION PRIVATE LIMITED
-                    </div>
-                </div>
-            </div>
-        </div>
+        </header>
 
         <!-- ============================================== -->
-        <!-- RIGHT COLUMN: Luxury Satin + Floating Card     -->
+        <!-- MAIN 3-COLUMN HERO COMPOSITION                 -->
         <!-- ============================================== -->
-        <div class="login-right-pane">
-            <!-- Satin Silk Wave Layers -->
-            <div class="satin-wave-top"></div>
-            <div class="satin-wave-bottom"></div>
+        <main class="hero-layout-grid">
+            <!-- ------------------------------------------ -->
+            <!-- COLUMN 1: Story, Workflow Pills & Factory   -->
+            <!-- ------------------------------------------ -->
+            <section class="hero-left-panel">
+                <div class="category-eyebrow">GARMENT MANUFACTURING ERP</div>
+                <h1 class="hero-main-heading">
+                    From Fabric<br>
+                    <span class="headline-purple-highlight">to Finished Shirts.</span>
+                </h1>
+                <p class="hero-sub-description">
+                    Streamline your production, track every order, and deliver quality &mdash; all in one powerful platform.
+                </p>
 
-            <!-- Top-Right Secure Workspace Badge -->
-            <div class="secure-badge-corner">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                SECURE WORKSPACE
-                <span class="secure-green-dot"></span>
-            </div>
-
-            <!-- Decorative Button Accent (Bottom Right) -->
-            <div class="satin-button-decor"></div>
-
-            <!-- FLOATING LOGIN CARD -->
-            <div class="mockup-floating-card">
-                <!-- Centered Logo Block -->
-                <div class="card-brand-center">
-                    <div class="card-hexagon-emblem">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5846e0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2z"></path>
-                            <path d="M12 7l4 2.5v5l-4 2.5-4-2.5v-5l4-2.5z"></path>
-                        </svg>
+                <!-- Four Feature Columns (Real Direct HTML) -->
+                <div class="features-grid-row">
+                    <!-- 1. Cutting -->
+                    <div class="feature-card-item">
+                        <div class="feature-icon-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="6" cy="6" r="3"></circle>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                                <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                                <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+                            </svg>
+                            <span class="feature-title-text">Cutting</span>
+                        </div>
+                        <span class="feature-sub-desc">Plan &amp; Track</span>
                     </div>
-                    <div class="card-niko-title">NIKO</div>
-                    <div class="card-niko-subtitle">GARMENTS ERP &bull; NACHIAS</div>
+
+                    <!-- 2. Production -->
+                    <div class="feature-card-item">
+                        <div class="feature-icon-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"></path>
+                                <path d="M16 3v4"></path>
+                                <path d="M8 3v4"></path>
+                                <circle cx="12" cy="14" r="2.5"></circle>
+                            </svg>
+                            <span class="feature-title-text">Production</span>
+                        </div>
+                        <span class="feature-sub-desc">Monitor Progress</span>
+                    </div>
+
+                    <!-- 3. Quality -->
+                    <div class="feature-card-item">
+                        <div class="feature-icon-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <polyline points="9 12 11 14 15 10"></polyline>
+                            </svg>
+                            <span class="feature-title-text">Quality</span>
+                        </div>
+                        <span class="feature-sub-desc">Ensure Standards</span>
+                    </div>
+
+                    <!-- 4. Dispatch -->
+                    <div class="feature-card-item">
+                        <div class="feature-icon-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="1" y="3" width="15" height="13"></rect>
+                                <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                            </svg>
+                            <span class="feature-title-text">Dispatch</span>
+                        </div>
+                        <span class="feature-sub-desc">On Time Delivery</span>
+                    </div>
                 </div>
 
-                <!-- Welcome Text -->
-                <h2 class="card-heading-title">Welcome <span class="purple-back">back.</span></h2>
-                <p class="card-heading-desc">Sign in to your manufacturing workspace.</p>
+                <!-- Standalone Women Stitching Factory Image with Sweeping Curve & Badge -->
+                <div class="factory-stitching-wrap">
+                    <img 
+                        src="{{ url('assets/images/nachias_factory_isolated.jpg') }}?v={{ time() }}" 
+                        alt="Women stitching in shirt manufacturing factory" 
+                        class="factory-stitching-img"
+                    />
+                </div>
+            </section>
 
-                <!-- Flash Messages -->
-                @include('flash_messages')
-
-                <!-- Authentication Form -->
-                <form id="formAuthentication" action="{{ url('login') }}" method="POST" autocomplete="off">
-                    @csrf
-
-                    <!-- Email Field -->
-                    <div class="field-wrap-box">
-                        <span class="field-icon-left">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+            <!-- ------------------------------------------ -->
+            <!-- COLUMN 2: Central Interactive Login Card   -->
+            <!-- ------------------------------------------ -->
+            <section class="hero-center-panel">
+                <div class="central-login-card">
+                    <!-- Brand Centered Logo inside Card -->
+                    <div class="card-brand-top">
+                        <div class="card-shield-black">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <path d="M12 8v8"></path>
+                                <path d="M9.5 12l2.5-3 2.5 3"></path>
+                                <circle cx="12" cy="17" r="1" fill="currentColor"></circle>
                             </svg>
-                        </span>
-                        <input 
-                            type="text" 
-                            class="field-input-control @error('email') is-invalid @enderror" 
-                            id="email" 
-                            name="email" 
-                            placeholder="Email Address" 
-                            value="{{ old('email', Cookie::get('email') ?? '') }}" 
-                            required 
-                        />
+                        </div>
+                        <div class="card-brand-texts">
+                            <span class="card-brand-title-purple">Niko</span>
+                            <span class="card-brand-sub-caps">GARMENTS ERP &bull; MANUFACTURING</span>
+                        </div>
                     </div>
 
-                    <!-- Password Field with Lock Prefix & Eye Toggle Suffix -->
-                    <div class="field-wrap-box">
-                        <span class="field-icon-left">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                        </span>
-                        <input 
-                            type="password" 
-                            class="field-input-control @error('password') is-invalid @enderror" 
-                            id="form-alignment-password" 
-                            name="password" 
-                            placeholder="Password" 
-                            value="{{ old('password', Cookie::get('password') ?? '') }}" 
-                            onkeypress="return event.charCode !== 32" 
-                            required 
-                        />
-                        <span class="field-icon-eye" id="pwdToggleBtn" role="button" aria-label="Toggle password visibility">
-                            <svg id="iconEyeSvg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
-                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
-                                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
-                                <line x1="2" y1="2" x2="22" y2="22"></line>
-                            </svg>
-                        </span>
+                    <!-- Welcome Heading -->
+                    <div class="card-welcome-header">
+                        <h2 class="card-welcome-title">Welcome Back</h2>
+                        <p class="card-welcome-sub">Sign in to your manufacturing workspace.</p>
                     </div>
 
-                    <!-- Remember Me & Forgot Password Row -->
-                    <div class="options-row-wrap">
-                        <label class="check-container" for="remember-me">
+                    <!-- Flash Messages -->
+                    @include('flash_messages')
+
+                    <!-- Authentication Form -->
+                    <form id="formAuthentication" action="{{ url('login') }}" method="POST" autocomplete="off">
+                        @csrf
+
+                        <!-- Email Address Input -->
+                        <div class="form-input-group">
+                            <span class="input-icon-prefix">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                                </svg>
+                            </span>
                             <input 
-                                type="checkbox" 
-                                class="purple-check-box" 
-                                name="remember" 
-                                id="remember-me" 
-                                value="1" 
-                                {{ Cookie::get('remember') ? 'checked' : '' }} 
+                                type="text" 
+                                class="custom-text-input @error('email') is-invalid @enderror" 
+                                id="email" 
+                                name="email" 
+                                placeholder="Email Address" 
+                                value="{{ old('email', Cookie::get('email') ?? '') }}" 
+                                required 
                             />
-                            <span class="check-label-text">Remember Me</span>
-                        </label>
-                        <a href="javascript:void(0);" class="forgot-link-btn">Forgot password?</a>
-                    </div>
-
-                    <!-- Sign In Purple Gradient Button -->
-                    <button class="btn-submit-mockup" type="submit" id="btnSignIn">
-                        <span>SIGN IN</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </button>
-
-                    <!-- Validation Errors -->
-                    @if ($errors->has('email') || $errors->has('password'))
-                        <div class="error-feedback-alert">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="8" x2="12" y2="12"></line>
-                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                            <span>{{ $errors->first('email') ?: $errors->first('password') }}</span>
                         </div>
-                    @endif
-                </form>
 
-                <!-- OR Divider -->
-                <div class="or-divider-wrap">
-                    <span>OR</span>
-                </div>
+                        <!-- Password Input with Toggle Eye -->
+                        <div class="form-input-group">
+                            <span class="input-icon-prefix">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                            </span>
+                            <input 
+                                type="password" 
+                                class="custom-text-input @error('password') is-invalid @enderror" 
+                                id="form-alignment-password" 
+                                name="password" 
+                                placeholder="Password" 
+                                value="{{ old('password', Cookie::get('password') ?? '') }}" 
+                                onkeypress="return event.charCode !== 32" 
+                                required 
+                            />
+                            <span class="password-toggle-suffix" id="pwdToggleBtn" role="button" aria-label="Toggle password visibility">
+                                <svg id="iconEyeSvg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
+                                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
+                                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
+                                    <line x1="2" y1="2" x2="22" y2="22"></line>
+                                </svg>
+                            </span>
+                        </div>
 
-                <!-- Trust / Security Pill -->
-                <div class="trust-security-pill">
-                    <div class="trust-icon-box">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            <path d="m9 12 2 2 4-4"></path>
-                        </svg>
+                        <!-- Options Row: Remember Me & Forgot Password -->
+                        <div class="form-options-bar">
+                            <label class="checkbox-container-label" for="remember-me">
+                                <input 
+                                    type="checkbox" 
+                                    class="purple-checkbox-control" 
+                                    name="remember" 
+                                    id="remember-me" 
+                                    value="1" 
+                                    {{ Cookie::get('remember') ? 'checked' : '' }} 
+                                />
+                                <span>Remember Me</span>
+                            </label>
+                            <a href="javascript:void(0);" class="forgot-link-anchor">Forgot Password?</a>
+                        </div>
+
+                        <!-- Sign In Button -->
+                        <button class="btn-submit-signin" type="submit" id="btnSignIn">
+                            <span>Sign In</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </button>
+
+                        <!-- Validation Alert -->
+                        @if ($errors->has('email') || $errors->has('password'))
+                            <div class="error-alert-badge">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <span>{{ $errors->first('email') ?: $errors->first('password') }}</span>
+                            </div>
+                        @endif
+                    </form>
+
+                    <!-- OR Divider -->
+                    <div class="or-divider-box">
+                        <span>OR</span>
                     </div>
-                    <div>
-                        <p class="trust-title">Your data is safe with us</p>
-                        <p class="trust-sub">Secure &bull; Trusted &bull; Confidential</p>
+
+                    <!-- Trust Security Badge -->
+                    <div class="security-trust-box">
+                        <div class="trust-shield-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <polyline points="9 12 11 14 15 10"></polyline>
+                            </svg>
+                        </div>
+                        <div class="trust-text-stack">
+                            <span class="trust-heading">Your data is safe with us</span>
+                            <span class="trust-subtext">Secure &bull; Trusted &bull; Confidential</span>
+                        </div>
                     </div>
                 </div>
+            </section>
 
-                <!-- Footer Copyright -->
-                <div class="card-bottom-copy">
-                    Nachias Fashion Private Limited &copy; {{ date('Y') }}
+            <!-- ------------------------------------------ -->
+            <!-- COLUMN 3: Standalone Finished Shirt Image  -->
+            <!-- ------------------------------------------ -->
+            <aside class="hero-right-panel">
+                <div class="shirt-showcase-container">
+                    <img 
+                        src="{{ url('assets/images/nachias_shirt_clean.png') }}?v={{ time() }}" 
+                        alt="Finished Casino Formal Shirts - Nachias Fashion" 
+                        class="shirt-product-img"
+                    />
                 </div>
+            </aside>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- FOOTER (Real Direct HTML Words)                -->
+        <!-- ============================================== -->
+        <footer class="page-footer-bar">
+            <span class="footer-company-text">NACHIAS FASHION PRIVATE LIMITED</span>
+            <div class="footer-powered-by">
+                <svg class="footer-shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <path d="M12 8v8"></path>
+                    <path d="M9.5 12l2.5-3 2.5 3"></path>
+                </svg>
+                <span>Powered by Nachias Garments ERP</span>
             </div>
-        </div>
+        </footer>
     </div>
 
     <!-- Scripts -->
     <script src="{{ url('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ url('assets/js/bootstrap.js') }}"></script>
 
-    <!-- Reliable Password Toggle Script -->
+    <!-- Reliable Password Toggle -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var toggleBtn = document.getElementById('pwdToggleBtn');
@@ -1018,7 +1074,7 @@
             var iconEye = document.getElementById('iconEyeSvg');
 
             var eyeSlashSvg = '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line>';
-            var eyeOpenSvg = '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle>';
+            var eyeOpenSvg = '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="17" r="3"></circle>';
 
             if (toggleBtn && pwdInput && iconEye) {
                 toggleBtn.addEventListener('click', function (e) {

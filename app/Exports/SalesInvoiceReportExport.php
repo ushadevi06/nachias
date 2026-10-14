@@ -32,7 +32,10 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
                   ->orWhere(function($q2) {
                       $q2->whereNull('irn')
                          ->whereHas('customer', function($q3) {
-                             $q3->where('name', 'like', '%CASH%');
+                             $q3->where('name', 'like', '%CASH%')
+                                ->orWhere('name', 'like', '%ARUMUGAM%')
+                                ->orWhere('name', 'like', '%SRIVARSAN%')
+                                ->orWhereIn('code', ['7011', '7012']);
                          });
                   });
             })->orderBy('id', 'asc');

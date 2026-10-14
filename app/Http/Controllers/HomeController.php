@@ -44,90 +44,38 @@ class HomeController extends Controller
         $total_stock = StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
         $urgent_orders = SalesOrder::where('status', 'Pending')->whereNull('deleted_at')->count();
 
-        /* Sales Report Matrix (Sales, Sales Return, Net Sales) */
-        // Today Sales
-        $today_sales_qty = DB::table('sales_invoice_items')
-            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-            ->whereDate('sales_invoices.inv_date', $today)
-            ->whereNull('sales_invoices.deleted_at')
-            ->whereNull('sales_invoice_items.deleted_at')
-            ->sum('sales_invoice_items.quantity');
+        /* Sales Report Matrix (Sales, Sales Return, Net Sales) - FINISHED GOODS Store Only */
+        $fgStoreId = DB::table('store_types')->where('store_type_name', 'FINISHED GOODS')->value('id') ?? 3;
 
-        $today_sales_wot = DB::table('sales_invoices')
-            ->whereDate('inv_date', $today)
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        // Today Sales
+        $today_sales_qty = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->whereDate('sales_invoices.inv_date', $today)->where('sales_invoices.store_id', $fgStoreId)->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->sum('sales_invoice_items.quantity');
+        $today_sales_wot = DB::table('sales_invoices')->whereDate('inv_date', $today)->where('store_id', $fgStoreId)->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         // Today Sales Return (Credit Notes)
-        $today_return_qty = DB::table('credit_note_items')
-            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
-            ->whereDate('credit_notes.note_date', $today)
-            ->whereNull('credit_notes.deleted_at')
-            ->whereNull('credit_note_items.deleted_at')
-            ->sum('credit_note_items.quantity');
-
-        $today_return_wot = DB::table('credit_notes')
-            ->whereDate('note_date', $today)
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $today_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereDate('credit_notes.note_date', $today)->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
+        $today_return_wot = DB::table('credit_notes')->whereDate('note_date', $today)->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         $today_net_qty = max(0, $today_sales_qty - $today_return_qty);
         $today_net_wot = max(0, $today_sales_wot - $today_return_wot);
 
         // Monthly Sales
-        $month_sales_qty = DB::table('sales_invoice_items')
-            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-            ->whereBetween('sales_invoices.inv_date', [$monthStart, Carbon::now()])
-            ->whereNull('sales_invoices.deleted_at')
-            ->whereNull('sales_invoice_items.deleted_at')
-            ->sum('sales_invoice_items.quantity');
-
-        $month_sales_wot = DB::table('sales_invoices')
-            ->whereBetween('inv_date', [$monthStart, Carbon::now()])
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $month_sales_qty = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->whereBetween('sales_invoices.inv_date', [$monthStart, Carbon::now()])->where('sales_invoices.store_id', $fgStoreId)->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->sum('sales_invoice_items.quantity');
+        $month_sales_wot = DB::table('sales_invoices')->whereBetween('inv_date', [$monthStart, Carbon::now()])->where('store_id', $fgStoreId)->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         // Monthly Sales Return
-        $month_return_qty = DB::table('credit_note_items')
-            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
-            ->whereBetween('credit_notes.note_date', [$monthStart, Carbon::now()])
-            ->whereNull('credit_notes.deleted_at')
-            ->whereNull('credit_note_items.deleted_at')
-            ->sum('credit_note_items.quantity');
-
-        $month_return_wot = DB::table('credit_notes')
-            ->whereBetween('note_date', [$monthStart, Carbon::now()])
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $month_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereBetween('credit_notes.note_date', [$monthStart, Carbon::now()])->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
+        $month_return_wot = DB::table('credit_notes')->whereBetween('note_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         $month_net_qty = max(0, $month_sales_qty - $month_return_qty);
         $month_net_wot = max(0, $month_sales_wot - $month_return_wot);
 
         // Yearly Sales
-        $year_sales_qty = DB::table('sales_invoice_items')
-            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-            ->whereBetween('sales_invoices.inv_date', [$yearStart, Carbon::now()])
-            ->whereNull('sales_invoices.deleted_at')
-            ->whereNull('sales_invoice_items.deleted_at')
-            ->sum('sales_invoice_items.quantity');
-
-        $year_sales_wot = DB::table('sales_invoices')
-            ->whereBetween('inv_date', [$yearStart, Carbon::now()])
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $year_sales_qty = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->whereBetween('sales_invoices.inv_date', [$yearStart, Carbon::now()])->where('sales_invoices.store_id', $fgStoreId)->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->sum('sales_invoice_items.quantity');
+        $year_sales_wot = DB::table('sales_invoices')->whereBetween('inv_date', [$yearStart, Carbon::now()])->where('store_id', $fgStoreId)->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         // Yearly Sales Return
-        $year_return_qty = DB::table('credit_note_items')
-            ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
-            ->whereBetween('credit_notes.note_date', [$yearStart, Carbon::now()])
-            ->whereNull('credit_notes.deleted_at')
-            ->whereNull('credit_note_items.deleted_at')
-            ->sum('credit_note_items.quantity');
-
-        $year_return_wot = DB::table('credit_notes')
-            ->whereBetween('note_date', [$yearStart, Carbon::now()])
-            ->whereNull('deleted_at')
-            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $year_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereBetween('credit_notes.note_date', [$yearStart, Carbon::now()])->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
+        $year_return_wot = DB::table('credit_notes')->whereBetween('note_date', [$yearStart, Carbon::now()])->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         $year_net_qty = max(0, $year_sales_qty - $year_return_qty);
         $year_net_wot = max(0, $year_sales_wot - $year_return_wot);
@@ -244,17 +192,13 @@ class HomeController extends Controller
         $cash_sub_total = SalesInvoice::whereNull('deleted_at')->where('payment_mode', 'Cash')->sum('sub_total');
         $cash_discount_percent = $cash_sub_total > 0 ? round(($cash_discount / $cash_sub_total) * 100, 2) : 0;
 
-        $total_customer_collections = Payment::where('payment_type', 'Customer Collection')
-            ->whereNull('deleted_at')
-            ->sum('amount');
+        $total_customer_collections = Payment::where('payment_type', 'Customer Collection')->whereNull('deleted_at')->sum('amount');
         $total_debtors = max(0, $total_sales_value - $total_customer_collections);
 
         $total_purchase = PurchaseInvoice::whereNull('deleted_at')->sum('grand_total');
         $purchase_return = DebitNote::whereNull('deleted_at')->sum('grand_total');
 
-        $total_supplier_payments = Payment::where('payment_type', 'Supplier Payment')
-            ->whereNull('deleted_at')
-            ->sum('amount');
+        $total_supplier_payments = Payment::where('payment_type', 'Supplier Payment')->whereNull('deleted_at')->sum('amount');
         $total_creditors = max(0, $total_purchase - $total_supplier_payments);
 
         /* Debtors Outstanding & Aging Report */

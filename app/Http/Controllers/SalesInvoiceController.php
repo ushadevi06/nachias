@@ -321,6 +321,7 @@ class SalesInvoiceController extends Controller
                     $editBtn = '<a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
+
                 $action = '<div class="button-box d-flex align-items-center">
                     <a href="' . url('sales_invoices/view/' . $inv->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a>
                     ' . $editBtn . '
@@ -339,6 +340,12 @@ class SalesInvoiceController extends Controller
                     $storeName = $inv->store->store_type_name;
                 }
 
+                $soInfo = '';
+                if ($inv->salesOrder) {
+                    $soInfo = '<br><span class="text-primary fw-medium" style="font-size: 11px;"><i class="ri ri-file-list-3-line me-1"></i>' . $inv->salesOrder->so_no . '</span>'
+                        . ($inv->salesOrder->order_no ? ' <span class="badge bg-label-info ms-1" style="font-size:10px;">' . $inv->salesOrder->order_no . '</span>' : '');
+                }
+
                 $data[] = [
                     'id' => $inv->id,
                     'DT_RowIndex' => $count++,
@@ -346,7 +353,7 @@ class SalesInvoiceController extends Controller
                     'inv_date' => $inv->inv_date ? $inv->inv_date->format('d-m-Y') : '',
                     'store_name' => '<span class="badge ' . $storeBadgeClass . '">' . e($storeName) . '</span>',
                     'raw_store_name' => $storeName,
-                    'customer_name' => ($inv->customer ? $inv->customer->name : '-') . ($inv->customer ? ' <span  class="mini-title">(' . $inv->customer->code . ')</span>' : ''),
+                    'customer_name' => ($inv->customer ? $inv->customer->name : '-') . ($inv->customer ? ' <span  class="mini-title">(' . $inv->customer->code . ')</span>' : '') . $soInfo,
                     'so_no' => ($inv->salesOrder ? $inv->salesOrder->so_no : '-') . ($inv->salesOrder && $inv->salesOrder->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $inv->salesOrder->order_no . '</span>' : ''),
                     'total_items' => $inv->total_items ?? 0,
                     'total_qty' => $inv->total_qty ?? 0,
@@ -1847,12 +1854,14 @@ class SalesInvoiceController extends Controller
         $actualTaxTotal = !$invoice->other_state ? ((float)$invoice->cgst + (float)$invoice->sgst) : (float)$invoice->igst;
         $totalInWords = numberToWords($invoice->grand_total);
         $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
+        $pdfType = request()->query('type', 'pdf1');
 
-        $pdf = Pdf::loadView('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords'));
+        $pdf = Pdf::loadView('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'pdfType'));
         $pdf->setPaper('A4', 'portrait');
         
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
-        return $pdf->stream('Sales_Invoice_' . $safeInvoiceNo . '.pdf');
+        $suffix = ($pdfType === 'pdf2') ? '_SizeRange' : '';
+        return $pdf->stream('Sales_Invoice_' . $safeInvoiceNo . $suffix . '.pdf');
     }
 
     public function print($id)
@@ -1926,9 +1935,10 @@ class SalesInvoiceController extends Controller
         $actualTaxTotal = !$invoice->other_state ? ((float)$invoice->cgst + (float)$invoice->sgst) : (float)$invoice->igst;
         $totalInWords = numberToWords($invoice->grand_total);
         $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
+        $pdfType = request()->query('type', 'pdf1');
         $is_print = true;
 
-        return view('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print'));
+        return view('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print', 'pdfType'));
     }
     public function printSticker($id)
     {
@@ -1960,7 +1970,7 @@ class SalesInvoiceController extends Controller
         return view('sales_invoice.courier_sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
     }
 
-    public function downloadDeliveryOrder($id)
+    public function downloadDeliveryOrder($id, Request $request)
     {
         $invoice = SalesInvoice::with([
             'customer.state', 
@@ -1977,15 +1987,22 @@ class SalesInvoiceController extends Controller
         
         $setting = Setting::with(['state', 'city'])->first();
         $totalPcs = $invoice->items->sum('quantity');
+
+        $mode = $request->query('mode', 'portrait');
+        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
+
+        if ($mode === 'landscape') {
+            $pdf = Pdf::loadView('sales_invoice.delivery_order_landscape', compact('invoice', 'setting', 'totalPcs'));
+            $pdf->setPaper('A4', 'landscape');
+            return $pdf->stream('Delivery_Order_Landscape_' . $safeInvoiceNo . '.pdf');
+        }
 
         $pdf = Pdf::loadView('sales_invoice.delivery_order', compact('invoice', 'setting', 'totalPcs'));
         $pdf->setPaper('A4', 'portrait');
-        
-        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
         return $pdf->stream('Delivery_Order_' . $safeInvoiceNo . '.pdf');
     }
 
-    public function downloadOpenDeliveryOrder($id)
+    public function downloadOpenDeliveryOrder($id, Request $request)
     {
         $invoice = SalesInvoice::with([
             'customer.state', 
@@ -2003,10 +2020,17 @@ class SalesInvoiceController extends Controller
         $setting = Setting::with(['state', 'city'])->first();
         $totalPcs = $invoice->items->sum('quantity');
 
+        $mode = $request->query('mode', 'portrait');
+        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
+
+        if ($mode === 'landscape') {
+            $pdf = Pdf::loadView('sales_invoice.open_delivery_order_landscape', compact('invoice', 'setting', 'totalPcs'));
+            $pdf->setPaper('A4', 'landscape');
+            return $pdf->stream('Open_Delivery_Order_Landscape_' . $safeInvoiceNo . '.pdf');
+        }
+
         $pdf = Pdf::loadView('sales_invoice.open_delivery_order', compact('invoice', 'setting', 'totalPcs'));
         $pdf->setPaper('A4', 'portrait');
-        
-        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
         return $pdf->stream('Open_Delivery_Order_' . $safeInvoiceNo . '.pdf');
     }
 
@@ -3335,7 +3359,10 @@ class SalesInvoiceController extends Controller
                       ->orWhere(function($q2) {
                           $q2->whereNull('irn')
                              ->whereHas('customer', function($q3) {
-                                 $q3->where('name', 'like', '%CASH%');
+                                 $q3->where('name', 'like', '%CASH%')
+                                    ->orWhere('name', 'like', '%ARUMUGAM%')
+                                    ->orWhere('name', 'like', '%SRIVARSAN%')
+                                    ->orWhereIn('code', ['7011', '7012']);
                              });
                       });
                 })->orderBy('id', 'desc');

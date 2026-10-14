@@ -80,7 +80,6 @@
                                     <th>Invoice Date</th>
                                     <th>Store</th>
                                     <th>Customer Name / Buyer </th>
-                                    <th>Linked SO No.</th>
                                     <th>Total Qty</th>
                                     <th>Sub Total</th>
                                     <th>Discount</th>
@@ -94,7 +93,7 @@
                             <tbody></tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="6" class="text-end fw-bold">Total:</th>
+                                    <th colspan="5" class="text-end fw-bold">Total:</th>
                                     <th id="footer-total-qty" class="fw-bold">0</th>
                                     <th id="footer-sub-total" class="fw-bold">₹0.00</th>
                                     <th id="footer-discount" class="fw-bold">₹0.00</th>
@@ -175,7 +174,6 @@
                 { data: 'inv_date' },
                 { data: 'store_name' },
                 { data: 'customer_name' },
-                { data: 'so_no' },
                 { data: 'total_qty' },
                 { data: 'sub_total' },
                 { data: 'discount' },

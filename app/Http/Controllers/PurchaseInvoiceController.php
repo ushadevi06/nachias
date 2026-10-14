@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use App\Models\Brand;
 use App\Models\FabricSize;
 use App\Models\FabricType;
+use App\Models\GrnEntry;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -118,7 +119,7 @@ class PurchaseInvoiceController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view_details purchase-invoice')) {
                     $action .= '<a href="' . url('purchase_invoices/view/' . $invoice->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                $hasGrn = \App\Models\GrnEntry::where('purchase_invoice_id', $invoice->id)->whereNull('deleted_at')->exists();
+                $hasGrn = GrnEntry::where('purchase_invoice_id', $invoice->id)->whereNull('deleted_at')->exists();
                 if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid' && !$hasGrn) {
                     $action .= '<a href="' . url('purchase_invoices/add/' . $invoice->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
@@ -162,7 +163,7 @@ class PurchaseInvoiceController extends Controller
                 return unauthorizedRedirect();
             }
             
-            $hasGrn = \App\Models\GrnEntry::where('purchase_invoice_id', $id)->exists();
+            $hasGrn = GrnEntry::where('purchase_invoice_id', $id)->exists();
             if ($hasGrn) {
                 return redirect('purchase_invoices')->with('error', 'Cannot edit this Purchase Invoice because a GRN has already been created for it.');
             }
@@ -411,7 +412,7 @@ class PurchaseInvoiceController extends Controller
                 $igstPercent = floatval($request->igst_percent ?? 0);
                 $igstAmount = ($displayTaxableAmount * $igstPercent) / 100;
                 if ($igstAmount < 0) $igstAmount = 0;
-                $taxAmount = $igstAmount;
+                $taxAmount = round($igstAmount, 2);
             } else {
                 $cgstPercent = floatval($request->cgst_percent ?? 0);
                 $sgstPercent = floatval($request->sgst_percent ?? 0);
@@ -419,18 +420,18 @@ class PurchaseInvoiceController extends Controller
                 $sgstAmount = ($displayTaxableAmount * $sgstPercent) / 100;
                 if ($cgstAmount < 0) $cgstAmount = 0;
                 if ($sgstAmount < 0) $sgstAmount = 0;
-                $taxAmount = $cgstAmount + $sgstAmount;
+                $taxAmount = round($cgstAmount + $sgstAmount, 2);
             }
 
             $totalBeforeRoundOff = round($taxableAmount + $taxAmount + $postGstCharges, 2);
-            $roundOffAmount = floatval($request->round_off ?? 0);
+            $roundOffAmount = round(floatval($request->round_off ?? 0), 2);
             $roundOffType = $request->round_off_type ?? 'Add';
             $finalTotal = 0;
 
             if ($roundOffType === 'Add') {
-                $finalTotal = $totalBeforeRoundOff + $roundOffAmount;
+                $finalTotal = round($totalBeforeRoundOff + $roundOffAmount, 2);
             } else {
-                $finalTotal = $totalBeforeRoundOff - $roundOffAmount;
+                $finalTotal = round($totalBeforeRoundOff - $roundOffAmount, 2);
             }
 
             if ($finalTotal < 0) {
