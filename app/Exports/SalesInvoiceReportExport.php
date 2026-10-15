@@ -187,7 +187,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $item->quantity,
             $item->amount, // SALES VALUE
             $isFirstRow ? $inv->discount : '', // SALES DISCOUNT
-            $isFirstRow ? $inv->box_discount_amount : '', // SALES DISCOUNT (WITHOUT BOX)
+            '', // SALES DISCOUNT (WITHOUT BOX)
             $isFirstRow ? $inv->sub_total : '', 
             $gstPercent,
             $isFirstRow ? $cgst2_5 : '',

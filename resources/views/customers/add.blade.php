@@ -415,6 +415,18 @@
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="number" step="0.01"
+                                            class="form-control @error('transport_rate') is-invalid @enderror"
+                                            id="transport_rate" placeholder="Enter Transport Rate" name="transport_rate"
+                                            value="{{ old('transport_rate', $customer->transport_rate ?? '') }}">
+                                        <label for="transport_rate">Transport Rate (Per Box ₹)</label>
+                                    </div>
+                                    @error('transport_rate')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
                                 <div class="col-lg-12">
                                     <hr>
                                 </div>

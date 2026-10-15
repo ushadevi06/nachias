@@ -34,23 +34,36 @@
         }
         .meta-container {
             width: 100%;
-            margin-bottom: 5px;
+            margin-top: 6px;
+            margin-bottom: 8px;
             border-collapse: collapse;
         }
         .meta-container td {
             vertical-align: top;
-            padding: 0;
+            padding: 4px 0;
         }
         .meta-left {
             width: 60%;
             font-size: 10px;
-            line-height: 1.25;
+            line-height: 1.45;
+        }
+        .meta-left div {
+            margin-bottom: 2.5px;
+        }
+        .meta-left div:last-child {
+            margin-bottom: 0;
         }
         .meta-right {
             width: 40%;
             text-align: right;
             font-size: 10px;
-            line-height: 1.25;
+            line-height: 1.45;
+        }
+        .meta-right div {
+            margin-bottom: 2.5px;
+        }
+        .meta-right div:last-child {
+            margin-bottom: 0;
         }
         .meta-title {
             font-size: 12px;
@@ -108,7 +121,6 @@
 </head>
 <body>
     @php
-        // Resolve sleeve code
         $getSleeveCode = function($sleeveType) {
             if (empty($sleeveType)) return '-';
             $s = strtoupper(trim($sleeveType));
@@ -117,7 +129,6 @@
             return substr($s, 0, 1);
         };
 
-        // Determine all sizes to display
         $standardSizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
         $invSizes = $invoice->items->map(function($i) {
             $s = $i->sizeRatio ? $i->sizeRatio->size : ($i->size ?? '');
@@ -130,7 +141,6 @@
             return is_numeric($s) ? (int)$s : $s;
         })->values()->all();
 
-        // Process line items into aggregated rows
         $rows = [];
         $orderDate = $invoice->salesOrder && $invoice->salesOrder->so_date ? $invoice->salesOrder->so_date->format('d/m/Y') : ($invoice->inv_date ? $invoice->inv_date->format('d/m/Y') : '');
 
@@ -158,7 +168,6 @@
             $cleanSize = trim(ltrim($rawSize, 'Ss'));
             $qty = (float)($item->quantity ?? 0);
 
-            // Item description / Brand Style
             $brandName = '';
             $styleName = '';
             if ($seItem && $seItem->brand) {
@@ -194,7 +203,6 @@
             $rows[$key]['total_qty'] += $qty;
         }
 
-        // Calculate size totals
         $sizeTotals = array_fill_keys($allSizes, 0);
         $grandTotalQty = 0;
         foreach ($rows as $r) {
@@ -205,10 +213,6 @@
             $grandTotalQty += $r['total_qty'];
         }
 
-        // Intelligent Page Chunking:
-        // Ensure that the footer NEVER appears alone on the second page.
-        // If all items fit on 1 page (up to 15 rows), 1 page only.
-        // If more than 15 rows, split so the last page has at least 2 items plus the footer.
         $rowsList = array_values($rows);
         $totalRows = count($rowsList);
         $chunks = [];
@@ -342,18 +346,8 @@
                                     <td style="font-weight: bold; font-size: 12px; text-align: right; padding: 1px 0;">{{ (int)$grandTotalQty }}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 2px 0;">Total Packages :</td>
-                                    <td style="padding: 2px 0;">One Piece Box <span class="box-line"></span></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 2px 0;"></td>
-                                    <td style="padding: 2px 0;">Six Piece Box <span class="box-line"></span></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 2px 0; font-weight: bold;"></td>
-                                    <td style="padding: 2px 0; font-weight: bold;">
-                                        Total Box : <span style="font-size: 10.5px; padding-left: 5px;">{{ $invoice->no_of_box ?: '1' }}</span>
-                                    </td>
+                                    <td style="padding: 2px 0; font-weight: bold; font-size: 10.5px;">Total Box :</td>
+                                    <td style="padding: 2px 0; font-weight: bold; font-size: 10.5px; text-align: right;">{{ $invoice->no_of_box ?: '1' }}</td>
                                 </tr>
                             </table>
                         </td>

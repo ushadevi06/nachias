@@ -1011,6 +1011,12 @@ class SalesInvoiceController extends Controller
                     addLog($id ? 'update' : 'create', 'Sales Invoice', 'sales_invoices', $invoice->id, $id ? $existingInvoice->toArray() : null, $invoice->toArray());
                 }
 
+                try {
+                    app(\App\Services\TransportBookingService::class)->generateBookingsForInvoice($invoice);
+                } catch (\Exception $tbe) {
+                    \Log::warning('Transport booking auto-generation: ' . $tbe->getMessage());
+                }
+
                 DB::commit();
                 
                 $msg = $id ? 'Sale Invoice updated successfully' : 'Sale Invoice created successfully';

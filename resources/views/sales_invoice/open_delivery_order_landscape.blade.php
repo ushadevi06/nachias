@@ -34,23 +34,36 @@
         }
         .meta-container {
             width: 100%;
-            margin-bottom: 5px;
+            margin-top: 6px;
+            margin-bottom: 8px;
             border-collapse: collapse;
         }
         .meta-container td {
             vertical-align: top;
-            padding: 0;
+            padding: 4px 0;
         }
         .meta-left {
             width: 60%;
             font-size: 10px;
-            line-height: 1.25;
+            line-height: 1.45;
+        }
+        .meta-left div {
+            margin-bottom: 2.5px;
+        }
+        .meta-left div:last-child {
+            margin-bottom: 0;
         }
         .meta-right {
             width: 40%;
             text-align: right;
             font-size: 10px;
-            line-height: 1.25;
+            line-height: 1.45;
+        }
+        .meta-right div {
+            margin-bottom: 2.5px;
+        }
+        .meta-right div:last-child {
+            margin-bottom: 0;
         }
         .meta-title {
             font-size: 12px;
@@ -339,18 +352,8 @@
                                     <td style="font-weight: bold; font-size: 12px; text-align: right; padding: 1px 0;">{{ (int)$grandTotalQty }}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 2px 0;">Total Packages :</td>
-                                    <td style="padding: 2px 0;">One Piece Box <span class="box-line"></span></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 2px 0;"></td>
-                                    <td style="padding: 2px 0;">Six Piece Box <span class="box-line"></span></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 2px 0; font-weight: bold;"></td>
-                                    <td style="padding: 4px 0; font-weight: bold;">
-                                        Total Box : <span style="font-size: 10.5px; padding-left: 5px;">{{ $invoice->no_of_box ?: '1' }}</span>
-                                    </td>
+                                    <td style="padding: 2px 0; font-weight: bold; font-size: 10.5px;">Total Box :</td>
+                                    <td style="padding: 2px 0; font-weight: bold; font-size: 10.5px; text-align: right;">{{ $invoice->no_of_box ?: '1' }}</td>
                                 </tr>
                             </table>
                         </td>

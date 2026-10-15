@@ -708,6 +708,11 @@ $isSuper = $user->id == 1;
                                                         <div>Sales Invoices</div>
                                                     </a>
                                                 </li>
+                                                <li class="menu-item {{ request()->is('transport_bookings*') ? 'active' : '' }}">
+                                                    <a href="{{ url('transport_bookings') }}" class="menu-link">
+                                                        <div>Transport Handover / LR Register</div>
+                                                    </a>
+                                                </li>
                                             @endif
 
                                             @if($isSuper || $user->can('view credit-notes'))

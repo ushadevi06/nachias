@@ -36,6 +36,7 @@ use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockConsumableReturnController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\SalesInvoiceController;
+use App\Http\Controllers\TransportBookingController;
 use App\Http\Controllers\OldSalesInvoiceController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\JobCardEntryController;
@@ -547,6 +548,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('sales_invoices/cancel-einvoice/{id}', [SalesInvoiceController::class, 'cancelEInvoice']);
     Route::post('sales_invoices/cancel-ewaybill/{id}', [SalesInvoiceController::class, 'cancelEWayBill']);
     Route::get('sales_invoices/recreate/{id}', [SalesInvoiceController::class, 'recreate']);
+
+    /* Transport Handover & LR Register */
+    Route::get('transport_bookings', [TransportBookingController::class, 'index'])->name('transport_bookings.index');
+    Route::get('transport_bookings/print_sheet', [TransportBookingController::class, 'printSheet'])->name('transport_bookings.print_sheet');
+    Route::post('transport_bookings/{id}/record_lr', [TransportBookingController::class, 'recordLr'])->name('transport_bookings.record_lr');
+    Route::post('transport_bookings/{id}/mark_picked', [TransportBookingController::class, 'markPicked'])->name('transport_bookings.mark_picked');
+    Route::match(['GET', 'POST'], 'transport_bookings/payment_clearance', [TransportBookingController::class, 'paymentClearance'])->name('transport_bookings.payment_clearance');
 
     /* Old Sales Invoices (Archive) */
     Route::get('old_sales_invoices', [OldSalesInvoiceController::class, 'index']);

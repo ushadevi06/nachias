@@ -41,6 +41,7 @@ class Customer extends Model
         'credit_limit',
         'sales_discount',
         'box_discount_amount',
+        'transport_rate',
         'bank_name',
         'branch',
         'account_number',
