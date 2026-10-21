@@ -27,10 +27,10 @@
             letter-spacing: 0.5px;
         }
         .company-address {
-            font-size: 9px;
+            font-size: 11px;
             margin-top: 1px;
             color: #222;
-            line-height: 1.2;
+            line-height: 1.35;
         }
         .meta-container {
             width: 100%;
@@ -121,6 +121,19 @@
 </head>
 <body>
     @php
+        $logoPath = null;
+        if (!empty($setting->logo_file) && file_exists(public_path($setting->logo_file))) {
+            $logoPath = public_path($setting->logo_file);
+        } elseif (file_exists(public_path('assets/images/jc_logo.png'))) {
+            $logoPath = public_path('assets/images/jc_logo.png');
+        }
+        $logoBase64 = '';
+        if ($logoPath && file_exists($logoPath)) {
+            $logoData = file_get_contents($logoPath);
+            $ext = pathinfo($logoPath, PATHINFO_EXTENSION);
+            $logoBase64 = 'data:image/' . ($ext === 'svg' ? 'svg+xml' : $ext) . ';base64,' . base64_encode($logoData);
+        }
+
         $getSleeveCode = function($sleeveType) {
             if (empty($sleeveType)) return '-';
             $s = strtoupper(trim($sleeveType));
@@ -184,13 +197,15 @@
             }
             $desc = trim($brandName . ' ' . $styleName);
 
-            $key = $art . '_' . $sleeve . '_' . number_format($rate, 2, '.', '') . '_' . number_format($mrp, 2, '.', '');
+            $uomDisplay = $item->uom ? ($item->uom->uom_code ?: $item->uom->uom_name) : ($seItem && $seItem->uom ? ($seItem->uom->uom_code ?: $seItem->uom->uom_name) : ($item->item && $item->item->uom ? ($item->item->uom->uom_code ?: $item->item->uom->uom_name) : 'PCS'));
+
+            $key = $art . '_' . $desc . '_' . $uomDisplay . '_' . $sleeve . '_' . number_format($rate, 2, '.', '') . '_' . number_format($mrp, 2, '.', '');
 
             if (!isset($rows[$key])) {
                 $rows[$key] = [
-                    'date' => $orderDate,
                     'art' => $art,
                     'desc' => $desc,
+                    'uom' => $uomDisplay,
                     'sleeve' => $sleeve,
                     'rate' => $rate,
                     'mrp' => $mrp,
@@ -243,19 +258,28 @@
         @endphp
         <div style="{{ !$isLastChunk ? 'page-break-after: always;' : '' }}">
             <!-- Company Header -->
-            <div class="header-box">
-                <div class="company-name">{{ strtoupper($setting->company_name ?? 'NACHIAS FASHION PRIVATE LIMITED') }}</div>
-                <div class="company-address">
-                    {{ $setting->address ?? '272/2, SOMU NAGAR, SIRINGERI NAGAR (SARATHAMBAL KOVIL BACKSIDE), BYEPASS ROAD, MADURAI - 625016' }}<br>
-                    Phone: {{ $setting->phone ?? '8489938071, 8489938073' }} | Email: {{ $setting->email ?? 'srinachias@yahoo.in, sales@nachias.com' }} | GSTIN: {{ $setting->gst_no ?? '33AADCN9342A1ZU' }}
-                </div>
-            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px;">
+                <tr>
+                    <td style="width: 15%; vertical-align: middle; text-align: left; padding: 0;">
+                        @if(!empty($logoBase64))
+                            <img src="{{ $logoBase64 }}" style="width: 130px; height: auto;" alt="Logo">
+                        @endif
+                    </td>
+                    <td style="width: 70%; vertical-align: middle; text-align: center; padding: 0;">
+                        <div class="company-name">{{ strtoupper($setting->company_name ?? 'NACHIAS FASHION PRIVATE LIMITED') }}</div>
+                        <div class="company-address" style="font-size: 10px; line-height: 1.35; margin-top: 2px;">
+                            {{ preg_replace('/,\s*/', ', ', trim(preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $setting->address ?? '272/2, SOMU NAGAR, SIRINGERI NAGAR (SARATHAMBAL KOVIL BACKSIDE), BYEPASS ROAD, MADURAI - 625016')))) }}<br>
+                            Phone: {{ !empty($setting->phone) ? $setting->phone : '8489938071, 8489938073' }} | Email: {{ !empty($setting->email) ? $setting->email : 'srinachias@yahoo.in, sales@nachias.com' }} | GSTIN: {{ !empty($setting->gst_no) ? $setting->gst_no : '33AADCN9342A1ZU' }}
+                        </div>
+                    </td>
+                    <td style="width: 15%; padding: 0;">&nbsp;</td>
+                </tr>
+            </table>
 
             <!-- Metadata Table -->
             <table class="meta-container">
                 <tr>
                     <td class="meta-left">
-                        <div><strong>Party Name :</strong> {{ $invoice->customer->code ?? '' }}</div>
                         <div class="meta-title">M/S. {{ $invoice->customer->name ?? '' }}</div>
                         <div>{{ strtoupper($invoice->customer->address_line_1 ?? '') }} {{ strtoupper($invoice->customer->address_line_2 ?? '') }}</div>
                         <div>{{ strtoupper($invoice->customer->city->city_name ?? '') }} {{ $invoice->customer->zip_code ? '- ' . $invoice->customer->zip_code : '' }} ({{ $invoice->customer->state->state_name ?? '' }})</div>
@@ -263,8 +287,8 @@
                     </td>
                     <td class="meta-right">
                         <div style="font-size: 13px; font-weight: bold; margin-bottom: 2px;">DELIVERY ORDER</div>
-                        <div><strong>Packing Slip No :</strong> {{ $invoice->inv_no }}</div>
-                        <div><strong>Date :</strong> {{ $invoice->inv_date ? $invoice->inv_date->format('d/m/Y') : date('d/m/Y') }}</div>
+                        <div><strong>PL No :</strong> {{ $invoice->inv_no }}</div>
+                        <div><strong>Packed On :</strong> {{ $invoice->inv_date ? $invoice->inv_date->format('d/m/Y') : date('d/m/Y') }}</div>
                         <div><strong>Order No :</strong> {{ $invoice->salesOrder->so_no ?? $invoice->salesOrder->order_no ?? '-' }}</div>
                         <div><strong>Total Qty :</strong> {{ (int)$grandTotalQty }} PCS</div>
                         @if(count($chunks) > 1)
@@ -278,9 +302,9 @@
             <table class="items-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">Date</th>
-                        <th style="width: 14%;">Item No.</th>
-                        <th style="width: 20%;">Description</th>
+                        <th style="width: 15%;">Item No.</th>
+                        <th style="width: 21%;">Description</th>
+                        <th style="width: 6%;">UOM</th>
                         <th style="width: 4%;">Slv</th>
                         @foreach($allSizes as $size)
                             <th style="width: {{ round(32 / count($allSizes), 2) }}%;">S{{ $size }}</th>
@@ -293,9 +317,9 @@
                 <tbody>
                     @foreach($chunkRows as $r)
                         <tr>
-                            <td class="text-center">{{ $r['date'] }}</td>
                             <td class="bold">{{ $r['art'] }}</td>
                             <td>{{ $r['desc'] }}</td>
+                            <td class="text-center">{{ $r['uom'] }}</td>
                             <td class="text-center bold">{{ $r['sleeve'] }}</td>
                             @foreach($allSizes as $size)
                                 <td class="text-center">
@@ -329,14 +353,11 @@
                 <table class="footer-table">
                     <tr>
                         <td class="footer-left">
-                            <div style="font-weight: bold; font-size: 10px; margin-bottom: 4px;">
-                                CASE : {{ $invoice->no_of_box ?: '1' }}
-                            </div>
                             <div style="margin-bottom: 4px;">
-                                <strong>Special Instructions :</strong> {{ $invoice->remarks ?: 'None' }}
+                                <strong>Remarks :</strong> {{ $invoice->remarks ?: 'None' }}
                             </div>
                             <div style="margin-top: 10px;">
-                                <strong>Packed By :</strong> _________________________________
+                                <strong>Prepared By :</strong> {{ auth()->user()->name ?? '' }}
                             </div>
                         </td>
                         <td class="footer-right">

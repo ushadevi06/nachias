@@ -448,6 +448,19 @@
                                                 @endif
                                             @endforeach
                                         </tbody>
+                                        <tfoot class="table-light fw-bold">
+                                            <tr>
+                                                <td colspan="{{ $isRawMaterial ? ($isFabricStore ? 6 : 5) : 6 }}" class="text-end">Total:</td>
+                                                <td class="text-end">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
+                                                @if(!$isRawMaterial)
+                                                    <td></td>
+                                                    <td></td>
+                                                @else
+                                                    <td></td>
+                                                @endif
+                                                <td class="text-end">₹{{ number_format($invoice->sub_total, 2) }}</td>
+                                            </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
                             </div>
@@ -548,6 +561,10 @@
                                 <div class="row g-4">
                                     <div class="col-md-6">
                                         <div class="summary-left border rounded p-3 h-100">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <label class="detail-title">Total Qty:</label>
+                                                <div class="text-muted fw-bold">{{ number_format($invoice->items->sum('quantity'), 2) }}</div>
+                                            </div>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Sub Total:</label>
                                                 <div class="text-muted fw-bold">₹{{ number_format($invoice->sub_total, 2) }}

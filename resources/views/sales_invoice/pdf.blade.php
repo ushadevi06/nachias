@@ -391,13 +391,13 @@ if (!empty($invoice->signed_qr_code)) {
     }
 }
 $PAGE_HEIGHT_PX   = 1075; 
-$HEADER_HEIGHT_PX = 300;  
-$ROW_HEIGHT_PX    = 24;   
+$HEADER_HEIGHT_PX = 240;  
+$ROW_HEIGHT_PX    = 20;   
 $CONTINUE_NOTE_PX = 30;   
 
 $footerHeight = 0;
-// Base height for the summary table (bank details, notes, signatures)
-$footerHeight += 180; 
+// Base height for the summary table (bank details, totals)
+$footerHeight += 85; 
 
 $summaryLines = 1;
 if ($showDiscount && ($invoice->discount ?? 0) > 0) {
@@ -425,13 +425,13 @@ if ($showTax) {
     $footerHeight += 40;
 }
 
-$footerHeight += 140; // Terms and Remarks
-$footerHeight += 20; // Safe Buffer
+$footerHeight += 95; 
+$footerHeight += 10; 
 
 $contentAreaHeight = $PAGE_HEIGHT_PX - $HEADER_HEIGHT_PX;
-$tableHeaderHeight = 32; // Buffer to account for table thead height and borders
-$rowsPerFullPage = max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX - $tableHeaderHeight) / $ROW_HEIGHT_PX));
-$rowsPerLastPage = max(1, (int) floor(($contentAreaHeight - $footerHeight - $tableHeaderHeight) / $ROW_HEIGHT_PX));
+$tableHeaderHeight = 32; 
+$rowsPerFullPage = min(28, max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX - $tableHeaderHeight) / $ROW_HEIGHT_PX)));
+$rowsPerLastPage = 13;
 
 $pdfType = $pdfType ?? request()->query('type', 'pdf1');
 
@@ -555,18 +555,13 @@ if ($pdfType === 'pdf2') {
             } elseif ($item->item && $item->item->style) {
                 $styleName = $item->item->style->style_name;
             } elseif (!empty($item->art_no)) {
-                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)
-                    ->whereNotNull('style_id')
-                    ->with('style')
-                    ->first();
+                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)->whereNotNull('style_id')->with('style')->first();
                 $styleName = ($matchedSe && $matchedSe->style) ? $matchedSe->style->style_name : '-';
             } else {
                 $styleName = '-';
             }
         } else {
-            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
-                ->where('sku', $item->sku)
-                ->first();
+            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
             
             $codeToParse = '';
             if ($soItem) {
@@ -796,18 +791,22 @@ $footerPlacedOnValidChunk = false;
 if ($totalItemsCount === 0) {
     $pages[] = collect();
     $footerPlacedOnValidChunk = true;
+} elseif ($totalItemsCount <= $rowsPerLastPage) {
+    $pages[] = $allItems;
+    $footerPlacedOnValidChunk = true;
 } else {
     $remaining = $allItems;
     while ($remaining->count() > 0) {
-        if ($remaining->count() <= $rowsPerLastPage) {
+        $remCount = $remaining->count();
+        if ($remCount <= $rowsPerLastPage) {
             $pages[] = $remaining;
-            $remaining = collect();
             $footerPlacedOnValidChunk = true;
-        } else {
-            $take = min($rowsPerFullPage, $remaining->count());
-            $pages[] = $remaining->take($take);
-            $remaining = $remaining->slice($take)->values();
+            break;
         }
+
+        $take = min($rowsPerFullPage, $remCount);
+        $pages[] = $remaining->take($take);
+        $remaining = $remaining->slice($take)->values();
     }
 }
 
@@ -848,11 +847,11 @@ $totalChunks = count($pages);
                                     @else
                                         <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 220px;">
                                     @endif
-                                 </td>
-                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;" >
-                                     <div style="font-size: 12px; line-height: 1.3;">
-                                         {{ $setting->address }} 
-                                         <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 12px;">
+                                </td>
+                                <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;" >
+                                    <div style="font-size: 12px; line-height: 1.3;">
+                                        {{ $setting->address }} 
+                                        <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 12px;">
                                             <tr>
                                                 <td style="border: none; padding: 0; width: 45px;">Mobile</td>
                                                 <td style="border: none; padding: 0; width: 10px;">:</td>
@@ -882,7 +881,7 @@ $totalChunks = count($pages);
         <table style="width: 100%; border-collapse: collapse;">
             <tr>
                 <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:11.5px;">
                         <tr>
                             <td width="20%">Bill To</td>
                             <td width="5%">:</td>
@@ -912,25 +911,25 @@ $totalChunks = count($pages);
                     </table>
                 </td>
                 <td width="50%" style="padding: 0; vertical-align: top; border-bottom: 1px solid #000;">
-                    <table class="no-border" style="margin: 0; width: 100%; font-size:12px;">
+                    <table class="no-border" style="table-layout: fixed; margin: 0; width: 100%; font-size: 11.5px;">
                         <tr>
-                            <td width="30%">Invoice No.</td>
-                            <td width="5%">:</td>
-                            <td width="65%">{{ $invoice->inv_no }}</td>
+                            <td width="36%" style="white-space: nowrap;">Invoice No.</td>
+                            <td width="4%" style="text-align: center;">:</td>
+                            <td width="60%">{{ $invoice->inv_no }}</td>
                         </tr>
                         <tr>
-                            <td>Invoice Date</td>
-                            <td>:</td>
+                            <td style="white-space: nowrap;">Invoice Date</td>
+                            <td style="text-align: center;">:</td>
                             <td>{{ $invoice->inv_date->format('d/m/Y') }}</td>
                         </tr>
                         <tr>
-                            <td>Order No.</td>
-                            <td>:</td>
-                            <td>{{ $invoice->salesOrder->so_no ?? 'N/A' }}</td>
+                            <td style="white-space: nowrap;">Order No.</td>
+                            <td style="text-align: center;">:</td>
+                            <td>{{ !empty($invoice->salesOrder->order_no) ? $invoice->salesOrder->order_no : ($invoice->salesOrder->so_no ?? 'N/A') }}</td>
                         </tr>
                         <tr>
-                            <td>Destination</td>
-                            <td>:</td>
+                            <td style="white-space: nowrap;">Destination</td>
+                            <td style="text-align: center;">:</td>
                             <td>{{ $invoice->customer->city->city_name ?? 'N/A' }}</td>
                         </tr>
                     </table>
@@ -938,7 +937,7 @@ $totalChunks = count($pages);
             </tr>
             <tr>
                 <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:11.5px;">
                         <tr>
                             <td width="20%">Ship To</td>
                             <td width="5%">:</td>
@@ -968,31 +967,31 @@ $totalChunks = count($pages);
                     </table>
                 </td>
                 <td width="50%" style="padding: 0; vertical-align: top;">
-                    <table class="no-border" style="margin: 0; width: 100%; font-size: 12px;">
+                    <table class="no-border" style="table-layout: fixed; margin: 0; width: 100%; font-size: 11.5px;">
                         <tr>
-                            <td width="30%">Transport</td>
-                            <td width="5%">:</td>
-                            <td width="65%">{{ $invoice->salesOrder->transporter_name ?? '' }}</td>
+                            <td width="36%" style="white-space: nowrap;">Transport</td>
+                            <td width="4%" style="text-align: center;">:</td>
+                            <td width="60%">{{ !empty($invoice->transporter_name) ? $invoice->transporter_name : ($invoice->salesOrder->transporter_name ?? ($invoice->customer->transport_name ?? '')) }}</td>
                         </tr>
                         <tr>
-                            <td>Doc No.</td>
-                            <td>:</td>
-                            <td>{{ $invoice->inv_no }}</td>
+                            <td style="white-space: nowrap;">Alternate Transport</td>
+                            <td style="text-align: center;">:</td>
+                            <td>{{ $invoice->customer->alt_transport_name ?? ($invoice->salesOrder->customer->alt_transport_name ?? '') }}</td>
                         </tr>
                         <tr>
-                            <td>Sales Group</td>
-                            <td>:</td>
+                            <td style="white-space: nowrap;">Booking Office</td>
+                            <td style="text-align: center;">:</td>
+                            <td>{{ $invoice->customer->booking_office ?? ($invoice->salesOrder->customer->booking_office ?? '') }}</td>
+                        </tr>
+                        <tr>
+                            <td style="white-space: nowrap;">Sales Group</td>
+                            <td style="text-align: center;">:</td>
                             <td>{{ is_object($invoice->customer->zone) || is_array($invoice->customer->zone) ? ($invoice->customer->zone->zone_name ?? $invoice->customer->zone['zone_name'] ?? 'N/A') : (is_string($invoice->customer->zone) ? json_decode($invoice->customer->zone)->zone_name ?? $invoice->customer->zone : 'N/A') }}</td>
                         </tr>
                         <tr>
-                            <td>Sales Executive</td>
-                            <td>:</td>
-                            <td>{{ $invoice->salesOrder->salesAgent->name ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td>Total Pkgs</td>
-                            <td>:</td>
-                            <td>{{ count($invoice->items) }}</td>
+                            <td style="white-space: nowrap;">Total Packages</td>
+                            <td style="text-align: center;">:</td>
+                            <td>{{ (int)($invoice->items->sum('quantity') ?: $invoice->items->sum('qty')) }}</td>
                         </tr>
                     </table>
                 </td>
@@ -1109,18 +1108,13 @@ $totalChunks = count($pages);
                             } elseif ($item->item && $item->item->style) {
                                 $styleName = $item->item->style->style_name;
                             } elseif (!empty($item->art_no)) {
-                                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)
-                                    ->whereNotNull('style_id')
-                                    ->with('style')
-                                    ->first();
+                                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)->whereNotNull('style_id')->with('style')->first();
                                 $styleName = ($matchedSe && $matchedSe->style) ? $matchedSe->style->style_name : '-';
                             } else {
                                 $styleName = '-';
                             }
                         } else {
-                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
-                                ->where('sku', $item->sku)
-                                ->first();
+                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
                             
                             $codeToParse = '';
                             if ($soItem) {
@@ -1304,8 +1298,8 @@ $totalChunks = count($pages);
                     @endif
                 @endforeach
                 
-                @if($chunk->count() < 10)
-                    @for($j = 0; $j < (10 - $chunk->count()); $j++)
+                @if($isLastChunk && $chunk->count() < 11)
+                    @for($j = 0; $j < (11 - $chunk->count()); $j++)
                         <tr>
                             <td class="text-center">&nbsp;</td>
                             <td>&nbsp;</td>
@@ -1592,7 +1586,7 @@ $totalChunks = count($pages);
         </div>
         @endif
         @if($isLastChunk)
-        <table class="no-border" style="margin-top: 15px; width: 100%;">
+        <table class="no-border" style="margin-top: 4px; width: 100%;">
             <tr>
                 <td width="60%" style="vertical-align: top; padding-left: 4px;">
                     <div style="margin-bottom: 8px; font-size: 10px;">

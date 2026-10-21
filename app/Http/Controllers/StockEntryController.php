@@ -535,7 +535,8 @@ class StockEntryController extends Controller
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == 1) {
                             $grnEntryItem = GrnEntryItem::with(['purchaseInvoiceItem.purchaseOrderItem'])->find($item['grn_entry_item_id']);
-                            $purchaseOrderItem = $grnEntryItem?->purchaseInvoiceItem?->purchaseOrderItem;
+                            $purchaseInvoiceItem = $grnEntryItem?->purchaseInvoiceItem;
+                            $purchaseOrderItem = $purchaseInvoiceItem?->purchaseOrderItem;
 
                             StockEntryItem::create([
                                 'stock_entry_id' => $stockEntry->id,
@@ -551,10 +552,10 @@ class StockEntryController extends Controller
                                 'qty_out' => 0,
                                 'price' => $item['price'] ?? 0,
                                 'fabric_type_id' => $item['fabric_type_id'] ?? null,
-                                'brand_id' => $purchaseOrderItem->brand_id ?? null,
-                                'style_id' => $purchaseOrderItem->style_id ?? null,
-                                'fabric_width_id' => $purchaseOrderItem->fabric_width_id ?? null,
-                                'color_id' => $purchaseOrderItem->color_id ?? null,
+                                'brand_id' => $purchaseInvoiceItem?->brand_id ?? $purchaseOrderItem?->brand_id ?? null,
+                                'style_id' => $purchaseInvoiceItem?->style_id ?? $purchaseOrderItem?->style_id ?? null,
+                                'fabric_width_id' => $purchaseInvoiceItem?->fabric_width_id ?? $purchaseOrderItem?->fabric_width_id ?? null,
+                                'color_id' => $purchaseOrderItem?->color_id ?? null,
                             ]);
                         }
                     }
@@ -612,7 +613,8 @@ class StockEntryController extends Controller
             'stockEntryItems.warehouse',
             'stockEntryItems.storeLocation',
             'stockEntryItems.uom',
-            'stockEntryItems.grnEntryItem',
+            'stockEntryItems.grnEntryItem.purchaseInvoiceItem.style',
+            'stockEntryItems.grnEntryItem.purchaseInvoiceItem.purchaseOrderItem.style',
             'stockEntryItems.fabricType',
             'stockEntryItems.item',
             'stockEntryItems.style',

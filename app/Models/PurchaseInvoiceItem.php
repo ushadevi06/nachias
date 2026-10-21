@@ -29,6 +29,7 @@ class PurchaseInvoiceItem extends Model
         'qty_received',
         'qty_invoiced',
         'brand_id',
+        'style_id',
         'fabric_width_id',
         'notes',
     ];
@@ -71,6 +72,11 @@ class PurchaseInvoiceItem extends Model
     public function brand()
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function style()
+    {
+        return $this->belongsTo(Style::class);
     }
 
     public function fabricWidth()

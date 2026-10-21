@@ -1190,6 +1190,7 @@
         const isEditMode = {{ $jobCard ? 'true' : 'false' }};
         let globalActiveSizes = { fs: @json($activeFs), hs: @json($activeHs) };
         let isSyncing = false;
+        window._isMatrixManuallyEdited = (isEditMode && existingMatrix && existingMatrix.length > 0);
         let currentArtNumbers = [];
         const phpFabrics = @json(array_values($fabrics));
         if (oldFabrics && Object.keys(oldFabrics).length > 0) {
@@ -1745,8 +1746,8 @@
             const grandTotal = $('#article-qty-matrix-grand-total').text().trim();
             const total = parseFloat(grandTotal) || 0;
 
-            @if($jobCard && $hasTasks && !$isFgConverted)
-            const lockedTargetQty = parseFloat("{{ (float)($jobCard->grand_total_qty ?? 0) }}") || 0;
+            @if($jobCard && ($hasTasks || $hasIssuedItems) && !$isFgConverted)
+            const lockedTargetQty = parseFloat("{{ (float)($jobCard->grand_total_qty ?? 0) - (float)($jobCard->additional_qty ?? 0) }}") || 0;
             if (Math.abs(total - lockedTargetQty) > 0.01) {
                 const diffVal = Math.round((total - lockedTargetQty) * 100) / 100;
                 const diffMsg = diffVal > 0 ? `+${diffVal} Pcs Excess` : `${Math.abs(diffVal)} Pcs Shortage`;
@@ -1754,7 +1755,7 @@
                     icon: 'error',
                     title: 'Total Quantity Mismatch',
                     html: `<div class="text-start">` +
-                          `<p>Task has already been assigned for this Job Card.</p>` +
+                          `<p>Tasks have already been assigned / items issued for this Job Card.</p>` +
                           `<div class="p-2 border rounded bg-light mb-3">` +
                           `<div><b>Locked Target Quantity:</b> <span class="badge bg-primary fs-6">${lockedTargetQty} Pcs</span></div>` +
                           `<div class="mt-2"><b>Current Matrix Total:</b> <span class="badge bg-danger fs-6">${total} Pcs</span> (${diffMsg})</div>` +
@@ -2252,7 +2253,7 @@
 
                     let resolvedArtName = artName || (typeof rawMaterialMap !== 'undefined' && rawMaterialMap[String(art).trim()] ? rawMaterialMap[String(art).trim()] : '');
 
-                    const isLocked = (isFgConverted || hasIssuedItems);
+                    const isLocked = isFgConverted;
                     const isTaskReadOnly = isLocked ? 'readonly tabindex="-1"' : '';
                     const readonlyAttr = isTaskReadOnly;
 
@@ -2508,7 +2509,7 @@
                     }
                 }
 
-                const isLocked = (isFgConverted || hasIssuedItems);
+                const isLocked = isFgConverted;
                 const isTaskReadOnly = isLocked ? 'readonly tabindex="-1"' : '';
                 const readonlyAttr = (!isFabric && !hasAutoCons && !isCanvas) ? '' : ((isFabric || isCanvas) ? isTaskReadOnly : 'readonly tabindex="-1"');
                 const rowClass = (isFabric || isCanvas) ? 'cat1-row' : (hasAutoCons ? 'cat2-row-auto' : 'cat2-row-manual');
@@ -2591,29 +2592,7 @@
             const $el = $(this);
             const $row = $el.closest('tr');
             if ($row.closest('table').is('#article-qty-matrix')) {
-                const isCat1 = ($row.attr('data-category') == 1);
-
-                if (isCat1 || isCanvasMode()) {
-                    const col = $el.data('col');
-                    const parts = (col || "").split('-');
-                    if (parts.length >= 2) {
-                        const type = parts[0];
-                        const size = parts[1];
-                        const val = parseFloat($el.val()) || 0;
-                        const pieces = val; 
-                        const $masterInput = $('.qty-direct-input').filter(function() {
-                            return $(this).data('size') == size && $(this).data('type') == type;
-                        });
-                        if ($masterInput.length) {
-                            const wasSyncing = isSyncing;
-                            isSyncing = true;
-                            $masterInput.val(pieces);
-                            isSyncing = wasSyncing;
-                            syncMatrixWithMasterTable(true, false, type, size);
-                            return;
-                        }
-                    }
-                }
+                window._isMatrixManuallyEdited = true;
                 calculateMatrixTotals();
             }
         });
@@ -2781,6 +2760,36 @@
                 $('#total_qty_hs').val(totalHS > 0 ? Math.round(totalHS) : '');
                 $('.total-summary-fs').text(totalFS > 0 ? Math.round(totalFS) : '0');
                 $('.total-summary-hs').text(totalHS > 0 ? Math.round(totalHS) : '0');
+
+                // Sync top summary table (.qty-direct-input) and hidden matrix items with column sums
+                for (const col in cat1ColSums) {
+                    const parts = col.split('-');
+                    if (parts.length >= 2) {
+                        const type = parts[0];
+                        const size = parts[1];
+                        const sumVal = cat1ColSums[col] || 0;
+                        const $master = $(`.qty-direct-input[data-type="${type}"][data-size="${size}"]`);
+                        if ($master.length) {
+                            $master.val(sumVal > 0 ? (sumVal % 1 === 0 ? sumVal : sumVal.toFixed(2)) : '');
+                        }
+                    }
+                }
+
+                $('#hidden-matrix-items-container').remove();
+                if (currentSizes && currentSizes.length > 0) {
+                    let hiddenInputsHtml = `<div id="hidden-matrix-items-container" style="display:none;">`;
+                    currentSizes.forEach((size, idx) => {
+                        let totalFs = cat1ColSums[`fs-${size}`] || 0;
+                        let totalHs = cat1ColSums[`hs-${size}`] || 0;
+                        let ratioVal = currentRatios[idx] || '';
+                        hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][size]" value="${size}">`;
+                        hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][qty_fs]" value="${totalFs > 0 ? totalFs : ''}">`;
+                        hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][qty_hs]" value="${totalHs > 0 ? totalHs : ''}">`;
+                        hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][ratio]" value="${ratioVal}">`;
+                    });
+                    hiddenInputsHtml += `</div>`;
+                    $('#cutting-size-table').after(hiddenInputsHtml);
+                }
 
                 $('.requirement-display').each(function() {
                     const art = $(this).data('art');
@@ -3526,6 +3535,7 @@
             $table.find('tr:last-child .select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
             updateLayMarkRowNumbers($table);
             if (typeof updateLayMarkSleeveOptions === 'function') updateLayMarkSleeveOptions();
+            window._isMatrixManuallyEdited = false;
             if (!isCanvasMode()) {
                 calculateMatrixFromLayMarks();
             } else {
@@ -3552,6 +3562,7 @@
             if ($table.find('tr.lay-mark-row').length > 1) {
                 $row.remove();
                 updateLayMarkRowNumbers($table);
+                window._isMatrixManuallyEdited = false;
                 if (!isCanvasMode()) {
                     calculateMatrixFromLayMarks();
                 } else {
@@ -3785,6 +3796,7 @@
                 $(this).val(0);
             }
             if (isSyncing) return;
+            window._isMatrixManuallyEdited = true;
             updateSleeveJson();
             syncMatrixWithMasterTable(true);
         });
@@ -3870,7 +3882,7 @@
                                 });
                             });
                         });
-                        if (!isCanvas) {
+                        if (!isCanvas && !targetType && !window._isMatrixManuallyEdited) {
                             calculateMatrixFromLayMarks();
                         }
                     }
@@ -3901,7 +3913,7 @@
         }
 
         function calculateMatrixFromLayMarks() {
-            if (isCanvasMode()) return;
+            if (isCanvasMode() || window._isMatrixManuallyEdited) return;
             const matrixData = {};
             let needsSync = false;
             $('.lay-mark-table').each(function() {
@@ -3996,6 +4008,7 @@
         }
 
         $(document).on('input', 'input[name*="[no_of_lay]"], input[name*="[meter]"], .lay-mark-table input', function() {
+            window._isMatrixManuallyEdited = false;
             if (isCanvasMode()) {
                 calculateMatrixTotals();
                 return;
@@ -4004,6 +4017,7 @@
         });
 
         $(document).on('change select2:select select2:unselect', '.select2-size-multi, [name*="[sleeve]"]', function() {
+            window._isMatrixManuallyEdited = false;
             if (isCanvasMode()) {
                 calculateMatrixTotals();
                 return;

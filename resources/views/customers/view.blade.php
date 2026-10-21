@@ -9,10 +9,10 @@
                     <h4>Customers</h4>
                     @if(auth()->id() == 1 || auth()->user()->can('create customers'))
                         <div class="d-flex gap-2">
-                            {{-- <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                            <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
                                 data-bs-target="#importModal">
                                 <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
-                            </button> --}}
+                            </button>
                             <a class="btn btn-outline-success" href="{{ url('customers/export-excel') }}">
                                 <i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Export
                             </a>
@@ -76,15 +76,22 @@
                 <form action="{{ url('customers/import') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="modal-body">
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="ri ri-information-line me-1"></i>
+                            <strong>Bulk Update Tip:</strong> To bulk update existing customers (e.g. Alternate Transport Name / Booking Office), click <strong>Export</strong>, fill the columns in Excel, and upload the file here. Matching Customer Codes will be updated automatically!
+                        </div>
                         <div class="mb-3">
                             <label for="import_file" class="form-label">Upload File (CSV, Excel)</label>
                             <input class="form-control" type="file" id="import_file" name="import_file"
                                 accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
                                 required>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
                             <a href="{{ url('customers/download-sample') }}" class="btn btn-sm btn-outline-info">
                                 <i class="ri ri-download-2-line"></i> Download Sample Format
+                            </a>
+                            <a href="{{ url('customers/export-excel') }}" class="btn btn-sm btn-outline-success">
+                                <i class="ri ri-file-excel-2-line"></i> Export Current Customers
                             </a>
                         </div>
                     </div>

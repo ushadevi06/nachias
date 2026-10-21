@@ -129,6 +129,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Invoice No</th>
+                                    <th>Invoice Date</th>
                                     <th>Customer / Place</th>
                                     <th>Box No</th>
                                     <th>Qty</th>
@@ -273,6 +274,7 @@ $(function() {
         columns: [
             { data: 'DT_RowIndex' },
             { data: 'inv_no' },
+            { data: 'inv_date' },
             { data: 'customer' },
             { data: 'box_number' },
             { data: 'quantity' },
@@ -297,7 +299,7 @@ $(function() {
         $('#filter_lr_status').val('').trigger('change');
         $('#filter_transport_name').val('');
         $('#filter_date').val('');
-        table.ajax.reload();
+        table.search('').draw();
         updatePrintSheetUrl();
     });
 

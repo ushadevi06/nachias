@@ -1808,6 +1808,9 @@
                         success: function(response) {
                             if (response.success) {
                                 soSelect.empty();
+                                if (response.customer_transport_name) {
+                                    $('#transporter_name').val(response.customer_transport_name);
+                                }
                                 $.each(response.data, function(index, so) {
                                     soSelect.append(new Option(
                                         so.so_no + ' (Pending: ' + so.pending_qty + ')',
@@ -2455,6 +2458,10 @@
                         $('#customer_search').val(data.text);
                         $('#clear_customer_btn').show();
 
+                        if (data.transport_name) {
+                            $('#transporter_name').val(data.transport_name);
+                        }
+
                         if (data.address) {
                             $('#address').val(data.address).prop('readonly', true);
                         } else {
@@ -2469,6 +2476,9 @@
                                         $('#address').val(res.address).prop('readonly', true);
                                     } else {
                                         $('#address').attr('placeholder', 'Enter Delivery Address').val('').prop('readonly', false);
+                                    }
+                                    if (res.success && res.customer && res.customer.transport_name) {
+                                        $('#transporter_name').val(res.customer.transport_name);
                                     }
                                 },
                                 error: function() {
@@ -2555,6 +2565,7 @@
                         $('#address').val('').prop('readonly', true);
                         $('#sales_discount').val('0.00');
                         $('#transport_distance').val('');
+                        $('#transporter_name').val('');
                         $('#clear_customer_btn').hide();
                         calculateTotals();
                     }
@@ -2566,6 +2577,7 @@
                     $('#address').val('').prop('readonly', true);
                     $('#sales_discount').val('0.00');
                     $('#transport_distance').val('');
+                    $('#transporter_name').val('');
                     $(this).hide();
                     calculateTotals();
                 });

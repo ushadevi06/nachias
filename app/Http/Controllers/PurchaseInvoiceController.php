@@ -12,6 +12,7 @@ use App\Models\Charge;
 use App\Models\PurchaseInvoicePayment;
 use Illuminate\Http\Request;
 use App\Models\Brand;
+use App\Models\Style;
 use App\Models\FabricSize;
 use App\Models\FabricType;
 use App\Models\GrnEntry;
@@ -171,9 +172,11 @@ class PurchaseInvoiceController extends Controller
                 'items.rawMaterial.storeCategory', 
                 'items.uom', 
                 'items.brand', 
+                'items.style', 
                 'items.fabricWidth', 
                 'items.purchaseOrderItem.storeCategory', 
                 'items.purchaseOrderItem.brand', 
+                'items.purchaseOrderItem.style', 
                 'items.purchaseOrderItem.fabricWidth', 
                 'charges', 
                 'purchaseCommissionAgent'
@@ -611,6 +614,7 @@ class PurchaseInvoiceController extends Controller
 
                                     $existingItem->update([
                                         'brand_id' => $item['brand_id'] ?? $existingItem->brand_id,
+                                        'style_id' => $item['style_id'] ?? $existingItem->style_id,
                                         'fabric_width_id' => $item['fabric_width_id'] ?? $existingItem->fabric_width_id,
                                         'hsn_code' => $item['hsn_code'] ?? $existingItem->hsn_code,
                                         'rate' => $newRate,
@@ -645,6 +649,7 @@ class PurchaseInvoiceController extends Controller
                                     'purchase_invoice_id' => $invoice->id,
                                     'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
                                     'brand_id' => $item['brand_id'] ?? null,
+                                    'style_id' => $item['style_id'] ?? null,
                                     'fabric_width_id' => $item['fabric_width_id'] ?? null,
                                     'raw_material_id' => $item['raw_material_id'],
                                     'hsn_code' => $item['hsn_code'],
@@ -744,6 +749,7 @@ class PurchaseInvoiceController extends Controller
                 ->get();
         }
         $brands = Brand::active()->orderBy('id', 'desc')->get();
+        $styles = Style::active()->orderBy('style_name', 'asc')->get();
         $fabricSizes = FabricSize::active()->orderBy('id', 'desc')->get();
         $fabricTypes = FabricType::active()->orderBy('id', 'desc')->get();
         $suppliers = Supplier::where('status', 'Active')
@@ -776,7 +782,7 @@ class PurchaseInvoiceController extends Controller
         $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
         $nextInvoiceNumber = '';
 
-        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber', 'brands', 'fabricSizes', 'fabricTypes'));
+        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber', 'brands', 'styles', 'fabricSizes', 'fabricTypes'));
     }
 
     public function view($id)
@@ -790,8 +796,10 @@ class PurchaseInvoiceController extends Controller
             'items.rawMaterial',
             'items.uom',
             'items.brand',
+            'items.style',
             'items.fabricWidth',
             'items.purchaseOrderItem.brand',
+            'items.purchaseOrderItem.style',
             'items.purchaseOrderItem.fabricWidth',
             'items.purchaseOrderItem.storeCategory',
             'items.purchaseOrderItem.purchaseOrder',
@@ -845,6 +853,7 @@ class PurchaseInvoiceController extends Controller
             'items.uom',
             'items.storeCategory',
             'items.brand',
+            'items.style',
             'items.fabricWidth',
             'items.fabricType'
         ])->findOrFail($id);
@@ -895,6 +904,8 @@ class PurchaseInvoiceController extends Controller
                 'hsn_code' => $item->rawMaterial->hsn_code ?? '',
                 'brand_id' => $item->brand_id,
                 'brand_name' => $item->brand->brand_name ?? '-',
+                'style_id' => $item->style_id,
+                'style_name' => $item->style->style_name ?? '-',
                 'fabric_width_id' => $item->fabric_width_id,
                 'fabric_width' => $item->fabricWidth->width ?? '-',
                 'fabric_type_id' => $item->fabric_type_id,
@@ -940,6 +951,9 @@ class PurchaseInvoiceController extends Controller
             'sgst_percent' => $purchaseOrder->sgst_percent,
             'all_brands' => Brand::orderBy('brand_name')->get()->map(function($b) {
                 return ['id' => $b->id, 'name' => $b->brand_name];
+            }),
+            'all_styles' => Style::active()->orderBy('style_name')->get()->map(function($s) {
+                return ['id' => $s->id, 'name' => $s->style_name];
             }),
             'all_fabric_widths' => FabricSize::orderBy('width')->get()->map(function($f) {
                 return ['id' => $f->id, 'name' => $f->width];
@@ -987,6 +1001,7 @@ class PurchaseInvoiceController extends Controller
             'items.uom',
             'items.storeCategory',
             'items.brand',
+            'items.style',
             'items.fabricWidth',
             'items.fabricType',
             'purchaseCommissionAgent'
@@ -1057,6 +1072,8 @@ class PurchaseInvoiceController extends Controller
                     'hsn_code' => $hsnCode,
                     'brand_id' => $existingInvItem->brand_id ?? $item->brand_id,
                     'brand_name' => $item->brand->brand_name ?? '-',
+                    'style_id' => $existingInvItem->style_id ?? $item->style_id,
+                    'style_name' => ($existingInvItem && $existingInvItem->style) ? $existingInvItem->style->style_name : ($item->style->style_name ?? '-'),
                     'fabric_width_id' => $existingInvItem->fabric_width_id ?? $item->fabric_width_id,
                     'fabric_width' => $item->fabricWidth->width ?? '-',
                     'fabric_type_id' => $existingInvItem->fabric_type_id ?? $item->fabric_type_id,
@@ -1105,6 +1122,7 @@ class PurchaseInvoiceController extends Controller
             'cgst_percent' => $firstPo->cgst_percent,
             'sgst_percent' => $firstPo->sgst_percent,
             'all_brands' => Brand::orderBy('brand_name')->get()->map(function($b) { return ['id' => $b->id, 'name' => $b->brand_name]; }),
+            'all_styles' => Style::active()->orderBy('style_name')->get()->map(function($s) { return ['id' => $s->id, 'name' => $s->style_name]; }),
             'all_fabric_widths' => FabricSize::orderBy('width')->get()->map(function($f) { return ['id' => $f->id, 'name' => $f->width]; }),
             'all_fabric_types' => FabricType::orderBy('fabric_type')->get()->map(function($f) { return ['id' => $f->id, 'name' => $f->fabric_type]; }),
             'items' => $allItems->values(),

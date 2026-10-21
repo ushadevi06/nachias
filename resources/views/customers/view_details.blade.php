@@ -67,6 +67,10 @@
                                     <span class="fw-bold d-block text-muted small text-uppercase mb-1">Transport Name</span>
                                     <span class="text-dark">{{ $customer->transport_name ?? '-' }}</span>
                                 </li>
+                                <li class="mb-3">
+                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Alternate Transport Name</span>
+                                    <span class="text-dark">{{ $customer->alt_transport_name ?? '-' }}</span>
+                                </li>
                                 <li>
                                     <span class="fw-bold d-block text-muted small text-uppercase mb-1">Booking Office</span>
                                     <span class="text-dark">{{ $customer->booking_office ?? '-' }}</span>

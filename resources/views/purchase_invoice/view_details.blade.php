@@ -127,6 +127,7 @@
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Supplier Design Name</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Brand</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold">Style</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">HSN</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">Fabric Width</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">Fabric Type</th>
@@ -172,6 +173,7 @@
                                                 </td>
                                                 <td>{{ $item->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
                                                 <td>{{ $item->brand->brand_name ?? $item->purchaseOrderItem->brand->brand_name ?? '-' }}</td>
+                                                <td>{{ $item->style->style_name ?? $item->purchaseOrderItem->style->style_name ?? '-' }}</td>
                                                 <td class="text-center">{{ $item->hsn_code ?? '-' }}</td>
                                                 <td class="text-center">{{ $item->fabricWidth->width ?? $item->purchaseOrderItem->fabricWidth->width ?? '-' }}</td>
                                                 <td class="text-center">{{ $item->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
@@ -207,13 +209,13 @@
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="{{ $invoice->other_state ? 17 : 19 }}" class="text-center py-5 text-muted">No items found</td>
+                                            <td colspan="{{ $invoice->other_state ? 18 : 20 }}" class="text-center py-5 text-muted">No items found</td>
                                         </tr>
                                     @endif
                                 </tbody>
                                 <tfoot class="bg-light fw-bold border-top">
                                     <tr>
-                                        <td colspan="{{ $invoice->other_state ? 16 : 18 }}" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
+                                        <td colspan="{{ $invoice->other_state ? 17 : 19 }}" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
                                         <td class="text-end pe-4 py-3">₹{{ number_format($invoice->sub_total, 2) }}</td>
                                     </tr>
                                 </tfoot>

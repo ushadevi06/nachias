@@ -77,6 +77,7 @@
                                             <tr>
                                                 <th>Material Name</th>
                                                 <th>Store Category</th>
+                                                <th>Style</th>
                                                 @if($hasStoreLocation)
                                                 <th>Store Location</th>
                                                 @endif
@@ -91,6 +92,7 @@
                                             <tr>
                                                 <td>{{ $item->rawMaterial->name ?? ($item->finished_item_code ?: '-') }}</td>
                                                 <td>{{ $item->storeCategory->category_name ?? ($item->rawMaterial->storeCategory->category_name ?? '-') }}{{ ($item->storeCategory && $item->storeCategory->code) ? ' (' . $item->storeCategory->code . ')' : '' }}</td>
+                                                <td>{{ $item->style->style_name ?? $item->grnEntryItem->purchaseInvoiceItem->style->style_name ?? $item->grnEntryItem->purchaseInvoiceItem->purchaseOrderItem->style->style_name ?? '-' }}</td>
                                                 @if($hasStoreLocation)
                                                 <td>{{ $item->storeLocation->store_location ?? ($item->grnEntryItem->storeLocation->store_location ?? '-') }}</td>
                                                 @endif
@@ -103,7 +105,7 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <th colspan="{{ $hasStoreLocation ? 4 : 3 }}" class="text-end">Total:</th>
+                                                 <th colspan="{{ $hasStoreLocation ? 5 : 4 }}" class="text-end">Total:</th>
                                                 <th class="text-success fw-bold">+{{ floatval($totalQtyIn) }}</th>
                                                 <th></th>
                                                 <th></th>

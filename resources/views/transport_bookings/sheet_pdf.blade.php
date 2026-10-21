@@ -126,14 +126,19 @@
             @forelse($bookings as $idx => $b)
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
-                    <td class="fw-bold">{{ $b->salesInvoice->inv_no ?? '-' }}</td>
+                    <td class="fw-bold">
+                        {{ $b->salesInvoice->inv_no ?? '-' }}
+                        @if(!empty($b->salesInvoice?->inv_date))
+                            <div style="font-size: 8px; font-weight: normal; color: #555;">{{ \Carbon\Carbon::parse($b->salesInvoice->inv_date)->format('d-m-Y') }}</div>
+                        @endif
+                    </td>
                     <td>
                         <strong>{{ $b->customer->name ?? '-' }}</strong>
                         @if(!empty($b->customer->code))
                             <span style="font-size: 8.5px; color: #666;">({{ $b->customer->code }})</span>
                         @endif
                     </td>
-                    <td>{{ $b->booking_office ?: ($b->customer->place->place_name ?? '-') }}</td>
+                    <td>{{ (!empty($b->booking_office) && $b->booking_office !== 'None') ? $b->booking_office : ($b->customer->city->city_name ?? ($b->customer->place->place_name ?? '-')) }}</td>
                     <td class="fw-bold">{{ $b->preferred_transport ?: '-' }}</td>
                     <td class="text-center fw-bold">{{ $b->box_number }}</td>
                     <td class="text-center fw-bold">{{ (int)$b->quantity }}</td>

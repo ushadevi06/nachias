@@ -111,6 +111,7 @@ class CustomerController extends Controller
                 'email' => 'nullable|email:rfc,dns|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
                 'transport_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
+                'alt_transport_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
                 'booking_office' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
                 'zone_id' => 'required|exists:zones,id',
                 'store_id' => 'nullable|exists:store_types,id',
@@ -141,7 +142,7 @@ class CustomerController extends Controller
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'box_discount_amount' => 'nullable|numeric|min:0',
-                'transport_rate' => 'nullable|numeric|min:0',
+                // 'transport_rate' => 'nullable|numeric|min:0',
                 'bank_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
                 'branch' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
                 'account_number' => [
@@ -175,7 +176,13 @@ class CustomerController extends Controller
                 '*.email' => 'Please enter a valid email address.',
             ];
 
-            $validated = $request->validate($rules,$messages);
+            $attributes = [
+                'transport_name' => 'Transport Name',
+                'alt_transport_name' => 'Alternate Transport Name',
+                'booking_office' => 'Booking Office',
+            ];
+
+            $validated = $request->validate($rules, $messages, $attributes);
 
             $data = [
                 'category' => $request->category,
@@ -185,6 +192,7 @@ class CustomerController extends Controller
                 'email' => $request->email,
                 'website_url' => $request->website_url,
                 'transport_name' => $request->transport_name,
+                'alt_transport_name' => $request->alt_transport_name,
                 'booking_office' => $request->booking_office,
                 'zone_id' => $request->zone_id,
                 'store_id' => $request->store_id,
@@ -207,7 +215,7 @@ class CustomerController extends Controller
                 'credit_limit' => $request->credit_limit ?? 0,
                 'sales_discount' => $request->sales_discount ?? 0,
                 'box_discount_amount' => $request->box_discount_amount ?? 0,
-                'transport_rate' => $request->transport_rate ?? 0,
+                // 'transport_rate' => $request->transport_rate ?? 0,
                 'bank_name' => $request->bank_name,
                 'branch' => $request->branch,
                 'account_number' => $request->account_number,
@@ -217,13 +225,10 @@ class CustomerController extends Controller
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 $oldData = Customer::find($id)->toArray();
-
                 Customer::where('id', $id)->update($data);
                 $newData = Customer::find($id)->toArray();
-                
                 $formattedOldData = formatLocationLogData($oldData);
                 $formattedNewData = formatLocationLogData($newData);
-                
                 addLog('update', 'Customer', 'customers', $id, $formattedOldData, $formattedNewData);
                 $message = 'Customer updated successfully';
 
@@ -231,9 +236,7 @@ class CustomerController extends Controller
                 $data['created_by'] = auth()->id();
                 $customer = Customer::create($data);
                 $newData = $customer->toArray();
-                
                 $formattedNewData = formatLocationLogData($newData);
-                
                 addLog('create', 'Customer', 'customers', $customer->id, null, $formattedNewData);
                 $message = 'Customer added successfully';
             }
@@ -311,8 +314,10 @@ class CustomerController extends Controller
         ]);
 
         try {
-            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\CustomerImport, $request->file('import_file'));
-            return redirect('customers')->with('success', 'Customers imported successfully.');
+            $import = new \App\Imports\CustomerImport;
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('import_file'));
+            $message = method_exists($import, 'getSuccessMessage') ? $import->getSuccessMessage() : 'Customers imported successfully.';
+            return redirect('customers')->with('success', $message);
         } catch (\Exception $e) {
             return redirect('customers')->with('error', $e->getMessage());
         }
@@ -320,7 +325,7 @@ class CustomerController extends Controller
 
     public function downloadSample()
     {
-        $headers = ['Category','Code', 'Name', 'Mobile Number','Email','Website URL','State','City','Place','Address','Zip Code','Transport Name','Booking Office','Zone','Contact Person Name','Contact Mobile No','Contact Email','Status','GST No','Payment Terms', 'Sales Discount', 'Box Discount Amount(Per Pcs)'];
+        $headers = ['Category','Code', 'Name', 'Mobile Number','Email','Website URL','State','City','Place','Address','Zip Code','Transport Name','Alternate Transport Name','Booking Office','Zone','Contact Person Name','Contact Mobile No','Contact Email','Status','GST No','Payment Terms', 'Sales Discount', 'Box Discount Amount(Per Pcs)'];
 
         $callback = function() use ($headers) {
             $file = fopen('php://output', 'w');

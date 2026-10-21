@@ -1255,7 +1255,13 @@ class SalesInvoiceController extends Controller
             ];
         })->filter(fn($so) => $so !== null)->values();
 
-        return response()->json(['success' => true, 'data' => $data]);
+        $customer = Customer::find($customerId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'customer_transport_name' => $customer ? ($customer->transport_name ?? '') : ''
+        ]);
     }
 
     public function getMultipleSaleOrdersDetails(Request $request)

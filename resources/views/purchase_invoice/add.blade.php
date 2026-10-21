@@ -192,6 +192,7 @@
                                         <th>Raw Material</th>
                                         <th>Supplier Design Name</th>
                                         <th>Brand</th>
+                                        <th class="col-fabric">Style</th>
                                         <th class="hsn-column">HSN Code <span class="text-danger">*</span></th>
                                         <th class="col-fabric">Fabric Width</th>
                                         <th class="col-fabric">Fabric Type</th>
@@ -243,6 +244,16 @@
                                                         @foreach($brands as $brand)
                                                             <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>
                                                                 {{ $brand->brand_name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td class="fabric-only-cell">
+                                                    <select name="items[{{ $index }}][style_id]" class="select2 form-select form-select-sm">
+                                                        <option value="">Select Style</option>
+                                                        @foreach($styles as $style)
+                                                            <option value="{{ $style->id }}" {{ ($item['style_id'] ?? '') == $style->id ? 'selected' : '' }}>
+                                                                {{ $style->style_name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -379,6 +390,19 @@
                                                             @endphp
                                                             <option value="{{ $brand->id }}" {{ $selectedBrandId == $brand->id ? 'selected' : '' }}>
                                                                 {{ $brand->brand_name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td class="fabric-only-cell">
+                                                    <select name="items[{{ $index }}][style_id]" class="select2 form-select form-select-sm">
+                                                        <option value="">Select Style</option>
+                                                        @foreach($styles as $style)
+                                                            @php
+                                                                $selectedStyleId = $invItem->style_id ?? $invItem->purchaseOrderItem->style_id ?? null;
+                                                            @endphp
+                                                            <option value="{{ $style->id }}" {{ $selectedStyleId == $style->id ? 'selected' : '' }}>
+                                                                {{ $style->style_name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -1183,6 +1207,13 @@
                                 });
                             }
 
+                            let styleOptions = '<option value="">Select Style</option>';
+                            if (response.all_styles) {
+                                response.all_styles.forEach(function(s) {
+                                    styleOptions += `<option value="${s.id}">${s.name}</option>`;
+                                });
+                            }
+
                             let widthOptions = '<option value="">Select Width</option>';
                             if (response.all_fabric_widths) {
                                 response.all_fabric_widths.forEach(function(f) {
@@ -1200,11 +1231,18 @@
                             response.items.forEach(function (item, index) {
                                 const balancedQty = item.qty_ordered - item.qty_invoiced;
                                 let itemBrandSelect = `<select name="items[${index}][brand_id]" class="select2 form-select form-select-sm">${brandOptions}</select>`;
+                                let itemStyleSelect = `<select name="items[${index}][style_id]" class="select2 form-select form-select-sm">${styleOptions}</select>`;
                                 let itemWidthSelect = `<select name="items[${index}][fabric_width_id]" class="select2 form-select form-select-sm">${widthOptions}</select>`;
 
                                 let brandSelectObj = $(itemBrandSelect);
                                 brandSelectObj.find(`option[value="${item.brand_id}"]`).attr('selected', 'selected');
                                 itemBrandSelect = brandSelectObj.prop('outerHTML');
+
+                                let styleSelectObj = $(itemStyleSelect);
+                                if (item.style_id) {
+                                    styleSelectObj.find(`option[value="${item.style_id}"]`).attr('selected', 'selected');
+                                }
+                                itemStyleSelect = styleSelectObj.prop('outerHTML');
 
                                 let widthSelectObj = $(itemWidthSelect);
                                 widthSelectObj.find(`option[value="${item.fabric_width_id}"]`).attr('selected', 'selected');
@@ -1248,6 +1286,7 @@
                                         <td>${item.raw_material_name}</td>
                                         <td>${item.art_no || '-'}</td>
                                         <td>${itemBrandSelect}</td>
+                                        <td class="fabric-only-cell">${itemStyleSelect}</td>
                                         <td class="hsn-column">
                                             <input type="text" name="items[${index}][hsn_code]" class="form-control form-control-sm item-hsn" value="${item.hsn_code || ''}" placeholder="Enter HSN" readonly>
                                         </td>
@@ -1267,7 +1306,6 @@
                                                 Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max: ${(item.qty_ordered * 1.5).toFixed(2)}).
                                             </small>
                                         </td>
-
                                         <td>${item.uom_code}</td>
                                         <td class="rate-display">
                                             <input type="number" step="any" min="0" name="items[${index}][rate]" value="${parseFloat(item.rate).toFixed(4)}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" readonly>

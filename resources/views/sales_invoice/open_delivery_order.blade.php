@@ -299,7 +299,9 @@
         @php
             $rows = [];
             foreach ($items as $item) {
-                $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
+                $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                    ->where('sku', $item->sku)
+                    ->first();
                 $codeToParse = '';
                 if ($soItem) {
                     $codeToParse = $soItem->getAttributes()['item_name'] ?? '';

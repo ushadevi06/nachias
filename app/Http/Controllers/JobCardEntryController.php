@@ -359,11 +359,7 @@ class JobCardEntryController extends Controller
                     if ($id) {
                         $existingJc = JobCardEntry::with('fabricDetails.quantities')->find($id);
                         if ($existingJc && !$existingJc->isFullyConvertedToFg()) {
-                            $totalFgReceived = (float) \DB::table('production_receipt_items as pri')
-                                ->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')
-                                ->where('pr.job_card_id', $existingJc->id)
-                                ->where('pr.status', 'Posted')
-                                ->sum('pri.qty_to_receive');
+                            $totalFgReceived = (float) \DB::table('production_receipt_items as pri')->join('production_receipts as pr', 'pri.production_receipt_id', '=', 'pr.id')->where('pr.job_card_id', $existingJc->id)->where('pr.status', 'Posted')->sum('pri.qty_to_receive');
                             $grandTotal = floatval($existingJc->grand_total_qty ?? 0);
                             $validator->errors()->add('status', "Cannot mark Job Card as Completed: All quantities must be fully converted into Finished Goods (FG) via Posted Production Receipts (Currently Received in FG: {$totalFgReceived} / {$grandTotal} pcs).");
                         }
@@ -378,13 +374,14 @@ class JobCardEntryController extends Controller
                         $hasAssignedTasks = $existingJc->tasks()->where(function($q) {
                             $q->where('is_additional', 0)->orWhereNull('is_additional');
                         })->exists();
+                        $hasIssued = $existingJc->issueItems()->exists();
                         $hasReceipts = \App\Models\ProductionReceipt::where('job_card_id', $existingJc->id)->exists();
                         $isFg = ($existingJc->status === 'Production Completed' || $hasReceipts);
 
-                        if ($hasAssignedTasks && !$isFg) {
-                            $originalTarget = (float) ($existingJc->grand_total_qty ?? 0);
+                        if (($hasAssignedTasks || $hasIssued) && !$isFg) {
+                            $originalTarget = (float) ($existingJc->grand_total_qty ?? 0) - (float) ($existingJc->additional_qty ?? 0);
                             if (abs($submittedGrandTotal - $originalTarget) > 0.01) {
-                                $validator->errors()->add('article_matrix', "Task has already been assigned for {$originalTarget} pcs. Total cutting quantity cannot be increased or decreased (Current Total: {$submittedGrandTotal} pcs). You can redistribute sizes and sleeves within {$originalTarget} pcs.");
+                                $validator->errors()->add('article_matrix', "Items have already been issued / tasks assigned for {$originalTarget} pcs. Total cutting quantity cannot be increased or decreased (Current Total: {$submittedGrandTotal} pcs). You can redistribute sizes and sleeves within {$originalTarget} pcs.");
                             }
                         }
                     }
@@ -833,6 +830,10 @@ class JobCardEntryController extends Controller
                                         $fabricDetail->quantities()->create(array_merge($mqMatch, $mqVal));
                                     }
                                     $rowTotal += ($qFs + $qHs);
+                                } else {
+                                    if ($hasTasks || $hasIssuedItems) {
+                                        $fabricDetail->quantities()->where('size', $size)->delete();
+                                    }
                                 }
                             }
                         }

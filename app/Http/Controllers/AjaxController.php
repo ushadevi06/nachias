@@ -369,6 +369,8 @@ class AjaxController extends Controller
                 'pincode' => $c->pincode ?: ($c->zip_code ?: ''),
                 'sales_discount' => (float)($c->sales_discount ?? 0),
                 'box_discount_amount' => (float)($c->box_discount_amount ?? 0),
+                'transport_name' => $c->transport_name ?? '',
+                'alt_transport_name' => $c->alt_transport_name ?? '',
                 'address' => implode(', ', $addressParts)
             ];
         });

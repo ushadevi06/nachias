@@ -22,15 +22,10 @@ class TransportBookingController extends Controller
         $this->bookingService = $bookingService;
     }
 
-    /**
-     * Display the Transport Handover / LR Register (Server-side DataTables + View)
-     */
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = TransportBooking::with(['salesInvoice', 'customer', 'deliveryAgent'])
-                ->orderBy('sales_invoice_id', 'desc')
-                ->orderBy('id', 'asc');
+            $query = TransportBooking::with(['salesInvoice', 'customer.city', 'customer.place', 'deliveryAgent'])->orderBy('sales_invoice_id', 'desc')->orderBy('id', 'asc');
 
             if ($request->filled('status')) {
                 $query->where('status', $request->status);
@@ -63,6 +58,56 @@ class TransportBookingController extends Controller
                 $query->whereDate('created_at', $date);
             }
 
+            $searchValue = trim($request->input('search.value') ?? (is_array($request->search) ? ($request->search['value'] ?? '') : (string)$request->input('search', '')));
+            if ($searchValue !== '') {
+                $cleanBox = trim(preg_replace('/^box\s*/i', '', $searchValue));
+                $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $searchValue);
+
+                $query->where(function ($q) use ($searchValue, $cleanBox, $numericSearch) {
+                    $q->where('lr_no', 'like', "%{$searchValue}%")
+                        ->orWhere('preferred_transport', 'like', "%{$searchValue}%")
+                        ->orWhere('booking_office', 'like', "%{$searchValue}%")
+                        ->orWhere('box_number', 'like', "%{$searchValue}%")
+                        ->orWhere('status', 'like', "%{$searchValue}%")
+                        ->orWhere('delivery_agent_name', 'like', "%{$searchValue}%");
+
+                    if ($cleanBox !== '' && $cleanBox !== $searchValue) {
+                        $q->orWhere('box_number', 'like', "%{$cleanBox}%");
+                    }
+
+                    if (is_numeric($numericSearch)) {
+                        $q->orWhere('quantity', $numericSearch)
+                            ->orWhere('lr_price', 'like', "%{$numericSearch}%")
+                            ->orWhere('booking_rate', 'like', "%{$numericSearch}%");
+                    }
+
+                    $q->orWhereHas('salesInvoice', function ($si) use ($searchValue) {
+                        $si->where('inv_no', 'like', "%{$searchValue}%");
+                        if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $searchValue)) {
+                            $dbDate = Carbon::createFromFormat('d-m-Y', $searchValue)->format('Y-m-d');
+                            $si->orWhereDate('inv_date', $dbDate);
+                        } elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $searchValue)) {
+                            $si->orWhereDate('inv_date', $searchValue);
+                        }
+                    })
+                    ->orWhereHas('customer', function ($c) use ($searchValue) {
+                        $c->where('name', 'like', "%{$searchValue}%")
+                            ->orWhere('code', 'like', "%{$searchValue}%")
+                            ->orWhere('mobile_no', 'like', "%{$searchValue}%")
+                            ->orWhere('alt_transport_name', 'like', "%{$searchValue}%")
+                            ->orWhereHas('city', function ($ct) use ($searchValue) {
+                                $ct->where('city_name', 'like', "%{$searchValue}%");
+                            })
+                            ->orWhereHas('place', function ($pl) use ($searchValue) {
+                                $pl->where('place_name', 'like', "%{$searchValue}%");
+                            });
+                    })
+                    ->orWhereHas('deliveryAgent', function ($da) use ($searchValue) {
+                        $da->where('name', 'like', "%{$searchValue}%");
+                    });
+                });
+            }
+
             $totalRecords = TransportBooking::count();
             $filteredRecords = $query->count();
 
@@ -79,20 +124,27 @@ class TransportBookingController extends Controller
             foreach ($bookings as $idx => $b) {
                 $custName = $b->customer ? $b->customer->name : 'N/A';
                 $custCode = $b->customer ? $b->customer->code : '';
-                $place = $b->booking_office ?: '';
+                $place = (!empty($b->booking_office) && $b->booking_office !== '-')
+                    ? $b->booking_office
+                    : ($b->customer && $b->customer->city ? $b->customer->city->city_name : ($b->customer && $b->customer->place ? $b->customer->place->place_name : ''));
 
-                $customerHtml = "<div><span class='fw-bold text-dark d-block'>{$custName}</span><small class='text-muted'>{$place} ({$custCode})</small></div>";
+                $placeDisplay = $place ? ($custCode ? "{$place} ({$custCode})" : $place) : ($custCode ? "({$custCode})" : '');
+                $customerHtml = "<div><span class='fw-bold text-dark d-block'>{$custName}</span><small class='text-muted'>{$placeDisplay}</small></div>";
                 
                 $invNo = $b->salesInvoice ? $b->salesInvoice->inv_no : '-';
                 $invUrl = url('sales_invoices/show/' . $b->sales_invoice_id);
                 $invHtml = "<a href='{$invUrl}' class='fw-semibold text-primary' target='_blank'>{$invNo}</a>";
+
+                $invDate = ($b->salesInvoice && $b->salesInvoice->inv_date)
+                    ? Carbon::parse($b->salesInvoice->inv_date)->format('d-m-Y')
+                    : '-';
+                $invDateHtml = "<span class='text-nowrap text-secondary fw-medium'>{$invDate}</span>";
 
                 $boxHtml = "<span class='badge bg-label-dark fw-bold'>Box {$b->box_number}</span>";
 
                 $driverName = $b->deliveryAgent ? $b->deliveryAgent->name : ($b->delivery_agent_name ?: 'Unassigned');
                 $driverHtml = "<span class='badge bg-label-primary'>{$driverName}</span>";
 
-                // Status Badge
                 $statusHtml = '';
                 if ($b->status === 'Booked') {
                     $statusHtml = "<span class='badge bg-label-success'><i class='ri ri-checkbox-circle-line me-1'></i> Booked</span>";
@@ -102,7 +154,6 @@ class TransportBookingController extends Controller
                     $statusHtml = "<span class='badge bg-label-secondary'>Ready for Delivery</span>";
                 }
 
-                // LR Badge / Display
                 $lrHtml = '';
                 if (!empty($b->lr_no)) {
                     $lrHtml = "<span class='badge bg-label-success fw-bold font-monospace fs-7'>{$b->lr_no}</span>";
@@ -110,7 +161,6 @@ class TransportBookingController extends Controller
                     $lrHtml = "<button type='button' class='btn btn-xs btn-outline-danger btn-open-lr-modal' data-id='{$b->id}' data-invoice='{$invNo}' data-box='{$b->box_number}' data-customer='{$custName}' data-transport='{$b->preferred_transport}' data-rate='{$b->booking_rate}' data-lr='' data-driver='{$b->delivery_agent_id}'>+ Enter LR</button>";
                 }
 
-                // Actions
                 $editBtn = "<button type='button' class='btn btn-sm btn-icon btn-text-primary rounded-pill btn-open-lr-modal' data-id='{$b->id}' data-invoice='{$invNo}' data-box='{$b->box_number}' data-customer='{$custName}' data-transport='{$b->preferred_transport}' data-rate='{$b->booking_rate}' data-lr='{$b->lr_no}' data-driver='{$b->delivery_agent_id}' title='Update LR Details'><i class='ri ri-pencil-line'></i></button>";
                 $stickerBtn = "<a href='" . url('sales_invoices/transport-sticker/' . $b->sales_invoice_id) . "' target='_blank' class='btn btn-sm btn-icon btn-text-info rounded-pill ms-1' title='Print Sticker'><i class='ri ri-printer-line'></i></a>";
 
@@ -119,6 +169,7 @@ class TransportBookingController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $start + $idx + 1,
                     'inv_no' => $invHtml,
+                    'inv_date' => $invDateHtml,
                     'customer' => $customerHtml,
                     'box_number' => $boxHtml,
                     'quantity' => (int)$b->quantity,
@@ -139,13 +190,11 @@ class TransportBookingController extends Controller
             ]);
         }
 
-        // Dropdown Data for View
         $customers = Customer::where('status', 'Active')->orderBy('name')->get(['id', 'name', 'code']);
         $drivers = User::whereHas('role', function ($q) {
             $q->where('name', 'DRIVER');
         })->orWhere('role_id', 11)->orderBy('name')->get(['id', 'name']);
 
-        // KPI Counts
         $totalBoxesCount = TransportBooking::count();
         $bookedBoxesCount = TransportBooking::where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->count();
         $pendingLrCount = TransportBooking::where(function ($q) {
@@ -161,9 +210,6 @@ class TransportBookingController extends Controller
         ));
     }
 
-    /**
-     * Update LR Number & Booking details (via standard Modal)
-     */
     public function recordLr(Request $request, $id)
     {
         $validated = $request->validate([
@@ -200,9 +246,6 @@ class TransportBookingController extends Controller
         }
     }
 
-    /**
-     * Mark box as picked by driver
-     */
     public function markPicked(Request $request, $id)
     {
         $booking = TransportBooking::findOrFail($id);
@@ -222,14 +265,11 @@ class TransportBookingController extends Controller
         ]);
     }
 
-    /**
-     * Print Handover Sheet (A4 Landscape)
-     */
     public function printSheet(Request $request)
     {
         $setting = Setting::first();
 
-        $query = TransportBooking::with(['salesInvoice', 'customer', 'deliveryAgent']);
+        $query = TransportBooking::with(['salesInvoice', 'customer.city', 'customer.place', 'deliveryAgent']);
 
         if ($request->filled('invoice_id')) {
             $query->where('sales_invoice_id', $request->invoice_id);
@@ -255,9 +295,6 @@ class TransportBookingController extends Controller
         return $pdf->stream('Handover_Sheet_' . date('Ymd_His') . '.pdf');
     }
 
-    /**
-     * Driver Weekly Payment Clearance Module
-     */
     public function paymentClearance(Request $request)
     {
         $drivers = User::whereHas('role', function ($q) {
@@ -275,14 +312,8 @@ class TransportBookingController extends Controller
             $baseQuery->where('delivery_agent_id', $selectedDriverId);
         }
 
-        // Process Clearance Submission
         if ($request->isMethod('post') && $request->action === 'clear_payment') {
-            $eligibleIds = (clone $baseQuery)
-                ->where('status', 'Booked')
-                ->whereNotNull('lr_no')
-                ->where('lr_no', '!=', '')
-                ->where('payment_status', '!=', 'Cleared')
-                ->pluck('id');
+            $eligibleIds = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->where('payment_status', '!=', 'Cleared')->pluck('id');
 
             TransportBooking::whereIn('id', $eligibleIds)->update([
                 'payment_status' => 'Cleared',
@@ -290,18 +321,12 @@ class TransportBookingController extends Controller
                 'updated_by' => auth()->id() ?? 1,
             ]);
 
-            return redirect()->route('transport_bookings.payment_clearance', $request->only(['driver_id', 'start_date', 'end_date']))
-                ->with('success', 'Weekly payout of ' . count($eligibleIds) . ' verified boxes successfully cleared!');
+            return redirect()->route('transport_bookings.payment_clearance', $request->only(['driver_id', 'start_date', 'end_date']))->with('success', 'Weekly payout of ' . count($eligibleIds) . ' verified boxes successfully cleared!');
         }
 
-        $eligibleBookings = (clone $baseQuery)
-            ->where('status', 'Booked')
-            ->whereNotNull('lr_no')
-            ->where('lr_no', '!=', '')
-            ->get();
+        $eligibleBookings = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->get();
 
-        $blockedBookings = (clone $baseQuery)
-            ->where(function ($q) {
+        $blockedBookings = (clone $baseQuery)->where(function ($q) {
                 $q->whereNull('lr_no')->orWhere('lr_no', '');
             })
             ->get();
