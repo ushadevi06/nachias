@@ -6,6 +6,7 @@
                 <th class="text-center">Inward Date</th>
                 <th>Unit/Plant</th>
                 <th>Warehouse</th>
+                <th>Store</th>
                 <th>Responsible Person</th>
                 <th class="text-center">Total Qty</th>
             </tr>
@@ -14,7 +15,7 @@
         </tbody>
         <tfoot class="table-light border-top" id="stockInwardTfoot">
             <tr class="bg-light fw-bold">
-                <th colspan="5" class="text-end fw-bold">TOTAL</th>
+                <th colspan="6" class="text-end fw-bold">TOTAL</th>
                 <th class="text-center fw-bold text-primary" id="inwardFootQty">0</th>
             </tr>
         </tfoot>
@@ -44,6 +45,7 @@ window.initStockInwardTable = function() {
             { data: 'inward_date', name: 'inward_date', className: 'text-center' },
             { data: 'unit_plant', name: 'unit_plant' },
             { data: 'warehouse', name: 'warehouse' },
+            { data: 'store', name: 'store' },
             { data: 'responsible_person', name: 'responsible_person' },
             { data: 'total_qty', name: 'total_qty', className: 'text-center fw-bold text-primary' }
         ],
@@ -59,7 +61,7 @@ window.initStockInwardTable = function() {
             var json = settings.json;
             var total = (json && json.total_qty !== undefined)
                 ? json.total_qty
-                : api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                : api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
             $('#inwardFootQty').html(fmt(total));
         }
     });

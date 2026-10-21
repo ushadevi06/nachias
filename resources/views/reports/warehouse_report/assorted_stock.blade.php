@@ -48,6 +48,7 @@
     var currentAssortedBrandName = '';
     var currentAssortedStyleId = null;
     var currentAssortedStyleName = '';
+    var currentAssortedSleeve = '';
     var assortedDtInstance = null;
 
     function formatNumber(num) {
@@ -86,6 +87,8 @@
             ajax: {
                 url: "{{ url('warehouse_reports/ajax/assorted-stock') }}",
                 data: function (d) {
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
                     d.brand_id = $('select[name="brand_id"]').val();
                     d.store_id = $('select[name="store_id"]').val();
                     d.warehouse_id = $('#filter_warehouse_id').val() || $('#top_warehouse_select').val();
@@ -134,13 +137,31 @@
         $('#assortedStockTheadTr').html(`
             <th class="fw-bold">STYLE</th>
             <th class="text-center fw-bold">ART NOS</th>
-            <th class="text-center fw-bold">TOTAL ASSORTED STOCK</th>
+            <th class="text-center fw-bold">SLEEVE</th>
+            <th class="text-center fw-bold">36</th>
+            <th class="text-center fw-bold">38</th>
+            <th class="text-center fw-bold">40</th>
+            <th class="text-center fw-bold">42</th>
+            <th class="text-center fw-bold">44</th>
+            <th class="text-center fw-bold">46</th>
+            <th class="text-center fw-bold">48</th>
+            <th class="text-center fw-bold">50</th>
+            <th class="text-center fw-bold">TOTAL QTY</th>
         `);
 
         $('#assortedStockTfootTr').html(`
             <th class="fw-bold text-start">TOTAL</th>
+            <th class="text-center fw-bold text-info" id="assortedStyleFootArtCount">-</th>
             <th class="text-center fw-bold">-</th>
-            <th class="text-center fw-bold text-primary" id="assortedFootQty">0</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot36">-</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot38">-</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot40">-</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot42">-</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot44">-</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot46">-</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot48">-</th>
+            <th class="text-center fw-bold text-dark" id="assortedStyleFoot50">-</th>
+            <th class="text-center fw-bold text-primary" id="assortedStyleFootQty">0</th>
         `);
 
         assortedDtInstance = $('#assortedStockTable').DataTable({
@@ -150,6 +171,8 @@
             ajax: {
                 url: "{{ url('warehouse_reports/assorted_styles') }}",
                 data: function (d) {
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
                     d.brand_id = brandId;
                     d.brand_name = brandName;
                     d.store_id = $('select[name="store_id"]').val();
@@ -157,9 +180,18 @@
                 }
             },
             columns: [
-                { data: 'style', name: 'style', width: '50%' },
-                { data: 'art_count', name: 'art_count', className: 'text-center', orderable: false, width: '25%' },
-                { data: 'stock_qty', name: 'stock_qty', className: 'text-center', width: '25%' }
+                { data: 'style', name: 'styles.style_name' },
+                { data: 'art_count', name: 'art_count', className: 'text-center' },
+                { data: 'sleeve', name: 'assorted.sleeve_type', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center', orderable: false },
+                { data: 'size_38', name: 'size_38', className: 'text-center', orderable: false },
+                { data: 'size_40', name: 'size_40', className: 'text-center', orderable: false },
+                { data: 'size_42', name: 'size_42', className: 'text-center', orderable: false },
+                { data: 'size_44', name: 'size_44', className: 'text-center', orderable: false },
+                { data: 'size_46', name: 'size_46', className: 'text-center', orderable: false },
+                { data: 'size_48', name: 'size_48', className: 'text-center', orderable: false },
+                { data: 'size_50', name: 'size_50', className: 'text-center', orderable: false },
+                { data: 'stock_qty', name: 'assorted_qty', className: 'text-center' }
             ],
             dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 100],
@@ -171,21 +203,32 @@
             },
             drawCallback: function (settings) {
                 var json = settings.json;
-                if (json && json.totals && json.totals.stock_qty !== undefined) {
-                    $('#assortedFootQty').html(json.totals.stock_qty);
+                if (json && json.totals) {
+                    if (json.totals.art_count !== undefined) $('#assortedStyleFootArtCount').html(json.totals.art_count);
+                    if (json.totals.sum_36 !== undefined) $('#assortedStyleFoot36').html(json.totals.sum_36);
+                    if (json.totals.sum_38 !== undefined) $('#assortedStyleFoot38').html(json.totals.sum_38);
+                    if (json.totals.sum_40 !== undefined) $('#assortedStyleFoot40').html(json.totals.sum_40);
+                    if (json.totals.sum_42 !== undefined) $('#assortedStyleFoot42').html(json.totals.sum_42);
+                    if (json.totals.sum_44 !== undefined) $('#assortedStyleFoot44').html(json.totals.sum_44);
+                    if (json.totals.sum_46 !== undefined) $('#assortedStyleFoot46').html(json.totals.sum_46);
+                    if (json.totals.sum_48 !== undefined) $('#assortedStyleFoot48').html(json.totals.sum_48);
+                    if (json.totals.sum_50 !== undefined) $('#assortedStyleFoot50').html(json.totals.sum_50);
+                    if (json.totals.stock_qty !== undefined) $('#assortedStyleFootQty').html(json.totals.stock_qty);
                 }
             }
         });
     }
 
-    function drillDownToAssortedArtNo(brandId, brandName, styleId, styleName) {
+    function drillDownToAssortedArtNo(brandId, brandName, styleId, styleName, sleeve) {
         currentAssortedBrandId = brandId;
         currentAssortedBrandName = brandName;
         currentAssortedStyleId = styleId;
         currentAssortedStyleName = styleName;
+        currentAssortedSleeve = sleeve || '';
 
+        var sleeveTitle = currentAssortedSleeve && currentAssortedSleeve !== '-' ? ` (${currentAssortedSleeve})` : '';
         $('#assortedBreadcrumbs').attr('style', 'display: flex !important;');
-        $('#assortedBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="drillDownToAssortedStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')">${brandName}</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${styleName}</span>`);
+        $('#assortedBreadcrumbText').html(`All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-secondary cursor-pointer" onclick="drillDownToAssortedStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')">${brandName}</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; <span class="text-primary">${styleName}${sleeveTitle}</span>`);
         $('#btnBackToAssorted').attr('onclick', `drillDownToAssortedStyle(${brandId}, '${brandName.replace(/'/g, "\\'")}')`).html('<i class="ri ri-arrow-left-line"></i> Back to Styles');
 
         reinitAssortedDataTable();
@@ -225,8 +268,11 @@
             ajax: {
                 url: "{{ url('warehouse_reports/assorted_art_nos') }}",
                 data: function (d) {
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
                     d.brand_id = brandId;
                     d.style_id = styleId;
+                    d.sleeve = currentAssortedSleeve;
                     d.store_id = $('select[name="store_id"]').val();
                     d.warehouse_id = $('#filter_warehouse_id').val() || $('#top_warehouse_select').val();
                 }

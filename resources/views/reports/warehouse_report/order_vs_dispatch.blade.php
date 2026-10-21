@@ -1,26 +1,34 @@
-<div class="card-datatable">
+<div class="card-datatable table-responsive">
     <table class="datatables-products table table-hover" id="orderVsDispatchTable">
         <thead>
             <tr>
-                <th>Order No</th>
-                <th>Customer</th>
-                <th class="text-center">Ordered Qty</th>
-                <th class="text-center">Open Order Qty</th>
-                <th class="text-center">Dispatched Qty</th>
-                <th class="text-center">Pending Qty</th>
-                <th class="text-center">Progress</th>
+                <th>ORDER DATE</th>
+                <th>ORDER NO</th>
+                <th>DELIVERY DATE</th>
+                <th class="text-center">PRIORITY</th>
+                <th>CUSTOMER</th>
+                <th>PLACE</th>
+                <th class="text-center">ORDERED QTY</th>
+                <th class="text-center">ORDERED INVOICED QTY</th>
+                <th class="text-center">OPEN ORDER QTY</th>
+                <th class="text-center">DISPATCHED QTY</th>
+                <th class="text-center">PENDING QTY</th>
+                <th class="text-center">ORDER COMPLETED</th>
+                <th class="text-center">STATUS</th>
             </tr>
         </thead>
         <tbody>
         </tbody>
         <tfoot class="table-light border-top" id="orderVsDispatchTfoot">
             <tr class="bg-light fw-bold">
-                <th colspan="2" class="text-end fw-bold">TOTAL</th>
-                <th class="text-center fw-bold text-primary" id="ovdFootOrdered">0</th>
+                <th colspan="6" class="text-end fw-bold">TOTAL</th>
+                <th class="text-center fw-bold text-dark" id="ovdFootOrdered">0</th>
+                <th class="text-center fw-bold text-success" id="ovdFootOrderedInvoiced">0</th>
                 <th class="text-center fw-bold text-info" id="ovdFootOpenOrder">0</th>
-                <th class="text-center fw-bold text-success" id="ovdFootDispatched">0</th>
+                <th class="text-center fw-bold text-primary" id="ovdFootDispatched">0</th>
                 <th class="text-center fw-bold text-danger" id="ovdFootPending">0</th>
-                <th></th>
+                <th class="text-center">-</th>
+                <th class="text-center">-</th>
             </tr>
         </tfoot>
     </table>
@@ -46,27 +54,43 @@ window.initOrderVsDispatchTable = function() {
             }
         },
         columns: [
-            { data: 'so_no', name: 'so_no' },
-            { data: 'customer', name: 'customer' },
+            { data: 'order_date', name: 'sales_orders.so_date' },
+            { data: 'order_no', name: 'sales_orders.order_no' },
+            { data: 'delivery_date', name: 'sales_orders.delivery_date' },
+            { data: 'priority', name: 'sales_orders.order_type', className: 'text-center' },
+            { data: 'customer', name: 'customers.name' },
+            { data: 'place', name: 'place_name' },
             { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center' },
+            { data: 'ordered_invoiced_qty', name: 'ordered_invoiced_qty', className: 'text-center' },
             { data: 'open_order_qty', name: 'open_order_qty', className: 'text-center' },
             { data: 'dispatched_qty', name: 'dispatched_qty', className: 'text-center' },
             { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
-            { data: 'fulfillment', name: 'fulfillment', className: 'text-center', orderable: false }
+            { data: 'order_completed', name: 'order_completed', className: 'text-center', orderable: false },
+            { data: 'status', name: 'sales_orders.status', className: 'text-center' }
         ],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f><rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10,
         drawCallback: function (settings) {
-            var api = this.api();
-            var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
-            };
-            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
-            $('#ovdFootOrdered').html(fmt(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#ovdFootOpenOrder').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#ovdFootDispatched').html(fmt(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#ovdFootPending').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            var json = settings.json;
+            if (json && json.totals) {
+                $('#ovdFootOrdered').text(json.totals.ordered_qty || '0');
+                $('#ovdFootOrderedInvoiced').text(json.totals.ordered_invoiced_qty || '0');
+                $('#ovdFootOpenOrder').text(json.totals.open_order_qty || '0');
+                $('#ovdFootDispatched').text(json.totals.dispatched_qty || '0');
+                $('#ovdFootPending').text(json.totals.pending_qty || '0');
+            } else {
+                var api = this.api();
+                var intVal = function (i) {
+                    return typeof i === 'string' ? i.replace(/<[^>]*>?/gm, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                };
+                var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+                $('#ovdFootOrdered').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#ovdFootOrderedInvoiced').html(fmt(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#ovdFootOpenOrder').html(fmt(api.column(8, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#ovdFootDispatched').html(fmt(api.column(9, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#ovdFootPending').html(fmt(api.column(10, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            }
         }
     });
 };

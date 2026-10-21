@@ -39,7 +39,7 @@
                                     <select name="status" id="filter_status" class="form-select select2"
                                         data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        @foreach(['Draft', 'Approved', 'Pending', 'In Production', 'Dispatched', 'Cancelled'] as $s)
+                                        @foreach(['Draft', 'Approved', 'Pending', 'Dispatched', 'Cancelled'] as $s)
                                             <option value="{{ $s }}">{{ $s }}</option>
                                         @endforeach
                                     </select>

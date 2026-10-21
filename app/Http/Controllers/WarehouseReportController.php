@@ -40,39 +40,60 @@ class WarehouseReportController extends Controller
 
             if ($activeTab == 'warehouse-summary') {
                 $selectedWarehouseId = $request->get('warehouse_id', 'all');
+                $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+                $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
+                $filterBrandId = $request->get('brand_id');
 
-                if ($selectedWarehouseId == 'all' || empty($selectedWarehouseId)) {
-                    $capacities = WarehouseBrandCapacity::where('status', 'Active')
-                        ->groupBy('brand_id')
-                        ->select('brand_id', DB::raw('SUM(capacity_pcs) as total_capacity'))
-                        ->pluck('total_capacity', 'brand_id')
-                        ->toArray();
+                $capQuery = WarehouseBrandCapacity::where('status', 'Active');
+                if ($selectedWarehouseId != 'all' && !empty($selectedWarehouseId)) {
+                    $capQuery->where('warehouse_id', $selectedWarehouseId);
+                }
+                $capacities = $capQuery->groupBy('brand_id')->select('brand_id', DB::raw('SUM(capacity_pcs) as total_capacity'))->pluck('total_capacity', 'brand_id')->toArray();
 
-                    $brandIdsWithStock = StockEntryItem::where('stock_type', 'finished_goods')
-                        ->distinct()
-                        ->pluck('brand_id')
-                        ->toArray();
-                } else {
-                    $capacities = WarehouseBrandCapacity::where('warehouse_id', $selectedWarehouseId)
-                        ->where('status', 'Active')
-                        ->groupBy('brand_id')
-                        ->select('brand_id', DB::raw('SUM(capacity_pcs) as total_capacity'))
-                        ->pluck('total_capacity', 'brand_id')
-                        ->toArray();
+                $brandStockQuery = StockEntryItem::where('stock_type', 'finished_goods');
 
-                    $brandIdsWithStock = StockEntryItem::where('stock_type', 'finished_goods')
-                        ->where(function($q) use ($selectedWarehouseId) {
-                            $q->where('warehouse_id', $selectedWarehouseId)
-                              ->orWhereHas('stockEntry', function($se) use ($selectedWarehouseId) {
-                                  $se->where('warehouse_id', $selectedWarehouseId);
-                              });
-                        })
-                        ->distinct()
-                        ->pluck('brand_id')
-                        ->toArray();
+                if ($selectedWarehouseId != 'all' && !empty($selectedWarehouseId)) {
+                    $brandStockQuery->where(function($q) use ($selectedWarehouseId) {
+                        $q->where('warehouse_id', $selectedWarehouseId)
+                          ->orWhereHas('stockEntry', function($se) use ($selectedWarehouseId) {
+                              $se->where('warehouse_id', $selectedWarehouseId);
+                          });
+                    });
                 }
 
-                $activeBrands = Brand::where('status', 'Active')->whereIn('id', $brandIdsWithStock)->orderBy('id','desc')->get();
+                if ($fromDate || $toDate) {
+                    $brandStockQuery->where(function($q) use ($fromDate, $toDate) {
+                        $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                            if ($fromDate && $toDate) {
+                                $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                            } elseif ($fromDate) {
+                                $se->where('stock_date', '>=', $fromDate);
+                            } elseif ($toDate) {
+                                $se->where('stock_date', '<=', $toDate);
+                            }
+                        })->orWhere(function($sub) use ($fromDate, $toDate) {
+                            $sub->whereNull('stock_entry_id');
+                            if ($fromDate && $toDate) {
+                                $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                            } elseif ($fromDate) {
+                                $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                            } elseif ($toDate) {
+                                $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                            }
+                        });
+                    });
+                }
+
+                $brandIdsWithStock = $brandStockQuery->distinct()->pluck('brand_id')->toArray();
+
+                $targetBrandIds = array_unique(array_merge(array_keys($capacities), $brandIdsWithStock));
+                $brandsQuery = Brand::where('status', 'Active');
+                if ($filterBrandId) {
+                    $brandsQuery->where('id', $filterBrandId);
+                } else {
+                    $brandsQuery->whereIn('id', $targetBrandIds);
+                }
+                $activeBrands = $brandsQuery->orderBy('id','desc')->get();
                 $reportData = [];
 
                 $totalCapacity = 0;
@@ -86,8 +107,7 @@ class WarehouseReportController extends Controller
                 foreach ($activeBrands as $brand) {
                     $capacityPcs = $capacities[$brand->id] ?? 0;
 
-                    $stockItemsQuery = StockEntryItem::where('brand_id', $brand->id)
-                        ->where('stock_type', 'finished_goods');
+                    $stockItemsQuery = StockEntryItem::where('brand_id', $brand->id)->where('stock_type', 'finished_goods');
 
                     if ($selectedWarehouseId != 'all' && !empty($selectedWarehouseId)) {
                         $stockItemsQuery->where(function($q) use ($selectedWarehouseId) {
@@ -95,6 +115,29 @@ class WarehouseReportController extends Controller
                               ->orWhereHas('stockEntry', function($se) use ($selectedWarehouseId) {
                                   $se->where('warehouse_id', $selectedWarehouseId);
                               });
+                        });
+                    }
+
+                    if ($fromDate || $toDate) {
+                        $stockItemsQuery->where(function($q) use ($fromDate, $toDate) {
+                            $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                                if ($fromDate && $toDate) {
+                                    $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                                } elseif ($fromDate) {
+                                    $se->where('stock_date', '>=', $fromDate);
+                                } elseif ($toDate) {
+                                    $se->where('stock_date', '<=', $toDate);
+                                }
+                            })->orWhere(function($sub) use ($fromDate, $toDate) {
+                                $sub->whereNull('stock_entry_id');
+                                if ($fromDate && $toDate) {
+                                    $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                                } elseif ($fromDate) {
+                                    $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                                } elseif ($toDate) {
+                                    $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                                }
+                            });
                         });
                     }
 
@@ -206,10 +249,7 @@ class WarehouseReportController extends Controller
                     $priorityStockQuery->where('store_location_id', $request->store_id);
                 }
 
-                $priorityStock = $priorityStockQuery->groupBy('art_no')->having('current_stock', '>', 0)
-                    ->having('ageing_days', '>=', 90)
-                    ->orderBy('ageing_days', 'desc')
-                    ->get();
+                $priorityStock = $priorityStockQuery->groupBy('art_no')->having('current_stock', '>', 0)->having('ageing_days', '>=', 90)->orderBy('ageing_days', 'desc')->get();
 
                 if ($activeTab == 'priority') {
                     return response()->json([
@@ -252,6 +292,8 @@ class WarehouseReportController extends Controller
         $brandId = $request->brand_id;
         $agingFilter = $request->aging_filter;
         $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
         
         $stockQuery = StockEntryItem::query()
             ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
@@ -265,6 +307,16 @@ class WarehouseReportController extends Controller
             )
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at');
+
+        if ($fromDate || $toDate) {
+            if ($fromDate && $toDate) {
+                $stockQuery->whereBetween(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), [$fromDate, $toDate]);
+            } elseif ($fromDate) {
+                $stockQuery->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '>=', $fromDate);
+            } elseif ($toDate) {
+                $stockQuery->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '<=', $toDate);
+            }
+        }
 
         if ($agingFilter === '0-30') {
             $stockQuery->whereRaw('DATEDIFF(NOW(), COALESCE(stock_entries.stock_date, stock_entry_items.created_at)) <= 30');
@@ -380,31 +432,42 @@ class WarehouseReportController extends Controller
 
         $brandId = $request->brand_id;
         $warehouseId = $request->warehouse_id ?: 'all';
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
 
         if ($warehouseId == 'all') {
-            $capacities = WarehouseBrandCapacity::where('brand_id', $brandId)
-                ->where('status', 'Active')
-                ->groupBy('style_id')
-                ->select('style_id', DB::raw('SUM(capacity_pcs) as total_capacity'))
-                ->pluck('total_capacity', 'style_id')
-                ->toArray();
+            $capacities = WarehouseBrandCapacity::where('brand_id', $brandId)->where('status', 'Active')->groupBy('style_id')->select('style_id', DB::raw('SUM(capacity_pcs) as total_capacity'))->pluck('total_capacity', 'style_id')->toArray();
 
-            // Fetch distinct styles present in stock for this brand
-            $stockStyleIds = StockEntryItem::where('brand_id', $brandId)
-                ->where('stock_type', 'finished_goods')
-                ->whereNotNull('style_id')
-                ->distinct()
-                ->pluck('style_id')
-                ->toArray();
+            $stockStyleQuery = StockEntryItem::where('brand_id', $brandId)->where('stock_type', 'finished_goods')->whereNotNull('style_id');
+
+            if ($fromDate || $toDate) {
+                $stockStyleQuery->where(function($q) use ($fromDate, $toDate) {
+                    $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                        if ($fromDate && $toDate) {
+                            $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                        } elseif ($fromDate) {
+                            $se->where('stock_date', '>=', $fromDate);
+                        } elseif ($toDate) {
+                            $se->where('stock_date', '<=', $toDate);
+                        }
+                    })->orWhere(function($sub) use ($fromDate, $toDate) {
+                        $sub->whereNull('stock_entry_id');
+                        if ($fromDate && $toDate) {
+                            $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                        } elseif ($fromDate) {
+                            $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                        } elseif ($toDate) {
+                            $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                        }
+                    });
+                });
+            }
+
+            $stockStyleIds = $stockStyleQuery->distinct()->pluck('style_id')->toArray();
         } else {
-            $capacities = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)
-                ->where('brand_id', $brandId)
-                ->where('status', 'Active')
-                ->pluck('capacity_pcs', 'style_id')
-                ->toArray();
+            $capacities = WarehouseBrandCapacity::where('warehouse_id', $warehouseId)->where('brand_id', $brandId)->where('status', 'Active')->pluck('capacity_pcs', 'style_id')->toArray();
 
-            // Fetch distinct styles present in stock for this brand & warehouse
-            $stockStyleIds = StockEntryItem::where('brand_id', $brandId)
+            $stockStyleQuery = StockEntryItem::where('brand_id', $brandId)
                 ->where('stock_type', 'finished_goods')
                 ->where(function($q) use ($warehouseId) {
                     $q->where('warehouse_id', $warehouseId)
@@ -412,10 +475,32 @@ class WarehouseReportController extends Controller
                           $se->where('warehouse_id', $warehouseId);
                       });
                 })
-                ->whereNotNull('style_id')
-                ->distinct()
-                ->pluck('style_id')
-                ->toArray();
+                ->whereNotNull('style_id');
+
+            if ($fromDate || $toDate) {
+                $stockStyleQuery->where(function($q) use ($fromDate, $toDate) {
+                    $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                        if ($fromDate && $toDate) {
+                            $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                        } elseif ($fromDate) {
+                            $se->where('stock_date', '>=', $fromDate);
+                        } elseif ($toDate) {
+                            $se->where('stock_date', '<=', $toDate);
+                        }
+                    })->orWhere(function($sub) use ($fromDate, $toDate) {
+                        $sub->whereNull('stock_entry_id');
+                        if ($fromDate && $toDate) {
+                            $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                        } elseif ($fromDate) {
+                            $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                        } elseif ($toDate) {
+                            $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                        }
+                    });
+                });
+            }
+
+            $stockStyleIds = $stockStyleQuery->distinct()->pluck('style_id')->toArray();
         }
 
         $allActiveStyles = Style::where('status', 'Active')->orderBy('style_name', 'asc')->get();
@@ -437,7 +522,6 @@ class WarehouseReportController extends Controller
         $totalSingle = 0;
         $totalTotalStock = 0;
         $totalDamage = 0;
-        // For utilization %: only count styles with configured capacity
         $utilCapacity = 0;
         $utilStock = 0;
 
@@ -448,9 +532,7 @@ class WarehouseReportController extends Controller
 
             $capPcs = $capacities[$style->id] ?? 0;
 
-            $stockItemsQuery = StockEntryItem::where('brand_id', $brandId)
-                ->where('style_id', $style->id)
-                ->where('stock_type', 'finished_goods');
+            $stockItemsQuery = StockEntryItem::where('brand_id', $brandId)->where('style_id', $style->id)->where('stock_type', 'finished_goods');
 
             if ($warehouseId != 'all') {
                 $stockItemsQuery->where(function($q) use ($warehouseId) {
@@ -458,6 +540,29 @@ class WarehouseReportController extends Controller
                       ->orWhereHas('stockEntry', function($se) use ($warehouseId) {
                           $se->where('warehouse_id', $warehouseId);
                       });
+                });
+            }
+
+            if ($fromDate || $toDate) {
+                $stockItemsQuery->where(function($q) use ($fromDate, $toDate) {
+                    $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                        if ($fromDate && $toDate) {
+                            $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                        } elseif ($fromDate) {
+                            $se->where('stock_date', '>=', $fromDate);
+                        } elseif ($toDate) {
+                            $se->where('stock_date', '<=', $toDate);
+                        }
+                    })->orWhere(function($sub) use ($fromDate, $toDate) {
+                        $sub->whereNull('stock_entry_id');
+                        if ($fromDate && $toDate) {
+                            $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                        } elseif ($fromDate) {
+                            $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                        } elseif ($toDate) {
+                            $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                        }
+                    });
                 });
             }
 
@@ -509,9 +614,7 @@ class WarehouseReportController extends Controller
         if ($hasNullStyleCap) {
             $nullCapPcs = $capacities[''] ?? ($capacities[null] ?? ($capacities[0] ?? 0));
             if ($nullCapPcs > 0 && (!$search || stripos('General / Unassigned', $search) !== false)) {
-                $stockItemsQuery = StockEntryItem::where('brand_id', $brandId)
-                    ->whereNull('style_id')
-                    ->where('stock_type', 'finished_goods');
+                $stockItemsQuery = StockEntryItem::where('brand_id', $brandId)->whereNull('style_id')->where('stock_type', 'finished_goods');
 
                 if ($warehouseId != 'all') {
                     $stockItemsQuery->where(function($q) use ($warehouseId) {
@@ -519,6 +622,29 @@ class WarehouseReportController extends Controller
                           ->orWhereHas('stockEntry', function($se) use ($warehouseId) {
                               $se->where('warehouse_id', $warehouseId);
                           });
+                    });
+                }
+
+                if ($fromDate || $toDate) {
+                    $stockItemsQuery->where(function($q) use ($fromDate, $toDate) {
+                        $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                            if ($fromDate && $toDate) {
+                                $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                            } elseif ($fromDate) {
+                                $se->where('stock_date', '>=', $fromDate);
+                            } elseif ($toDate) {
+                                $se->where('stock_date', '<=', $toDate);
+                            }
+                        })->orWhere(function($sub) use ($fromDate, $toDate) {
+                            $sub->whereNull('stock_entry_id');
+                            if ($fromDate && $toDate) {
+                                $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                            } elseif ($fromDate) {
+                                $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                            } elseif ($toDate) {
+                                $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                            }
+                        });
                     });
                 }
 
@@ -551,7 +677,6 @@ class WarehouseReportController extends Controller
                 $totalTotalStock += $totalStock;
                 $totalDamage += $damageStock;
 
-                // nullCapPcs > 0 is already guaranteed by the outer if; include in utilization
                 $utilCapacity += $nullCapPcs;
                 $utilStock    += $totalStock;
 
@@ -567,7 +692,6 @@ class WarehouseReportController extends Controller
             }
         }
 
-        // Utilization % only for styles with configured capacity
         $totalUtilPct = $utilCapacity > 0 ? round(($utilStock / $utilCapacity) * 100, 2) : 0;
         $totBadgeClass = $totalUtilPct > 95 ? 'bg-danger' : ($totalUtilPct > 80 ? 'bg-warning text-dark' : 'bg-primary');
 
@@ -611,6 +735,8 @@ class WarehouseReportController extends Controller
         $styleId = $request->style_id;
         $agingFilter = $request->aging_filter;
         $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
         
         $stockQuery = StockEntryItem::query()
             ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
@@ -631,6 +757,16 @@ class WarehouseReportController extends Controller
             )
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at');
+
+        if ($fromDate || $toDate) {
+            if ($fromDate && $toDate) {
+                $stockQuery->whereBetween(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), [$fromDate, $toDate]);
+            } elseif ($fromDate) {
+                $stockQuery->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '>=', $fromDate);
+            } elseif ($toDate) {
+                $stockQuery->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '<=', $toDate);
+            }
+        }
 
         if ($agingFilter === '0-30') {
             $stockQuery->whereRaw('DATEDIFF(NOW(), COALESCE(stock_entries.stock_date, stock_entry_items.created_at)) <= 30');
@@ -688,8 +824,7 @@ class WarehouseReportController extends Controller
                   ->orWhere('stock_entry_items.qty_in', 'like', "%{$search}%");
             });
         }
-
-        $stockQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.sleeve_type', 'stock_entry_items.size');
+        $stockQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.sleeve_type', 'stock_entry_items.size')->havingRaw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0');
 
         if ($request->has('order')) {
             $orderColIdx = intval($request->input('order.0.column'));
@@ -799,15 +934,29 @@ class WarehouseReportController extends Controller
         $brandId = $request->brand_id;
         $storeIdFilter = $request->store_id;
         $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
+
+        $sleeveNormalizedSql = "CASE 
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('FS', 'F/S', 'FULL', 'FULL SLEEVE') THEN 'Full'
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('HS', 'H/S', 'HALF', 'HALF SLEEVE') THEN 'Half'
+            ELSE COALESCE(NULLIF(stock_entry_items.sleeve_type, ''), '-')
+        END";
 
         $subQuery = StockEntryItem::query()
             ->select(
                 'stock_entry_items.brand_id',
                 'stock_entry_items.style_id',
                 'stock_entry_items.art_no',
-                'stock_entry_items.sleeve_type',
+                DB::raw("{$sleeveNormalizedSql} as sleeve_type"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '36' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q36"),
                 DB::raw("SUM(CASE WHEN stock_entry_items.size = '38' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q38"),
                 DB::raw("SUM(CASE WHEN stock_entry_items.size = '40' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q40"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '42' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q42"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '44' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q44"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '46' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q46"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '48' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q48"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '50' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q50"),
                 DB::raw("SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty")
             )
             ->where('stock_entry_items.stock_type', 'finished_goods')
@@ -822,12 +971,34 @@ class WarehouseReportController extends Controller
         if ($storeIdFilter) {
             $subQuery->where('stock_entry_items.store_location_id', $storeIdFilter);
         }
+        if ($fromDate || $toDate) {
+            $subQuery->where(function($q) use ($fromDate, $toDate) {
+                $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                    if ($fromDate && $toDate) {
+                        $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                    } elseif ($fromDate) {
+                        $se->where('stock_date', '>=', $fromDate);
+                    } elseif ($toDate) {
+                        $se->where('stock_date', '<=', $toDate);
+                    }
+                })->orWhere(function($sub) use ($fromDate, $toDate) {
+                    $sub->whereNull('stock_entry_id');
+                    if ($fromDate && $toDate) {
+                        $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                    } elseif ($fromDate) {
+                        $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                    } elseif ($toDate) {
+                        $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                    }
+                });
+            });
+        }
 
         $subQuery->groupBy(
             'stock_entry_items.brand_id',
             'stock_entry_items.style_id',
             'stock_entry_items.art_no',
-            'stock_entry_items.sleeve_type'
+            DB::raw('sleeve_type')
         )->havingRaw('total_qty > 0 AND NOT (q38 > 0 AND q40 > 0)');
 
         $query = DB::query()->fromSub($subQuery, 'assorted')
@@ -835,21 +1006,73 @@ class WarehouseReportController extends Controller
             ->select(
                 DB::raw('COALESCE(styles.id, 0) as style_id'),
                 DB::raw("COALESCE(styles.style_name, '(No Style)') as style_name"),
+                'assorted.sleeve_type',
                 DB::raw('COUNT(DISTINCT assorted.art_no) as art_count'),
+                DB::raw('SUM(assorted.q36) as q36'),
+                DB::raw('SUM(assorted.q38) as q38'),
+                DB::raw('SUM(assorted.q40) as q40'),
+                DB::raw('SUM(assorted.q42) as q42'),
+                DB::raw('SUM(assorted.q44) as q44'),
+                DB::raw('SUM(assorted.q46) as q46'),
+                DB::raw('SUM(assorted.q48) as q48'),
+                DB::raw('SUM(assorted.q50) as q50'),
                 DB::raw('SUM(assorted.total_qty) as assorted_qty')
             );
 
         if ($search) {
-            $query->where('styles.style_name', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('styles.style_name', 'like', "%{$search}%")
+                  ->orWhere('assorted.sleeve_type', 'like', "%{$search}%");
+            });
         }
 
-        $query->groupBy(DB::raw('COALESCE(styles.id, 0)'), DB::raw("COALESCE(styles.style_name, '(No Style)')"));
+        $query->groupBy(
+            DB::raw('COALESCE(styles.id, 0)'),
+            DB::raw("COALESCE(styles.style_name, '(No Style)')"),
+            'assorted.sleeve_type'
+        );
 
         $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
         $recordsFiltered = $recordsTotal;
-        $totalQtySum = DB::query()->fromSub($query, 'sub')->sum('assorted_qty');
 
-        $query->orderBy('assorted_qty', 'desc');
+        $totalsRow = DB::query()->fromSub($query, 'sub')->selectRaw('
+            SUM(art_count) as total_art_count,
+            SUM(q36) as sum_36,
+            SUM(q38) as sum_38,
+            SUM(q40) as sum_40,
+            SUM(q42) as sum_42,
+            SUM(q44) as sum_44,
+            SUM(q46) as sum_46,
+            SUM(q48) as sum_48,
+            SUM(q50) as sum_50,
+            SUM(assorted_qty) as sum_total
+        ')->first();
+
+        if ($request->has('order')) {
+            $orderColIdx = intval($request->input('order.0.column'));
+            $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
+            $columnsMap = [
+                0 => 'styles.style_name',
+                1 => 'art_count',
+                2 => 'assorted.sleeve_type',
+                3 => 'q36',
+                4 => 'q38',
+                5 => 'q40',
+                6 => 'q42',
+                7 => 'q44',
+                8 => 'q46',
+                9 => 'q48',
+                10 => 'q50',
+                11 => 'assorted_qty',
+            ];
+            if (isset($columnsMap[$orderColIdx])) {
+                $query->orderBy($columnsMap[$orderColIdx], $orderDir);
+            } else {
+                $query->orderBy('styles.style_name', 'asc')->orderBy('assorted.sleeve_type', 'asc');
+            }
+        } else {
+            $query->orderBy('styles.style_name', 'asc')->orderBy('assorted.sleeve_type', 'asc');
+        }
 
         if ($length != -1) {
             $query->skip($start)->take($length);
@@ -859,19 +1082,45 @@ class WarehouseReportController extends Controller
         $data = [];
         $brandName = $request->brand_name ?? '';
 
+        $fmtCell = function($val) {
+            return $val > 0 
+                ? '<span class="fw-bold text-dark">' . number_format($val, 0) . '</span>' 
+                : '<span class="text-muted" style="opacity: 0.4;">-</span>';
+        };
+
         foreach ($stylesList as $item) {
             $sId = $item->style_id;
             $sName = addslashes($item->style_name);
             $bId = $brandId ?? 0;
             $bNameEsc = addslashes($brandName);
 
+            $rawSleeve = trim((string)($item->sleeve_type ?? ''));
+            $sleeveUpper = strtoupper($rawSleeve);
+            if (in_array($sleeveUpper, ['FS', 'F/S', 'FULL', 'FULL SLEEVE'])) {
+                $sleeveFormatted = 'Full';
+            } elseif (in_array($sleeveUpper, ['HS', 'H/S', 'HALF', 'HALF SLEEVE'])) {
+                $sleeveFormatted = 'Half';
+            } else {
+                $sleeveFormatted = $rawSleeve !== '' ? htmlspecialchars($rawSleeve) : '-';
+            }
+
+            $sleeveEsc = addslashes($sleeveFormatted);
             $data[] = [
                 'DT_RowAttr' => [
-                    'onclick' => "drillDownToAssortedArtNo({$bId}, '" . htmlspecialchars($bNameEsc, ENT_QUOTES) . "', {$sId}, '" . htmlspecialchars($sName, ENT_QUOTES) . "')",
+                    'onclick' => "drillDownToAssortedArtNo({$bId}, '" . htmlspecialchars($bNameEsc, ENT_QUOTES) . "', {$sId}, '" . htmlspecialchars($sName, ENT_QUOTES) . "', '" . htmlspecialchars($sleeveEsc, ENT_QUOTES) . "')",
                     'style' => 'cursor: pointer;'
                 ],
                 'style' => '<strong class="text-uppercase text-primary">' . htmlspecialchars($item->style_name) . '</strong>',
                 'art_count' => '<span class="badge bg-label-info">' . number_format($item->art_count ?? 0, 0) . ' Art Nos</span>',
+                'sleeve' => '<span class="badge bg-label-secondary fw-semibold">' . $sleeveFormatted . '</span>',
+                'size_36' => $fmtCell($item->q36 ?? 0),
+                'size_38' => $fmtCell($item->q38 ?? 0),
+                'size_40' => $fmtCell($item->q40 ?? 0),
+                'size_42' => $fmtCell($item->q42 ?? 0),
+                'size_44' => $fmtCell($item->q44 ?? 0),
+                'size_46' => $fmtCell($item->q46 ?? 0),
+                'size_48' => $fmtCell($item->q48 ?? 0),
+                'size_50' => $fmtCell($item->q50 ?? 0),
                 'stock_qty' => '<span class="badge bg-label-primary fs-6 fw-bold">' . number_format($item->assorted_qty ?? 0, 0) . '</span>',
             ];
         }
@@ -882,7 +1131,16 @@ class WarehouseReportController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
             'totals' => [
-                'stock_qty' => number_format($totalQtySum ?? 0, 0)
+                'art_count' => number_format($totalsRow->total_art_count ?? 0, 0) . ' Art Nos',
+                'sum_36' => number_format($totalsRow->sum_36 ?? 0, 0),
+                'sum_38' => number_format($totalsRow->sum_38 ?? 0, 0),
+                'sum_40' => number_format($totalsRow->sum_40 ?? 0, 0),
+                'sum_42' => number_format($totalsRow->sum_42 ?? 0, 0),
+                'sum_44' => number_format($totalsRow->sum_44 ?? 0, 0),
+                'sum_46' => number_format($totalsRow->sum_46 ?? 0, 0),
+                'sum_48' => number_format($totalsRow->sum_48 ?? 0, 0),
+                'sum_50' => number_format($totalsRow->sum_50 ?? 0, 0),
+                'stock_qty' => number_format($totalsRow->sum_total ?? 0, 0)
             ]
         ]);
     }
@@ -899,11 +1157,19 @@ class WarehouseReportController extends Controller
         $styleId = $request->style_id;
         $storeIdFilter = $request->store_id;
         $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
+
+        $sleeveNormalizedSql = "CASE 
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('FS', 'F/S', 'FULL', 'FULL SLEEVE') THEN 'Full'
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('HS', 'H/S', 'HALF', 'HALF SLEEVE') THEN 'Half'
+            ELSE COALESCE(NULLIF(stock_entry_items.sleeve_type, ''), '-')
+        END";
 
         $query = StockEntryItem::query()
             ->select(
                 'stock_entry_items.art_no',
-                'stock_entry_items.sleeve_type',
+                DB::raw("{$sleeveNormalizedSql} as sleeve_type"),
                 DB::raw("SUM(CASE WHEN stock_entry_items.size = '36' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q36"),
                 DB::raw("SUM(CASE WHEN stock_entry_items.size = '38' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q38"),
                 DB::raw("SUM(CASE WHEN stock_entry_items.size = '40' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q40"),
@@ -935,15 +1201,45 @@ class WarehouseReportController extends Controller
         if ($storeIdFilter) {
             $query->where('stock_entry_items.store_location_id', $storeIdFilter);
         }
+        if ($fromDate || $toDate) {
+            $query->where(function($q) use ($fromDate, $toDate) {
+                $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                    if ($fromDate && $toDate) {
+                        $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                    } elseif ($fromDate) {
+                        $se->where('stock_date', '>=', $fromDate);
+                    } elseif ($toDate) {
+                        $se->where('stock_date', '<=', $toDate);
+                    }
+                })->orWhere(function($sub) use ($fromDate, $toDate) {
+                    $sub->whereNull('stock_entry_id');
+                    if ($fromDate && $toDate) {
+                        $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                    } elseif ($fromDate) {
+                        $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                    } elseif ($toDate) {
+                        $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                    }
+                });
+            });
+        }
+        if ($request->filled('sleeve') && $request->sleeve !== '' && $request->sleeve !== '-') {
+            $sleeveUpper = strtoupper(trim($request->sleeve));
+            if ($sleeveUpper === 'FULL') {
+                $query->whereIn(DB::raw("UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, '')))"), ['FS', 'F/S', 'FULL', 'FULL SLEEVE']);
+            } elseif ($sleeveUpper === 'HALF') {
+                $query->whereIn(DB::raw("UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, '')))"), ['HS', 'H/S', 'HALF', 'HALF SLEEVE']);
+            }
+        }
 
         if ($search) {
-            $query->where(function ($q) use ($search) {
+            $query->where(function ($q) use ($search, $sleeveNormalizedSql) {
                 $q->where('stock_entry_items.art_no', 'like', "%{$search}%")
-                  ->orWhere('stock_entry_items.sleeve_type', 'like', "%{$search}%");
+                  ->orWhere(DB::raw($sleeveNormalizedSql), 'like', "%{$search}%");
             });
         }
 
-        $query->groupBy('stock_entry_items.art_no', 'stock_entry_items.sleeve_type')
+        $query->groupBy('stock_entry_items.art_no', DB::raw('sleeve_type'))
               ->havingRaw('total_qty > 0 AND NOT (q38 > 0 AND q40 > 0)');
 
         $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
@@ -1083,7 +1379,6 @@ class WarehouseReportController extends Controller
                     DB::raw('SUM(stock_entry_items.qty_in) as inward_qty')
                 )->groupBy('brands.id')->pluck('inward_qty', 'brand_id');
 
-                // Sales Qty in Date Range
                 $salesQuery = DB::table('sales_invoice_items')
                     ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
                     ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
@@ -1120,7 +1415,6 @@ class WarehouseReportController extends Controller
                     DB::raw('SUM(sales_invoice_items.quantity) as sales_qty')
                 )->groupBy('brands.id')->pluck('sales_qty', 'brand_id');
 
-                // Sales Return Qty in Date Range
                 $returnQuery = DB::table('credit_note_items')
                     ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
                     ->leftJoin('sales_invoice_items', 'credit_note_items.sales_invoice_item_id', '=', 'sales_invoice_items.id')
@@ -1155,7 +1449,6 @@ class WarehouseReportController extends Controller
                     DB::raw('SUM(credit_note_items.quantity) as return_qty')
                 )->groupBy('brands.id')->pluck('return_qty', 'brand_id');
 
-                // Current Live Stock per Brand
                 $currentStockQuery = DB::table('stock_entry_items')
                     ->leftJoin('brands', function($join) {
                         $join->on(function($query) {
@@ -1189,7 +1482,6 @@ class WarehouseReportController extends Controller
                     DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty')
                 )->groupBy('brands.id')->pluck('total_qty', 'brand_id');
 
-                // Inward from fromDate till today
                 $inwardFromDateTillNowQuery = DB::table('stock_entry_items')
                     ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
                     ->leftJoin('brands', function($join) {
@@ -1225,7 +1517,6 @@ class WarehouseReportController extends Controller
                     DB::raw('SUM(stock_entry_items.qty_in) as inward_qty')
                 )->groupBy('brands.id')->pluck('inward_qty', 'brand_id');
 
-                // Sales from fromDate till today
                 $salesFromDateTillNowQuery = DB::table('sales_invoice_items')
                     ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
                     ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
@@ -1496,6 +1787,8 @@ class WarehouseReportController extends Controller
             case 'brandwise-stock':
                 $agingFilter = $request->aging_filter;
                 $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+                $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+                $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
 
                 $query = StockEntryItem::query()
                     ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
@@ -1529,6 +1822,16 @@ class WarehouseReportController extends Controller
                     ->where('stock_entry_items.stock_type', 'finished_goods')
                     ->whereNull('stock_entry_items.deleted_at')
                     ->whereNotNull('brands.id');
+
+                if ($fromDate || $toDate) {
+                    if ($fromDate && $toDate) {
+                        $query->whereBetween(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), [$fromDate, $toDate]);
+                    } elseif ($fromDate) {
+                        $query->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '>=', $fromDate);
+                    } elseif ($toDate) {
+                        $query->where(DB::raw('DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))'), '<=', $toDate);
+                    }
+                }
 
                 if ($agingFilter === '0-30') {
                     $query->whereRaw('DATEDIFF(NOW(), COALESCE(stock_entries.stock_date, stock_entry_items.created_at)) <= 30');
@@ -1620,6 +1923,8 @@ class WarehouseReportController extends Controller
                 $brandIdFilter = $request->brand_id;
                 $storeIdFilter = $request->store_id;
                 $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+                $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+                $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
 
                 $subQuery = StockEntryItem::query()
                     ->select(
@@ -1642,6 +1947,28 @@ class WarehouseReportController extends Controller
                 }
                 if ($brandIdFilter) {
                     $subQuery->where('stock_entry_items.brand_id', $brandIdFilter);
+                }
+                if ($fromDate || $toDate) {
+                    $subQuery->where(function($q) use ($fromDate, $toDate) {
+                        $q->whereHas('stockEntry', function($se) use ($fromDate, $toDate) {
+                            if ($fromDate && $toDate) {
+                                $se->whereBetween('stock_date', [$fromDate, $toDate]);
+                            } elseif ($fromDate) {
+                                $se->where('stock_date', '>=', $fromDate);
+                            } elseif ($toDate) {
+                                $se->where('stock_date', '<=', $toDate);
+                            }
+                        })->orWhere(function($sub) use ($fromDate, $toDate) {
+                            $sub->whereNull('stock_entry_id');
+                            if ($fromDate && $toDate) {
+                                $sub->whereBetween(DB::raw('DATE(created_at)'), [$fromDate, $toDate]);
+                            } elseif ($fromDate) {
+                                $sub->where(DB::raw('DATE(created_at)'), '>=', $fromDate);
+                            } elseif ($toDate) {
+                                $sub->where(DB::raw('DATE(created_at)'), '<=', $toDate);
+                            }
+                        });
+                    });
                 }
 
                 $subQuery->groupBy(
@@ -1707,29 +2034,59 @@ class WarehouseReportController extends Controller
                 ]);
 
             case 'order-dispatch':
-                $query = SalesOrder::with(['customer'])
-                    ->leftJoin('sales_invoices', 'sales_orders.id', '=', 'sales_invoices.so_id')
-                    ->leftJoin('sales_invoice_items', function($join) {
-                        $join->on('sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
-                             ->whereNull('sales_invoice_items.deleted_at');
+                $soArtSub = DB::table('sales_order_items')->select('sale_order_id', 'art_no', DB::raw('SUM(qty) as ord_art_qty'))->whereNull('deleted_at')->groupBy('sale_order_id', 'art_no');
+
+                $invArtSub = DB::table('sales_invoices as si')->join('sales_invoice_items as sii', 'si.id', '=', 'sii.sales_invoice_id')->whereNull('si.deleted_at')->whereNull('sii.deleted_at')->whereNotNull('si.so_id')->select('si.so_id', 'sii.art_no', DB::raw('SUM(sii.quantity) as inv_art_qty'))->groupBy('si.so_id', 'sii.art_no');
+
+                $invSummarySub = DB::query()->fromSub($invArtSub, 'inv')
+                    ->leftJoinSub($soArtSub, 'so_art', function($join) {
+                        $join->on('inv.so_id', '=', 'so_art.sale_order_id')
+                             ->on('inv.art_no', '=', 'so_art.art_no');
                     })
+                    ->selectRaw('
+                        inv.so_id,
+                        SUM(CASE 
+                            WHEN so_art.ord_art_qty IS NOT NULL THEN LEAST(so_art.ord_art_qty, inv.inv_art_qty) 
+                            ELSE 0 
+                        END) as ordered_invoiced_qty,
+                        SUM(CASE 
+                            WHEN so_art.ord_art_qty IS NOT NULL THEN GREATEST(0, inv.inv_art_qty - so_art.ord_art_qty) 
+                            ELSE inv.inv_art_qty 
+                        END) as open_order_qty,
+                        SUM(inv.inv_art_qty) as dispatched_qty
+                    ')
+                    ->groupBy('inv.so_id');
+
+                // 3. Main Query on sales_orders
+                $query = DB::table('sales_orders')
+                    ->leftJoin('customers', 'sales_orders.customer_id', '=', 'customers.id')
+                    ->leftJoin('places', 'customers.place_id', '=', 'places.id')
+                    ->leftJoin('cities', 'customers.city_id', '=', 'cities.id')
+                    ->leftJoinSub($invSummarySub, 'inv_sum', 'sales_orders.id', '=', 'inv_sum.so_id')
                     ->select(
                         'sales_orders.id',
-                        'sales_orders.customer_id',
                         'sales_orders.so_no',
+                        'sales_orders.order_no',
+                        'sales_orders.orderaxe_ref_id',
                         'sales_orders.so_date',
-                        'sales_orders.total_qty as ordered_qty',
-                        DB::raw('COALESCE(SUM(CASE WHEN sales_invoice_items.is_extra = 1 THEN sales_invoice_items.quantity ELSE 0 END), 0) as open_order_qty'),
-                        DB::raw('COALESCE(SUM(sales_invoice_items.quantity), 0) as dispatched_qty')
+                        'sales_orders.delivery_date',
+                        'sales_orders.request_date',
+                        'sales_orders.order_type',
+                        'customers.name as customer_name',
+                        DB::raw("COALESCE(places.place_name, cities.city_name, '-') as place_name"),
+                        DB::raw('COALESCE(sales_orders.total_qty, 0) as ordered_qty'),
+                        DB::raw('COALESCE(inv_sum.ordered_invoiced_qty, 0) as ordered_invoiced_qty'),
+                        DB::raw('COALESCE(inv_sum.open_order_qty, 0) as open_order_qty'),
+                        DB::raw('COALESCE(inv_sum.dispatched_qty, 0) as dispatched_qty'),
+                        'sales_orders.status'
                     )
-                    ->whereNull('sales_orders.deleted_at')
-                    ->whereNull('sales_invoices.deleted_at');
+                    ->whereNull('sales_orders.deleted_at');
 
                 if ($request->from_date) {
-                    $query->where('sales_orders.so_date', '>=', date('Y-m-d', strtotime($request->from_date)));
+                    $query->where('sales_orders.so_date', '>=', date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))));
                 }
                 if ($request->to_date) {
-                    $query->where('sales_orders.so_date', '<=', date('Y-m-d', strtotime($request->to_date)));
+                    $query->where('sales_orders.so_date', '<=', date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))));
                 }
                 if ($request->brand_id) {
                     $query->whereExists(function ($q) use ($request) {
@@ -1744,26 +2101,65 @@ class WarehouseReportController extends Controller
                                     )");
                             })
                             ->whereColumn('sales_order_items.sale_order_id', 'sales_orders.id')
-                            ->where('brands.id', $request->brand_id);
+                            ->where('brands.id', $request->brand_id)
+                            ->whereNull('sales_order_items.deleted_at');
                     });
                 }
                 if ($request->customer_id) {
                     $query->where('sales_orders.customer_id', $request->customer_id);
                 }
+                if ($request->store_id) {
+                    $query->where('sales_orders.store_id', $request->store_id);
+                }
                 
                 if ($search) {
                     $query->where(function ($q) use ($search) {
                         $q->where('sales_orders.so_no', 'like', "%{$search}%")
-                          ->orWhereHas('customer', function($q2) use ($search) {
-                              $q2->where('name', 'like', "%{$search}%");
-                          });
+                          ->orWhere('sales_orders.order_no', 'like', "%{$search}%")
+                          ->orWhere('sales_orders.orderaxe_ref_id', 'like', "%{$search}%")
+                          ->orWhere('customers.name', 'like', "%{$search}%")
+                          ->orWhere('places.place_name', 'like', "%{$search}%")
+                          ->orWhere('cities.city_name', 'like', "%{$search}%");
                     });
                 }
 
-                $query->groupBy('sales_orders.id', 'sales_orders.customer_id', 'sales_orders.so_no', 'sales_orders.so_date', 'sales_orders.total_qty')->orderBy('id','desc');
-
                 $recordsTotal = DB::query()->fromSub($query, 'sub')->count();
                 $recordsFiltered = $recordsTotal;
+
+                $totalsRow = DB::query()->fromSub($query, 'sub')->selectRaw('
+                    SUM(ordered_qty) as total_ordered,
+                    SUM(ordered_invoiced_qty) as total_invoiced,
+                    SUM(open_order_qty) as total_open_order,
+                    SUM(dispatched_qty) as total_dispatched,
+                    SUM(GREATEST(0, ordered_qty - ordered_invoiced_qty)) as total_pending
+                ')->first();
+
+                if ($request->has('order')) {
+                    $orderColIdx = intval($request->input('order.0.column'));
+                    $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
+                    $columnsMap = [
+                        0 => 'sales_orders.so_date',
+                        1 => 'sales_orders.order_no',
+                        2 => 'sales_orders.delivery_date',
+                        3 => 'sales_orders.order_type',
+                        4 => 'customers.name',
+                        5 => 'place_name',
+                        6 => 'ordered_qty',
+                        7 => 'ordered_invoiced_qty',
+                        8 => 'open_order_qty',
+                        9 => 'dispatched_qty',
+                        10 => 'ordered_qty',
+                        11 => 'ordered_invoiced_qty',
+                        12 => 'sales_orders.status',
+                    ];
+                    if (isset($columnsMap[$orderColIdx])) {
+                        $query->orderBy($columnsMap[$orderColIdx], $orderDir);
+                    } else {
+                        $query->orderBy('sales_orders.id', 'desc');
+                    }
+                } else {
+                    $query->orderBy('sales_orders.id', 'desc');
+                }
 
                 if ($length != -1) {
                     $query->skip($start)->take($length);
@@ -1773,33 +2169,72 @@ class WarehouseReportController extends Controller
                 $data = [];
                 
                 foreach ($orderVsDispatch as $so) {
-                    $pending_qty = max(0, $so->ordered_qty - $so->dispatched_qty);
-                    $fulfillment_pc = $so->ordered_qty > 0 ? min(100, ($so->dispatched_qty / $so->ordered_qty) * 100) : 0;
-                    
-                    $pcClass = 'bg-danger';
-                    if($fulfillment_pc >= 90) $pcClass = 'bg-success';
-                    elseif($fulfillment_pc >= 50) $pcClass = 'bg-warning';
+                    $orderNo = !empty($so->order_no) ? $so->order_no : (!empty($so->orderaxe_ref_id) ? $so->orderaxe_ref_id : $so->so_no);
+                    $orderNoHtml = '<strong class="text-primary">' . htmlspecialchars($orderNo) . '</strong>';
+                    if ($orderNo !== $so->so_no) {
+                        $orderNoHtml .= '<br><span class="text-muted" style="font-size: 0.72rem;">(' . htmlspecialchars($so->so_no) . ')</span>';
+                    }
 
-                    $fulfillmentHtml = '
-                        <div class="d-flex align-items-center justify-content-center">
-                            <span class="me-2 text-muted" style="font-size: 0.75rem;">' . number_format($fulfillment_pc, 1) . '%</span>
-                            <div class="progress" style="height: 6px; width: 60px;">
-                                <div class="progress-bar ' . $pcClass . '" role="progressbar" style="width: ' . $fulfillment_pc . '%" aria-valuenow="' . $fulfillment_pc . '" aria-valuemin="0" aria-valuemax="100"></div>
+                    $orderDate = !empty($so->so_date) ? date('d-m-Y', strtotime($so->so_date)) : '-';
+                    $delDate = (!empty($so->delivery_date) && $so->delivery_date != '0000-00-00')
+                        ? date('d-m-Y', strtotime($so->delivery_date))
+                        : ((!empty($so->request_date) && $so->request_date != '0000-00-00') ? date('d-m-Y', strtotime($so->request_date)) : '-');
+
+                    $prioRaw = strtoupper(trim($so->order_type ?: 'Regular'));
+                    $prioClass = match($prioRaw) {
+                        'URGENT' => 'bg-label-danger',
+                        'CUSTOMER ORDER' => 'bg-label-primary',
+                        'OPEN' => 'bg-label-info',
+                        'SAMPLE' => 'bg-label-warning',
+                        default => 'bg-label-secondary'
+                    };
+                    $priorityHtml = '<span class="badge ' . $prioClass . ' fw-semibold">' . htmlspecialchars($so->order_type ?: 'Regular') . '</span>';
+
+                    $ordQty = (float)($so->ordered_qty ?? 0);
+                    $ordInvQty = (float)($so->ordered_invoiced_qty ?? 0);
+                    $openOrdQty = (float)($so->open_order_qty ?? 0);
+                    $dispQty = (float)($so->dispatched_qty ?? 0);
+                    $pendingQty = max(0, $ordQty - $ordInvQty);
+
+                    $completionPc = $ordQty > 0 ? min(100, round(($ordInvQty / $ordQty) * 100)) : ($dispQty > 0 ? 100 : 0);
+                    $pcClass = ($completionPc >= 100) ? 'bg-success' : (($completionPc >= 50) ? 'bg-warning' : 'bg-danger');
+                    $completionHtml = '
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <span class="fw-bold me-1" style="font-size: 0.75rem;">' . $completionPc . '%</span>
+                            <div class="progress" style="height: 6px; width: 45px;">
+                                <div class="progress-bar ' . $pcClass . '" role="progressbar" style="width: ' . $completionPc . '%"></div>
                             </div>
                         </div>';
 
-                    $openOrderQty = (int) $so->open_order_qty;
+                    $statusRaw = $so->status ?: 'Pending';
+                    $statusClass = match(strtolower($statusRaw)) {
+                        'approved', 'completed' => 'bg-label-success',
+                        'pending' => 'bg-label-warning',
+                        'cancelled' => 'bg-label-danger',
+                        default => 'bg-label-info'
+                    };
+                    $statusHtml = '<span class="badge ' . $statusClass . ' fw-semibold">' . htmlspecialchars($statusRaw) . '</span>';
 
                     $data[] = [
-                        'customer' => $so->customer->name ?? '-',
-                        'so_no' => '<strong>' . $so->so_no . '</strong><br><span class="text-muted" style="font-size: 0.75rem;">' . date('d M Y', strtotime($so->so_date)) . '</span>',
-                        'ordered_qty' => number_format($so->ordered_qty, 0),
-                        'open_order_qty' => $openOrderQty > 0
-                            ? '<span class="text-info fw-bold">' . number_format($openOrderQty, 0) . '</span>'
+                        'order_date' => '<span class="fw-semibold text-muted">' . $orderDate . '</span>',
+                        'order_no' => $orderNoHtml,
+                        'delivery_date' => '<span class="fw-semibold text-muted">' . $delDate . '</span>',
+                        'priority' => $priorityHtml,
+                        'customer' => '<span class="fw-semibold text-dark">' . htmlspecialchars($so->customer_name ?? '-') . '</span>',
+                        'place' => '<span class="text-muted">' . htmlspecialchars($so->place_name ?? '-') . '</span>',
+                        'ordered_qty' => '<span class="fw-bold text-dark">' . number_format($ordQty, 0) . '</span>',
+                        'ordered_invoiced_qty' => $ordInvQty > 0
+                            ? '<span class="fw-bold text-success">' . number_format($ordInvQty, 0) . '</span>'
                             : '<span class="text-muted">0</span>',
-                        'dispatched_qty' => '<span class="text-primary fw-bold">' . number_format($so->dispatched_qty, 0) . '</span>',
-                        'pending_qty' => '<span class="' . ($pending_qty > 0 ? 'text-danger' : 'text-success') . ' fw-bold">' . number_format($pending_qty, 0) . '</span>',
-                        'fulfillment' => $fulfillmentHtml
+                        'open_order_qty' => $openOrdQty > 0
+                            ? '<span class="fw-bold text-info">' . number_format($openOrdQty, 0) . '</span>'
+                            : '<span class="text-muted">0</span>',
+                        'dispatched_qty' => '<span class="fw-bold text-primary">' . number_format($dispQty, 0) . '</span>',
+                        'pending_qty' => $pendingQty > 0
+                            ? '<span class="fw-bold text-danger">' . number_format($pendingQty, 0) . '</span>'
+                            : '<span class="text-muted">0</span>',
+                        'order_completed' => $completionHtml,
+                        'status' => $statusHtml
                     ];
                 }
 
@@ -1808,6 +2243,13 @@ class WarehouseReportController extends Controller
                     'recordsTotal' => $recordsTotal,
                     'recordsFiltered' => $recordsFiltered,
                     'data' => $data,
+                    'totals' => [
+                        'ordered_qty' => number_format($totalsRow->total_ordered ?? 0, 0),
+                        'ordered_invoiced_qty' => number_format($totalsRow->total_invoiced ?? 0, 0),
+                        'open_order_qty' => number_format($totalsRow->total_open_order ?? 0, 0),
+                        'dispatched_qty' => number_format($totalsRow->total_dispatched ?? 0, 0),
+                        'pending_qty' => number_format($totalsRow->total_pending ?? 0, 0),
+                    ]
                 ]);
 
             case 'dispatch-report':
@@ -1818,20 +2260,35 @@ class WarehouseReportController extends Controller
                     })
                     ->whereNull('deleted_at');
 
-                if ($request->from_date) {
-                    $fromDate = date('Y-m-d', strtotime($request->from_date));
+                $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+                $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
+
+                if ($fromDate && $toDate) {
+                    $query->where(function ($q) use ($fromDate, $toDate) {
+                        $q->whereHas('salesInvoices', function ($iq) use ($fromDate, $toDate) {
+                            $iq->whereBetween('inv_date', [$fromDate, $toDate]);
+                        })->orWhere(function ($sq) use ($fromDate, $toDate) {
+                            $sq->whereDoesntHave('salesInvoices')
+                               ->whereBetween('so_date', [$fromDate, $toDate]);
+                        });
+                    });
+                } elseif ($fromDate) {
                     $query->where(function ($q) use ($fromDate) {
                         $q->whereHas('salesInvoices', function ($iq) use ($fromDate) {
                             $iq->where('inv_date', '>=', $fromDate);
-                        })->orWhere('so_date', '>=', $fromDate);
+                        })->orWhere(function ($sq) use ($fromDate) {
+                            $sq->whereDoesntHave('salesInvoices')
+                               ->where('so_date', '>=', $fromDate);
+                        });
                     });
-                }
-                if ($request->to_date) {
-                    $toDate = date('Y-m-d', strtotime($request->to_date));
+                } elseif ($toDate) {
                     $query->where(function ($q) use ($toDate) {
                         $q->whereHas('salesInvoices', function ($iq) use ($toDate) {
                             $iq->where('inv_date', '<=', $toDate);
-                        })->orWhere('so_date', '<=', $toDate);
+                        })->orWhere(function ($sq) use ($toDate) {
+                            $sq->whereDoesntHave('salesInvoices')
+                               ->where('so_date', '<=', $toDate);
+                        });
                     });
                 }
                 if ($request->brand_id) {
@@ -1883,7 +2340,25 @@ class WarehouseReportController extends Controller
                 $dispatchReport = $query->orderBy('id', 'desc')->get();
                 $data = [];
                 foreach ($dispatchReport as $so) {
-                    $invoicesData = $so->salesInvoices->map(function($inv) {
+                    $relevantInvoices = $so->salesInvoices;
+                    if ($fromDate || $toDate) {
+                        $relevantInvoices = $relevantInvoices->filter(function($inv) use ($fromDate, $toDate) {
+                            $invDate = $inv->inv_date ? date('Y-m-d', strtotime($inv->inv_date)) : null;
+                            if (!$invDate) return false;
+                            if ($fromDate && $toDate) {
+                                return $invDate >= $fromDate && $invDate <= $toDate;
+                            } elseif ($fromDate) {
+                                return $invDate >= $fromDate;
+                            } elseif ($toDate) {
+                                return $invDate <= $toDate;
+                            }
+                            return true;
+                        });
+                    }
+
+                    $targetInvoices = $relevantInvoices->isNotEmpty() ? $relevantInvoices : $so->salesInvoices;
+
+                    $invoicesData = $targetInvoices->map(function($inv) {
                         return [
                             'id' => $inv->id,
                             'no' => SalesInvoice::formatDisplayInvNo($inv->inv_no),
@@ -1909,10 +2384,10 @@ class WarehouseReportController extends Controller
                         $invoicesHtml = '-';
                     }
 
-                    $latestInv = $so->salesInvoices->sortByDesc('inv_date')->first();
+                    $latestInv = $targetInvoices->sortByDesc('inv_date')->first();
                     $displayDate = $latestInv && $latestInv->inv_date ? date('d M Y', strtotime($latestInv->inv_date)) : date('d M Y', strtotime($so->so_date));
 
-                    $invoicedQty = $so->salesInvoices->sum(function($inv) {
+                    $invoicedQty = $targetInvoices->sum(function($inv) {
                         return $inv->items->sum('quantity');
                     });
                     $dispatchedQty = $invoicedQty > 0 ? $invoicedQty : (float)$so->total_qty;
@@ -1936,18 +2411,13 @@ class WarehouseReportController extends Controller
                 ]);
 
             case 'stock-inward':
-                $fgStoreIds = StoreType::whereRaw("UPPER(TRIM(store_type_name)) = 'FINISHED GOODS'")->pluck('id')->toArray();
-                if (empty($fgStoreIds)) {
-                    $fgStoreIds = [3];
-                }
-
                 $query = DB::table('production_receipts')
                     ->leftJoin('job_card_entries', 'production_receipts.job_card_id', '=', 'job_card_entries.id')
                     ->leftJoin('service_providers', 'job_card_entries.service_provider_id', '=', 'service_providers.id')
                     ->leftJoin('warehouses', 'production_receipts.warehouse_id', '=', 'warehouses.id')
+                    ->leftJoin('store_types', 'production_receipts.store_type_id', '=', 'store_types.id')
                     ->leftJoin('users', 'production_receipts.employee_id', '=', 'users.id')
                     ->leftJoin('production_receipt_items', 'production_receipts.id', '=', 'production_receipt_items.production_receipt_id')
-                    ->whereIn('production_receipts.store_type_id', $fgStoreIds)
                     ->whereNull('job_card_entries.deleted_at')
                     ->select(
                         'production_receipts.id',
@@ -1956,6 +2426,7 @@ class WarehouseReportController extends Controller
                         'job_card_entries.job_card_no',
                         'service_providers.name as plant_name',
                         'warehouses.warehouse_name',
+                        'store_types.store_type_name',
                         'users.name as employee_name',
                         'users.emp_id',
                         DB::raw('COALESCE(SUM(production_receipt_items.qty_to_receive), 0) as total_qty')
@@ -1979,6 +2450,7 @@ class WarehouseReportController extends Controller
                         $q->where('job_card_entries.job_card_no', 'like', "%{$search}%")
                           ->orWhere('service_providers.name', 'like', "%{$search}%")
                           ->orWhere('warehouses.warehouse_name', 'like', "%{$search}%")
+                          ->orWhere('store_types.store_type_name', 'like', "%{$search}%")
                           ->orWhere('users.name', 'like', "%{$search}%")
                           ->orWhere('users.emp_id', 'like', "%{$search}%")
                           ->orWhere('production_receipts.receipt_no', 'like', "%{$search}%");
@@ -1992,6 +2464,7 @@ class WarehouseReportController extends Controller
                     'job_card_entries.job_card_no',
                     'service_providers.name',
                     'warehouses.warehouse_name',
+                    'store_types.store_type_name',
                     'users.name',
                     'users.emp_id'
                 );
@@ -2004,9 +2477,7 @@ class WarehouseReportController extends Controller
                     $query->skip($start)->take($length);
                 }
 
-                $stockInward = $query->orderBy('production_receipts.receipt_date', 'desc')
-                                     ->orderBy('production_receipts.id', 'desc')
-                                     ->get();
+                $stockInward = $query->orderBy('production_receipts.receipt_date', 'desc')->orderBy('production_receipts.id', 'desc')->get();
                 $data = [];
 
                 foreach ($stockInward as $row) {
@@ -2020,6 +2491,7 @@ class WarehouseReportController extends Controller
                         'inward_date' => $row->receipt_date ? date('d-m-Y', strtotime($row->receipt_date)) : '-',
                         'unit_plant' => $row->plant_name ?? '-',
                         'warehouse' => $row->warehouse_name ?? '-',
+                        'store' => $row->store_type_name ?? '-',
                         'responsible_person' => $empText,
                         'total_qty' => number_format($row->total_qty, 0),
                     ];
@@ -2099,6 +2571,7 @@ class WarehouseReportController extends Controller
                         'period' => '<strong>' . $item->period . '</strong>',
                         'total_sales' => '₹' . number_format($item->total_sales ?? 0, 2),
                         'regular_sales' => '₹' . number_format($item->regular_sales ?? 0, 2),
+                        'discount_sales' => '₹' . number_format($item->discount_sales_raw ?? 0, 2),
                         'discount_amount' => '₹' . number_format($item->discount_amount ?? 0, 2),
                         'discount_pc' => '<span class="text-danger">' . number_format($discount_pc, 1) . '%</span>',
                         'net_revenue' => '<span class="text-success fw-bold">₹' . number_format($item->net_revenue ?? 0, 2) . '</span>'
@@ -2358,8 +2831,6 @@ class WarehouseReportController extends Controller
                 }
 
                 $orderItems = $orderQuery->get();
-
-                // Pre-build brand map — resolve each unique art_no combo only once
                 $brandMap = $this->buildArtNoBrandMap($orderItems, $allBrands);
 
                 $brandSoTotals = [];
@@ -2413,6 +2884,8 @@ class WarehouseReportController extends Controller
                 }
 
                 $data = [];
+                $overallMissedOrders = 0;
+                $overallLostRevenue = 0;
                 foreach ($brandSoTotals as $bName => $soList) {
                     if ($search && stripos($bName, $search) === false) {
                         continue;
@@ -2437,6 +2910,9 @@ class WarehouseReportController extends Controller
                     }
 
                     if ($missedOrdersCount > 0 || $totalLostValue > 0) {
+                        $overallMissedOrders += $missedOrdersCount;
+                        $overallLostRevenue += $totalLostValue;
+
                         $data[] = [
                             'DT_RowAttr' => [
                                 'onclick' => "drillDownToLostSalesBrand('" . addslashes($bName) . "')",
@@ -2462,6 +2938,10 @@ class WarehouseReportController extends Controller
                     'recordsTotal' => $recordsTotal,
                     'recordsFiltered' => $recordsFiltered,
                     'data' => $data,
+                    'totals' => [
+                        'missed_orders' => $overallMissedOrders,
+                        'lost_revenue' => $overallLostRevenue,
+                    ]
                 ]);
 
            
@@ -2487,6 +2967,8 @@ class WarehouseReportController extends Controller
                         'sales_orders.delivery_date',
                         'sales_orders.order_type',
                         'sales_orders.order_no',
+                        'sales_orders.total_qty',
+                        'sales_orders.status as so_status',
                         'sales_orders.reason_for_delay',
                         'sales_orders.internal_remarks',
                         'customers.name as customer_name',
@@ -2532,6 +3014,57 @@ class WarehouseReportController extends Controller
                     });
                 }
 
+                $statusFilter = strtolower(trim($request->order_status ?: $request->status ?: ''));
+                if (!empty($statusFilter) && $statusFilter !== 'all') {
+                    if ($statusFilter === 'cancelled') {
+                        $query->whereRaw('LOWER(sales_orders.status) = ?', ['cancelled']);
+                    } elseif ($statusFilter === 'pending') {
+                        $query->whereRaw('LOWER(COALESCE(sales_orders.status, "")) != ?', ['cancelled'])
+                              ->whereNotExists(function($q) {
+                            $q->select(DB::raw(1))
+                              ->from('sales_invoices as si')
+                              ->join('sales_invoice_items as sii', 'si.id', '=', 'sii.sales_invoice_id')
+                              ->whereColumn('si.so_id', 'sales_orders.id')
+                              ->whereNull('si.deleted_at')
+                              ->whereNull('sii.deleted_at')
+                              ->where('sii.quantity', '>', 0);
+                        });
+                    } elseif ($statusFilter === 'completed' || $statusFilter === 'partially_delivery' || $statusFilter === 'partial' || $statusFilter === 'partial_delivery') {
+                        $query->whereRaw('LOWER(COALESCE(sales_orders.status, "")) != ?', ['cancelled']);
+
+                        $soArtSub = DB::table('sales_order_items')->select('sale_order_id', 'art_no', DB::raw('SUM(qty) as ord_art_qty'))->whereNull('deleted_at')->groupBy('sale_order_id', 'art_no');
+
+                        $invArtSub = DB::table('sales_invoices as si')->join('sales_invoice_items as sii', 'si.id', '=', 'sii.sales_invoice_id')->whereNull('si.deleted_at')->whereNull('sii.deleted_at')->whereNotNull('si.so_id')->select('si.so_id', 'sii.art_no', DB::raw('SUM(sii.quantity) as inv_art_qty'))->groupBy('si.so_id', 'sii.art_no');
+
+                        $invSummarySub = DB::query()->fromSub($invArtSub, 'inv')
+                            ->leftJoinSub($soArtSub, 'so_art', function($join) {
+                                $join->on('inv.so_id', '=', 'so_art.sale_order_id')
+                                     ->on('inv.art_no', '=', 'so_art.art_no');
+                            })
+                            ->selectRaw('
+                                inv.so_id,
+                                SUM(CASE 
+                                    WHEN so_art.ord_art_qty IS NOT NULL THEN LEAST(so_art.ord_art_qty, inv.inv_art_qty) 
+                                    ELSE 0 
+                                END) as ordered_invoiced_qty,
+                                SUM(CASE 
+                                    WHEN so_art.ord_art_qty IS NOT NULL THEN GREATEST(0, inv.inv_art_qty - so_art.ord_art_qty) 
+                                    ELSE inv.inv_art_qty 
+                                END) as open_order_qty,
+                                SUM(inv.inv_art_qty) as dispatched_qty
+                            ')
+                            ->groupBy('inv.so_id');
+
+                        $query->leftJoinSub($invSummarySub, 'inv_sum', 'sales_orders.id', '=', 'inv_sum.so_id');
+
+                        if ($statusFilter === 'completed') {
+                            $query->whereRaw('COALESCE(inv_sum.ordered_invoiced_qty, 0) >= COALESCE(sales_orders.total_qty, 0) AND COALESCE(sales_orders.total_qty, 0) > 0');
+                        } else {
+                            $query->whereRaw('(COALESCE(inv_sum.ordered_invoiced_qty, 0) > 0 OR COALESCE(inv_sum.dispatched_qty, 0) > 0) AND COALESCE(inv_sum.ordered_invoiced_qty, 0) < COALESCE(sales_orders.total_qty, 0)');
+                        }
+                    }
+                }
+
                 $recordsTotal = (clone $query)->count();
                 $recordsFiltered = $recordsTotal;
 
@@ -2539,7 +3072,7 @@ class WarehouseReportController extends Controller
 
                 $soIds = $salesOrders->pluck('so_id')->toArray();
 
-                $soItemsList = [];
+                $soItemsList = collect();
                 if (!empty($soIds)) {
                     $soItemsList = DB::table('sales_order_items')
                         ->leftJoin('stock_entry_items', 'sales_order_items.stock_entry_item_id', '=', 'stock_entry_items.id')
@@ -2562,7 +3095,33 @@ class WarehouseReportController extends Controller
                 }
 
                 $soArtNoInvoicedMap = [];
+                $invSummaryMap = [];
                 if (!empty($soIds)) {
+                    $soArtSub = DB::table('sales_order_items')->select('sale_order_id', 'art_no', DB::raw('SUM(qty) as ord_art_qty'))->whereIn('sale_order_id', $soIds)->whereNull('deleted_at')->groupBy('sale_order_id', 'art_no');
+
+                    $invArtSub = DB::table('sales_invoices as si')->join('sales_invoice_items as sii', 'si.id', '=', 'sii.sales_invoice_id')->whereIn('si.so_id', $soIds)->whereNull('si.deleted_at')->whereNull('sii.deleted_at')->whereNotNull('si.so_id')->select('si.so_id', 'sii.art_no', DB::raw('SUM(sii.quantity) as inv_art_qty'))->groupBy('si.so_id', 'sii.art_no');
+
+                    $invSummaryMap = DB::query()->fromSub($invArtSub, 'inv')
+                        ->leftJoinSub($soArtSub, 'so_art', function($join) {
+                            $join->on('inv.so_id', '=', 'so_art.sale_order_id')
+                                 ->on('inv.art_no', '=', 'so_art.art_no');
+                        })
+                        ->selectRaw('
+                            inv.so_id,
+                            SUM(CASE 
+                                WHEN so_art.ord_art_qty IS NOT NULL THEN LEAST(so_art.ord_art_qty, inv.inv_art_qty) 
+                                ELSE 0 
+                            END) as ordered_invoiced_qty,
+                            SUM(CASE 
+                                WHEN so_art.ord_art_qty IS NOT NULL THEN GREATEST(0, inv.inv_art_qty - so_art.ord_art_qty) 
+                                ELSE inv.inv_art_qty 
+                            END) as open_order_qty,
+                            SUM(inv.inv_art_qty) as dispatched_qty
+                        ')
+                        ->groupBy('inv.so_id')
+                        ->get()
+                        ->keyBy('so_id');
+
                     $invoices = DB::table('sales_invoice_items')
                         ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
                         ->whereIn('sales_invoices.so_id', $soIds)
@@ -2594,10 +3153,6 @@ class WarehouseReportController extends Controller
                     });
 
                     $brands = [];
-                    $totalOrderedQty = 0;
-                    $totalInvoicedQty = 0;
-                    $pendingArtNos = [];
-
                     foreach ($itemsForSo as $itm) {
                         $bName = null;
                         if (!empty($itm->stock_brand_name)) {
@@ -2641,19 +3196,34 @@ class WarehouseReportController extends Controller
                             $bName = 'Uncategorized';
                         }
                         $brands[$bName] = true;
+                    }
 
-                        $ordQ = floatval($itm->qty ?? 0);
-                        $invQ = floatval($soArtNoInvoicedMap[$so->so_id][$itm->art_no] ?? 0);
-                        $totalOrderedQty += $ordQ;
-                        $totalInvoicedQty += min($ordQ, $invQ);
-
-                        if ($ordQ > $invQ && !empty($itm->art_no)) {
-                            $pendingArtNos[] = $itm->art_no;
+                    $totalOrderedQty = floatval($so->total_qty ?? 0);
+                    if ($totalOrderedQty <= 0) {
+                        foreach ($itemsForSo as $itm) {
+                            $totalOrderedQty += floatval($itm->qty ?? 0);
                         }
                     }
 
+                    $totalInvoicedQty = floatval($invSummaryMap[$so->so_id]->ordered_invoiced_qty ?? 0);
+                    $openOrderQty = floatval($invSummaryMap[$so->so_id]->open_order_qty ?? 0);
+                    $dispatchedQty = floatval($invSummaryMap[$so->so_id]->dispatched_qty ?? 0);
                     $pendingQty = max(0, $totalOrderedQty - $totalInvoicedQty);
                     $completionPct = $totalOrderedQty > 0 ? min(100, round(($totalInvoicedQty / $totalOrderedQty) * 100, 2)) : 0;
+
+                    $artNoRemainingInv = $soArtNoInvoicedMap[$so->so_id] ?? [];
+                    $pendingArtNos = [];
+                    foreach ($itemsForSo as $itm) {
+                        $artNo = $itm->art_no;
+                        $ordQ = floatval($itm->qty ?? 0);
+                        $availInv = floatval($artNoRemainingInv[$artNo] ?? 0);
+                        $alloc = min($ordQ, $availInv);
+                        $artNoRemainingInv[$artNo] = max(0, $availInv - $alloc);
+                        $remOrd = $ordQ - $alloc;
+                        if ($remOrd > 0 && !empty($artNo)) {
+                            $pendingArtNos[] = $artNo;
+                        }
+                    }
 
                     $brandBadges = [];
                     foreach (array_keys($brands) as $bName) {
@@ -2673,9 +3243,13 @@ class WarehouseReportController extends Controller
                     }
                     $completionHtml = '<span class="badge px-2 py-1 fw-bold" style="' . $pcBadgeStyle . ' font-size: 11px;">' . $completionPct . '%</span>';
 
-                    if ($completionPct >= 100) {
+                    $isCancelled = (strtolower(trim($so->so_status ?? '')) === 'cancelled');
+
+                    if ($isCancelled) {
+                        $statusHtml = '<span class="badge bg-secondary text-white fw-bold px-2 py-1" style="background-color:#6c757d !important; font-size:10px;">CANCELLED</span>';
+                    } elseif ($completionPct >= 100) {
                         $statusHtml = '<span class="badge bg-success text-white fw-bold px-2 py-1" style="font-size:10px;">COMPLETED</span>';
-                    } elseif ($totalInvoicedQty > 0) {
+                    } elseif ($totalInvoicedQty > 0 || $dispatchedQty > 0) {
                         $statusHtml = '<span class="badge bg-danger text-white fw-bold px-2 py-1" style="background-color:#e63946 !important; font-size:10px;">PARTIAL DELIVERY</span>';
                     } else {
                         $statusHtml = '<span class="badge bg-danger text-white fw-bold px-2 py-1" style="background-color:#e63946 !important; font-size:10px;">PENDING</span>';
@@ -2706,6 +3280,8 @@ class WarehouseReportController extends Controller
                         'brand' => $brandHtml,
                         'ordered_qty' => number_format($totalOrderedQty, 0),
                         'invoiced_qty' => number_format($totalInvoicedQty, 0),
+                        'open_order_qty' => number_format($openOrderQty, 0),
+                        'dispatched_qty' => number_format($dispatchedQty, 0),
                         'pending_qty' => '<span class="' . ($pendingQty > 0 ? 'text-danger fw-bold' : 'text-success fw-bold') . '">' . number_format($pendingQty, 0) . '</span>',
                         'completion' => $completionHtml,
                         'status' => $statusHtml,
@@ -3337,6 +3913,9 @@ class WarehouseReportController extends Controller
     {
         $soId = $request->so_id;
 
+        $so = DB::table('sales_orders')->where('id', $soId)->first(['status']);
+        $isCancelled = $so && (strtolower(trim($so->status ?? '')) === 'cancelled');
+
         $items = DB::table('sales_order_items')
             ->leftJoin('stock_entry_items', 'sales_order_items.stock_entry_item_id', '=', 'stock_entry_items.id')
             ->select(
@@ -3366,19 +3945,24 @@ class WarehouseReportController extends Controller
             ->groupBy('art_no')
             ->pluck('inv_qty', 'art_no');
 
+        $artNoRemaining = $invoicedArtNos ? $invoicedArtNos->toArray() : [];
         $artNosData = [];
         $sno = 1;
         foreach ($items as $item) {
             $artNo = $item->art_no;
             $ordQty = floatval($item->qty ?? 0);
-            $invQty = floatval($invoicedArtNos[$artNo] ?? 0);
-            $pendingQty = max(0, $ordQty - $invQty);
+            $availInv = floatval($artNoRemaining[$artNo] ?? 0);
+            $alloc = min($ordQty, $availInv);
+            $artNoRemaining[$artNo] = max(0, $availInv - $alloc);
+            $pendingQty = max(0, $ordQty - $alloc);
 
             if ($pendingQty <= 0) {
                 continue;
             }
 
-            if ($invQty > 0) {
+            if ($isCancelled) {
+                $status = '<span class="badge bg-secondary text-white">Cancelled</span>';
+            } elseif ($alloc > 0) {
                 $status = '<span class="badge bg-warning text-dark">Partial</span>';
             } else {
                 $status = '<span class="badge bg-danger">Pending</span>';
@@ -3424,8 +4008,8 @@ class WarehouseReportController extends Controller
                 'sleeve' => '<span class="badge bg-label-info">' . $sleeveFormatted . '</span>',
                 'size' => '<span class="badge bg-label-secondary">' . htmlspecialchars($sizeVal) . '</span>',
                 'ordered_qty' => number_format($ordQty, 0),
-                'invoiced_qty' => number_format($invQty, 0),
-                'pending_qty' => '<span class="fw-bold text-danger">' . number_format($pendingQty, 0) . '</span>',
+                'invoiced_qty' => number_format($alloc, 0),
+                'pending_qty' => number_format($pendingQty, 0),
                 'status' => $status
             ];
         }
@@ -3450,6 +4034,15 @@ class WarehouseReportController extends Controller
 
         $recordsFiltered = count($artNosData);
 
+        $totOrdAll = 0;
+        $totInvAll = 0;
+        $totPendAll = 0;
+        foreach ($artNosData as $r) {
+            $totOrdAll += floatval(str_replace(',', '', $r['ordered_qty'] ?? 0));
+            $totInvAll += floatval(str_replace(',', '', $r['invoiced_qty'] ?? 0));
+            $totPendAll += floatval(str_replace(',', '', $r['pending_qty'] ?? 0));
+        }
+
         $pagedData = $length > 0 ? array_slice($artNosData, $start, $length) : $artNosData;
 
         return response()->json([
@@ -3458,7 +4051,12 @@ class WarehouseReportController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'status' => true,
             'data' => $pagedData,
-            'items' => $pagedData
+            'items' => $pagedData,
+            'totals' => [
+                'ordered_qty' => number_format($totOrdAll, 0),
+                'invoiced_qty' => number_format($totInvAll, 0),
+                'pending_qty' => number_format($totPendAll, 0),
+            ]
         ]);
     }
 
@@ -3601,6 +4199,8 @@ class WarehouseReportController extends Controller
         if ($search) {
             $orderQuery->where(function($q) use ($search) {
                 $q->where('sales_orders.so_no', 'like', "%{$search}%")
+                  ->orWhere('sales_orders.order_no', 'like', "%{$search}%")
+                  ->orWhere('sales_orders.orderaxe_ref_id', 'like', "%{$search}%")
                   ->orWhere('customers.name', 'like', "%{$search}%")
                   ->orWhere('sales_order_items.art_no', 'like', "%{$search}%");
             });
@@ -3636,18 +4236,20 @@ class WarehouseReportController extends Controller
             if (!isset($soMap[$soId])) {
                 $matchedSoIds[] = $soId;
                 $reasonText = !empty($item->reason_for_delay) ? trim($item->reason_for_delay) : '-';
+                $orderaxeOrderNo = !empty($item->order_no) ? trim($item->order_no) : (!empty($item->orderaxe_ref_id) ? trim($item->orderaxe_ref_id) : '-');
                 $soMap[$soId] = [
-                    'so_id'           => $soId,
-                    'so_no'           => $item->so_no,
-                    'orderaxe_ref_id' => $item->orderaxe_ref_id ?? $item->order_no,
-                    'is_orderaxe'     => !empty($item->orderaxe_id) || !empty($item->orderaxe_ref_id),
-                    'customer'        => $item->customer_name ?? '-',
-                    'so_date'         => date('d M Y', strtotime($item->so_date)),
-                    'reason'          => $reasonText,
-                    'ordered_qty'     => 0,
-                    'ordered_value'   => 0,
-                    'so_art_nos'      => [],   // normalized art_no => total qty
-                    'art_rates'       => [],   // normalized art_no => unit rate
+                    'so_id'             => $soId,
+                    'so_no'             => $item->so_no,
+                    'orderaxe_order_no' => $orderaxeOrderNo,
+                    'orderaxe_ref_id'   => $item->orderaxe_ref_id ?? $item->order_no,
+                    'is_orderaxe'       => !empty($item->orderaxe_id) || !empty($item->orderaxe_ref_id) || !empty($item->order_no),
+                    'customer'          => $item->customer_name ?? '-',
+                    'so_date'           => date('d M Y', strtotime($item->so_date)),
+                    'reason'            => $reasonText,
+                    'ordered_qty'       => 0,
+                    'ordered_value'     => 0,
+                    'so_art_nos'        => [],   
+                    'art_rates'         => [],  
                 ];
             }
 
@@ -3656,7 +4258,6 @@ class WarehouseReportController extends Controller
 
             if (!empty($normArtNo)) {
                 $soMap[$soId]['so_art_nos'][$normArtNo] = ($soMap[$soId]['so_art_nos'][$normArtNo] ?? 0) + $ordQ;
-                // store rate for lost value calc (last rate wins per art_no, acceptable)
                 if ($ordQ > 0) {
                     $soMap[$soId]['art_rates'][$normArtNo] = $ordAmt / $ordQ;
                 }
@@ -3686,13 +4287,19 @@ class WarehouseReportController extends Controller
 
         $allOrders = [];
         $orderSno = 1;
+        $totOrdAll     = 0;
+        $totInvAll     = 0;
+        $totOpenOrdAll = 0;
+        $totQtyAll     = 0;
+        $totLostQtyAll = 0;
+        $totLostValAll = 0;
+
         foreach ($soMap as $soId => $data) {
             $soInvQty  = 0;
             $lostValue = 0;
-            $soArtNos  = $data['so_art_nos'];   // already normalized
+            $soArtNos  = $data['so_art_nos'];   
             $artRates  = $data['art_rates'];
 
-            // Calc invoiced qty (only for art_nos in SO)
             foreach ($soArtNos as $normArt => $ordQ) {
                 $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
                 $effectiveInvQ = min($ordQ, $invQ);
@@ -3703,7 +4310,6 @@ class WarehouseReportController extends Controller
                 $lostValue += ($itemPending * $rate);
             }
 
-            // Open Order Qty: invoice items NOT in SO, or excess over SO qty
             $openOrderQty = 0;
             if (!empty($invoicedArtNosMap[$soId])) {
                 foreach ($invoicedArtNosMap[$soId] as $invNormArtNo => $invQ) {
@@ -3722,10 +4328,24 @@ class WarehouseReportController extends Controller
                 continue;
             }
 
+            $totalInvoicedQty = $soInvQty + $openOrderQty;
+
+            $totOrdAll     += $totalOrdQty;
+            $totInvAll     += $soInvQty;
+            $totOpenOrdAll += $openOrderQty;
+            $totQtyAll     += $totalInvoicedQty;
+            $totLostQtyAll += $pendingQty;
+            $totLostValAll += $lostValue;
+
             $soNoHtml = '<a href="' . url('sales_orders/view/' . $soId) . '" target="_blank" class="fw-bold text-primary">' . htmlspecialchars($data['so_no']) . '</a>';
             if ($data['is_orderaxe']) {
-                $soNoHtml .= ' <span class="badge bg-label-info ms-1" style="font-size:10px;">Orderaxe</span>';
+                $orderaxeText = ($data['orderaxe_order_no'] !== '-') ? htmlspecialchars($data['orderaxe_order_no']) : '';
+                $soNoHtml .= '<div class="d-flex align-items-center mt-1">' . ($orderaxeText ? '<span class="text-secondary fw-semibold small ms-1">' . $orderaxeText . '</span>' : '') . '</div>';
             }
+
+            $orderaxeNoHtml = $data['orderaxe_order_no'] !== '-'
+                ? '<span class="fw-semibold text-dark">' . htmlspecialchars($data['orderaxe_order_no']) . '</span>'
+                : '<span class="text-muted">-</span>';
 
             $reasonHtml = $data['reason'] !== '-' ? htmlspecialchars($data['reason']) : '<span class="text-muted">-</span>';
 
@@ -3734,6 +4354,7 @@ class WarehouseReportController extends Controller
                 'so_id' => $soId,
                 'so_no_plain' => $data['so_no'],
                 'so_no' => $soNoHtml,
+                'orderaxe_order_no' => $orderaxeNoHtml,
                 'customer' => htmlspecialchars($data['customer']),
                 'so_date' => $data['so_date'],
                 'ordered_qty' => number_format($totalOrdQty, 0),
@@ -3741,6 +4362,7 @@ class WarehouseReportController extends Controller
                 'open_order_qty' => $openOrderQty > 0
                     ? '<span class="text-info fw-bold">' . number_format($openOrderQty, 0) . '</span>'
                     : '<span class="text-muted">0</span>',
+                'total_qty' => '<span class="text-dark fw-bold">' . number_format($totalInvoicedQty, 0) . '</span>',
                 'lost_qty' => '<span class="text-danger fw-bold">' . number_format($pendingQty, 0) . '</span>',
                 'lost_value' => '<span class="text-danger fw-bold">₹' . number_format($lostValue, 2) . '</span>',
                 'reason' => $reasonHtml,
@@ -3757,6 +4379,14 @@ class WarehouseReportController extends Controller
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data' => $pagedOrders,
+            'totals' => [
+                'ordered_qty'    => $totOrdAll,
+                'invoiced_qty'   => $totInvAll,
+                'open_order_qty' => $totOpenOrdAll,
+                'total_qty'      => $totQtyAll,
+                'lost_qty'       => $totLostQtyAll,
+                'lost_value'     => $totLostValAll,
+            ],
         ]);
     }
 
@@ -3827,7 +4457,7 @@ class WarehouseReportController extends Controller
             ->get();
 
         $invSkuPool = [];
-        $invArtNoPool = [];
+        $invArtNoTotals = [];
 
         foreach ($invRows as $row) {
             $sku = trim($row->sku ?? '');
@@ -3837,36 +4467,54 @@ class WarehouseReportController extends Controller
             }
             $norm = strtoupper(preg_replace('/\s+/', '', trim($row->art_no ?? '')));
             if (!empty($norm)) {
-                $invArtNoPool[$norm] = ($invArtNoPool[$norm] ?? 0) + $q;
+                $invArtNoTotals[$norm] = ($invArtNoTotals[$norm] ?? 0) + $q;
             }
+        }
+
+        // Pass 1: Match by exact SKU / barcode first across all SO items
+        $soRemMap = [];
+        $consumedFromArt = [];
+
+        foreach ($soItems as $idx => $item) {
+            $sku = trim($item->barcode ?: ($item->sku ?: ''));
+            $norm = strtoupper(preg_replace('/\s+/', '', trim($item->art_no ?? '')));
+            $soQ = floatval($item->qty ?? 0);
+
+            $usedSku = 0;
+            if (!empty($sku) && isset($invSkuPool[$sku]) && $invSkuPool[$sku] > 0) {
+                $usedSku = min($soQ, $invSkuPool[$sku]);
+                $invSkuPool[$sku] -= $usedSku;
+                if (!empty($norm)) {
+                    $consumedFromArt[$norm] = ($consumedFromArt[$norm] ?? 0) + $usedSku;
+                }
+            }
+
+            $soRemMap[$idx] = [
+                'item' => $item,
+                'norm' => $norm,
+                'remQ' => $soQ - $usedSku,
+            ];
+        }
+
+        $unallocatedArtPool = [];
+        foreach ($invArtNoTotals as $norm => $totInv) {
+            $matched = $consumedFromArt[$norm] ?? 0;
+            $unallocatedArtPool[$norm] = max(0, $totInv - $matched);
         }
 
         $lostItems = [];
         $itemSno = 1;
         $totalLostQty = 0;
 
-        foreach ($soItems as $item) {
-            $sku = trim($item->barcode ?: ($item->sku ?: ''));
-            $norm = strtoupper(preg_replace('/\s+/', '', trim($item->art_no ?? '')));
-            $soQ = floatval($item->qty ?? 0);
+        foreach ($soRemMap as $idx => $entry) {
+            $remQ = $entry['remQ'];
+            $norm = $entry['norm'];
+            $item = $entry['item'];
 
-            // 1. Deduct by exact SKU (barcode) if available in invoice
-            $usedFromSku = 0;
-            if (!empty($sku) && isset($invSkuPool[$sku]) && $invSkuPool[$sku] > 0) {
-                $usedFromSku = min($soQ, $invSkuPool[$sku]);
-                $invSkuPool[$sku] -= $usedFromSku;
-                if (!empty($norm) && isset($invArtNoPool[$norm])) {
-                    $invArtNoPool[$norm] = max(0, $invArtNoPool[$norm] - $usedFromSku);
-                }
-            }
-
-            $remQ = $soQ - $usedFromSku;
-
-            // 2. If any remaining, deduct from normalized Art No pool
-            if ($remQ > 0 && !empty($norm) && isset($invArtNoPool[$norm]) && $invArtNoPool[$norm] > 0) {
-                $usedFromArt = min($remQ, $invArtNoPool[$norm]);
-                $invArtNoPool[$norm] -= $usedFromArt;
-                $remQ -= $usedFromArt;
+            if ($remQ > 0 && !empty($norm) && isset($unallocatedArtPool[$norm]) && $unallocatedArtPool[$norm] > 0) {
+                $usedArt = min($remQ, $unallocatedArtPool[$norm]);
+                $unallocatedArtPool[$norm] -= $usedArt;
+                $remQ -= $usedArt;
             }
 
             if ($remQ > 0) {
@@ -4259,7 +4907,6 @@ class WarehouseReportController extends Controller
             return $makeKey($item->art_no, $item->sleeve_type, $item->size);
         });
 
-        // Credit Notes / Sales Return in Date Range
         $returnsQuery = DB::table('credit_note_items')
             ->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')
             ->leftJoin('sales_invoice_items', 'credit_note_items.sales_invoice_item_id', '=', 'sales_invoice_items.id')

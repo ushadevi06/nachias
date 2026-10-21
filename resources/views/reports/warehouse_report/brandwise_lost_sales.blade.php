@@ -36,8 +36,9 @@
                 <th>Customer</th>
                 <th class="text-center">Order Date</th>
                 <th class="text-center">Ordered Qty</th>
-                <th class="text-center">Invoiced Qty</th>
+                <th class="text-center">Ordered Invoiced Qty</th>
                 <th class="text-center">Open Order Qty</th>
+                <th class="text-center">Total Qty</th>
                 <th class="text-center">Lost Qty</th>
                 <th class="text-center">Lost Revenue</th>
                 <th>Reason for Delay</th>
@@ -50,6 +51,7 @@
                 <th class="text-center fw-bold text-primary" id="lostOrdersFootOrdered">0</th>
                 <th class="text-center fw-bold text-primary" id="lostOrdersFootInvoiced">0</th>
                 <th class="text-center fw-bold text-info" id="lostOrdersFootOpenOrder">0</th>
+                <th class="text-center fw-bold text-dark" id="lostOrdersFootTotalQty">0</th>
                 <th class="text-center fw-bold text-warning" id="lostOrdersFootLostQty">0</th>
                 <th class="text-center fw-bold text-danger" id="lostOrdersFootLostVal">₹0.00</th>
                 <th></th>
@@ -207,13 +209,25 @@ function renderLostSalesBrandLevel() {
                 submitBtn.html(submitBtn.data('original-html')).prop('disabled', false);
             }
             var api = this.api();
-            var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
-            };
+            var json = (this.api().ajax && this.api().ajax.json) ? this.api().ajax.json() : null;
             var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
             var cur = function (num) { return '₹' + parseFloat(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-            $('#lostSalesFootOrders').html(fmt(api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#lostSalesFootRevenue').html(cur(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+
+            if (json && json.totals) {
+                $('#lostSalesFootOrders').html(fmt(json.totals.missed_orders));
+                $('#lostSalesFootRevenue').html(cur(json.totals.lost_revenue));
+            } else {
+                var intVal = function (i) {
+                    if (typeof i === 'number') return i;
+                    if (typeof i === 'string') {
+                        var val = parseFloat(i.replace(/<[^>]*>/g, '').replace(/[^\d.-]/g, ''));
+                        return isNaN(val) ? 0 : val;
+                    }
+                    return 0;
+                };
+                $('#lostSalesFootOrders').html(fmt(api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostSalesFootRevenue').html(cur(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            }
         },
         initComplete: function() {
             if (typeof window.showWarehouseReportLoading === 'function') {
@@ -275,6 +289,7 @@ function drillDownToLostSalesBrand(brandName) {
             { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center' },
             { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
             { data: 'open_order_qty', name: 'open_order_qty', className: 'text-center' },
+            { data: 'total_qty', name: 'total_qty', className: 'text-center' },
             {
                 data: 'lost_qty', name: 'lost_qty', className: 'text-center',
                 render: function(data, type, row) {
@@ -298,21 +313,33 @@ function drillDownToLostSalesBrand(brandName) {
                 submitBtn.html(submitBtn.data('original-html')).prop('disabled', false);
             }
             var api = this.api();
-            var intVal = function (i) {
-                if (typeof i === 'number') return i;
-                if (typeof i === 'string') {
-                    var val = parseFloat(i.replace(/<[^>]*>/g, '').replace(/[^\d.-]/g, ''));
-                    return isNaN(val) ? 0 : val;
-                }
-                return 0;
-            };
             var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
             var cur = function (num) { return '₹' + parseFloat(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-            $('#lostOrdersFootOrdered').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#lostOrdersFootInvoiced').html(fmt(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#lostOrdersFootOpenOrder').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#lostOrdersFootLostQty').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#lostOrdersFootLostVal').html(cur(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            var json = api.ajax.json();
+
+            if (json && json.totals) {
+                $('#lostOrdersFootOrdered').html(fmt(json.totals.ordered_qty));
+                $('#lostOrdersFootInvoiced').html(fmt(json.totals.invoiced_qty));
+                $('#lostOrdersFootOpenOrder').html(fmt(json.totals.open_order_qty));
+                $('#lostOrdersFootTotalQty').html(fmt(json.totals.total_qty));
+                $('#lostOrdersFootLostQty').html(fmt(json.totals.lost_qty));
+                $('#lostOrdersFootLostVal').html(cur(json.totals.lost_value));
+            } else {
+                var intVal = function (i) {
+                    if (typeof i === 'number') return i;
+                    if (typeof i === 'string') {
+                        var val = parseFloat(i.replace(/<[^>]*>/g, '').replace(/[^\d.-]/g, ''));
+                        return isNaN(val) ? 0 : val;
+                    }
+                    return 0;
+                };
+                $('#lostOrdersFootOrdered').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostOrdersFootInvoiced').html(fmt(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostOrdersFootOpenOrder').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostOrdersFootTotalQty').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostOrdersFootLostQty').html(fmt(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostOrdersFootLostVal').html(cur(api.column(8, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            }
         },
         initComplete: function() {
             if (typeof window.showWarehouseReportLoading === 'function') {

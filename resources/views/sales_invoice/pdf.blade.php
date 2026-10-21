@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Sales Invoice {{ (isset($pdfType) && $pdfType === 'pdf2') ? '(Size Range) ' : '' }}- {{ $invoice->inv_no }}</title>
+    <title>Sales Invoice - {{ $invoice->inv_no }}</title>
     <style>
         @page {
             margin: 20px 10px 15px 10px;
@@ -391,13 +391,13 @@ if (!empty($invoice->signed_qr_code)) {
     }
 }
 $PAGE_HEIGHT_PX   = 1075; 
-$HEADER_HEIGHT_PX = 240;  
-$ROW_HEIGHT_PX    = 20;   
+$HEADER_HEIGHT_PX = 300;  
+$ROW_HEIGHT_PX    = 24;   
 $CONTINUE_NOTE_PX = 30;   
 
 $footerHeight = 0;
-// Base height for the summary table (bank details, totals)
-$footerHeight += 85; 
+// Base height for the summary table (bank details, notes, signatures)
+$footerHeight += 180; 
 
 $summaryLines = 1;
 if ($showDiscount && ($invoice->discount ?? 0) > 0) {
@@ -425,364 +425,15 @@ if ($showTax) {
     $footerHeight += 40;
 }
 
-$footerHeight += 95; 
-$footerHeight += 10; 
+$footerHeight += 140; // Terms and Remarks
+$footerHeight += 20; // Safe Buffer
 
 $contentAreaHeight = $PAGE_HEIGHT_PX - $HEADER_HEIGHT_PX;
-$tableHeaderHeight = 32; 
-$rowsPerFullPage = min(28, max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX - $tableHeaderHeight) / $ROW_HEIGHT_PX)));
-$rowsPerLastPage = 13;
+$tableHeaderHeight = 32; // Buffer to account for table thead height and borders
+$rowsPerFullPage = max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX - $tableHeaderHeight) / $ROW_HEIGHT_PX));
+$rowsPerLastPage = max(1, (int) floor(($contentAreaHeight - $footerHeight - $tableHeaderHeight) / $ROW_HEIGHT_PX));
 
-$pdfType = $pdfType ?? request()->query('type', 'pdf1');
-
-$formatSizeRange = function(array $sizes) {
-    $sizes = array_values(array_filter(array_unique(array_map('trim', $sizes)), function($v) {
-        return $v !== '' && $v !== '-' && $v !== null;
-    }));
-    if (empty($sizes)) {
-        return '-';
-    }
-    // Clean any accidental 'S' or 's' prefix if followed by numbers (e.g. S38 -> 38)
-    $cleanSizes = [];
-    foreach ($sizes as $s) {
-        $trimmed = preg_replace('/^[Ss](\d+)/', '$1', $s);
-        $cleanSizes[] = $trimmed;
-    }
-    $cleanSizes = array_values(array_unique($cleanSizes));
-
-    if (count($cleanSizes) === 1) {
-        return (string)$cleanSizes[0];
-    }
-
-    $allNumeric = true;
-    foreach ($cleanSizes as $cs) {
-        if (!is_numeric($cs)) {
-            $allNumeric = false;
-            break;
-        }
-    }
-
-    if ($allNumeric) {
-        $numSizes = array_map('floatval', $cleanSizes);
-        sort($numSizes, SORT_NUMERIC);
-        $min = $numSizes[0];
-        $max = $numSizes[count($numSizes) - 1];
-        $minStr = (floor($min) == $min) ? (int)$min : $min;
-        $maxStr = (floor($max) == $max) ? (int)$max : $max;
-        if ($minStr == $maxStr) {
-            return (string)$minStr;
-        }
-        return $minStr . '-' . $maxStr;
-    }
-
-    $orderMap = [
-        'XXS' => 1, 'XS' => 2, 'S' => 3, 'M' => 4, 'L' => 5,
-        'XL' => 6, 'XXL' => 7, '2XL' => 7, '3XL' => 8, '4XL' => 9, '5XL' => 10
-    ];
-    $canMap = true;
-    foreach ($sizes as $s) {
-        if (!isset($orderMap[strtoupper($s)])) {
-            $canMap = false;
-            break;
-        }
-    }
-    if ($canMap) {
-        usort($sizes, function($a, $b) use ($orderMap) {
-            return $orderMap[strtoupper($a)] <=> $orderMap[strtoupper($b)];
-        });
-        $min = $sizes[0];
-        $max = $sizes[count($sizes) - 1];
-        if (strtoupper($min) === strtoupper($max)) {
-            return (string)$min;
-        }
-        return $min . '-' . $max;
-    }
-
-    natsort($cleanSizes);
-    $cleanSizes = array_values($cleanSizes);
-    $min = $cleanSizes[0];
-    $max = $cleanSizes[count($cleanSizes) - 1];
-    if ($min === $max) {
-        return (string)$min;
-    }
-    return $min . '-' . $max;
-};
-
-if ($pdfType === 'pdf2') {
-    $resolvedItems = [];
-    foreach ($invoice->items as $item) {
-        $brandName = '';
-        $styleName = '';
-        $sleeve = '';
-        $itemName = '';
-
-        $seItem = $item->stockEntryItem;
-        if (!$seItem && $item->stock_entry_item_id) {
-            $seItem = \App\Models\StockEntryItem::with(['rawMaterial', 'item', 'style', 'brand', 'uom'])->find($item->stock_entry_item_id);
-        }
-        if (!$seItem && !empty($item->stock_allocations)) {
-            $allocs = is_array($item->stock_allocations) ? $item->stock_allocations : json_decode($item->stock_allocations, true);
-            if (!empty($allocs) && is_array($allocs)) {
-                $firstAlloc = reset($allocs);
-                $allocSeId = $firstAlloc['stock_entry_item_id'] ?? null;
-                if ($allocSeId) {
-                    $seItem = \App\Models\StockEntryItem::with(['rawMaterial', 'item', 'style', 'brand', 'uom'])->find($allocSeId);
-                }
-            }
-        }
-
-        $displayArtNo = $seItem ? ($seItem->art_no ?: $item->art_no) : $item->art_no;
-        $uomDisplay = $item->uom ? ($item->uom->uom_code ?: $item->uom->uom_name) : ($seItem && $seItem->uom ? ($seItem->uom->uom_code ?: $seItem->uom->uom_name) : 'PCS');
-
-        if ($isRawMaterial) {
-            if ($seItem && $seItem->rawMaterial) {
-                $itemName = $seItem->rawMaterial->name;
-            } elseif ($seItem && $seItem->raw_material_id) {
-                $rmObj = \DB::table('raw_materials')->where('id', $seItem->raw_material_id)->first();
-                $itemName = $rmObj ? $rmObj->name : ($item->art_no ?: 'Raw Material');
-            } elseif ($seItem && $seItem->item) {
-                $itemName = $seItem->item->name ?: $seItem->item->code;
-            } elseif ($item->item) {
-                $itemName = $item->item->name ?: $item->item->code;
-            } elseif (!empty($item->item_name)) {
-                $itemName = $item->item_name;
-            } else {
-                $itemName = $item->art_no ?: 'Raw Material';
-            }
-
-            if ($seItem && $seItem->style) {
-                $styleName = $seItem->style->style_name;
-            } elseif ($item->item && $item->item->style) {
-                $styleName = $item->item->style->style_name;
-            } elseif (!empty($item->art_no)) {
-                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)->whereNotNull('style_id')->with('style')->first();
-                $styleName = ($matchedSe && $matchedSe->style) ? $matchedSe->style->style_name : '-';
-            } else {
-                $styleName = '-';
-            }
-        } else {
-            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
-            
-            $codeToParse = '';
-            if ($soItem) {
-                $codeToParse = $soItem->getAttributes()['item_name'] ?? '';
-                if (empty($codeToParse) || $codeToParse === '-') {
-                    $codeToParse = $soItem->finished_item_code;
-                }
-            }
-            
-            if (empty($codeToParse) || $codeToParse === '-') {
-                if ($item->stockEntryItem) {
-                    $codeToParse = $item->stockEntryItem->finished_item_code;
-                } elseif ($item->item) {
-                    $codeToParse = $item->item->code;
-                }
-            }
-            
-            if (empty($codeToParse) || $codeToParse === '-') {
-                $codeToParse = $item->sku ?? '';
-            }
-
-            $resolved = false;
-            $seItem = $item->stockEntryItem;
-            if (!$seItem && $soItem && $soItem->stock_entry_item_id) {
-                $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
-            }
-
-            if ($seItem) {
-                if ($seItem->brand) {
-                    $brandName = $seItem->brand->brand_name;
-                }
-                if ($seItem->style) {
-                    $styleName = $seItem->style->style_name;
-                }
-                
-                if (empty($brandName) && !empty($seItem->finished_item_code)) {
-                    $seParts = explode('-', $seItem->finished_item_code);
-                    if (count($seParts) > 0) {
-                        $dbBrand = \App\Models\Brand::where('code', trim($seParts[0]))->first();
-                        if ($dbBrand) {
-                            $brandName = $dbBrand->brand_name;
-                        }
-                    }
-                }
-                
-                if (!empty($brandName) || !empty($styleName)) {
-                    $resolved = true;
-                }
-                if (empty($sleeve) && !empty($seItem->sleeve_type)) {
-                    $sleeve = $seItem->sleeve_type;
-                }
-            }
-            
-            if (!empty($item->sleeve_type)) {
-                $sleeveValUpper = strtoupper(trim($item->sleeve_type));
-                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                    $sleeve = 'F/S';
-                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                    $sleeve = 'H/S';
-                } else {
-                    $sleeve = $item->sleeve_type;
-                }
-            } elseif (!empty($sleeve)) {
-                $sleeveValUpper = strtoupper(trim($sleeve));
-                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                    $sleeve = 'F/S';
-                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                    $sleeve = 'H/S';
-                }
-            }
-
-            if ((empty($brandName) || empty($styleName)) && !empty($codeToParse) && $codeToParse !== '-') {
-                $parts = explode('-', $codeToParse);
-                
-                if (count($parts) >= 2) {
-                    $brandCode = trim($parts[0]);
-                    $styleCode = trim($parts[1]);
-                    
-                    $dbBrand = \App\Models\Brand::where('code', $brandCode)->first();
-                    $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
-                    
-                    if ($dbBrand && empty($brandName)) {
-                        $brandName = $dbBrand->brand_name;
-                    }
-                    if ($dbStyle && empty($styleName)) {
-                        $styleName = $dbStyle->style_name;
-                    }
-                    if (!empty($brandName) || !empty($styleName)) {
-                        $resolved = true;
-                    }
-                    
-                    if (empty($sleeve) && isset($parts[2])) {
-                        $sleeveVal = trim($parts[2]);
-                        $sleeveValUpper = strtoupper($sleeveVal);
-                        if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                            $sleeve = 'F/S';
-                        } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                            $sleeve = 'H/S';
-                        } else {
-                            $sleeve = $sleeveVal;
-                        }
-                    }
-                }
-                
-                if ((empty($brandName) || empty($styleName)) && count($parts) >= 1) {
-                    $mainCode = trim($parts[0]);
-                    $dbBrand = null;
-                    $brandCode = '';
-                    $allBrands = \App\Models\Brand::all();
-                    foreach ($allBrands as $brand) {
-                        $bCode = trim($brand->code);
-                        if (!empty($bCode) && stripos($mainCode, $bCode) === 0) {
-                            $dbBrand = $brand;
-                            $brandCode = $bCode;
-                            break;
-                        }
-                    }
-                    
-                    if ($dbBrand) {
-                        if (empty($brandName)) {
-                            $brandName = $dbBrand->brand_name;
-                        }
-                        $styleCode = substr($mainCode, strlen($brandCode));
-                        $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
-                        if ($dbStyle && empty($styleName)) {
-                            $styleName = $dbStyle->style_name;
-                        }
-                        $resolved = true;
-                        
-                        if (empty($sleeve) && isset($parts[1])) {
-                            $sleeveVal = trim($parts[1]);
-                            $sleeveValUpper = strtoupper($sleeveVal);
-                            if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                $sleeve = 'F/S';
-                            } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                $sleeve = 'H/S';
-                            } else {
-                                $sleeve = $sleeveVal;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if ($resolved) {
-                $itemName = trim($brandName . ' ' . $styleName . ' ' . $sleeve);
-            } else {
-                $itemName = $codeToParse;
-            }
-        }
-
-        $sizeVal = $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '');
-
-        $resolvedItems[] = [
-            'displayArtNo' => $displayArtNo,
-            'itemName' => $itemName,
-            'styleName' => $styleName,
-            'uomDisplay' => $uomDisplay,
-            'hsn_sac' => $item->hsn_sac ?? '',
-            'size' => $sizeVal,
-            'quantity' => (float)$item->quantity,
-            'mrp' => (float)$item->mrp,
-            'rate' => (float)$item->rate,
-            'amount' => (float)$item->amount,
-        ];
-    }
-
-    $groups = [];
-    foreach ($resolvedItems as $rItem) {
-        $key = implode('|||', [
-            trim($rItem['displayArtNo'] ?? ''),
-            trim($rItem['itemName'] ?? ''),
-            trim($rItem['uomDisplay'] ?? ''),
-            number_format($rItem['rate'], 2, '.', ''),
-            number_format($rItem['mrp'], 2, '.', ''),
-            trim($rItem['hsn_sac'] ?? ''),
-            trim($rItem['styleName'] ?? '')
-        ]);
-
-        if (!isset($groups[$key])) {
-            $groups[$key] = [
-                'displayArtNo' => $rItem['displayArtNo'],
-                'itemName' => $rItem['itemName'],
-                'styleName' => $rItem['styleName'],
-                'uomDisplay' => $rItem['uomDisplay'],
-                'hsn_sac' => $rItem['hsn_sac'],
-                'rate' => $rItem['rate'],
-                'mrp' => $rItem['mrp'],
-                'quantity' => 0,
-                'amount' => 0,
-                'sizes' => []
-            ];
-        }
-
-        $groups[$key]['quantity'] += $rItem['quantity'];
-        $groups[$key]['amount'] += $rItem['amount'];
-        if (!empty($rItem['size'])) {
-            $groups[$key]['sizes'][] = $rItem['size'];
-        }
-    }
-
-    $allItems = collect();
-    foreach ($groups as $grp) {
-        $obj = new \stdClass();
-        $obj->is_grouped = true;
-        $obj->displayArtNo = $grp['displayArtNo'];
-        $obj->itemName = $grp['itemName'];
-        $obj->styleName = $grp['styleName'];
-        $obj->uomDisplay = $grp['uomDisplay'];
-        $obj->hsn_sac = $grp['hsn_sac'];
-        $obj->displaySize = $formatSizeRange($grp['sizes']);
-        $obj->quantity = $grp['quantity'];
-        $obj->mrp = $grp['mrp'];
-        $obj->rate = $grp['rate'];
-        $obj->amount = $grp['amount'];
-
-        $allItems->push($obj);
-    }
-} else {
-    $allItems = collect($invoice->items)->values();
-}
+$allItems = collect($invoice->items)->values();
 $totalItemsCount = $allItems->count();
 $MIN_LAST_PAGE_ROWS = 0;
 $pages = [];
@@ -791,22 +442,18 @@ $footerPlacedOnValidChunk = false;
 if ($totalItemsCount === 0) {
     $pages[] = collect();
     $footerPlacedOnValidChunk = true;
-} elseif ($totalItemsCount <= $rowsPerLastPage) {
-    $pages[] = $allItems;
-    $footerPlacedOnValidChunk = true;
 } else {
     $remaining = $allItems;
     while ($remaining->count() > 0) {
-        $remCount = $remaining->count();
-        if ($remCount <= $rowsPerLastPage) {
+        if ($remaining->count() <= $rowsPerLastPage) {
             $pages[] = $remaining;
+            $remaining = collect();
             $footerPlacedOnValidChunk = true;
-            break;
+        } else {
+            $take = min($rowsPerFullPage, $remaining->count());
+            $pages[] = $remaining->take($take);
+            $remaining = $remaining->slice($take)->values();
         }
-
-        $take = min($rowsPerFullPage, $remCount);
-        $pages[] = $remaining->take($take);
-        $remaining = $remaining->slice($take)->values();
     }
 }
 
@@ -847,11 +494,11 @@ $totalChunks = count($pages);
                                     @else
                                         <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 220px;">
                                     @endif
-                                </td>
-                                <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;" >
-                                    <div style="font-size: 12px; line-height: 1.3;">
-                                        {{ $setting->address }} 
-                                        <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 12px;">
+                                 </td>
+                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;" >
+                                     <div style="font-size: 12px; line-height: 1.3;">
+                                         {{ $setting->address }} 
+                                         <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 12px;">
                                             <tr>
                                                 <td style="border: none; padding: 0; width: 45px;">Mobile</td>
                                                 <td style="border: none; padding: 0; width: 10px;">:</td>
@@ -878,10 +525,10 @@ $totalChunks = count($pages);
             </table>
         </div>
         <div class="header-title">Tax Invoice</div>
-        <table style="width: 100%; border-collapse: collapse;">
+         <table style="width: 100%; border-collapse: collapse;">
             <tr>
                 <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:11.5px;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
                         <tr>
                             <td width="20%">Bill To</td>
                             <td width="5%">:</td>
@@ -911,7 +558,7 @@ $totalChunks = count($pages);
                     </table>
                 </td>
                 <td width="50%" style="padding: 0; vertical-align: top; border-bottom: 1px solid #000;">
-                    <table class="no-border" style="table-layout: fixed; margin: 0; width: 100%; font-size: 11.5px;">
+                    <table class="no-border" style="table-layout: fixed; margin: 0; width: 100%; font-size: 12px;">
                         <tr>
                             <td width="36%" style="white-space: nowrap;">Invoice No.</td>
                             <td width="4%" style="text-align: center;">:</td>
@@ -937,7 +584,7 @@ $totalChunks = count($pages);
             </tr>
             <tr>
                 <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:11.5px;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
                         <tr>
                             <td width="20%">Ship To</td>
                             <td width="5%">:</td>
@@ -967,16 +614,11 @@ $totalChunks = count($pages);
                     </table>
                 </td>
                 <td width="50%" style="padding: 0; vertical-align: top;">
-                    <table class="no-border" style="table-layout: fixed; margin: 0; width: 100%; font-size: 11.5px;">
+                    <table class="no-border" style="table-layout: fixed; margin: 0; width: 100%; font-size: 12px;">
                         <tr>
                             <td width="36%" style="white-space: nowrap;">Transport</td>
                             <td width="4%" style="text-align: center;">:</td>
                             <td width="60%">{{ !empty($invoice->transporter_name) ? $invoice->transporter_name : ($invoice->salesOrder->transporter_name ?? ($invoice->customer->transport_name ?? '')) }}</td>
-                        </tr>
-                        <tr>
-                            <td style="white-space: nowrap;">Alternate Transport</td>
-                            <td style="text-align: center;">:</td>
-                            <td>{{ $invoice->customer->alt_transport_name ?? ($invoice->salesOrder->customer->alt_transport_name ?? '') }}</td>
                         </tr>
                         <tr>
                             <td style="white-space: nowrap;">Booking Office</td>
@@ -1031,39 +673,6 @@ $totalChunks = count($pages);
                 @foreach($chunk as $item)
                     @php
                         $rowCounter++;
-                    @endphp
-                    @if($item->is_grouped ?? false)
-                        <tr>
-                            <td class="text-center">{{ $rowCounter }}</td>
-                            <td>
-                                <div class="bold">{{ $item->itemName }}</div>
-                            </td>
-                            @if($isFabricStore)
-                                <td class="text-center">{{ $item->styleName }}</td>
-                            @endif
-                            @if(!$isScrapStore)
-                                <td class="text-center">{{ $item->displayArtNo ?? '-' }}</td>
-                            @endif
-                            <td class="text-center">{{ $item->uomDisplay }}</td>
-                            @if($isFabricStore || $isAccessoriesStore)
-                                <td class="text-center">{{ $item->hsn_sac ?? '-' }}</td>
-                            @endif
-                            @if(!$isRawMaterial)
-                                <td class="text-center" style="white-space: nowrap;">{{ $item->displaySize ?? '-' }}</td>
-                            @endif
-                            <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
-                            @if(!$isRawMaterial && $showMrp)
-                            <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
-                            @endif
-                            @if($showPrice)
-                            <td class="text-right">{{ number_format($item->rate, 2) }}</td>
-                            @endif
-                            @if($showAmount)
-                            <td class="text-right bold">{{ number_format($item->amount, 2) }}</td>
-                            @endif
-                        </tr>
-                    @else
-                    @php
                         $brandName = '';
                         $styleName = '';
                         $sleeve = '';
@@ -1108,13 +717,18 @@ $totalChunks = count($pages);
                             } elseif ($item->item && $item->item->style) {
                                 $styleName = $item->item->style->style_name;
                             } elseif (!empty($item->art_no)) {
-                                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)->whereNotNull('style_id')->with('style')->first();
+                                $matchedSe = \App\Models\StockEntryItem::where('art_no', $item->art_no)
+                                    ->whereNotNull('style_id')
+                                    ->with('style')
+                                    ->first();
                                 $styleName = ($matchedSe && $matchedSe->style) ? $matchedSe->style->style_name : '-';
                             } else {
                                 $styleName = '-';
                             }
                         } else {
-                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
+                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                                ->where('sku', $item->sku)
+                                ->first();
                             
                             $codeToParse = '';
                             if ($soItem) {
@@ -1295,11 +909,10 @@ $totalChunks = count($pages);
                         <td class="text-right bold">{{ number_format($item->amount, 2) }}</td>
                         @endif
                     </tr>
-                    @endif
                 @endforeach
                 
-                @if($isLastChunk && $chunk->count() < 11)
-                    @for($j = 0; $j < (11 - $chunk->count()); $j++)
+                @if($chunk->count() < 10)
+                    @for($j = 0; $j < (10 - $chunk->count()); $j++)
                         <tr>
                             <td class="text-center">&nbsp;</td>
                             <td>&nbsp;</td>
@@ -1586,9 +1199,17 @@ $totalChunks = count($pages);
         </div>
         @endif
         @if($isLastChunk)
-        <table class="no-border" style="margin-top: 4px; width: 100%;">
+        <table class="no-border" style="margin-top: 15px; width: 100%;">
             <tr>
                 <td width="60%" style="vertical-align: top; padding-left: 4px;">
+                    @php
+                        $altTransport = trim($invoice->customer->alt_transport_name ?? ($invoice->salesOrder->customer->alt_transport_name ?? ''));
+                    @endphp
+                    @if(!empty($altTransport) && $altTransport !== '-')
+                    <div style="margin-bottom: 4px; font-size: 10px;">
+                        <span>Alternate Transport :</span> {{ $altTransport }}
+                    </div>
+                    @endif
                     <div style="margin-bottom: 8px; font-size: 10px;">
                         <span>Remarks :</span> {{ $invoice->remarks ?? '' }}
                     </div>

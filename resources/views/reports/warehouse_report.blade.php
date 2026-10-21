@@ -37,7 +37,7 @@
                         <option value="inward">📥 Stock Inward</option>
                         <option value="discount">🏷️ Regular / Discount</option>
                         <option value="brandwise-lost-sales">❌ Brandwise Lost Sales</option>
-                        <option value="order-processing-time">⏱️ Order Processing Time</option>
+                        <option value="order-processing-time">⏱️ Order Processing</option>
                         <option value="stock-inward-sales">📊 Stock Inward & Sales</option>
                         <option value="brandwise-completion">📈 Brandwise Completion</option>
                     </select>
@@ -83,6 +83,16 @@
                         <option value="31-60" {{ request('aging_filter') == '31-60' ? 'selected' : '' }}>31 - 60 Days</option>
                         <option value="61-90" {{ request('aging_filter') == '61-90' ? 'selected' : '' }}>61 - 90 Days</option>
                         <option value="91+" {{ request('aging_filter') == '91+' ? 'selected' : '' }}>91+ Days (Old / Aged)</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2" id="order_status_filter_col" style="{{ request('report_type') === 'order-processing-time' ? '' : 'display: none;' }}">
+                    <label class="form-label small fw-bold text-muted">Status</label>
+                    <select class="form-select select2" name="order_status" id="order_status_filter" data-placeholder="Select Status">
+                        <option value="">All Status</option>
+                        <option value="pending" {{ request('order_status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="partially_delivery" {{ (request('order_status') == 'partially_delivery' || request('order_status') == 'partial') ? 'selected' : '' }}>Partially Delivery</option>
+                        <option value="completed" {{ request('order_status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                        <option value="cancelled" {{ request('order_status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-1 col-xl-1 d-flex gap-1">
@@ -187,7 +197,7 @@
                     @include('reports.warehouse_report.brandwise_lost_sales')
                 </div>
 
-                <!-- 13. Order Processing Time Report -->
+                <!-- 13. Order Processing Report -->
                 <div class="tab-pane fade" id="order-processing-time" role="tabpanel">
                     @include('reports.warehouse_report.order_processing_time')
                 </div>
@@ -461,13 +471,23 @@ $(document).ready(function() {
         } else {
             $('#aging_filter_col').hide();
         }
+
+        if (targetTabId === 'order-processing-time') {
+            $('#order_status_filter_col').show();
+        } else {
+            $('#order_status_filter_col').hide();
+        }
     }
 
     $('#report_type_select').on('change', function() {
         let targetTabId = $(this).val();
         let selectedText = $(this).find('option:selected').text();
         
-        $('#active_report_title').html(selectedText + ' Report');
+        let reportTitle = selectedText;
+        if (!reportTitle.toLowerCase().endsWith('report')) {
+            reportTitle += ' Report';
+        }
+        $('#active_report_title').html(reportTitle);
 
         syncReportFilterVisibility();
 
@@ -643,6 +663,7 @@ $(document).ready(function() {
         $('select[name="store_id"]').val('').trigger('change');
         $('select[name="warehouse_id"]').val('all').trigger('change');
         $('#aging_filter').val('').trigger('change.select2');
+        $('#order_status_filter').val('').trigger('change.select2');
 
         let activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val() || 'brand-sales';
 

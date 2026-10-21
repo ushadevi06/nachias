@@ -21,6 +21,8 @@
                 <th class="text-nowrap">BRAND</th>
                 <th class="text-nowrap">ORDER QTY</th>
                 <th class="text-nowrap">INVOICED QTY</th>
+                <th class="text-nowrap">OPEN ORDER QTY</th>
+                <th class="text-nowrap">DISPATCHED QTY</th>
                 <th class="text-nowrap">PENDING QTY</th>
                 <th class="text-nowrap">ORDER COMPLETED</th>
                 <th class="text-nowrap">STATUS</th>
@@ -34,8 +36,10 @@
         <tfoot class="table-light border-top" id="orderProcessingTfoot">
             <tr class="bg-light fw-bold">
                 <th colspan="10" class="text-end fw-bold">TOTAL</th>
-                <th class="text-center fw-bold text-primary" id="optFootOrdered">0</th>
+                <th class="text-center fw-bold text-dark" id="optFootOrdered">0</th>
                 <th class="text-center fw-bold text-success" id="optFootInvoiced">0</th>
+                <th class="text-center fw-bold text-info" id="optFootOpenOrder">0</th>
+                <th class="text-center fw-bold text-primary" id="optFootDispatched">0</th>
                 <th class="text-center fw-bold text-danger" id="optFootPending">0</th>
                 <th colspan="5"></th>
             </tr>
@@ -74,6 +78,8 @@ function renderOrderProcessingTimeMainLevel() {
                 <th class="text-nowrap">BRAND</th>
                 <th class="text-nowrap">ORDER QTY</th>
                 <th class="text-nowrap">INVOICED QTY</th>
+                <th class="text-nowrap">OPEN ORDER QTY</th>
+                <th class="text-nowrap">DISPATCHED QTY</th>
                 <th class="text-nowrap">PENDING QTY</th>
                 <th class="text-nowrap">ORDER COMPLETED</th>
                 <th class="text-nowrap">STATUS</th>
@@ -86,8 +92,10 @@ function renderOrderProcessingTimeMainLevel() {
         <tfoot class="table-light border-top" id="orderProcessingTfoot">
             <tr class="bg-light fw-bold">
                 <th colspan="10" class="text-end fw-bold">TOTAL</th>
-                <th class="text-center fw-bold text-primary" id="optFootOrdered">0</th>
+                <th class="text-center fw-bold text-dark" id="optFootOrdered">0</th>
                 <th class="text-center fw-bold text-success" id="optFootInvoiced">0</th>
+                <th class="text-center fw-bold text-info" id="optFootOpenOrder">0</th>
+                <th class="text-center fw-bold text-primary" id="optFootDispatched">0</th>
                 <th class="text-center fw-bold text-danger" id="optFootPending">0</th>
                 <th colspan="5"></th>
             </tr>
@@ -106,6 +114,7 @@ function renderOrderProcessingTimeMainLevel() {
                 d.brand_id = $('select[name="brand_id"]').val();
                 d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
+                d.order_status = $('select[name="order_status"]').val();
             }
         },
         columns: [
@@ -119,9 +128,11 @@ function renderOrderProcessingTimeMainLevel() {
             { data: 'customer', name: 'customer' },
             { data: 'place', name: 'place' },
             { data: 'brand', name: 'brand' },
-            { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center' },
-            { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
-            { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+            { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center fw-bold text-dark' },
+            { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center fw-bold text-success' },
+            { data: 'open_order_qty', name: 'open_order_qty', className: 'text-center fw-bold text-info' },
+            { data: 'dispatched_qty', name: 'dispatched_qty', className: 'text-center fw-bold text-primary' },
+            { data: 'pending_qty', name: 'pending_qty', className: 'text-center fw-bold text-danger' },
             { data: 'completion', name: 'completion', className: 'text-center' },
             { data: 'status', name: 'status', className: 'text-center' },
             { data: 'awaiting_art_nos', name: 'awaiting_art_nos', className: 'text-center', orderable: false },
@@ -134,12 +145,14 @@ function renderOrderProcessingTimeMainLevel() {
         drawCallback: function (settings) {
             var api = this.api();
             var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                return typeof i === 'string' ? i.replace(/<[^>]*>/g, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
             };
             var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
             $('#optFootOrdered').html(fmt(api.column(10, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
             $('#optFootInvoiced').html(fmt(api.column(11, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#optFootPending').html(fmt(api.column(12, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootOpenOrder').html(fmt(api.column(12, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootDispatched').html(fmt(api.column(13, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            $('#optFootPending').html(fmt(api.column(14, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
         }
     });
 }
@@ -208,14 +221,21 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
             infoEmpty: "Showing 0 to 0 entries"
         },
         drawCallback: function (settings) {
-            var api = this.api();
-            var intVal = function (i) {
-                return typeof i === 'string' ? i.replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
-            };
-            var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
-            $('#optSubFootOrdered').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#optSubFootInvoiced').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#optSubFootPending').html(fmt(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            var json = settings.json;
+            if (json && json.totals) {
+                $('#optSubFootOrdered').html(json.totals.ordered_qty || '0');
+                $('#optSubFootInvoiced').html(json.totals.invoiced_qty || '0');
+                $('#optSubFootPending').html(json.totals.pending_qty || '0');
+            } else {
+                var api = this.api();
+                var intVal = function (i) {
+                    return typeof i === 'string' ? i.replace(/<[^>]*>/g, '').replace(/[\₹,]/g, '').trim() * 1 : typeof i === 'number' ? i : 0;
+                };
+                var fmt = function (num) { return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); };
+                $('#optSubFootOrdered').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#optSubFootInvoiced').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#optSubFootPending').html(fmt(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            }
         }
     });
 }
