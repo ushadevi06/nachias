@@ -254,8 +254,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" class="form-control @error('sales_target') is-invalid @enderror" id="sales_target" placeholder="Enter Sales Target" name="sales_target" value="{{ old('sales_target', $salesAgent->sales_target ?? '') }}">
-                                    <label for="sales_target">Sales Target</label>
+                                    <input type="number" step="1" min="0" class="form-control @error('sales_target') is-invalid @enderror" id="sales_target" placeholder="Enter Sales Target (Per Month)" name="sales_target" value="{{ old('sales_target', isset($salesAgent) && $salesAgent->sales_target !== null ? (int)$salesAgent->sales_target : '') }}">
+                                    <label for="sales_target">Sales Target (Per Month)</label>
                                 </div>
                                 @error('sales_target')
                                 <div class="text-danger mt-1">{{ $message }}</div>

@@ -51,6 +51,7 @@ window.initOrderVsDispatchTable = function() {
                 d.brand_id = $('select[name="brand_id"]').val();
                 d.customer_id = $('select[name="customer_id"]').val();
                 d.store_id = $('select[name="store_id"]').val();
+                d.order_status = $('#order_status_filter').val();
             }
         },
         columns: [

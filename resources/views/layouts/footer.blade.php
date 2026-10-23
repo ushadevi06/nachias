@@ -57,16 +57,37 @@
                 return; // Skip already initialized tables
             }
             var $tbl = $(this);
-            var isDespatch = $tbl.closest('#despatch-report').length > 0;
+            var isWideReport = $tbl.closest('#despatch-report, #dispatch-report, #pending-report, #order-report').length > 0 
+                || $tbl.is('#dispatchProductWiseTable, #dispatchPartyWiseTable, #pendingProductWiseTable, #pendingPartyWiseTable, #orderProductWiseTable, #orderPartyWiseTable, #despatchReportTable')
+                || ($tbl.find('thead th').length > 10);
 
-            var pdfButton = isDespatch ? {
+            var pdfButton = isWideReport ? {
                 extend: 'pdf',
                 orientation: 'landscape',
-                pageSize: 'A3',
+                pageSize: ($tbl.find('thead th').length > 14 ? 'A3' : 'A4'),
                 customize: function (doc) {
-                    doc.defaultStyle.fontSize = 7;
-                    doc.styles.tableHeader.fontSize = 8;
-                    doc.pageMargins = [15, 20, 15, 20];
+                    doc.pageOrientation = 'landscape';
+                    var colCount = (doc.content && doc.content[1] && doc.content[1].table) ? doc.content[1].table.body[0].length : 12;
+                    if (colCount > 14) {
+                        doc.pageSize = 'A3';
+                        doc.defaultStyle.fontSize = 6;
+                        doc.styles.tableHeader.fontSize = 6.5;
+                        doc.styles.tableHeader.alignment = 'center';
+                        doc.pageMargins = [10, 15, 10, 15];
+                    } else if (colCount > 8) {
+                        doc.pageSize = 'A4';
+                        doc.defaultStyle.fontSize = 7;
+                        doc.styles.tableHeader.fontSize = 7.5;
+                        doc.styles.tableHeader.alignment = 'center';
+                        doc.pageMargins = [12, 15, 12, 15];
+                    } else {
+                        doc.defaultStyle.fontSize = 8;
+                        doc.styles.tableHeader.fontSize = 8.5;
+                        doc.pageMargins = [15, 20, 15, 20];
+                    }
+                    if (doc.content && doc.content[1] && doc.content[1].table) {
+                        doc.content[1].table.widths = Array(doc.content[1].table.body[0].length).fill('*');
+                    }
                 }
             } : 'pdf';
 

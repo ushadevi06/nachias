@@ -28,21 +28,37 @@
                     <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
                     <select class="form-select select2" id="report_type_select" name="report_type">
                         <option value="order-report" {{ (!request('report_type') && !request('type')) || request('report_type') == 'order-report' || request('type') == 'order-report' ? 'selected' : '' }}>📦 Order Report</option>
+                        <option value="dispatch-report" {{ request('report_type') == 'dispatch-report' || request('type') == 'dispatch-report' ? 'selected' : '' }}>🚚 Dispatch Report</option>
+                        <option value="pending-report" {{ request('report_type') == 'pending-report' || request('type') == 'pending-report' ? 'selected' : '' }}>⏳ Pending Orders</option>
                         <option value="sales-gst-report" {{ request('report_type') == 'sales-gst-report' || request('type') == 'sales-gst-report' || request('report_type') == 'sales-report' || request('type') == 'sales-report' ? 'selected' : '' }}>📈 Sales GST Report</option>
                         <option value="invoice-report" {{ request('report_type') == 'invoice-report' || request('type') == 'invoice-report' ? 'selected' : '' }}>🧾 Invoice Report</option>
-                        <option value="pending-report" {{ request('report_type') == 'pending-report' || request('type') == 'pending-report' ? 'selected' : '' }}>⏳ Pending Orders</option>
                         <option value="incentive-report" {{ request('report_type') == 'incentive-report' || request('type') == 'incentive-report' ? 'selected' : '' }}>🗺️ Zone Wise Incentive</option>
                         <option value="comparison-report" {{ request('report_type') == 'comparison-report' || request('type') == 'comparison-report' ? 'selected' : '' }}>📊 Sales Comparison</option>
                         <option value="credit-note-report" {{ request('report_type') == 'credit-note-report' || request('type') == 'credit-note-report' ? 'selected' : '' }}>📝 Credit Note Report</option>
                         <option value="despatch-report" {{ request('report_type') == 'despatch-report' || request('type') == 'despatch-report' ? 'selected' : '' }}>🚚 Despatch Tracking</option>
                         <option value="outstanding-report" {{ request('report_type') == 'outstanding-report' || request('type') == 'outstanding-report' ? 'selected' : '' }}>💰 Zone Wise Outstanding</option>
+                        <option value="regular-discount" {{ request('report_type') == 'regular-discount' || request('type') == 'regular-discount' || request('report_type') == 'discount' || request('type') == 'discount' ? 'selected' : '' }}>🏷️ Regular / Discount</option>
+                        <option value="brandwise-lost-sales" {{ request('report_type') == 'brandwise-lost-sales' || request('type') == 'brandwise-lost-sales' ? 'selected' : '' }}>❌ Brandwise Lost Sales</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-4 col-xl-3">
+                <div class="col-12 col-md-4 col-xl-3" id="sales_marketing_date_range_col">
                     <label class="form-label small fw-bold text-muted">Date Range</label>
                     <input type="text" class="form-control report_date_range" id="sales_marketing_date_range" placeholder="DD-MM-YYYY to DD-MM-YYYY" value="{{ (request('from_date') && request('to_date')) ? (request('from_date') == request('to_date') ? request('from_date') : request('from_date') . ' to ' . request('to_date')) : (request('from_date') ?? '') }}">
                     <input type="hidden" class="start_date" name="from_date" value="{{ request('from_date') }}">
                     <input type="hidden" class="end_date" name="to_date" value="{{ request('to_date') }}">
+                </div>
+                <div class="col-12 col-md-4 col-xl-3" id="comparison_year_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted"><i class="ri-calendar-event-line me-1"></i>Comparison Year</label>
+                    <select class="form-select select2" name="comparison_year" id="comparison_year_filter">
+                        @php
+                            $currY = (int)date('Y');
+                        @endphp
+                        @for($y = $currY + 5; $y >= $currY - 5; $y--)
+                            <option value="{{ $y }}" {{ $y == $currY ? 'selected' : '' }}>
+                                {{ $y }} vs {{ $y - 1 }}
+                            </option>
+                        @endfor
+                    </select>
                 </div>
 
                 <div class="col-12 col-md-2 col-xl-2">
@@ -54,6 +70,19 @@
                             {{ $customer->name }} ({{ $customer->code }})
                         </option>
                         @endforeach
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 col-xl-2" id="brand_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted">Brand</label>
+                    <select class="form-select select2" name="brand_id" id="brand_id_filter" data-placeholder="Select Brand">
+                        <option value="">All Brands</option>
+                        @if(isset($brands))
+                        @foreach($brands as $brand)
+                        <option value="{{ $brand->id }}" {{ request('brand_id') == $brand->id ? 'selected' : '' }}>
+                            {{ $brand->brand_name }} ({{ $brand->code }})
+                        </option>
+                        @endforeach
+                        @endif
                     </select>
                 </div>
                 <div class="col-12 col-md-2 col-xl-2">
@@ -127,6 +156,11 @@
                     @include('reports.sales_marketing_reports._pending_report')
                 </div>
 
+                <!-- 3.1. Dispatch Report -->
+                <div class="tab-pane fade" id="dispatch-report" role="tabpanel">
+                    @include('reports.sales_marketing_reports._dispatch_report')
+                </div>
+
                 <!-- 4. Zonewise Incentive Report -->
                 <div class="tab-pane fade" id="incentive-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._incentive_report')
@@ -180,6 +214,16 @@
                 <!-- 14. Sales Complaint Report -->
                 <div class="tab-pane fade" id="complaint-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._complaint_report')
+                </div>
+
+                <!-- 15. Regular / Discount Report -->
+                <div class="tab-pane fade" id="regular-discount" role="tabpanel">
+                    @include('reports.sales_marketing_reports._regular_discount')
+                </div>
+
+                <!-- 16. Brandwise Lost Sales Report -->
+                <div class="tab-pane fade" id="brandwise-lost-sales" role="tabpanel">
+                    @include('reports.sales_marketing_reports._brandwise_lost_sales')
                 </div>
             </div>
         </div>
@@ -454,7 +498,32 @@ $.extend(true, $.fn.dataTable.defaults, {
                 return title.replace(/[^\w\s\-_]/gi, '').trim();
             },
             orientation: 'landscape',
-            pageSize: 'A4',
+            pageSize: 'A3',
+            customize: function (doc) {
+                doc.pageOrientation = 'landscape';
+                var colCount = (doc.content && doc.content[1] && doc.content[1].table) ? doc.content[1].table.body[0].length : 12;
+                if (colCount > 14) {
+                    doc.pageSize = 'A3';
+                    doc.defaultStyle.fontSize = 6;
+                    doc.styles.tableHeader.fontSize = 6.5;
+                    doc.styles.tableHeader.alignment = 'center';
+                    doc.pageMargins = [10, 15, 10, 15];
+                } else if (colCount > 8) {
+                    doc.pageSize = 'A4';
+                    doc.defaultStyle.fontSize = 7;
+                    doc.styles.tableHeader.fontSize = 7.5;
+                    doc.styles.tableHeader.alignment = 'center';
+                    doc.pageMargins = [12, 15, 12, 15];
+                } else {
+                    doc.pageSize = 'A4';
+                    doc.defaultStyle.fontSize = 8;
+                    doc.styles.tableHeader.fontSize = 8.5;
+                    doc.pageMargins = [15, 20, 15, 20];
+                }
+                if (doc.content && doc.content[1] && doc.content[1].table) {
+                    doc.content[1].table.widths = Array(doc.content[1].table.body[0].length).fill('*');
+                }
+            },
             exportOptions: {
                 columns: ':not(.no-export)',
                 format: {
@@ -469,6 +538,9 @@ $.extend(true, $.fn.dataTable.defaults, {
             title: function () {
                 var title = $('#active_report_title').text().trim() || 'Sales & Marketing Report';
                 return title.replace(/[^\w\s\-_]/gi, '').trim();
+            },
+            customize: function (win) {
+                $(win.document.head).append('<style>@page { size: landscape; margin: 8mm; } body { font-size: 8pt; } table { width: 100% !important; font-size: 7.5pt; table-layout: fixed; } th, td { word-break: break-word; }</style>');
             },
             exportOptions: {
                 columns: ':not(.no-export)',
@@ -497,6 +569,82 @@ $(document).ready(function() {
                 var json = api.ajax.json();
                 if (json && json.totals) {
                     $('#order_report_total_qty').html(json.totals.qty);
+                }
+            }
+        },
+        'order-product-wise': {
+            tableId: '#orderProductWiseTable',
+            type: 'order-product-wise',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center fw-semibold text-muted' },
+                { data: 'product_name', name: 'product_name' },
+                { data: 'art_no', name: 'art_no', className: 'text-nowrap' },
+                { data: 'color', name: 'color' },
+                { data: 'sleeve', name: 'sleeve', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center' },
+                { data: 'size_38', name: 'size_38', className: 'text-center' },
+                { data: 'size_40', name: 'size_40', className: 'text-center' },
+                { data: 'size_42', name: 'size_42', className: 'text-center' },
+                { data: 'size_44', name: 'size_44', className: 'text-center' },
+                { data: 'size_46', name: 'size_46', className: 'text-center' },
+                { data: 'size_48', name: 'size_48', className: 'text-center' },
+                { data: 'size_50', name: 'size_50', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#order_pw_total_36').html(json.totals.size_36 || 0);
+                    $('#order_pw_total_38').html(json.totals.size_38 || 0);
+                    $('#order_pw_total_40').html(json.totals.size_40 || 0);
+                    $('#order_pw_total_42').html(json.totals.size_42 || 0);
+                    $('#order_pw_total_44').html(json.totals.size_44 || 0);
+                    $('#order_pw_total_46').html(json.totals.size_46 || 0);
+                    $('#order_pw_total_48').html(json.totals.size_48 || 0);
+                    $('#order_pw_total_50').html(json.totals.size_50 || 0);
+                    $('#order_pw_total_qty').html(json.totals.total_qty || 0);
+                }
+            }
+        },
+        'order-party-wise': {
+            tableId: '#orderPartyWiseTable',
+            type: 'order-party-wise',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center fw-semibold text-muted' },
+                { data: 'order_no', name: 'order_no', className: 'text-nowrap' },
+                { data: 'order_date', name: 'order_date', className: 'text-nowrap' },
+                { data: 'customer_name', name: 'customer_name' },
+                { data: 'place', name: 'place' },
+                { data: 'sales_executive', name: 'sales_executive', className: 'text-nowrap' },
+                { data: 'zone', name: 'zone' },
+                { data: 'product_name', name: 'product_name' },
+                { data: 'art_no', name: 'art_no', className: 'text-nowrap' },
+                { data: 'color', name: 'color' },
+                { data: 'sleeve', name: 'sleeve', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center' },
+                { data: 'size_38', name: 'size_38', className: 'text-center' },
+                { data: 'size_40', name: 'size_40', className: 'text-center' },
+                { data: 'size_42', name: 'size_42', className: 'text-center' },
+                { data: 'size_44', name: 'size_44', className: 'text-center' },
+                { data: 'size_46', name: 'size_46', className: 'text-center' },
+                { data: 'size_48', name: 'size_48', className: 'text-center' },
+                { data: 'size_50', name: 'size_50', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#order_party_total_36').html(json.totals.size_36 || 0);
+                    $('#order_party_total_38').html(json.totals.size_38 || 0);
+                    $('#order_party_total_40').html(json.totals.size_40 || 0);
+                    $('#order_party_total_42').html(json.totals.size_42 || 0);
+                    $('#order_party_total_44').html(json.totals.size_44 || 0);
+                    $('#order_party_total_46').html(json.totals.size_46 || 0);
+                    $('#order_party_total_48').html(json.totals.size_48 || 0);
+                    $('#order_party_total_50').html(json.totals.size_50 || 0);
+                    $('#order_party_total_qty').html(json.totals.total_qty || 0);
                 }
             }
         },
@@ -593,20 +741,189 @@ $(document).ready(function() {
             ]
         },
         'pending-report': {
-            tableId: '#pendingReportTable',
-            type: 'pending-report',
+            tableId: '#pendingProductWiseTable',
+            type: 'pending-product-wise',
             columns: [
-                { data: 'so_no', name: 'so_no', className: 'fw-bold text-primary' },
-                { data: 'customer', name: 'customer' },
-                { data: 'ord_qty', name: 'ord_qty', className: 'text-center' },
-                { data: 'bal_qty', name: 'bal_qty', className: 'text-center fw-bold text-danger' }
+                { data: 'sno', name: 'sno', className: 'text-center fw-semibold text-muted' },
+                { data: 'product_name', name: 'product_name' },
+                { data: 'art_no', name: 'art_no', className: 'text-nowrap' },
+                { data: 'color', name: 'color' },
+                { data: 'sleeve', name: 'sleeve', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center' },
+                { data: 'size_38', name: 'size_38', className: 'text-center' },
+                { data: 'size_40', name: 'size_40', className: 'text-center' },
+                { data: 'size_42', name: 'size_42', className: 'text-center' },
+                { data: 'size_44', name: 'size_44', className: 'text-center' },
+                { data: 'size_46', name: 'size_46', className: 'text-center' },
+                { data: 'size_48', name: 'size_48', className: 'text-center' },
+                { data: 'size_50', name: 'size_50', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center' }
             ],
             footerCallback: function (row, data, start, end, display) {
                 var api = this.api();
                 var json = api.ajax.json();
                 if (json && json.totals) {
-                    $('#pending_report_total_ord_qty').html(json.totals.ord_qty);
-                    $('#pending_report_total_bal_qty').html(json.totals.bal_qty);
+                    $('#pending_pw_total_36').html(json.totals.size_36 || 0);
+                    $('#pending_pw_total_38').html(json.totals.size_38 || 0);
+                    $('#pending_pw_total_40').html(json.totals.size_40 || 0);
+                    $('#pending_pw_total_42').html(json.totals.size_42 || 0);
+                    $('#pending_pw_total_44').html(json.totals.size_44 || 0);
+                    $('#pending_pw_total_46').html(json.totals.size_46 || 0);
+                    $('#pending_pw_total_48').html(json.totals.size_48 || 0);
+                    $('#pending_pw_total_50').html(json.totals.size_50 || 0);
+                    $('#pending_pw_total_qty').html(json.totals.total_qty || 0);
+                }
+            }
+        },
+        'pending-product-wise': {
+            tableId: '#pendingProductWiseTable',
+            type: 'pending-product-wise',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center fw-semibold text-muted' },
+                { data: 'product_name', name: 'product_name' },
+                { data: 'art_no', name: 'art_no', className: 'text-nowrap' },
+                { data: 'color', name: 'color' },
+                { data: 'sleeve', name: 'sleeve', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center' },
+                { data: 'size_38', name: 'size_38', className: 'text-center' },
+                { data: 'size_40', name: 'size_40', className: 'text-center' },
+                { data: 'size_42', name: 'size_42', className: 'text-center' },
+                { data: 'size_44', name: 'size_44', className: 'text-center' },
+                { data: 'size_46', name: 'size_46', className: 'text-center' },
+                { data: 'size_48', name: 'size_48', className: 'text-center' },
+                { data: 'size_50', name: 'size_50', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#pending_pw_total_36').html(json.totals.size_36 || 0);
+                    $('#pending_pw_total_38').html(json.totals.size_38 || 0);
+                    $('#pending_pw_total_40').html(json.totals.size_40 || 0);
+                    $('#pending_pw_total_42').html(json.totals.size_42 || 0);
+                    $('#pending_pw_total_44').html(json.totals.size_44 || 0);
+                    $('#pending_pw_total_46').html(json.totals.size_46 || 0);
+                    $('#pending_pw_total_48').html(json.totals.size_48 || 0);
+                    $('#pending_pw_total_50').html(json.totals.size_50 || 0);
+                    $('#pending_pw_total_qty').html(json.totals.total_qty || 0);
+                }
+            }
+        },
+        'pending-party-wise': {
+            tableId: '#pendingPartyWiseTable',
+            type: 'pending-party-wise',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center fw-semibold text-muted' },
+                { data: 'order_no', name: 'order_no', className: 'text-nowrap' },
+                { data: 'order_date', name: 'order_date', className: 'text-nowrap' },
+                { data: 'customer_name', name: 'customer_name' },
+                { data: 'place', name: 'place' },
+                { data: 'sales_executive', name: 'sales_executive', className: 'text-nowrap' },
+                { data: 'zone', name: 'zone' },
+                { data: 'product_name', name: 'product_name' },
+                { data: 'art_no', name: 'art_no', className: 'text-nowrap' },
+                { data: 'color', name: 'color' },
+                { data: 'sleeve', name: 'sleeve', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center' },
+                { data: 'size_38', name: 'size_38', className: 'text-center' },
+                { data: 'size_40', name: 'size_40', className: 'text-center' },
+                { data: 'size_42', name: 'size_42', className: 'text-center' },
+                { data: 'size_44', name: 'size_44', className: 'text-center' },
+                { data: 'size_46', name: 'size_46', className: 'text-center' },
+                { data: 'size_48', name: 'size_48', className: 'text-center' },
+                { data: 'size_50', name: 'size_50', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#pending_party_total_36').html(json.totals.size_36 || 0);
+                    $('#pending_party_total_38').html(json.totals.size_38 || 0);
+                    $('#pending_party_total_40').html(json.totals.size_40 || 0);
+                    $('#pending_party_total_42').html(json.totals.size_42 || 0);
+                    $('#pending_party_total_44').html(json.totals.size_44 || 0);
+                    $('#pending_party_total_46').html(json.totals.size_46 || 0);
+                    $('#pending_party_total_48').html(json.totals.size_48 || 0);
+                    $('#pending_party_total_50').html(json.totals.size_50 || 0);
+                    $('#pending_party_total_qty').html(json.totals.total_qty || 0);
+                }
+            }
+        },
+        'dispatch-product-wise': {
+            tableId: '#dispatchProductWiseTable',
+            type: 'dispatch-product-wise',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center fw-semibold text-muted' },
+                { data: 'product_name', name: 'product_name' },
+                { data: 'art_no', name: 'art_no', className: 'text-nowrap' },
+                { data: 'color', name: 'color' },
+                { data: 'sleeve', name: 'sleeve', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center' },
+                { data: 'size_38', name: 'size_38', className: 'text-center' },
+                { data: 'size_40', name: 'size_40', className: 'text-center' },
+                { data: 'size_42', name: 'size_42', className: 'text-center' },
+                { data: 'size_44', name: 'size_44', className: 'text-center' },
+                { data: 'size_46', name: 'size_46', className: 'text-center' },
+                { data: 'size_48', name: 'size_48', className: 'text-center' },
+                { data: 'size_50', name: 'size_50', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#dispatch_pw_total_36').html(json.totals.size_36 || 0);
+                    $('#dispatch_pw_total_38').html(json.totals.size_38 || 0);
+                    $('#dispatch_pw_total_40').html(json.totals.size_40 || 0);
+                    $('#dispatch_pw_total_42').html(json.totals.size_42 || 0);
+                    $('#dispatch_pw_total_44').html(json.totals.size_44 || 0);
+                    $('#dispatch_pw_total_46').html(json.totals.size_46 || 0);
+                    $('#dispatch_pw_total_48').html(json.totals.size_48 || 0);
+                    $('#dispatch_pw_total_50').html(json.totals.size_50 || 0);
+                    $('#dispatch_pw_total_qty').html(json.totals.total_qty || 0);
+                }
+            }
+        },
+        'dispatch-party-wise': {
+            tableId: '#dispatchPartyWiseTable',
+            type: 'dispatch-party-wise',
+            columns: [
+                { data: 'sno', name: 'sno', className: 'text-center fw-semibold text-muted' },
+                { data: 'invoice_no', name: 'invoice_no', className: 'text-nowrap' },
+                { data: 'invoice_date', name: 'invoice_date', className: 'text-nowrap' },
+                { data: 'customer_name', name: 'customer_name' },
+                { data: 'place', name: 'place' },
+                { data: 'sales_executive', name: 'sales_executive', className: 'text-nowrap' },
+                { data: 'zone', name: 'zone' },
+                { data: 'product_name', name: 'product_name' },
+                { data: 'art_no', name: 'art_no', className: 'text-nowrap' },
+                { data: 'color', name: 'color' },
+                { data: 'sleeve', name: 'sleeve', className: 'text-center' },
+                { data: 'size_36', name: 'size_36', className: 'text-center' },
+                { data: 'size_38', name: 'size_38', className: 'text-center' },
+                { data: 'size_40', name: 'size_40', className: 'text-center' },
+                { data: 'size_42', name: 'size_42', className: 'text-center' },
+                { data: 'size_44', name: 'size_44', className: 'text-center' },
+                { data: 'size_46', name: 'size_46', className: 'text-center' },
+                { data: 'size_48', name: 'size_48', className: 'text-center' },
+                { data: 'size_50', name: 'size_50', className: 'text-center' },
+                { data: 'total_qty', name: 'total_qty', className: 'text-center' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#dispatch_party_total_36').html(json.totals.size_36 || 0);
+                    $('#dispatch_party_total_38').html(json.totals.size_38 || 0);
+                    $('#dispatch_party_total_40').html(json.totals.size_40 || 0);
+                    $('#dispatch_party_total_42').html(json.totals.size_42 || 0);
+                    $('#dispatch_party_total_44').html(json.totals.size_44 || 0);
+                    $('#dispatch_party_total_46').html(json.totals.size_46 || 0);
+                    $('#dispatch_party_total_48').html(json.totals.size_48 || 0);
+                    $('#dispatch_party_total_50').html(json.totals.size_50 || 0);
+                    $('#dispatch_party_total_qty').html(json.totals.total_qty || 0);
                 }
             }
         },
@@ -616,16 +933,24 @@ $(document).ready(function() {
             columns: [
                 { data: 'zone', name: 'zone' },
                 { data: 'agent', name: 'agent' },
-                { data: 'total_sales', name: 'total_sales', className: 'text-end fw-bold' },
-                { data: 'incentive_pc', name: 'incentive_pc', className: 'text-center' },
+                { data: 'target', name: 'target', className: 'text-center fw-semibold' },
+                { data: 'achieved', name: 'achieved', className: 'text-center fw-bold' },
+                { data: 'discount_qty', name: 'discount_qty', className: 'text-center text-muted' },
+                { data: 'return_qty', name: 'return_qty', className: 'text-center text-danger fw-semibold' },
+                { data: 'incentive_qty', name: 'incentive_qty', className: 'text-center text-primary fw-bold' },
+                { data: 'rate_per_pcs', name: 'rate_per_pcs', className: 'text-end' },
                 { data: 'incentive_amt', name: 'incentive_amt', className: 'text-end fw-bold text-success' }
             ],
             footerCallback: function (row, data, start, end, display) {
                 var api = this.api();
                 var json = api.ajax.json();
                 if (json && json.totals) {
-                    $('#incentive_report_total_sales').html(json.totals.total_sales);
-                    $('#incentive_report_total_incentive').html(json.totals.incentive_amt);
+                    $('#incentive_report_total_target').html(json.totals.total_target || 0);
+                    $('#incentive_report_total_achieved').html(json.totals.total_achieved || 0);
+                    $('#incentive_report_total_discount').html(json.totals.total_discount || 0);
+                    $('#incentive_report_total_return').html(json.totals.total_return || 0);
+                    $('#incentive_report_total_incentive_qty').html(json.totals.total_incentive_qty || 0);
+                    $('#incentive_report_total_incentive').html(json.totals.incentive_amt || '₹0.00');
                 }
             }
         },
@@ -704,25 +1029,6 @@ $(document).ready(function() {
                 }
             }
         },
-        'comparison-report': {
-            tableId: '#comparisonReportTable',
-            type: 'comparison-report',
-            columns: [
-                { data: 'month_name', name: 'month_name' },
-                { data: 'prev_year_sales', name: 'prev_year_sales', className: 'text-end' },
-                { data: 'curr_year_sales', name: 'curr_year_sales', className: 'text-end' },
-                { data: 'growth_pc', name: 'growth_pc', className: 'text-center' }
-            ],
-            footerCallback: function (row, data, start, end, display) {
-                var api = this.api();
-                var json = api.ajax.json();
-                if (json && json.totals) {
-                    $('#comparison_report_prev_year').html(json.totals.prev_year_sales);
-                    $('#comparison_report_curr_year').html(json.totals.curr_year_sales);
-                    $('#comparison_report_growth').html('<span class="badge ' + (parseFloat(json.totals.growth_pc) >= 0 ? 'bg-label-success' : 'bg-label-danger') + ' rounded-pill">' + json.totals.growth_pc + '</span>');
-                }
-            }
-        },
         'outstanding-report': {
             tableId: '#outstandingReportTable',
             type: 'outstanding-report',
@@ -763,6 +1069,47 @@ $(document).ready(function() {
     }
 
     function loadActiveTabTable(tabPaneId, resetPaging = true) {
+        if (tabPaneId === 'regular-discount' || tabPaneId === 'discount') {
+            if (typeof window.initRegularDiscountTable === 'function') {
+                window.initRegularDiscountTable();
+                return;
+            }
+        }
+        if (tabPaneId === 'brandwise-lost-sales') {
+            if (typeof window.initBrandwiseLostSalesTable === 'function') {
+                window.initBrandwiseLostSalesTable();
+                return;
+            }
+        }
+        if (tabPaneId === 'comparison-report') {
+            if (typeof window.initComparisonReportTable === 'function') {
+                window.initComparisonReportTable();
+                return;
+            }
+        }
+        if (tabPaneId === 'pending-report') {
+            const isParty = $('#pending-party-wise-tab').hasClass('active');
+            tabPaneId = isParty ? 'pending-party-wise' : 'pending-product-wise';
+            if (isParty) {
+                $('#pending-party-wise-pane').addClass('show active');
+                $('#pending-product-wise-pane').removeClass('show active');
+            } else {
+                $('#pending-product-wise-pane').addClass('show active');
+                $('#pending-party-wise-pane').removeClass('show active');
+            }
+        }
+        if (tabPaneId === 'dispatch-report') {
+            const isParty = $('#dispatch-party-wise-tab').hasClass('active');
+            tabPaneId = isParty ? 'dispatch-party-wise' : 'dispatch-product-wise';
+            if (isParty) {
+                $('#dispatch-party-wise-pane').addClass('show active');
+                $('#dispatch-product-wise-pane').removeClass('show active');
+            } else {
+                $('#dispatch-product-wise-pane').addClass('show active');
+                $('#dispatch-party-wise-pane').removeClass('show active');
+            }
+        }
+
         const config = tableConfigs[tabPaneId];
         if (!config) return;
 
@@ -789,6 +1136,7 @@ $(document).ready(function() {
             processing: true,
             serverSide: true,
             autoWidth: false,
+            searchDelay: 600,
             destroy: true,
             language: {
                 emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
@@ -797,12 +1145,42 @@ $(document).ready(function() {
                 url: "{{ url('sales_marketing_reports/ajax') }}/" + config.type,
                 type: "GET",
                 data: function(d) {
-                    d.from_date = $('.start_date').val();
-                    d.to_date = $('.end_date').val();
+                    var fromVal = $('.start_date').val();
+                    var toVal = $('.end_date').val();
+                    if (!fromVal || !toVal) {
+                        var rangeText = $('#sales_marketing_date_range').val() || '';
+                        if (rangeText.indexOf(' to ') !== -1) {
+                            var parts = rangeText.split(' to ');
+                            fromVal = parts[0].trim();
+                            toVal = parts[1].trim();
+                        } else if (rangeText.trim()) {
+                            fromVal = rangeText.trim();
+                            toVal = rangeText.trim();
+                        }
+                    }
+                    d.from_date = fromVal;
+                    d.to_date = toVal;
                     d.customer_id = $('select[name="customer_id"]').val();
                     d.agent_id = $('select[name="agent_id"]').val();
+                    d.brand_id = $('select[name="brand_id"]').val();
                     d.einvoice_status = $('select[name="einvoice_status"]').val();
                     d.invoice_status = $('select[name="invoice_status"]').val();
+                }
+            },
+            initComplete: function() {
+                var api = this.api();
+                var tableId = config.tableId;
+                var searchInput = $(tableId + '_filter input');
+                if (searchInput.length) {
+                    searchInput.unbind();
+                    var searchTimer;
+                    searchInput.on('input', function() {
+                        var val = this.value;
+                        clearTimeout(searchTimer);
+                        searchTimer = setTimeout(function() {
+                            api.search(val).draw();
+                        }, 500);
+                    });
                 }
             },
             drawCallback: function() {
@@ -817,18 +1195,42 @@ $(document).ready(function() {
     }
 
     function updateFilterVisibility(reportType) {
-        if (reportType === 'sales-gst-report' || reportType === 'sales-report') {
-            $('#invoice_status_filter_col').show();
-            $('#einvoice_status_filter_col').show();
-        } else if (reportType === 'invoice-report') {
-            $('#invoice_status_filter_col').hide();
-            $('select[name="invoice_status"]').val('').trigger('change.select2');
-            $('#einvoice_status_filter_col').show();
-        } else {
+        if (reportType === 'comparison-report') {
+            $('#sales_marketing_date_range_col').hide();
+            $('#comparison_year_filter_col').show();
+            $('#brand_filter_col').show();
             $('#invoice_status_filter_col').hide();
             $('select[name="invoice_status"]').val('').trigger('change.select2');
             $('#einvoice_status_filter_col').hide();
             $('select[name="einvoice_status"]').val('').trigger('change.select2');
+        } else {
+            $('#sales_marketing_date_range_col').show();
+            $('#comparison_year_filter_col').hide();
+            if (reportType === 'sales-gst-report' || reportType === 'sales-report') {
+                $('#invoice_status_filter_col').show();
+                $('#einvoice_status_filter_col').show();
+                $('#brand_filter_col').hide();
+                $('select[name="brand_id"]').val('').trigger('change.select2');
+            } else if (reportType === 'invoice-report') {
+                $('#invoice_status_filter_col').hide();
+                $('select[name="invoice_status"]').val('').trigger('change.select2');
+                $('#einvoice_status_filter_col').show();
+                $('#brand_filter_col').hide();
+                $('select[name="brand_id"]').val('').trigger('change.select2');
+            } else if (reportType === 'regular-discount' || reportType === 'discount' || reportType === 'brandwise-lost-sales' || reportType === 'dispatch-report') {
+                $('#invoice_status_filter_col').hide();
+                $('select[name="invoice_status"]').val('').trigger('change.select2');
+                $('#einvoice_status_filter_col').hide();
+                $('select[name="einvoice_status"]').val('').trigger('change.select2');
+                $('#brand_filter_col').show();
+            } else {
+                $('#invoice_status_filter_col').hide();
+                $('select[name="invoice_status"]').val('').trigger('change.select2');
+                $('#einvoice_status_filter_col').hide();
+                $('select[name="einvoice_status"]').val('').trigger('change.select2');
+                $('#brand_filter_col').hide();
+                $('select[name="brand_id"]').val('').trigger('change.select2');
+            }
         }
     }
 
@@ -837,11 +1239,51 @@ $(document).ready(function() {
         const selectedText = $(this).find('option:selected').text();
         $('#active_report_title').html(selectedText);
 
-        $('.tab-pane').removeClass('show active');
+        $('#reportTabsContent > .tab-pane').removeClass('show active');
         $('#' + selectedType).addClass('show active');
 
+        if (selectedType === 'order-report') {
+            if ($('#order-product-wise-tab').hasClass('active')) {
+                $('#order-product-wise-pane').addClass('show active');
+                $('#order-list-pane').removeClass('show active');
+                $('#order-party-wise-pane').removeClass('show active');
+                loadActiveTabTable('order-product-wise', true);
+            } else if ($('#order-party-wise-tab').hasClass('active')) {
+                $('#order-party-wise-pane').addClass('show active');
+                $('#order-list-pane').removeClass('show active');
+                $('#order-product-wise-pane').removeClass('show active');
+                loadActiveTabTable('order-party-wise', true);
+            } else {
+                $('#order-list-tab').addClass('active').attr('aria-selected', 'true');
+                $('#order-product-wise-tab').removeClass('active').attr('aria-selected', 'false');
+                $('#order-party-wise-tab').removeClass('active').attr('aria-selected', 'false');
+                $('#order-list-pane').addClass('show active');
+                $('#order-product-wise-pane').removeClass('show active');
+                $('#order-party-wise-pane').removeClass('show active');
+                renderOrderLevel();
+            }
+        }
+
+        if (selectedType === 'pending-report') {
+            if ($('#pending-party-wise-tab').hasClass('active')) {
+                $('#pending-party-wise-pane').addClass('show active');
+                $('#pending-product-wise-pane').removeClass('show active');
+            } else {
+                $('#pending-product-wise-tab').addClass('active').attr('aria-selected', 'true');
+                $('#pending-party-wise-tab').removeClass('active').attr('aria-selected', 'false');
+                $('#pending-product-wise-pane').addClass('show active');
+                $('#pending-party-wise-pane').removeClass('show active');
+            }
+        }
+
+        if (selectedType === 'brandwise-lost-sales' && typeof renderLostSalesBrandLevel === 'function') {
+            renderLostSalesBrandLevel();
+        }
+
         updateFilterVisibility(selectedType);
-        loadActiveTabTable(selectedType, true);
+        if (selectedType !== 'order-report') {
+            loadActiveTabTable(selectedType, true);
+        }
     });
 
     const initialReportType = $('#report_type_select').val() || 'order-report';
@@ -849,14 +1291,95 @@ $(document).ready(function() {
     if (initialText) {
         $('#active_report_title').html(initialText);
     }
-    $('.tab-pane').removeClass('show active');
+    $('#reportTabsContent > .tab-pane').removeClass('show active');
     $('#' + initialReportType).addClass('show active');
+    if (initialReportType === 'order-report') {
+        $('#order-list-tab').addClass('active').attr('aria-selected', 'true');
+        $('#order-list-pane').addClass('show active');
+    }
+    if (initialReportType === 'pending-report') {
+        $('#pending-product-wise-tab').addClass('active').attr('aria-selected', 'true');
+        $('#pending-product-wise-pane').addClass('show active');
+    }
+    if (initialReportType === 'dispatch-report') {
+        $('#dispatch-product-wise-tab').addClass('active').attr('aria-selected', 'true');
+        $('#dispatch-product-wise-pane').addClass('show active');
+    }
     updateFilterVisibility(initialReportType);
     loadActiveTabTable(initialReportType, true);
 
     $('#salesMarketingReportForm').on('submit', function(e) {
         e.preventDefault();
         const activeTabId = $('#report_type_select').val() || 'order-report';
+        if (activeTabId === 'regular-discount' || activeTabId === 'discount') {
+            if (typeof window.initRegularDiscountTable === 'function') {
+                window.initRegularDiscountTable();
+                return;
+            }
+        }
+        if (activeTabId === 'brandwise-lost-sales') {
+            if (typeof renderLostSalesBrandLevel === 'function') {
+                renderLostSalesBrandLevel();
+                return;
+            }
+        }
+        if (activeTabId === 'comparison-report') {
+            if (typeof window.initComparisonReportTable === 'function') {
+                window.initComparisonReportTable();
+                return;
+            }
+        }
+        if (activeTabId === 'order-report') {
+            if ($('#order-product-wise-tab').hasClass('active') || $('#order-product-wise-pane').hasClass('active')) {
+                if ($.fn.DataTable.isDataTable('#orderProductWiseTable')) {
+                    showReportLoading(true);
+                    $('#orderProductWiseTable').DataTable().ajax.reload(function() { showReportLoading(false); }, true);
+                } else {
+                    loadActiveTabTable('order-product-wise', true);
+                }
+                return;
+            } else if ($('#order-party-wise-tab').hasClass('active') || $('#order-party-wise-pane').hasClass('active')) {
+                if ($.fn.DataTable.isDataTable('#orderPartyWiseTable')) {
+                    showReportLoading(true);
+                    $('#orderPartyWiseTable').DataTable().ajax.reload(function() { showReportLoading(false); }, true);
+                } else {
+                    loadActiveTabTable('order-party-wise', true);
+                }
+                return;
+            } else {
+                if ($.fn.DataTable.isDataTable('#orderReportTable')) {
+                    showReportLoading(true);
+                    $('#orderReportTable').DataTable().ajax.reload(function() { showReportLoading(false); }, true);
+                } else {
+                    loadActiveTabTable('order-report', true);
+                }
+                return;
+            }
+        }
+        if (activeTabId === 'pending-report') {
+            const isParty = $('#pending-party-wise-tab').hasClass('active') || $('#pending-party-wise-pane').hasClass('active');
+            const targetTableId = isParty ? '#pendingPartyWiseTable' : '#pendingProductWiseTable';
+            const targetType = isParty ? 'pending-party-wise' : 'pending-product-wise';
+            if ($.fn.DataTable.isDataTable(targetTableId)) {
+                showReportLoading(true);
+                $(targetTableId).DataTable().ajax.reload(function() { showReportLoading(false); }, true);
+            } else {
+                loadActiveTabTable(targetType, true);
+            }
+            return;
+        }
+        if (activeTabId === 'dispatch-report') {
+            const isParty = $('#dispatch-party-wise-tab').hasClass('active') || $('#dispatch-party-wise-pane').hasClass('active');
+            const targetTableId = isParty ? '#dispatchPartyWiseTable' : '#dispatchProductWiseTable';
+            const targetType = isParty ? 'dispatch-party-wise' : 'dispatch-product-wise';
+            if ($.fn.DataTable.isDataTable(targetTableId)) {
+                showReportLoading(true);
+                $(targetTableId).DataTable().ajax.reload(function() { showReportLoading(false); }, true);
+            } else {
+                loadActiveTabTable(targetType, true);
+            }
+            return;
+        }
         const config = tableConfigs[activeTabId];
         if (config && $.fn.DataTable.isDataTable(config.tableId)) {
             const dt = $(config.tableId).DataTable();
@@ -871,6 +1394,14 @@ $(document).ready(function() {
             }
         }
         loadActiveTabTable(activeTabId, true);
+    });
+
+    $('#comparison_year_filter').on('change', function() {
+        if ($('#report_type_select').val() === 'comparison-report') {
+            if (typeof window.initComparisonReportTable === 'function') {
+                window.initComparisonReportTable();
+            }
+        }
     });
 
     var isOrderRootLevel = true;
@@ -1034,158 +1565,35 @@ $(document).ready(function() {
         }
     });
 
-    var isPendingOrderRootLevel = true;
+    // Order Report Sub-tabs (Order List, Product Wise, Party Wise)
+    $(document).on('shown.bs.tab', '#order-list-tab', function() {
+        renderOrderLevel();
+    });
 
-    window.renderPendingOrderLevel = function() {
-        isPendingOrderRootLevel = true;
-        $('#pendingBreadcrumbs').hide();
-        $('#selectedPendingOrderInfoHeader').hide();
+    $(document).on('shown.bs.tab', '#order-product-wise-tab', function() {
+        loadActiveTabTable('order-product-wise', true);
+    });
 
-        if ($.fn.DataTable.isDataTable('#pendingReportTable')) {
-            $('#pendingReportTable').DataTable().clear().destroy();
-        }
+    $(document).on('shown.bs.tab', '#order-party-wise-tab', function() {
+        loadActiveTabTable('order-party-wise', true);
+    });
 
-        $('#pendingReportTheadTr').html(`
-            <th class="fw-bold">ORDER NO</th>
-            <th class="fw-bold">CUSTOMER</th>
-            <th class="text-center fw-bold">ORD. QTY</th>
-            <th class="text-center fw-bold">BAL. QTY</th>
-        `);
-        $('#pendingReportTable tfoot').remove();
-        $('#pendingReportTable').append(`
-            <tfoot class="table-light fw-bold">
-                <tr>
-                    <th colspan="2" class="text-end text-uppercase">Total:</th>
-                    <th class="text-center text-primary fw-bold" id="pending_report_total_ord_qty">0</th>
-                    <th class="text-center text-danger fw-bold" id="pending_report_total_bal_qty">0</th>
-                </tr>
-            </tfoot>
-        `);
-        $('#pendingReportTbody').empty();
+    // Pending Orders Sub-tabs (Product Wise vs Party Wise)
+    $(document).on('shown.bs.tab', '#pending-product-wise-tab', function() {
+        loadActiveTabTable('pending-product-wise', true);
+    });
 
-        loadActiveTabTable('pending-report');
-    };
+    $(document).on('shown.bs.tab', '#pending-party-wise-tab', function() {
+        loadActiveTabTable('pending-party-wise', true);
+    });
 
-    function renderPendingOrderItemLevel(soNo, customer, ordQty, balQty, orderId) {
-        isPendingOrderRootLevel = false;
+    // Dispatch Orders Sub-tabs (Product Wise vs Party Wise)
+    $(document).on('shown.bs.tab', '#dispatch-product-wise-tab', function() {
+        loadActiveTabTable('dispatch-product-wise', true);
+    });
 
-        var cleanSoNo = decodeHtmlEntities(soNo);
-        var cleanCustomer = decodeHtmlEntities(customer);
-
-        $('#pendingBreadcrumbText').text('Pending Orders > ' + cleanSoNo + ' (' + cleanCustomer + ')');
-        $('#pendingBreadcrumbs').css('display', 'flex');
-
-        $('#level2PendingSoNo').text(cleanSoNo);
-        $('#level2PendingCustomer').text(cleanCustomer);
-        $('#level2PendingOrdQty').text(ordQty);
-        $('#level2PendingBalQty').text(balQty);
-        $('#selectedPendingOrderInfoHeader').show();
-
-        if ($.fn.DataTable.isDataTable('#pendingReportTable')) {
-            $('#pendingReportTable').DataTable().clear().destroy();
-        }
-
-        $('#pendingReportTheadTr').html(`
-            <th class="text-center" style="width: 40px;">#</th>
-            <th class="fw-bold">ITEM NAME</th>
-            <th class="text-center fw-bold">SIZE</th>
-            <th class="text-center fw-bold">SLEEVE</th>
-            <th class="text-end fw-bold pe-3">QUANTITY</th>
-        `);
-
-        $('#pendingReportTable tfoot').remove();
-        $('#pendingReportTable').append(`
-            <tfoot class="table-light fw-bold">
-                <tr>
-                    <th colspan="4" class="text-end text-uppercase">Total:</th>
-                    <th class="text-end text-primary fw-bold pe-3" id="pending_order_item_level_total_qty">0</th>
-                </tr>
-            </tfoot>
-        `);
-
-        $('#pendingReportTbody').empty();
-
-        $('#pendingReportTable').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: "{{ url('sales_marketing_reports/ajax/order-items') }}",
-                type: "GET",
-                data: function(d) {
-                    d.order_id = orderId;
-                    d.so_no = soNo;
-                }
-            },
-            columns: [
-                {
-                    data: null,
-                    className: 'text-center text-muted fw-bold',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row, meta) {
-                        return meta.row + meta.settings._iDisplayStart + 1;
-                    }
-                },
-                { data: 'name', name: 'item_name', className: 'fw-medium text-dark' },
-                {
-                    data: 'size',
-                    name: 'size_id',
-                    className: 'text-center',
-                    render: function(data) {
-                        return '<span class="badge bg-label-secondary rounded-pill">' + (data || '-') + '</span>';
-                    }
-                },
-                {
-                    data: 'sleeve',
-                    name: 'sleeve',
-                    className: 'text-center',
-                    render: function(data) {
-                        return '<span class="badge bg-label-info rounded-pill">' + (data || '-') + '</span>';
-                    }
-                },
-                { data: 'qty', name: 'qty', className: 'text-end fw-bold pe-3' }
-            ],
-            footerCallback: function (row, data, start, end, display) {
-                var api = this.api();
-                var json = api.ajax.json();
-                if (json && json.totals) {
-                    $('#pending_order_item_level_total_qty').html(json.totals.qty);
-                }
-            },
-            responsive: true,
-            paging: true,
-            autoWidth: false,
-            searching: true,
-            ordering: true,
-            info: true,
-            lengthChange: true,
-            pageLength: 10,
-            lengthMenu: [10, 25, 50, 100],
-            language: {
-                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x d-block mb-1"></i>No items recorded for this order.</div>',
-                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> Loading items...'
-            },
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>'
-        });
-    }
-
-    // Handle Pending Order Row Click to Drilldown to Items Hierarchy
-    $(document).on('click', '#pendingReportTable tbody tr', function(e) {
-        if (!isPendingOrderRootLevel) return;
-        if ($(e.target).is('a, button, input, select')) return;
-
-        const dt = $('#pendingReportTable').DataTable();
-        const rowData = dt.row(this).data();
-
-        if (rowData) {
-            renderPendingOrderItemLevel(
-                rowData.so_no_raw,
-                rowData.customer_raw,
-                rowData.ord_qty_raw,
-                rowData.bal_qty_raw,
-                rowData.order_id || rowData.so_no_raw
-            );
-        }
+    $(document).on('shown.bs.tab', '#dispatch-party-wise-tab', function() {
+        loadActiveTabTable('dispatch-party-wise', true);
     });
 
     // Reset Button Handler (matches Warehouse Report pattern)
@@ -1199,27 +1607,59 @@ $(document).ready(function() {
         $('.end_date').val('');
         $('select[name="customer_id"]').val('').trigger('change');
         $('select[name="agent_id"]').val('').trigger('change');
+        $('select[name="brand_id"]').val('').trigger('change');
         $('select[name="invoice_status"]').val('').trigger('change');
         $('select[name="einvoice_status"]').val('').trigger('change');
+        $('#comparison_year_filter').val(new Date().getFullYear()).trigger('change.select2');
+        if (typeof renderLostSalesBrandLevel === 'function') {
+            renderLostSalesBrandLevel();
+        }
         $('#salesMarketingReportForm').trigger('submit');
     });
 
     // Export Handlers
     function triggerSalesMarketingExport(buttonClass) {
-        var $activeTab = $('.tab-pane.active');
         var targetDt = null;
+        var activeReport = $('#report_type_select').val() || 'order-report';
 
-        $activeTab.find('.datatables-products').each(function() {
-            if ($.fn.DataTable.isDataTable(this)) {
-                var dt = $(this).DataTable();
-                if (dt.button && dt.button(buttonClass).length) {
-                    targetDt = dt;
-                    return false;
+        // Check if on Order Report 3 tabs
+        if (activeReport === 'order-report') {
+            if ($('#order-product-wise-tab').hasClass('active') || $('#order-product-wise-pane').hasClass('active')) {
+                if ($('#orderProductWiseTable').length && $.fn.DataTable.isDataTable('#orderProductWiseTable')) {
+                    targetDt = $('#orderProductWiseTable').DataTable();
+                }
+            } else if ($('#order-party-wise-tab').hasClass('active') || $('#order-party-wise-pane').hasClass('active')) {
+                if ($('#orderPartyWiseTable').length && $.fn.DataTable.isDataTable('#orderPartyWiseTable')) {
+                    targetDt = $('#orderPartyWiseTable').DataTable();
+                }
+            } else {
+                if ($('#orderReportTable').length && $.fn.DataTable.isDataTable('#orderReportTable')) {
+                    targetDt = $('#orderReportTable').DataTable();
                 }
             }
-        });
+        }
+
+        // Check if on Pending Orders dual tabs (Product Wise vs Party Wise)
+        if (activeReport === 'pending-report') {
+            var isParty = $('#pending-party-wise-tab').hasClass('active') || $('#pending-party-wise-pane').hasClass('active');
+            var tableSelector = isParty ? '#pendingPartyWiseTable' : '#pendingProductWiseTable';
+            if ($(tableSelector).length && $.fn.DataTable.isDataTable(tableSelector)) {
+                targetDt = $(tableSelector).DataTable();
+            }
+        }
+
+        // Check if on Dispatch Orders dual tabs (Product Wise vs Party Wise)
+        if (activeReport === 'dispatch-report') {
+            var isParty = $('#dispatch-party-wise-tab').hasClass('active') || $('#dispatch-party-wise-pane').hasClass('active');
+            var tableSelector = isParty ? '#dispatchPartyWiseTable' : '#dispatchProductWiseTable';
+            if ($(tableSelector).length && $.fn.DataTable.isDataTable(tableSelector)) {
+                targetDt = $(tableSelector).DataTable();
+            }
+        }
+
+        // Otherwise find active visible table inside active tab pane
         if (!targetDt) {
-            $activeTab.find('table').each(function() {
+            $('#reportTabsContent > .tab-pane.active').find('table:visible').each(function() {
                 if ($.fn.DataTable.isDataTable(this)) {
                     var dt = $(this).DataTable();
                     if (dt.button && dt.button(buttonClass).length) {
@@ -1231,11 +1671,27 @@ $(document).ready(function() {
         }
 
         if (!targetDt) {
-            var $tbl = $activeTab.find('table');
-            if ($tbl.length && !$.fn.DataTable.isDataTable($tbl[0])) {
-                $tbl.DataTable();
-                targetDt = $tbl.DataTable();
-            }
+            $('.tab-pane.active').find('.datatables-products').each(function() {
+                if ($.fn.DataTable.isDataTable(this)) {
+                    var dt = $(this).DataTable();
+                    if (dt.button && dt.button(buttonClass).length) {
+                        targetDt = dt;
+                        return false;
+                    }
+                }
+            });
+        }
+
+        if (!targetDt) {
+            $('.tab-pane.active').find('table').each(function() {
+                if ($.fn.DataTable.isDataTable(this)) {
+                    var dt = $(this).DataTable();
+                    if (dt.button && dt.button(buttonClass).length) {
+                        targetDt = dt;
+                        return false;
+                    }
+                }
+            });
         }
 
         if (!targetDt) return;

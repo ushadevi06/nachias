@@ -2111,6 +2111,28 @@ class WarehouseReportController extends Controller
                 if ($request->store_id) {
                     $query->where('sales_orders.store_id', $request->store_id);
                 }
+
+                if ($request->order_status) {
+                    $stFilter = strtolower(trim($request->order_status));
+                    if ($stFilter === 'cancelled') {
+                        $query->whereRaw('LOWER(sales_orders.status) = ?', ['cancelled']);
+                    } elseif ($stFilter === 'dispatched' || $stFilter === 'completed') {
+                        $query->whereRaw('LOWER(COALESCE(sales_orders.status, "")) != ?', ['cancelled'])
+                              ->where(function($sub) {
+                                  $sub->whereRaw('LOWER(sales_orders.status) = ?', ['dispatched'])
+                                      ->orWhereRaw('(COALESCE(sales_orders.total_qty, 0) > 0 AND GREATEST(0, COALESCE(sales_orders.total_qty, 0) - COALESCE(inv_sum.ordered_invoiced_qty, 0)) = 0 AND (COALESCE(inv_sum.dispatched_qty, 0) > 0 OR COALESCE(inv_sum.ordered_invoiced_qty, 0) > 0))');
+                              });
+                    } elseif ($stFilter === 'partially_delivery' || $stFilter === 'partial') {
+                        $query->whereRaw('LOWER(COALESCE(sales_orders.status, "")) != ?', ['cancelled'])
+                              ->whereRaw('LOWER(COALESCE(sales_orders.status, "")) != ?', ['dispatched'])
+                              ->whereRaw('(COALESCE(inv_sum.dispatched_qty, 0) > 0 OR COALESCE(inv_sum.ordered_invoiced_qty, 0) > 0)')
+                              ->whereRaw('GREATEST(0, COALESCE(sales_orders.total_qty, 0) - COALESCE(inv_sum.ordered_invoiced_qty, 0)) > 0');
+                    } elseif ($stFilter === 'pending') {
+                        $query->whereRaw('LOWER(COALESCE(sales_orders.status, "")) != ?', ['cancelled'])
+                              ->whereRaw('LOWER(COALESCE(sales_orders.status, "")) != ?', ['dispatched'])
+                              ->whereRaw('(COALESCE(inv_sum.dispatched_qty, 0) = 0 AND COALESCE(inv_sum.ordered_invoiced_qty, 0) = 0)');
+                    }
+                }
                 
                 if ($search) {
                     $query->where(function ($q) use ($search) {
@@ -2206,13 +2228,29 @@ class WarehouseReportController extends Controller
                             </div>
                         </div>';
 
-                    $statusRaw = $so->status ?: 'Pending';
-                    $statusClass = match(strtolower($statusRaw)) {
-                        'approved', 'completed' => 'bg-label-success',
-                        'pending' => 'bg-label-warning',
-                        'cancelled' => 'bg-label-danger',
-                        default => 'bg-label-info'
-                    };
+                    $isCancelled = (strtolower(trim($so->status ?? '')) === 'cancelled');
+                    $isDispatchedInSO = (strtolower(trim($so->status ?? '')) === 'dispatched');
+
+                    if ($isCancelled) {
+                        $statusRaw = 'Cancelled';
+                        $statusClass = 'bg-label-danger';
+                    } elseif ($isDispatchedInSO) {
+                        $statusRaw = 'Dispatched';
+                        $statusClass = 'bg-label-info';
+                    } elseif ($ordQty > 0 && $pendingQty == 0 && ($dispQty > 0 || $ordInvQty > 0)) {
+                        $statusRaw = 'Dispatched';
+                        $statusClass = 'bg-label-info';
+                    } elseif ($pendingQty > 0 && ($dispQty > 0 || $ordInvQty > 0)) {
+                        $statusRaw = 'Partially Delivery';
+                        $statusClass = 'bg-label-warning';
+                    } else {
+                        $statusRaw = $so->status ?: 'Pending';
+                        $statusClass = match(strtolower($statusRaw)) {
+                            'approved', 'completed' => 'bg-label-success',
+                            'pending' => 'bg-label-warning',
+                            default => 'bg-label-secondary'
+                        };
+                    }
                     $statusHtml = '<span class="badge ' . $statusClass . ' fw-semibold">' . htmlspecialchars($statusRaw) . '</span>';
 
                     $data[] = [
@@ -4206,6 +4244,29 @@ class WarehouseReportController extends Controller
             });
         }
 
+        if ($brandName) {
+            $targetBrand = $allBrands->first(function($b) use ($brandName) {
+                return strtolower(trim($b->brand_name)) === strtolower(trim($brandName));
+            });
+            $bCode = $targetBrand ? trim($targetBrand->code) : '';
+
+            if ($targetBrand) {
+                $orderQuery->where(function($q) use ($targetBrand, $bCode, $brandName) {
+                    $q->where('stock_entry_items.brand_id', $targetBrand->id)
+                      ->orWhere('brand_categories.name', $brandName);
+                    if (!empty($bCode)) {
+                        $q->orWhere('sales_order_items.art_no', 'like', $bCode . '%')
+                          ->orWhere('sales_order_items.sku', 'like', $bCode . '%')
+                          ->orWhere('sales_order_items.item_name', 'like', $bCode . '%')
+                          ->orWhere('sales_order_items.category_name', 'like', $bCode . '%')
+                          ->orWhere('sales_order_items.categories_path_val', 'like', $bCode . '%');
+                    }
+                    $q->orWhere('sales_order_items.item_name', 'like', '%' . $brandName . '%')
+                      ->orWhere('sales_order_items.art_no', 'like', '%' . $brandName . '%');
+                });
+            }
+        }
+
         $orderItems = $orderQuery->get();
 
         // Pre-build brand map — resolve each unique art_no combo only once
@@ -4415,8 +4476,13 @@ class WarehouseReportController extends Controller
             ], 404);
         }
 
+        $brandName = $request->brand_name;
+        $allBrands = \App\Models\Brand::where('status', 'Active')->orderByRaw('LENGTH(code) DESC')->orderByRaw('LENGTH(brand_name) DESC')->get();
+
         $soItems = DB::table('sales_order_items')
             ->leftJoin('stock_entry_items', 'sales_order_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+            ->leftJoin('brands as b_stock', 'stock_entry_items.brand_id', '=', 'b_stock.id')
+            ->leftJoin('brand_categories', 'sales_order_items.brand_cat_id', '=', 'brand_categories.id')
             ->leftJoin('colors', 'sales_order_items.color_id', '=', 'colors.id')
             ->where('sales_order_items.sale_order_id', $soId)
             ->whereNull('sales_order_items.deleted_at')
@@ -4429,12 +4495,23 @@ class WarehouseReportController extends Controller
                 'sales_order_items.api_color',
                 'sales_order_items.size_id',
                 'sales_order_items.category_name',
+                'sales_order_items.categories_path_val',
                 'colors.color_name',
                 'stock_entry_items.size as stock_size',
                 'stock_entry_items.sleeve_type as stock_sleeve',
-                'stock_entry_items.barcode'
+                'stock_entry_items.barcode',
+                'b_stock.brand_name as stock_brand_name',
+                'brand_categories.name as cat_brand_name'
             )
             ->get();
+
+        if (!empty($brandName)) {
+            $brandMap = $this->buildArtNoBrandMap($soItems, $allBrands);
+            $soItems = $soItems->filter(function($item) use ($brandMap, $brandName) {
+                $resolved = $brandMap[spl_object_id($item)] ?? null;
+                return $resolved && strtolower(trim($resolved['name'])) === strtolower(trim($brandName));
+            })->values();
+        }
 
         $soArtNos = [];
         foreach ($soItems as $item) {

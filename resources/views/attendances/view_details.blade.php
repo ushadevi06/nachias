@@ -36,10 +36,11 @@
                     <p class="text-muted mb-3">Employee Code: <strong>{{ $attendance->emp_id }}</strong></p>
                     <span class="badge 
                         @if($attendance->status === 'Present') bg-success
-                        @elseif($attendance->status === 'Late') bg-danger
-                        @elseif($attendance->status === 'Overtime') bg-warning text-dark
+                        @elseif($attendance->status === 'Late') bg-warning text-dark
+                        @elseif($attendance->status === 'Overtime') bg-info
                         @elseif($attendance->status === 'Absent') bg-danger
                         @elseif($attendance->status === 'Punch Out Missing') bg-danger
+                        @elseif($attendance->status === 'Missing Time Card') bg-danger
                         @elseif($attendance->status === 'Holiday') bg-primary
                         @elseif($attendance->status === 'Week Off') bg-secondary
                         @else bg-secondary

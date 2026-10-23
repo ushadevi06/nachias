@@ -775,6 +775,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Sales & Marketing Report */
     Route::get('sales_marketing_reports', [SalesMarketingReportController::class, 'index']);
     Route::get('sales_marketing_reports/ajax/{type}', [SalesMarketingReportController::class, 'ajaxReportData']);
+    Route::get('sales_marketing_reports/brandwise_lost_sales_orders', [SalesMarketingReportController::class, 'getBrandwiseLostSalesOrders']);
+    Route::get('sales_marketing_reports/brandwise_lost_sales_items', [SalesMarketingReportController::class, 'getLostItemsDetail']);
+    Route::get('sales_marketing_reports/lost_items_detail/{so_id}', [SalesMarketingReportController::class, 'getLostItemsDetail']);
     Route::get('sales_gst_report', function() { return redirect('sales_marketing_reports?report_type=sales-gst-report'); });
     Route::get('sales_report', function() { return redirect('sales_marketing_reports?report_type=sales-gst-report'); });
 

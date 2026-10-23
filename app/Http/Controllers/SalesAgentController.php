@@ -179,7 +179,7 @@ class SalesAgentController extends Controller
                     'unique:sales_agents,pan_no,' . $id . ',id,deleted_at,NULL'
                 ],
                 'commission_value' => 'nullable|numeric|max:100',
-                'sales_target' => 'nullable|numeric|max:100',
+                'sales_target' => 'nullable|integer|min:0',
             ];
 
             $messages = [
@@ -190,7 +190,10 @@ class SalesAgentController extends Controller
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 '*.numeric' => 'This field must be a number.',
+                '*.integer' => 'This field must be an integer.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',
+                'sales_target.integer' => 'This field must be an integer.',
+                'sales_target.min' => 'This field must be at least :min.',
             ];
 
             $validated = $request->validate($rules, $messages);

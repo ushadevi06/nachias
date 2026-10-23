@@ -35,8 +35,6 @@
                         <option value="urgent-orders">🔥 Urgent Orders</option>
                         <option value="dispatch">🚚 Dispatch</option>
                         <option value="inward">📥 Stock Inward</option>
-                        <option value="discount">🏷️ Regular / Discount</option>
-                        <option value="brandwise-lost-sales">❌ Brandwise Lost Sales</option>
                         <option value="order-processing-time">⏱️ Order Processing</option>
                         <option value="stock-inward-sales">📊 Stock Inward & Sales</option>
                         <option value="brandwise-completion">📈 Brandwise Completion</option>
@@ -85,13 +83,13 @@
                         <option value="91+" {{ request('aging_filter') == '91+' ? 'selected' : '' }}>91+ Days (Old / Aged)</option>
                     </select>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" id="order_status_filter_col" style="{{ request('report_type') === 'order-processing-time' ? '' : 'display: none;' }}">
+                <div class="col-6 col-md-4 col-xl-2" id="order_status_filter_col" style="{{ in_array(request('report_type'), ['order-processing-time', 'order-dispatch', 'order-vs-dispatch']) ? '' : 'display: none;' }}">
                     <label class="form-label small fw-bold text-muted">Status</label>
                     <select class="form-select select2" name="order_status" id="order_status_filter" data-placeholder="Select Status">
                         <option value="">All Status</option>
                         <option value="pending" {{ request('order_status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="partially_delivery" {{ (request('order_status') == 'partially_delivery' || request('order_status') == 'partial') ? 'selected' : '' }}>Partially Delivery</option>
-                        <option value="completed" {{ request('order_status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                        <option value="dispatched" {{ (request('order_status') == 'dispatched' || request('order_status') == 'completed') ? 'selected' : '' }}>Dispatched</option>
                         <option value="cancelled" {{ request('order_status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                     </select>
                 </div>
@@ -185,16 +183,6 @@
                 <!-- 8. Stock Inward Report -->
                 <div class="tab-pane fade" id="inward" role="tabpanel">
                     @include('reports.warehouse_report.stock_inward')
-                </div>
-
-                <!-- 9. Regular Sales & Discount Sales Report -->
-                <div class="tab-pane fade" id="discount" role="tabpanel">
-                    @include('reports.warehouse_report.regular_discount')
-                </div>
-
-                <!-- 12. Brandwise Lost Sales Report -->
-                <div class="tab-pane fade" id="brandwise-lost-sales" role="tabpanel">
-                    @include('reports.warehouse_report.brandwise_lost_sales')
                 </div>
 
                 <!-- 13. Order Processing Report -->
@@ -472,7 +460,7 @@ $(document).ready(function() {
             $('#aging_filter_col').hide();
         }
 
-        if (targetTabId === 'order-processing-time') {
+        if (targetTabId === 'order-processing-time' || targetTabId === 'order-dispatch' || targetTabId === 'order-vs-dispatch') {
             $('#order_status_filter_col').show();
         } else {
             $('#order_status_filter_col').hide();
@@ -669,8 +657,6 @@ $(document).ready(function() {
 
         if (activeTabId === 'stock-inward-sales' && typeof renderStockInwardSalesBrandLevel === 'function') {
             renderStockInwardSalesBrandLevel();
-        } else if (activeTabId === 'brandwise-lost-sales' && typeof renderLostSalesBrandLevel === 'function') {
-            renderLostSalesBrandLevel();
         } else if (activeTabId === 'order-processing-time' && typeof renderOrderProcessingTimeRootLevel === 'function') {
             renderOrderProcessingTimeRootLevel();
         } else if (activeTabId === 'brandwise-completion' && typeof renderCompletionRootLevel === 'function') {
@@ -721,15 +707,6 @@ $(document).ready(function() {
             case 'stock-inward':
                 if (typeof window.initStockInwardTable === 'function') window.initStockInwardTable();
                 else if (typeof initStockInwardTable === 'function') initStockInwardTable();
-                break;
-            case 'discount':
-            case 'regular-discount':
-                if (typeof window.initRegularDiscountTable === 'function') window.initRegularDiscountTable();
-                else if (typeof initRegularDiscountTable === 'function') initRegularDiscountTable();
-                break;
-            case 'brandwise-lost-sales':
-                if (typeof window.initBrandwiseLostSalesTable === 'function') window.initBrandwiseLostSalesTable();
-                else if (typeof initBrandwiseLostSalesTable === 'function') initBrandwiseLostSalesTable();
                 break;
             case 'order-processing-time':
                 if (typeof window.initOrderProcessingTime === 'function') window.initOrderProcessingTime();

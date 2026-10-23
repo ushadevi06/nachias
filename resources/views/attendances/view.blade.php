@@ -482,10 +482,11 @@
 
         function getBadgeClass(status) {
             if (status === 'Present') return 'badge bg-success';
-            if (status === 'Late') return 'badge bg-danger';
-            if (status === 'Overtime') return 'badge bg-warning text-dark';
+            if (status === 'Late') return 'badge bg-warning text-dark';
+            if (status === 'Overtime') return 'badge bg-info';
             if (status === 'Absent') return 'badge bg-danger';
             if (status === 'Punch Out Missing') return 'badge bg-danger';
+            if (status === 'Missing Time Card') return 'badge bg-danger';
             if (status === 'Holiday') return 'badge bg-primary';
             if (status === 'Week Off') return 'badge bg-secondary';
             return 'badge bg-secondary';

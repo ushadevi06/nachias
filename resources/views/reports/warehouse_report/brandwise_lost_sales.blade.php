@@ -401,6 +401,7 @@ function drillDownToLostSalesItems(soId, soNo, customer, soDate) {
             type: "GET",
             data: function (d) {
                 d.so_id = currentLostSalesSoId;
+                d.brand_name = currentLostSalesBrand;
             }
         },
         columns: [
