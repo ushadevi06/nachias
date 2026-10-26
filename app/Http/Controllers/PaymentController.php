@@ -154,6 +154,19 @@ class PaymentController extends Controller
                 }
             }
 
+            if ($request->reference_document == 'so-invoice' && is_numeric($request->reference_no)) {
+                $invoice = SalesInvoice::find($request->reference_no);
+                if ($invoice) {
+                    $totalPaid = Payment::where('payment_type', $request->payment_type)->where('reference_type', 'Sales Invoice')->where('reference_id', $invoice->id)->whereNull('deleted_at')->sum('amount');
+
+                    $limit = (float)($invoice->grand_total ?? 0);
+                    $currentOutstanding = round($limit - $totalPaid, 2);
+                    if ($request->amount_paid > $currentOutstanding) {
+                        return redirect()->back()->with('danger', 'Amount Paid (₹' . number_format($request->amount_paid, 2) . ') exceeds Invoice Outstanding Balance (₹' . number_format(max(0, $currentOutstanding), 2) . ')')->withInput();
+                    }
+                }
+            }
+
             try {
                 DB::beginTransaction();
 

@@ -23,12 +23,20 @@
                                     @if(isset($jobCard->grand_total_qty))
                                         <span class="ms-2">| Total Qty: <span class="badge bg-label-primary fs-6 fw-bold">{{ (int) $jobCard->grand_total_qty }} PCS</span></span>
                                     @endif
+                                    @if(isset($stageRemainingPending) && isset($stageTotalPlanned) && $stageTotalPlanned > 0)
+                                        <span class="ms-2">| Stage Pending: <span class="badge bg-label-{{ $stageRemainingPending > 0 ? 'warning' : 'success' }} fs-6 fw-bold">{{ (int) $stageRemainingPending }} / {{ (int) $stageTotalPlanned }} PCS</span></span>
+                                    @endif
                                 </p>
                             </div>
                             <div class="col-md-5 text-md-end mt-3 mt-md-0">
                                 <div class="d-flex flex-wrap justify-content-md-end gap-2">
                                     @if(isset($task))
                                     <button type="button" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold" id="btn-view-history" data-task-id="{{ $task->id }}"><i class="ri ri-time-line me-1"></i> History</button>
+                                    @if($task->job_card_entry_id && $task->stage_id && isset($stageRemainingPending) && $stageRemainingPending > 0)
+                                    <a href="{{ route('task_management.add', ['job_card_id' => $task->job_card_entry_id, 'stage_id' => $task->stage_id]) }}" class="btn btn-success rounded-pill px-3 py-2 fw-bold shadow-sm" target="_blank">
+                                        <i class="ri ri-add-circle-line me-1"></i> + Create Next Task ({{ (int)$stageRemainingPending }} PCS)
+                                    </a>
+                                    @endif
                                     @endif
                                     <span class="badge bg-label-info rounded-pill px-3 py-2 fw-bold">
                                         <i class="ri ri-loader-4-line me-1"></i> {{ $task ? $task->status : '' }}
@@ -40,42 +48,45 @@
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-lg-2 mb-4">
-                <div class="sticky-sidebar">
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header border-bottom py-3">
-                            <h6 class="mb-0 fw-bold">Transaction Type</h6>
-                        </div>
-                        <div class="card-body px-0 py-2">
-                            <div class="nav flex-column nav-pills custom-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                                <button class="nav-link active text-start py-3 px-4 d-flex align-items-center" id="tab-issue" data-bs-toggle="pill" data-bs-target="#content-issue" type="button" role="tab">
-                                    <i class="ri ri-task-line me-2 fs-5"></i>
-                                    <div>
-                                        <span class="d-block fw-bold">Task Issue</span>
-                                        <small class="text-muted font-small">Issue materials/tasks</small>
-                                    </div>
-                                </button>
-                                <button class="nav-link text-start py-3 px-4 d-flex align-items-center" id="tab-receive" data-bs-toggle="pill" data-bs-target="#content-receive" type="button" role="tab">
-                                    <i class="ri ri-refresh-line me-2 fs-5"></i>
-                                    <div>
-                                        <span class="d-block fw-bold">Status Update</span>
-                                        <small class="text-muted font-small">Employee Progress</small>
-                                    </div>
-                                </button>
-                                <button class="nav-link text-start py-3 px-4 d-flex align-items-center" id="tab-adjustment" data-bs-toggle="pill" data-bs-target="#content-adjustment" type="button" role="tab">
-                                    <i class="ri ri-equalizer-line me-2 fs-5"></i>
-                                    <div>
-                                        <span class="d-block fw-bold">Task Adjustment</span>
-                                        <small class="text-muted font-small">Corrections & Wastage</small>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
+        <!-- Horizontal Tabs Navigation (1 Row, 3 Equal Columns) -->
+        <div class="row g-3 mb-4" id="v-pills-tab" role="tablist">
+            <div class="col-md-4">
+                <button class="nav-link custom-tab-btn active text-start" id="tab-issue" data-bs-toggle="pill" data-bs-target="#content-issue" type="button" role="tab">
+                    <div class="section-icon bg-label-primary text-primary me-3 flex-shrink-0" style="width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="ri ri-task-line fs-4"></i>
                     </div>
-                </div>
+                    <div class="overflow-hidden">
+                        <span class="d-block fw-bold" style="font-size: 0.95rem;">Task Issue</span>
+                        <small class="text-muted font-small d-block text-truncate">Issue materials/tasks</small>
+                    </div>
+                </button>
             </div>
-            <div class="col-lg-10">
+            <div class="col-md-4">
+                <button class="nav-link custom-tab-btn text-start" id="tab-receive" data-bs-toggle="pill" data-bs-target="#content-receive" type="button" role="tab">
+                    <div class="section-icon bg-label-success text-success me-3 flex-shrink-0" style="width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="ri ri-refresh-line fs-4"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <span class="d-block fw-bold" style="font-size: 0.95rem;">Status Update</span>
+                        <small class="text-muted font-small d-block text-truncate">Employee Progress</small>
+                    </div>
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button class="nav-link custom-tab-btn text-start" id="tab-adjustment" data-bs-toggle="pill" data-bs-target="#content-adjustment" type="button" role="tab">
+                    <div class="section-icon bg-label-warning text-warning me-3 flex-shrink-0" style="width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="ri ri-equalizer-line fs-4"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <span class="d-block fw-bold" style="font-size: 0.95rem;">Task Adjustment</span>
+                        <small class="text-muted font-small d-block text-truncate">Corrections & Wastage</small>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
                 <div class="tab-content sdk-tab-content p-0" id="v-pills-tabContent">
                     <div class="tab-pane fade show active" id="content-issue" role="tabpanel">
                         <form action="{{ $task ? route('task_management.edit', ['id' => $task->id]) : route('task_management.add') }}" method="POST" class="common-form" autocomplete="off">
@@ -152,7 +163,7 @@
                                                 @endphp
                                                 @if($selectedStage)
                                                     <input type="text" class="form-control" value="{{ $selectedStage->operationStage->operation_stage_name ?? ($selectedStage->stage ?? 'No Name') }}" readonly>
-                                                     <input type="hidden" name="stage_id" id="stage_select" value="{{ $selectedStage->id }}" data-start-date="{{ $selectedStage->start_date ? \Carbon\Carbon::parse($selectedStage->start_date)->format('Y-m-d') : '' }}" data-qty="{{ $selectedStage->planned_qty ?? 0 }}"  data-service-provider-id="{{ $selectedStage->scheduled_to ?? '' }}" data-job-card-service-provider-id="{{ $jobCard->service_provider_id ?? '' }}" data-due-date="{{ $selectedStage->due_date ? \Carbon\Carbon::parse($selectedStage->due_date)->format('Y-m-d') : '' }}" data-operation-stage-id="{{ $selectedStage->operation_stage_id }}" data-services='@json($services)'>
+                                                     <input type="hidden" name="stage_id" id="stage_select" value="{{ $selectedStage->id }}" data-start-date="{{ $selectedStage->start_date ? \Carbon\Carbon::parse($selectedStage->start_date)->format('Y-m-d') : '' }}" data-qty="{{ isset($stageRemainingPending) ? $stageRemainingPending : ($selectedStage->planned_qty ?? 0) }}" data-total-planned-qty="{{ $selectedStage->planned_qty ?? 0 }}" data-already-assigned-qty="{{ $stageAlreadyAssigned ?? 0 }}" data-service-provider-id="{{ $selectedStage->scheduled_to ?? '' }}" data-job-card-service-provider-id="{{ $jobCard->service_provider_id ?? '' }}" data-due-date="{{ $selectedStage->due_date ? \Carbon\Carbon::parse($selectedStage->due_date)->format('Y-m-d') : '' }}" data-operation-stage-id="{{ $selectedStage->operation_stage_id }}" data-services='@json($services)'>
                                                 @else
                                                     <input type="text" class="form-control" value="No Stage Selected" readonly>
                                                 @endif
@@ -184,76 +195,138 @@
                                         </div>
                                         @endif
 
-                                        <div class="col-md-12">
-                                            <div class="table-responsive border rounded bg-white mt-3">
-                                                <div id="assignment-cards-container">
-                                                    @php 
-                                                        $assignmentsArr = [];
-                                                        if (old('assignments')) {
-                                                            $assignmentsArr = old('assignments');
-                                                        } elseif (isset($task) && $task->assignments->count() > 0) {
-                                                            $assignmentsArr = $task->assignments;
-                                                        } elseif (!isset($task) && isset($services) && count($services) > 0) {
-                                                            $isStitchingAssemble = ($selectedStage->operationStage->operation_stage_name ?? '') === 'STITCHING ASSEMBLE';
-                                                            $multiplier = $isStitchingAssemble ? 2 : 1;
-                                                            foreach ($services as $svc) {
-                                                                for ($i = 0; $i < $multiplier; $i++) {
-                                                                    $assignmentsArr[] = [
-                                                                        'service_id' => $svc['id'],
-                                                                        'issue_qty' => $i === 0 ? $svc['qty'] : '',
-                                                                        'status' => 'Open'
-                                                                    ];
-                                                                }
-                                                            }
-                                                        } elseif (!isset($task)) {
-                                                            $assignmentsArr = [[]];
-                                                        }
-                                                    @endphp
+                                        @php
+                                            $stageStartFormatted = ($selectedStage && $selectedStage->start_date) ? \Carbon\Carbon::parse($selectedStage->start_date)->format('d-m-Y') : null;
+                                            $stageDueFormatted = ($selectedStage && $selectedStage->due_date) ? \Carbon\Carbon::parse($selectedStage->due_date)->format('d-m-Y') : null;
+                                            $defaultPlanDate = isset($task->issue_date) ? \Carbon\Carbon::parse($task->issue_date)->format('d-m-Y') : (old('plan_date') ?? '');
+                                        @endphp
+                                        <div class="col-md-6">
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="text" class="form-control flatpickr-plan-date" name="plan_date" id="plan_date" value="{{ $defaultPlanDate }}" data-start-date="{{ $stageStartFormatted ?? '' }}" data-due-date="{{ $stageDueFormatted ?? '' }}" placeholder="DD-MM-YYYY" autocomplete="off">
+                                                <label>Plan Date (Task Date) *</label>
+                                            </div>
+                                            @error('plan_date') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        </div>
 
-                                                    @foreach($assignmentsArr as $index => $assign)
+                                        <div class="col-md-6">
+                                            <div class="card border-0 bg-light h-100">
+                                                <div class="card-body p-3">
+                                                    <div class="row g-2 text-center text-sm-start align-items-center">
                                                         @php 
-                                                            $assign = (object) $assign;
-                                                            $emp_id_val = $assign->issued_to ?? '';
-                                                            $employee_name = '';
-                                                            $employee_emp_id = '';
-
-                                                            if (isset($assign->assignee)) {
-                                                                $employee_name = $assign->assignee->name;
-                                                                $employee_emp_id = $assign->assignee->emp_id ?? '';
-                                                            } elseif ($emp_id_val) {
-                                                                $oldUser = \App\Models\User::find($emp_id_val);
-                                                                if ($oldUser) {
-                                                                    $employee_name = $oldUser->name;
-                                                                    $employee_emp_id = $oldUser->emp_id ?? '';
-                                                                }
-                                                            }
-
-                                                            $employee_display = $employee_name ?: 'Selected Employee';
-                                                            if ($employee_emp_id) {
-                                                                $employee_display .= ' (' . $employee_emp_id . ')';
-                                                            }
-                                                            $service_id = $assign->service_id ?? '';
-                                                            $issue_date = isset($assign->issue_date) ? \Carbon\Carbon::parse($assign->issue_date)->format('d-m-Y') : '';
-                                                            $due_date = isset($assign->due_date) ? \Carbon\Carbon::parse($assign->due_date)->format('d-m-Y') : '';
-                                                            $status = $assign->status ?? 'Open';
+                                                            $totPlanned = (int)($stageTotalPlanned ?? ($selectedStage->planned_qty ?? ($jobCard->grand_total_qty ?? 0)));
+                                                            $pndQty = (int)($stageRemainingPending ?? 0);
+                                                            $achievedVal = max(0, $totPlanned - $pndQty);
                                                         @endphp
-                                                        <div class="assignment-card assignment-row">
-                                                            <div class="card-badge">#{{ $index + 1 }}</div>
-                                                            <input type="hidden" name="assignments[{{ $index }}][id]" value="{{ $assign->id ?? '' }}">
-                                                            <div class="assignment-card-header">
-                                                                <h6 class="assignment-card-title">Assignment Details</h6>
-                                                                <button type="button" class="assignment-remove-btn remove-assignment-row">
-                                                                    <i class="ri ri-delete-bin-line"></i>
-                                                                </button>
-                                                            </div>
-                                                            <div class="assignment-card-body">
-                                                                <div class="form-group mb-3">
-                                                                    <label>Service *</label>
-                                                                    <select class="form-select select2 services-select" name="assignments[{{ $index }}][service_id]" data-placeholder="Select Service" data-selected="{{ $service_id }}">
+                                                        <div class="col-4">
+                                                            <small class="text-muted d-block mb-1 text-truncate"><i class="ri ri-focus-2-line me-1"></i>STAGE TARGET</small>
+                                                            <span class="badge bg-label-secondary fs-6 fw-bold">{{ $totPlanned }} PCS</span>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <small class="text-muted d-block mb-1 text-truncate"><i class="ri ri-checkbox-circle-line me-1"></i>STAGE ACHIEVED</small>
+                                                            <span class="badge bg-label-success fs-6 fw-bold">{{ $achievedVal }} PCS</span>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <small class="text-muted d-block mb-1 text-truncate"><i class="ri ri-time-line me-1"></i>STAGE PENDING</small>
+                                                            <span class="badge bg-label-{{ $pndQty > 0 ? 'warning' : 'success' }} fs-6 fw-bold">{{ $pndQty }} PCS</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-12">
+                                            <div class="table-responsive border rounded bg-white mt-3 shadow-sm">
+                                                <table class="table table-bordered table-hover align-middle mb-0" id="assignments-table">
+                                                    <thead class="table-light text-nowrap">
+                                                        <tr class="text-secondary small fw-bold">
+                                                            <th style="width: 45px;" class="text-center">#</th>
+                                                            <th style="min-width: 170px;">Service <span class="text-danger">*</span></th>
+                                                            <th style="min-width: 200px;">Issued To <span class="text-danger">*</span></th>
+                                                            <th style="min-width: 140px;">Plan / Issue Date <span class="text-danger">*</span></th>
+                                                            <th style="min-width: 95px; width: 95px;" class="text-center">Hrs</th>
+                                                            <th style="min-width: 110px; width: 110px;" class="text-center">Qty <span class="text-danger">*</span></th>
+                                                            <th style="min-width: 140px;">Status</th>
+                                                            <th style="min-width: 160px;">Remarks</th>
+                                                            <th style="width: 90px; min-width: 90px;" class="text-center">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="assignment-cards-container">
+                                                        @php 
+                                                            $assignmentsArr = [];
+                                                            if (old('assignments')) {
+                                                                $assignmentsArr = old('assignments');
+                                                            } elseif (isset($task) && $task->assignments->count() > 0) {
+                                                                $assignmentsArr = $task->assignments;
+                                                            } elseif (!isset($task) && isset($services) && count($services) > 0) {
+                                                                $isStitchingAssemble = ($selectedStage->operationStage->operation_stage_name ?? '') === 'STITCHING ASSEMBLE';
+                                                                $multiplier = $isStitchingAssemble ? 2 : 1;
+                                                                foreach ($services as $svc) {
+                                                                    if ((float)($svc['qty'] ?? 0) <= 0) {
+                                                                        continue;
+                                                                    }
+                                                                    for ($i = 0; $i < $multiplier; $i++) {
+                                                                        $assignmentsArr[] = [
+                                                                            'service_id' => $svc['id'],
+                                                                            'issue_qty' => $i === 0 ? $svc['qty'] : '',
+                                                                            'status' => 'Open'
+                                                                        ];
+                                                                    }
+                                                                }
+                                                                if (empty($assignmentsArr)) {
+                                                                    $assignmentsArr = [[]];
+                                                                }
+                                                            } elseif (!isset($task)) {
+                                                                $assignmentsArr = [[]];
+                                                            }
+                                                        @endphp
+
+                                                        @foreach($assignmentsArr as $index => $assign)
+                                                            @php 
+                                                                $assign = (object) $assign;
+                                                                $emp_id_val = $assign->issued_to ?? '';
+                                                                $employee_name = '';
+                                                                $employee_emp_id = '';
+
+                                                                if (isset($assign->assignee)) {
+                                                                    $employee_name = $assign->assignee->name;
+                                                                    $employee_emp_id = $assign->assignee->emp_id ?? '';
+                                                                } elseif ($emp_id_val) {
+                                                                    $oldUser = \App\Models\User::find($emp_id_val);
+                                                                    if ($oldUser) {
+                                                                        $employee_name = $oldUser->name;
+                                                                        $employee_emp_id = $oldUser->emp_id ?? '';
+                                                                    }
+                                                                }
+
+                                                                $employee_display = $employee_name ?: 'Select Employee';
+                                                                if ($employee_emp_id) {
+                                                                    $employee_display .= ' (' . $employee_emp_id . ')';
+                                                                }
+                                                                $service_id = $assign->service_id ?? '';
+                                                                $issue_date = isset($assign->issue_date) ? \Carbon\Carbon::parse($assign->issue_date)->format('d-m-Y') : '';
+                                                                $due_date = isset($assign->due_date) ? \Carbon\Carbon::parse($assign->due_date)->format('d-m-Y') : '';
+                                                                $status = $assign->status ?? 'Open';
+                                                                if ($status === 'Completed' || (isset($assign->issue_qty) && (float)$assign->issue_qty > 0 && ((float)($assign->completed_qty ?? 0) + (float)($assign->wastage_qty ?? 0)) >= (float)$assign->issue_qty)) {
+                                                                    $status = 'Completed';
+                                                                } elseif (((float)($assign->completed_qty ?? 0) + (float)($assign->wastage_qty ?? 0)) > 0) {
+                                                                    $status = 'In Progress';
+                                                                }
+
+                                                            @endphp
+                                                            <tr class="assignment-row">
+                                                                <td class="text-center fw-bold card-badge">#{{ $index + 1 }}</td>
+                                                                <td>
+                                                                    <input type="hidden" name="assignments[{{ $index }}][id]" value="{{ $assign->id ?? '' }}">
+                                                                    <select class="form-select select2 services-select form-select-sm" name="assignments[{{ $index }}][service_id]" data-placeholder="Select Service" data-selected="{{ $service_id }}">
                                                                         <option value="">Select Service</option>
                                                                         @if(isset($services) && count($services) > 0)
                                                                             @foreach($services as $svc)
-                                                                                <option value="{{ $svc['id'] }}" data-qty="{{ $svc['qty'] }}" {{ $service_id == $svc['id'] ? 'selected' : '' }}>{{ $svc['name'] }}</option>
+                                                                                @php
+                                                                                    $sTarget = (int)($svc['total_planned_qty'] ?? $svc['qty'] ?? 0);
+                                                                                    $sAchieved = (int)($svc['achieved_qty'] ?? 0);
+                                                                                    $sPending = (int)($svc['stage_pending_qty'] ?? max(0, $sTarget - $sAchieved));
+                                                                                @endphp
+                                                                                <option value="{{ $svc['id'] }}" data-qty="{{ $svc['qty'] }}" data-target="{{ $sTarget }}" data-achieved="{{ $sAchieved }}" data-pending="{{ $sPending }}" {{ $service_id == $svc['id'] ? 'selected' : '' }}>{{ $svc['name'] }}</option>
                                                                             @endforeach
                                                                         @elseif($service_id)
                                                                             @php
@@ -264,71 +337,88 @@
                                                                             </option>
                                                                         @endif
                                                                     </select>
+                                                                    @php
+                                                                        $matchedSvc = isset($services) ? collect($services)->firstWhere('id', (int)$service_id) : null;
+                                                                        $mTarget = $matchedSvc ? (int)($matchedSvc['total_planned_qty'] ?? $matchedSvc['qty'] ?? 0) : 0;
+                                                                        $mAchieved = $matchedSvc ? (int)($matchedSvc['achieved_qty'] ?? 0) : 0;
+                                                                        $mPending = $matchedSvc ? (int)($matchedSvc['stage_pending_qty'] ?? max(0, $mTarget - $mAchieved)) : 0;
+                                                                    @endphp
+                                                                    <div class="service-metrics-badge mt-1 d-flex flex-wrap gap-1" style="font-size: 10px; {{ $matchedSvc ? 'display: flex !important;' : 'display: none !important;' }}">
+                                                                        <span class="badge bg-label-secondary py-0 px-1 border" style="font-size: 10px;" title="Stage Planned Target">Target: <b class="badge-target">{{ $mTarget }}</b></span>
+                                                                        <span class="badge bg-label-success py-0 px-1 border" style="font-size: 10px;" title="Already Completed/Assigned in Stage">Achieved: <b class="badge-achieved">{{ $mAchieved }}</b></span>
+                                                                        <span class="badge bg-label-warning py-0 px-1 border" style="font-size: 10px;" title="Remaining Pending Quantity">Pending: <b class="badge-pending">{{ $mPending }}</b></span>
+                                                                    </div>
                                                                     @error("assignments.$index.service_id") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                                </div>
-
-                                                                <div class="form-group mb-3">
-                                                                    <label>Issued To *</label>
-                                                                    <select class="form-select select2 employee-select" name="assignments[{{ $index }}][issued_to]" data-placeholder="Select Employee">
+                                                                </td>
+                                                                <td>
+                                                                    <select class="form-select select2 employee-select form-select-sm" name="assignments[{{ $index }}][issued_to]" data-placeholder="Select Employee">
                                                                         <option value="">Select Employee</option>
-                                                                        @if($emp_id_val)
+                                                                        @if(isset($users) && count($users) > 0)
+                                                                            @foreach($users as $user)
+                                                                                <option value="{{ $user->id }}" data-emp-id="{{ $user->emp_id ?? '' }}" {{ $emp_id_val == $user->id ? 'selected' : '' }}>
+                                                                                    {{ $user->name }}{{ $user->emp_id ? ' (' . $user->emp_id . ')' : '' }}
+                                                                                </option>
+                                                                            @endforeach
+                                                                        @elseif($emp_id_val)
                                                                             <option value="{{ $emp_id_val }}" selected>{{ $employee_display }}</option>
                                                                         @endif
                                                                     </select>
                                                                     <input type="hidden" name="assignments[{{ $index }}][emp_id]" class="employee-id-input" value="{{ $employee_emp_id }}">
                                                                     @error("assignments.$index.issued_to") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                                </div>
-
-                                                                <div class="assignment-card-grid mb-3">
-                                                                    <div class="form-group">
-                                                                        <label>Issue Date *</label>
-                                                                        <input type="text" class="form-control flatpickr-assignment issue-date" name="assignments[{{ $index }}][issue_date]" value="{{ $issue_date }}" placeholder="Issue Date" autocomplete="off">
-                                                                        @error("assignments.$index.issue_date") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Due Date</label>
-                                                                        <input type="text" class="form-control flatpickr-assignment due-date" name="assignments[{{ $index }}][due_date]" value="{{ $due_date }}" placeholder="Due Date" autocomplete="off">
-                                                                        @error("assignments.$index.due_date") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                                    </div>
-                                                                </div>
-
-                                                                <div class="assignment-card-grid mb-3">
-                                                                    <div class="form-group">
-                                                                        <label>Hrs</label>
-                                                                        <input type="number" step="0.01" min="0" class="form-control total-hrs" name="assignments[{{ $index }}][total_hrs]" value="{{ $assign->total_hrs ?? '' }}" placeholder="0.00">
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label>Qty *</label>
-                                                                        <input type="number" step="1" min="0" class="form-control" name="assignments[{{ $index }}][issue_qty]" value="{{ $assign->issue_qty ?? '' }}" placeholder="Qty">
-                                                                        @error("assignments.$index.issue_qty") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                                    </div>
-                                                                </div>
-
-                                                                <div class="form-group mb-3">
-                                                                    <label>Status</label>
-                                                                    <select class="form-select select2 status-select-row" name="assignments[{{ $index }}][status_display]" disabled>
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" class="form-control form-control-sm flatpickr-assignment issue-date {{ $status == 'Completed' ? 'bg-light' : '' }}" name="assignments[{{ $index }}][issue_date]" value="{{ $issue_date }}" placeholder="DD-MM-YYYY" autocomplete="off" {{ $status == 'Completed' ? 'readonly style=pointer-events:none;background-color:#f8f9fa;' : '' }}>
+                                                                    @error("assignments.$index.issue_date") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
+                                                                </td>
+                                                                <td>
+                                                                    <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center total-hrs" name="assignments[{{ $index }}][total_hrs]" value="{{ $assign->total_hrs ?? '' }}" placeholder="0.00">
+                                                                </td>
+                                                                <td>
+                                                                    <input type="number" step="1" min="0" class="form-control form-control-sm text-center qty-input" name="assignments[{{ $index }}][issue_qty]" value="{{ $assign->issue_qty ?? '' }}" placeholder="Qty">
+                                                                    @error("assignments.$index.issue_qty") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
+                                                                </td>
+                                                                <td>
+                                                                    <select class="form-select select2 status-select-row form-select-sm" name="assignments[{{ $index }}][status_display]" disabled>
                                                                         <option value="Pending Assignment" {{ $status == 'Pending Assignment' ? 'selected' : '' }}>Pending Assignment</option>
                                                                         <option value="Open" {{ $status == 'Open' ? 'selected' : '' }}>Open</option>
                                                                         <option value="In Progress" {{ $status == 'In Progress' ? 'selected' : '' }}>In Progress</option>
                                                                         <option value="Completed" {{ $status == 'Completed' ? 'selected' : '' }}>Completed</option>
                                                                     </select>
                                                                     <input type="hidden" name="assignments[{{ $index }}][status]" value="{{ $status }}">
-                                                                </div>
-
-                                                                <div class="form-group">
-                                                                    <label>Remarks</label>
-                                                                    <input type="text" class="form-control" name="assignments[{{ $index }}][remarks]" value="{{ $assign->remarks ?? '' }}" placeholder="Remarks">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-
-                                                    <button type="button" class="add-assignment-card-btn" id="add-assignment-row">
-                                                        <i class="ri ri-add-line fs-2"></i>
-                                                        <span class="fw-bold">Add Another Assignment</span>
-                                                    </button>
-                                                </div>
-
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" class="form-control form-control-sm" name="assignments[{{ $index }}][remarks]" value="{{ $assign->remarks ?? '' }}" placeholder="Remarks">
+                                                                </td>
+                                                                <td class="text-center text-nowrap">
+                                                                    @php
+                                                                        $matchedSvc = isset($services) ? collect($services)->firstWhere('id', (int)$service_id) : null;
+                                                                        $sTarget = $matchedSvc ? (float)($matchedSvc['total_planned_qty'] ?? $matchedSvc['qty'] ?? 0) : 0;
+                                                                        $sAchieved = $matchedSvc ? (float)($matchedSvc['achieved_qty'] ?? 0) : 0;
+                                                                        $sPending = $matchedSvc ? (float)($matchedSvc['stage_pending_qty'] ?? max(0, $sTarget - $sAchieved)) : 0;
+                                                                        $showAddBtn = $service_id && ($sPending > 0);
+                                                                    @endphp
+                                                                    <button type="button" class="btn btn-icon btn-outline-primary btn-sm add-row-for-service me-1" title="Add Another Row for this Service" style="{{ $showAddBtn ? '' : 'display: none;' }}">
+                                                                        <i class="ri ri-add-line"></i>
+                                                                    </button>
+                                                                    @if($status == 'Completed')
+                                                                        <button type="button" class="btn btn-icon btn-sm btn-outline-secondary disabled" disabled style="opacity: 0.35; cursor: not-allowed; pointer-events: none;" title="Completed batch cannot be deleted">
+                                                                            <i class="ri ri-delete-bin-line"></i>
+                                                                        </button>
+                                                                    @else
+                                                                        <button type="button" class="btn btn-icon btn-outline-danger btn-sm remove-assignment-row" title="Delete Row">
+                                                                            <i class="ri ri-delete-bin-line"></i>
+                                                                        </button>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="mt-3">
+                                                <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-2" id="add-assignment-row">
+                                                    <i class="ri ri-add-line fs-5 align-middle me-1"></i> Add Another Row
+                                                </button>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -441,10 +531,17 @@
                                                             $isOverdue = true;
                                                         }
 
+                                                        $displayStatus = $assign->status;
+                                                        if ((float)$assign->issue_qty > 0 && ((float)$assign->completed_qty + (float)$assign->wastage_qty) >= (float)$assign->issue_qty) {
+                                                            $displayStatus = 'Completed';
+                                                        } elseif (((float)$assign->completed_qty + (float)$assign->wastage_qty) > 0) {
+                                                            $displayStatus = 'In Progress';
+                                                        }
+
                                                         $statusColor = 'secondary';
-                                                        if ($assign->status == 'Completed')
+                                                        if ($displayStatus == 'Completed')
                                                             $statusColor = 'success';
-                                                        if ($assign->status == 'In Progress')
+                                                        if ($displayStatus == 'In Progress')
                                                             $statusColor = 'info';
 
                                                         $qcStatusColor = 'secondary';
@@ -453,7 +550,7 @@
                                                         if ($assign->qc_status == 'In QC')
                                                             $qcStatusColor = 'info';
                                                     @endphp
-                                                    <div class="accordion-item border rounded mb-3 status-update-row {{ $isOverdue ? 'border-danger' : '' }} {{ $assign->qc_status == 'QC Completed' ? 'border-success' : '' }}">
+                                                    <div class="accordion-item border rounded mb-3 status-update-row {{ $isOverdue ? 'border-danger' : '' }} {{ $assign->qc_status == 'QC Completed' ? 'border-success' : '' }}" data-service-id="{{ $assign->service_id }}">
                                                         <h2 class="accordion-header" id="heading-{{ $index }}">
                                                             <button class="accordion-button collapsed p-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $index }}">
                                                                 <div class="d-flex align-items-center justify-content-between w-100 me-3">
@@ -472,7 +569,7 @@
                                                                             <i class="ri ri-calendar-todo-line me-1"></i>{{ $assign->due_date ? \Carbon\Carbon::parse($assign->due_date)->format('d-m-Y') : 'N/A' }}
                                                                         </span>
                                                                         @endif
-                                                                        <span class="badge bg-label-{{ $statusColor }} border-{{ $statusColor }} fw-bold row-status-badge font-small">{{ $assign->status }}</span>
+                                                                        <span class="badge bg-label-{{ $statusColor }} border-{{ $statusColor }} fw-bold row-status-badge font-small">{{ $displayStatus }}</span>
                                                                         @if(auth()->user()->hasRole('QUALITY CHECKER') || auth()->user()->id == 1)
                                                                             <span class="badge bg-label-{{ $qcStatusColor }} border-{{ $qcStatusColor }} fw-bold row-qc-status-badge font-small">{{ $assign->qc_status ?? 'Pending' }}</span>
                                                                         @endif
@@ -840,105 +937,135 @@
     </div>
     <script>
         $(document).ready(function() {
-            const issuePicker = $("#issue_date").flatpickr({
+            var stageMinDate = "{{ $stageStartFormatted ?? '' }}" || null;
+            var stageMaxDate = "{{ $stageDueFormatted ?? '' }}" || null;
+
+            var planDefaultDate = "{{ $defaultPlanDate }}";
+            const planDatePicker = $("#plan_date").flatpickr({
                 dateFormat: "d-m-Y",
                 allowInput: true,
-                defaultDate: "{{ isset($task->issue_date) ? \Carbon\Carbon::parse($task->issue_date)->format('d-m-Y') : (old('issue_date') ?? date('d-m-Y')) }}",
+                closeOnSelect: true,
+                minDate: stageMinDate,
+                maxDate: stageMaxDate,
+                defaultDate: planDefaultDate ? planDefaultDate : null,
                 onChange: function(selectedDates, dateStr, instance) {
-                    duePicker.set('minDate', dateStr);
+                    if (dateStr) {
+                        $('#assignment-cards-container .assignment-row').each(function() {
+                            var $row = $(this);
+                            var rowStatus = $row.find('input[name*="[status]"]').val() || $row.find('.status-select-row').val();
+                            if (rowStatus === 'Completed') {
+                                return; // Completed batches must never be modified by Plan Date change!
+                            }
+                            var $rowDate = $row.find('.flatpickr-assignment.issue-date');
+                            var fp = $rowDate[0] ? $rowDate[0]._flatpickr : null;
+                            if (fp) {
+                                fp.setDate(dateStr, true);
+                            } else {
+                                $rowDate.val(dateStr);
+                            }
+                        });
+                        instance.close();
+                    }
                 }
             });
             let assignmentIndex = {{ count($assignmentsArr) }};
             let rowIndex = {{ count($adjItems ?? [0]) }};
             let availableMaterials = [];
 
-            function addAssignmentRow(data = {}) {
+            function addAssignmentRow(data = {}, $insertAfter = null) {
                 var firstRow = $('.assignment-row').first();
-                if (!data.issue_date && firstRow.length) {
-                    data.issue_date = firstRow.find('.flatpickr-assignment.issue-date').val();
-                }
-                if (!data.due_date && firstRow.length) {
-                    data.due_date = firstRow.find('.flatpickr-assignment.due-date').val();
+                if (!data.issue_date) {
+                    data.issue_date = (firstRow.length ? firstRow.find('.flatpickr-assignment.issue-date').val() : '') || $('#plan_date').val() || '';
                 }
                 if (!data.total_hrs && firstRow.length) {
                     data.total_hrs = firstRow.find('.total-hrs').val();
                 }
 
                 let rowHtml = `
-                <div class="assignment-card assignment-row">
-                    <div class="card-badge">#${assignmentIndex + 1}</div>
-                    <div class="assignment-card-header">
-                        <h6 class="assignment-card-title">Assignment Details</h6>
-                        <button type="button" class="assignment-remove-btn remove-assignment-row">
-                            <i class="ri ri-delete-bin-line"></i>
+                <tr class="assignment-row">
+                    <td class="text-center fw-bold card-badge">#${assignmentIndex + 1}</td>
+                    <td>
+                        <select class="form-select select2 services-select form-select-sm" name="assignments[${assignmentIndex}][service_id]" data-placeholder="Select Service">
+                            <option value="">Select Service</option>
+                            @if(isset($services) && count($services) > 0)
+                                @foreach($services as $svc)
+                                    @php
+                                        $sTarget = (int)($svc['total_planned_qty'] ?? $svc['qty'] ?? 0);
+                                        $sAchieved = (int)($svc['achieved_qty'] ?? 0);
+                                        $sPending = (int)($svc['stage_pending_qty'] ?? max(0, $sTarget - $sAchieved));
+                                    @endphp
+                                    <option value="{{ $svc['id'] }}" data-qty="{{ $svc['qty'] }}" data-target="{{ $sTarget }}" data-achieved="{{ $sAchieved }}" data-pending="{{ $sPending }}" ${data.service_id == {{ $svc['id'] }} ? 'selected' : ''}>{{ $svc['name'] }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                        <div class="service-metrics-badge mt-1 d-flex flex-wrap gap-1" style="font-size: 10px; display: none;">
+                            <span class="badge bg-label-secondary py-0 px-1 border" style="font-size: 10px;" title="Stage Planned Target">Target: <b class="badge-target">0</b></span>
+                            <span class="badge bg-label-success py-0 px-1 border" style="font-size: 10px;" title="Already Completed/Assigned in Stage">Achieved: <b class="badge-achieved">0</b></span>
+                            <span class="badge bg-label-warning py-0 px-1 border" style="font-size: 10px;" title="Remaining Pending Quantity">Pending: <b class="badge-pending">0</b></span>
+                        </div>
+                    </td>
+                    <td>
+                        <select class="form-select select2 employee-select form-select-sm" name="assignments[${assignmentIndex}][issued_to]" data-placeholder="Select Employee">
+                            <option value="">Select Employee</option>
+                            @if(isset($users) && count($users) > 0)
+                                @foreach($users as $user)
+                                    <option value="{{ $user->id }}" data-emp-id="{{ $user->emp_id ?? '' }}" ${data.issued_to == {{ $user->id }} ? 'selected' : ''}>
+                                        {{ addslashes($user->name) }}{{ $user->emp_id ? ' (' . addslashes($user->emp_id) . ')' : '' }}
+                                    </option>
+                                @endforeach
+                            @endif
+                            ${data.issued_to && !$('#assignment-cards-container .employee-select:first option[value="' + data.issued_to + '"]').length ? `<option value="${data.issued_to}" selected>${data.employee_name || 'Selected Employee'}</option>` : ''}
+                        </select>
+                        <input type="hidden" name="assignments[${assignmentIndex}][emp_id]" class="employee-id-input" value="${data.emp_id || ''}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm flatpickr-assignment issue-date" name="assignments[${assignmentIndex}][issue_date]" value="${data.issue_date || ''}" placeholder="DD-MM-YYYY" autocomplete="off">
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center total-hrs" name="assignments[${assignmentIndex}][total_hrs]" value="${data.total_hrs || ''}" placeholder="0.00">
+                    </td>
+                    <td>
+                        <input type="number" step="1" min="0" class="form-control form-control-sm text-center qty-input" name="assignments[${assignmentIndex}][issue_qty]" value="${data.issue_qty || ''}" placeholder="Qty">
+                    </td>
+                    <td>
+                        <select class="form-select select2 status-select-row form-select-sm" name="assignments[${assignmentIndex}][status_display]" disabled>
+                            <option value="Open" ${data.status === 'Open' || !data.status ? 'selected' : ''}>Open</option>
+                            <option value="In Progress" ${data.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Completed" ${data.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                        <input type="hidden" name="assignments[${assignmentIndex}][status]" value="${data.status || 'Open'}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" name="assignments[${assignmentIndex}][remarks]" value="${data.remarks || ''}" placeholder="Remarks">
+                    </td>
+                    <td class="text-center text-nowrap">
+                        <button type="button" class="btn btn-icon btn-outline-primary btn-sm add-row-for-service me-1" title="Add Another Row for this Service" style="display: none;">
+                            <i class="ri ri-add-line"></i>
                         </button>
-                    </div>
-                    <div class="assignment-card-body">
-                        <div class="form-group mb-3">
-                            <label>Service *</label>
-                            <select class="form-select select2 services-select" name="assignments[${assignmentIndex}][service_id]" data-placeholder="Select Service">
-                                <option value="">Select Service</option>
-                                @if(isset($services) && count($services) > 0)
-                                    @foreach($services as $svc)
-                                        <option value="{{ $svc['id'] }}" data-qty="{{ $svc['qty'] }}" ${data.service_id == {{ $svc['id'] }} ? 'selected' : ''}>{{ $svc['name'] }}</option>
-                                    @endforeach
-                                @endif
-                            </select>
-                        </div>
+                        ${data.status === 'Completed' ? `
+                            <button type="button" class="btn btn-icon btn-sm btn-outline-secondary" disabled style="opacity: 0.35; cursor: not-allowed;" title="Completed batch cannot be deleted">
+                                <i class="ri ri-delete-bin-line"></i>
+                            </button>
+                        ` : `
+                            <button type="button" class="btn btn-icon btn-outline-danger btn-sm remove-assignment-row" title="Delete Row">
+                                <i class="ri ri-delete-bin-line"></i>
+                            </button>
+                        `}
+                    </td>
+                </tr>`;
 
-                        <div class="form-group mb-3">
-                            <label>Issued To *</label>
-                            <select class="form-select select2 employee-select" name="assignments[${assignmentIndex}][issued_to]" data-placeholder="Select Employee">
-                                <option value="">Select Employee</option>
-                                ${data.issued_to ? `<option value="${data.issued_to}" selected>${data.employee_name || 'Selected Employee'}</option>` : ''}
-                            </select>
-                            <input type="hidden" name="assignments[${assignmentIndex}][emp_id]" class="employee-id-input" value="${data.emp_id || ''}">
-                        </div>
-
-                        <div class="assignment-card-grid mb-3">
-                            <div class="form-group">
-                                <label>Issue Date *</label>
-                                <input type="text" class="form-control flatpickr-assignment issue-date" name="assignments[${assignmentIndex}][issue_date]" value="${data.issue_date || ''}" placeholder="Issue Date" autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label>Due Date</label>
-                                <input type="text" class="form-control flatpickr-assignment due-date" name="assignments[${assignmentIndex}][due_date]" value="${data.due_date || ''}" placeholder="Due Date" autocomplete="off">
-                            </div>
-                        </div>
-
-                        <div class="assignment-card-grid mb-3">
-                            <div class="form-group">
-                                <label>Hrs</label>
-                                <input type="number" step="0.01" min="0" class="form-control total-hrs" name="assignments[${assignmentIndex}][total_hrs]" value="${data.total_hrs || ''}" placeholder="0.00">
-                            </div>
-                            <div class="form-group">
-                                <label>Qty</label>
-                                <input type="number" step="1" min="0" class="form-control" name="assignments[${assignmentIndex}][issue_qty]" value="${data.issue_qty || ''}" placeholder="Qty">
-                            </div>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label>Status</label>
-                            <select class="form-select select2 status-select-row" name="assignments[${assignmentIndex}][status_display]" disabled>
-                                <option value="Open" ${data.status === 'Open' || !data.status ? 'selected' : ''}>Open</option>
-                                <option value="In Progress" ${data.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                                <option value="Completed" ${data.status === 'Completed' ? 'selected' : ''}>Completed</option>
-                            </select>
-                            <input type="hidden" name="assignments[${assignmentIndex}][status]" value="${data.status || 'Open'}">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Remarks</label>
-                            <input type="text" class="form-control" name="assignments[${assignmentIndex}][remarks]" value="${data.remarks || ''}" placeholder="Remarks">
-                        </div>
-                    </div>
-                </div>`;
-
-                $('#add-assignment-row').before(rowHtml);
-                let $row = $('#assignment-cards-container .assignment-row:last');
-                initRowControls($row, data);
+                if ($insertAfter && $insertAfter.length) {
+                    $insertAfter.after(rowHtml);
+                    let $row = $insertAfter.next('.assignment-row');
+                    initRowControls($row, data);
+                } else {
+                    $('#assignment-cards-container').append(rowHtml);
+                    let $row = $('#assignment-cards-container .assignment-row:last');
+                    initRowControls($row, data);
+                }
                 assignmentIndex++;
                 updateCardNumbers();
+                validateTotalQty();
             }
             $(document).on('input change', '#assignment-cards-container input[name*="[issue_qty]"]', function() {
                 var $currentRow = $(this).closest('.assignment-row');
@@ -976,8 +1103,9 @@
             });
 
             $(document).on('change', '#assignment-cards-container .services-select', function(e, isInit) {
-                if (isInit) return; 
                 var $row = $(this).closest('.assignment-row');
+                updateRowServiceBadge($row);
+                if (isInit) return; 
                 var serviceId = $(this).val();
                 
                 if (serviceId) {
@@ -1008,7 +1136,7 @@
                 validateTotalQty();
             });
             function updateCardNumbers() {
-                $('#assignment-cards-container .assignment-card').each(function(index) {
+                $('#assignment-cards-container .assignment-row, #assignment-cards-container .assignment-card').each(function(index) {
                     $(this).find('.card-badge').text('#' + (index + 1));
                 });
             }
@@ -1050,7 +1178,7 @@
                         isValid = false;
                         var remaining = Math.max(0, serviceMaxQties[sId] - (serviceTotals[sId] - parseFloat($('#assignment-cards-container .assignment-row').find('.services-select').filter(function() { return $(this).val() == sId; }).closest('.assignment-row').find('input[name*="[issue_qty]"]').last().val() || 0)));
                         errorMessages.push(
-                            `<b>${serviceNames[sId]}</b>: Total assigned qty (<b>${serviceTotals[sId]}</b>) exceeds maximum allowed (<b>${serviceMaxQties[sId]} PCS</b>). Only <b>${serviceMaxQties[sId]} PCS</b> total available.`
+                            `<b>${serviceNames[sId]}</b>: Total assigned qty (<b>${serviceTotals[sId]} PCS</b>) exceeds remaining pending quantity (<b>${serviceMaxQties[sId]} PCS</b>).`
                         );
                     }
                 }
@@ -1072,57 +1200,80 @@
                     $submitBtn.attr('disabled', false);
                 }
 
+                // Update row Add (+) button visibility: show ONLY IF service has remaining pending qty > 0
+                $('#assignment-cards-container .assignment-row').each(function() {
+                    var $row = $(this);
+                    var sId = $row.find('.services-select').val();
+                    var $addBtn = $row.find('.add-row-for-service');
+
+                    if (sId) {
+                        var $selectedOption = $row.find('.services-select option:selected');
+                        var sPending = parseFloat($selectedOption.attr('data-pending'));
+                        if (isNaN(sPending)) {
+                            var $badge = $row.find('.badge-pending');
+                            sPending = $badge.length ? (parseFloat($badge.text()) || 0) : (parseFloat($selectedOption.data('qty')) || 0);
+                        }
+
+                        if (sPending > 0) {
+                            $addBtn.show();
+                        } else {
+                            $addBtn.hide();
+                        }
+                    } else {
+                        $addBtn.hide();
+                    }
+                });
+
                 return isValid;
             }
             function initRowControls($row, data = {}) {
                 var $el = $('#stage_select');
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
                 var stageStartDate = $selected.data('start-date');
-                var stageDueDate = $selected.data('due-date');
+                var curMinDate = stageMinDate || null;
+                var curMaxDate = stageMaxDate || null;
+                if (!curMinDate && stageStartDate) {
+                    curMinDate = formatDateForPicker(stageStartDate);
+                }
+                if (!curMaxDate && stageDueDate) {
+                    curMaxDate = formatDateForPicker(stageDueDate);
+                }
 
-                $row.find('.flatpickr-assignment.issue-date').flatpickr({
-                    dateFormat: "d-m-Y",
-                    allowInput: true,
-                    minDate: stageStartDate ? moment(stageStartDate).format('DD-MM-YYYY') : null,
-                    maxDate: stageDueDate ? moment(stageDueDate).format('DD-MM-YYYY') : null,
-                    onChange: function(selectedDates, dateStr, instance) {
-                        calculateRowHours($row);
-                        var dueDateInstance = $row.find('.flatpickr-assignment.due-date')[0]._flatpickr;
-                        if(dueDateInstance) {
-                            dueDateInstance.set('minDate', dateStr);
-                        }
-
-                        var isFirstRow = $row.is($('.assignment-row').first());
-                        if (isFirstRow && dateStr) {
-                            $('.assignment-row').not($row).each(function() {
-                                var otherInput = $(this).find('.flatpickr-assignment.issue-date')[0];
-                                if (otherInput && otherInput._flatpickr && !otherInput.value) {
-                                    otherInput._flatpickr.setDate(dateStr, true);
-                                }
-                            });
-                        }
+                var isCompletedRow = ($row.find('input[name*="[status]"]').val() === 'Completed') || ($row.find('.status-select-row').val() === 'Completed');
+                if (isCompletedRow) {
+                    $row.find('.flatpickr-assignment').attr('readonly', true).css({'pointer-events': 'none', 'background-color': '#f8f9fa'});
+                } else {
+                    var $issueInput = $row.find('.flatpickr-assignment.issue-date');
+                    if ($issueInput[0] && $issueInput[0]._flatpickr) {
+                        $issueInput[0]._flatpickr.destroy();
                     }
-                });
 
-                $row.find('.flatpickr-assignment.due-date').flatpickr({
-                    dateFormat: "d-m-Y",
-                    allowInput: true,
-                    minDate: stageStartDate ? moment(stageStartDate).format('DD-MM-YYYY') : null,
-                    maxDate: stageDueDate ? moment(stageDueDate).format('DD-MM-YYYY') : null,
-                    onChange: function(selectedDates, dateStr, instance) {
-                        calculateRowHours($row);
+                    $issueInput.flatpickr({
+                        dateFormat: "d-m-Y",
+                        allowInput: true,
+                        closeOnSelect: true,
+                        minDate: curMinDate,
+                        maxDate: curMaxDate,
+                        defaultDate: $issueInput.val() || null,
+                        onChange: function(selectedDates, dateStr, instance) {
+                            calculateRowHours($row);
 
-                        var isFirstRow = $row.is($('.assignment-row').first());
-                        if (isFirstRow && dateStr) {
-                            $('.assignment-row').not($row).each(function() {
-                                var otherInput = $(this).find('.flatpickr-assignment.due-date')[0];
-                                if (otherInput && otherInput._flatpickr && !otherInput.value) {
-                                    otherInput._flatpickr.setDate(dateStr, true);
-                                }
-                            });
+                            var isFirstRow = $row.is($('.assignment-row').first());
+                            if (isFirstRow && dateStr) {
+                                $('.assignment-row').not($row).each(function() {
+                                    var $r = $(this);
+                                    var rStatus = $r.find('input[name*="[status]"]').val() || $r.find('.status-select-row').val();
+                                    if (rStatus === 'Completed') return;
+                                    var otherInput = $r.find('.flatpickr-assignment.issue-date')[0];
+                                    if (otherInput && otherInput._flatpickr && !otherInput.value) {
+                                        otherInput._flatpickr.setDate(dateStr, true);
+                                    }
+                                });
+                            }
+                            instance.close();
                         }
-                    }
-                });
+                    });
+                }
 
                 calculateRowHours($row);          
                 $row.find('.services-select').each(function() {
@@ -1149,26 +1300,40 @@
                     if ($(this).data('select2')) $(this).select2('destroy');
                 }).select2({
                     dropdownParent: $row.find('.employee-select').parent(),
-                    ajax: {
-                        url: function() {
-                            var pId = getSelectedPlantId();
-                            return "{{ url('get-employees-by-plant') }}/" + pId;
-                        },
-                        dataType: 'json',
-                        delay: 250,
-                        data: function (params) { return { q: params.term }; },
-                        processResults: function (data) { return { results: data.results }; },
-                        cache: true
-                    },
                     placeholder: 'Select Employee',
                     allowClear: true,
                     width: '100%'
                 }).on('select2:select', function(e) {
-                    var data = e.params.data;
-                    $row.find('.employee-id-input').val(data.emp_id || '');
+                    var $selected = $(this).find('option:selected');
+                    var empId = $selected.attr('data-emp-id') || '';
+                    $row.find('.employee-id-input').val(empId);
                 }).on('select2:clear', function(e) {
                     $row.find('.employee-id-input').val('');
                 });
+
+                updateRowServiceBadge($row);
+            }
+
+            function updateRowServiceBadge($row) {
+                var $select = $row.find('.services-select');
+                var $badge = $row.find('.service-metrics-badge');
+                if (!$badge.length) return;
+
+                var $selected = $select.find('option:selected');
+                var serviceId = $select.val();
+
+                if (serviceId && $selected.length && $selected.attr('data-target') !== undefined) {
+                    var target = $selected.attr('data-target') || 0;
+                    var achieved = $selected.attr('data-achieved') || 0;
+                    var pending = $selected.attr('data-pending') !== undefined ? $selected.attr('data-pending') : ($selected.attr('data-qty') || 0);
+
+                    $badge.find('.badge-target').text(target);
+                    $badge.find('.badge-achieved').text(achieved);
+                    $badge.find('.badge-pending').text(pending);
+                    $badge.attr('style', 'font-size: 10px; display: flex !important;');
+                } else {
+                    $badge.attr('style', 'font-size: 10px; display: none !important;');
+                }
             }
 
             $(document).on('input', '.total-hrs', function() {
@@ -1221,10 +1386,13 @@
                 var $el = $('#stage_select');
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
                 var pId = $selected.attr('data-service-provider-id') || $selected.data('service-provider-id');
-                if (!pId || pId === 'all') {
+                if (!pId || pId === 'all' || pId === 'null' || pId === 'undefined') {
                     pId = $selected.attr('data-job-card-service-provider-id') || $selected.data('job-card-service-provider-id');
                 }
-                return pId || 'all';
+                if (!pId || pId === 'null' || pId === 'undefined') {
+                    pId = 'all';
+                }
+                return pId;
             }
 
             function getSelectedOperationStageId() {
@@ -1236,11 +1404,58 @@
             $('#add-assignment-row').on('click', function() {
                 addAssignmentRow();
                 validateTotalQty();
+                if ($('#status').val() === 'Completed') {
+                    $('#status').val('In Progress').trigger('change');
+                }
+            });
+
+            $(document).on('click', '.add-row-for-service', function() {
+                var $currentRow = $(this).closest('.assignment-row');
+                var currentServiceId = $currentRow.find('.services-select').val();
+                var currentIssueDate = $currentRow.find('.flatpickr-assignment.issue-date').val() || $('#plan_date').val() || '';
+                var currentTotalHrs = $currentRow.find('.total-hrs').val() || '';
+
+                var $selectedOption = $currentRow.find('.services-select option:selected');
+                var sPending = parseFloat($selectedOption.attr('data-pending'));
+                if (isNaN(sPending)) {
+                    var $badge = $currentRow.find('.badge-pending');
+                    sPending = $badge.length ? (parseFloat($badge.text()) || 0) : (parseFloat($selectedOption.data('qty')) || 0);
+                }
+
+                addAssignmentRow({
+                    service_id: currentServiceId,
+                    issue_qty: sPending > 0 ? sPending : '',
+                    issue_date: currentIssueDate,
+                    total_hrs: currentTotalHrs,
+                    status: 'Open'
+                }, $currentRow);
+
+                validateTotalQty();
+                if ($('#status').val() === 'Completed') {
+                    $('#status').val('In Progress').trigger('change');
+                }
             });
 
             $(document).on('click', '.remove-assignment-row', function() {
-                if ($('#assignment-cards-container .assignment-card').length > 1) {
-                    $(this).closest('.assignment-card').remove();
+                var $row = $(this).closest('.assignment-row');
+                var rowStatus = $row.find('input[name*="[status]"]').val() || $row.find('.status-select-row').val();
+                if (rowStatus === 'Completed') {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Cannot Delete',
+                            text: 'This batch is already Completed and cannot be deleted.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            customClass: { confirmButton: 'btn btn-primary' },
+                            buttonsStyling: false
+                        });
+                    } else {
+                        alert('This batch is already Completed and cannot be deleted.');
+                    }
+                    return false;
+                }
+                if ($('#assignment-cards-container .assignment-row').length > 1) {
+                    $row.remove();
                     updateCardNumbers();
                     validateTotalQty();
                 } else {
@@ -1259,10 +1474,25 @@
 
             $('#stage_select').on('change', function(e, isInit) {
                 var $el = $(this);
-                var stageId = $el.val();
+                var $selected = $el.is('select') ? $el.find(':selected') : $el;
+                var sDate = $selected.data('start-date');
+                var dDate = $selected.data('due-date');
+                if (sDate) stageMinDate = formatDateForPicker(sDate);
+                if (dDate) stageMaxDate = formatDateForPicker(dDate);
+
+                if (typeof planDatePicker !== 'undefined' && planDatePicker) {
+                    planDatePicker.set('minDate', stageMinDate);
+                    planDatePicker.set('maxDate', stageMaxDate);
+                }
 
                 $('#assignment-cards-container .assignment-row').each(function() {
-                    calculateRowHours($(this));
+                    var $row = $(this);
+                    calculateRowHours($row);
+                    var issueFp = $row.find('.flatpickr-assignment.issue-date')[0] ? $row.find('.flatpickr-assignment.issue-date')[0]._flatpickr : null;
+                    if (issueFp) {
+                        issueFp.set('minDate', stageMinDate);
+                        issueFp.set('maxDate', stageMaxDate);
+                    }
                 });
 
                 $('.select2').trigger('change', [isInit]);
@@ -1289,7 +1519,7 @@
                 }
                 return dateStr;
             }
-            setTimeout(function() {
+            function initAllExistingRows() {
                 var val = $('#stage_select').val();
                 if(val) {
                     $('#stage_select').trigger('change', [true]);
@@ -1299,7 +1529,9 @@
                     var $row = $(this);
                     initRowControls($row, {});
                 });
-            }, 500);
+                validateTotalQty();
+            }
+            initAllExistingRows();
 
             function initSelect2(selector) {
                 $(selector).select2({
@@ -1461,7 +1693,9 @@
                 }
             });
 
-            initSelect2('.select2');
+            $('#assignment-cards-container .assignment-row').each(function() {
+                initRowControls($(this), {});
+            });
 
             if ($('#stage_select').val()) {
                 $('#stage_select').trigger('change', [true]);
@@ -1511,18 +1745,42 @@
         .kpi-card { border-radius: 0.75rem; transition: 0.3s; border: none !important; box-shadow: var(--erp-shadow) !important; }
         .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px 0 rgba(67, 89, 113, 0.18) !important; }
 
-        .custom-pills .nav-link { 
+        .custom-tab-btn { 
             color: var(--erp-text); 
-            border-radius: 0.5rem; 
-            margin-bottom: 0.5rem; 
-            transition: 0.2s; 
-            border: 1px solid transparent;
+            border-radius: 0.65rem; 
+            padding: 0.85rem 1.25rem; 
+            transition: all 0.25s ease-in-out; 
+            border: 1.5px solid #e7e7e8;
+            background-color: #fff;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(67, 89, 113, 0.05);
         }
-        .custom-pills .nav-link:hover { background-color: rgba(105, 108, 255, 0.05); color: var(--erp-primary); }
-        .custom-pills .nav-link.active { 
-            background-color: rgba(105, 108, 255, 0.1); 
+        .custom-tab-btn:hover { 
+            background-color: rgba(105, 108, 255, 0.04); 
             color: var(--erp-primary); 
-            border-color: rgba(105, 108, 255, 0.2); 
+            border-color: rgba(105, 108, 255, 0.35); 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(67, 89, 113, 0.1);
+        }
+        .custom-tab-btn.active { 
+            background-color: rgba(105, 108, 255, 0.08) !important; 
+            color: var(--erp-primary) !important; 
+            border-color: var(--erp-primary) !important; 
+            box-shadow: 0 3px 10px rgba(105, 108, 255, 0.18) !important;
+        }
+        .custom-tab-btn.active .section-icon.bg-label-primary {
+            background-color: var(--erp-primary) !important;
+            color: #fff !important;
+        }
+        .custom-tab-btn.active .section-icon.bg-label-success {
+            background-color: #71dd37 !important;
+            color: #fff !important;
+        }
+        .custom-tab-btn.active .section-icon.bg-label-warning {
+            background-color: #ffab00 !important;
+            color: #fff !important;
         }
 
         .font-small { font-size: 0.75rem !important; }
@@ -1542,101 +1800,84 @@
         .sticky-sidebar { position: sticky; top: 100px; }
         .avatar { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 
-        /* Assignment Card Styles */
-        #assignment-cards-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1.5rem;
+        /* Assignments Table Styles */
+        #assignments-table {
+            margin-bottom: 0;
+            width: 100%;
         }
-        .assignment-card {
-            background: #fff;
-            border-radius: 1rem;
-            border: 1px solid rgba(105, 108, 255, 0.1);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            padding: 1.25rem;
-            position: relative;
-            /* overflow: hidden; */
-        }
-        .assignment-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(105, 108, 255, 0.15);
-            border-color: rgba(105, 108, 255, 0.3);
-        }
-        .assignment-card .card-badge {
-            position: absolute;
-            top: 0;
-            right: 0;
-            padding: 0.25rem 1rem;
-            border-bottom-left-radius: 1rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: rgba(105, 108, 255, 0.1);
-            color: var(--erp-primary);
-        }
-        .assignment-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px dashed rgba(0,0,0,0.05);
-        }
-        .assignment-card-title {
-            font-weight: 700;
-            font-size: 1rem;
+        #assignments-table thead th {
+            background-color: #f5f5f9;
             color: #566a7f;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.75rem 0.6rem;
+            border-bottom: 2px solid #e7e7e8;
+        }
+        #assignments-table tbody tr {
+            transition: background 0.15s ease-in-out;
+        }
+        #assignments-table tbody tr:hover {
+            background-color: rgba(105, 108, 255, 0.02);
+        }
+        #assignments-table td {
+            vertical-align: middle;
+            padding: 0.5rem 0.5rem;
+        }
+        #assignments-table .card-badge {
+            background: rgba(105, 108, 255, 0.08);
+            color: var(--erp-primary);
+            padding: 0.35rem 0.6rem;
+            border-radius: 0.375rem;
+            display: inline-block;
+            font-size: 0.8rem;
+        }
+        #assignments-table input[type="number"]::-webkit-inner-spin-button,
+        #assignments-table input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
             margin: 0;
         }
-        .assignment-remove-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 62, 29, 0.1);
-            color: #ff3e1d;
-            border: none;
-            transition: 0.2s;
+        #assignments-table input[type="number"] {
+            -moz-appearance: textfield;
         }
-        .assignment-remove-btn:hover {
-            background: #ff3e1d;
-            color: #fff;
-        }
-        .assignment-card-body .form-group {
-            margin-bottom: 0.75rem;
-            position: relative;
-        }
-        .assignment-card-body label {
+        #assignments-table .total-hrs {
+            min-width: 85px;
+            text-align: center;
+            padding: 0.35rem 0.3rem !important;
             font-weight: 600;
-            font-size: 0.75rem;
-            color: #a1acb8;
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-            display: block;
         }
-        .assignment-card-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
+        #assignments-table .qty-input {
+            min-width: 95px;
+            text-align: center;
+            padding: 0.35rem 0.3rem !important;
+            font-weight: 600;
         }
-        .add-assignment-card-btn {
-            height: 100%;
-            min-height: 200px;
-            border: 2px dashed rgba(105, 108, 255, 0.3);
-            border-radius: 1rem;
-            display: flex;
-            flex-direction: column;
+        #assignments-table .form-control-sm,
+        #assignments-table .form-select-sm {
+            font-size: 0.8125rem;
+            border-color: #d9dee3;
+        }
+        #assignments-table .select2-container .select2-selection--single {
+            height: 34px !important;
+            border-color: #d9dee3 !important;
+            border-radius: 0.375rem !important;
+        }
+        #assignments-table .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 32px !important;
+            font-size: 0.8125rem !important;
+            padding-left: 0.6rem !important;
+        }
+        #assignments-table .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 32px !important;
+        }
+        .remove-assignment-row {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: transparent;
-            color: var(--erp-primary);
-            transition: all 0.2s;
-        }
-        .add-assignment-card-btn:hover {
-            background: rgba(105, 108, 255, 0.05);
-            border-color: var(--erp-primary);
+            border-radius: 6px;
         }
     </style>
     <!-- History Modal -->
@@ -1814,6 +2055,17 @@
                 row.find('.progress-bar-text').text(percentage + '%'); // Optional: update text if present
 
                 var statusColor = 'secondary';
+                var svcId = row.attr('data-service-id') || row.data('service-id');
+                var svcTarget = parseFloat(row.attr('data-service-target') || row.data('service-target')) || 0;
+                var totalSvcCompleted = 0;
+                if (svcId) {
+                    $('.status-update-row[data-service-id="' + svcId + '"]').each(function() {
+                        var c = parseFloat(String($(this).find('.row-completed-qty').val()).replace(/,/g, '')) || 0;
+                        var w = parseFloat(String($(this).find('.row-wastage-qty').val()).replace(/,/g, '')) || 0;
+                        totalSvcCompleted += (c + w);
+                    });
+                }
+
                 if (completedQty == 0 && wastageQty == 0) {
                     statusInput.val('Open');
                     statusColor = 'secondary';
@@ -2150,24 +2402,10 @@
             $('#content-issue form').on('submit', function(e) {
                 var statusVal = $('#status').val();
                 if (statusVal === 'Completed') {
-                    var fullyCompleted = true;
                     var hasAssignments = false;
                     var totalIssueQty = 0;
                     var totalCompletedQty = 0;
 
-                    $('#content-issue .assignment-row').each(function(index, row) {
-                        hasAssignments = true;
-                        var issueQty = parseFloat($(row).find('input[name*="[issue_qty]"]').val()) || 0;
-                        var assignIdInput = $(row).find('input[type="hidden"][name*="[id]"]'); // In case it exists
-                        
-                        // We also need to get the assignment ID if we are editing
-                        // Since #content-issue dynamically manages rows, maybe it doesn't have ID in DOM.
-                        // We can just rely on total quantities across all rows if we can't match IDs easily.
-                    });
-                    
-                    // Actually, a simpler way is to sum all issueQty from the form
-                    // and compare with the total completed from assignmentProgress.
-                    // Because completedQty isn't editable in #content-issue anyway.
                     $('#content-issue .assignment-row input[name*="[issue_qty]"]').each(function() {
                         hasAssignments = true;
                         totalIssueQty += parseFloat($(this).val()) || 0;
@@ -2178,20 +2416,8 @@
                     }
 
                     if (!hasAssignments || totalIssueQty <= 0 || totalCompletedQty < totalIssueQty) {
-                        e.preventDefault();
-                        var msg = 'This task cannot be marked as Completed because it is not fully finished. Please complete the remaining quantity before changing the status to Completed.';
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                title: 'Validation Error',
-                                text: msg,
-                                icon: 'error',
-                                customClass: { confirmButton: 'btn btn-primary' },
-                                buttonsStyling: false
-                            });
-                        } else {
-                            alert(msg);
-                        }
-                        return false;
+                        // Automatically switch to 'In Progress' instead of showing error and stopping!
+                        $('#status').val('In Progress').trigger('change');
                     }
                 }
             });

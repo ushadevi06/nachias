@@ -664,12 +664,12 @@ class GoogleDriveBackupService
         @ini_set('max_execution_time', '600');
         try {
             $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
-            $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
-            $tables = [];
+            // Use buffered queries for schema/table introspection
+            $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+
             $stmt = $pdo->query('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
-            while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
-                $tables[] = $row[0];
-            }
+            $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            $stmt->closeCursor();
 
             $handle = fopen($filePath, 'w');
             if (!$handle) {
@@ -682,13 +682,19 @@ class GoogleDriveBackupService
             fwrite($handle, "SET SQL_MODE=\"NO_AUTO_VALUE_ON_ZERO\";\n\n");
 
             foreach ($tables as $table) {
-                // Table structure
+                // Table structure (buffered)
+                $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
                 $createStmt = $pdo->query("SHOW CREATE TABLE `{$table}`");
                 $createRow = $createStmt->fetch(\PDO::FETCH_NUM);
-                fwrite($handle, "DROP TABLE IF EXISTS `{$table}`;\n");
-                fwrite($handle, $createRow[1] . ";\n\n");
+                $createStmt->closeCursor();
 
-                // Stream rows directly to disk
+                if (!empty($createRow[1])) {
+                    fwrite($handle, "DROP TABLE IF EXISTS `{$table}`;\n");
+                    fwrite($handle, $createRow[1] . ";\n\n");
+                }
+
+                // Table rows streaming (unbuffered for low memory footprint)
+                $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
                 $rowsStmt = $pdo->query("SELECT * FROM `{$table}`");
                 while ($row = $rowsStmt->fetch(\PDO::FETCH_NUM)) {
                     $escapedValues = array_map(function ($value) use ($pdo) {
@@ -700,10 +706,12 @@ class GoogleDriveBackupService
 
                     fwrite($handle, "INSERT INTO `{$table}` VALUES(" . implode(',', $escapedValues) . ");\n");
                 }
+                $rowsStmt->closeCursor();
                 fwrite($handle, "\n");
                 fflush($handle);
             }
 
+            $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
             fwrite($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
             fclose($handle);
             return true;

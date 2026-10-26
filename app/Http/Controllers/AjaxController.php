@@ -120,8 +120,12 @@ class AjaxController extends Controller
             $query->where('role_id', request()->role_id);
         }
 
-        if (request()->has('q')) {
-            $query->where('name', 'like', '%' . request()->q . '%');
+        if (request()->filled('q') && request()->q !== 'undefined') {
+            $term = trim(request()->q);
+            $query->where(function ($q) use ($term) {
+                $q->where('name', 'like', '%' . $term . '%')
+                  ->orWhere('emp_id', 'like', '%' . $term . '%');
+            });
         }
 
         $employees = $query->get(['id', 'name', 'emp_id']);

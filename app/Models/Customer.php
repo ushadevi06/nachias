@@ -51,7 +51,6 @@ class Customer extends Model
         'updated_by',
     ];
 
-    // Relationships
     public function storeType()
     {
         return $this->belongsTo(StoreType::class, 'store_id');
@@ -99,7 +98,57 @@ class Customer extends Model
         return $this->hasMany(SalesInvoice::class, 'customer_id');
     }
 
+    public function openingBalance()
+    {
+        return $this->hasOne(CustomerOpeningBalance::class, 'customer_id');
+    }
+
     public function scopeActive($query){
         return $query->where('status', 'Active');
+    }
+
+    public function getCreditLimitStatus($additionalAmount = 0)
+    {
+        $creditLimit = (float)($this->credit_limit ?? 0);
+        if ($creditLimit <= 0) {
+            return [
+                'has_limit'             => false,
+                'exceeded'              => false,
+                'credit_limit'          => 0,
+                'current_outstanding'   => 0,
+                'projected_outstanding' => 0,
+                'available_limit'       => 0,
+                'exceeded_by'           => 0,
+            ];
+        }
+
+        $hasOpenTable = \Illuminate\Support\Facades\Schema::hasTable('customer_opening_balances');
+        $openAmount = ($hasOpenTable && class_exists(\App\Models\CustomerOpeningBalance::class))
+            ? (float)(\App\Models\CustomerOpeningBalance::where('customer_id', $this->id)->orWhere('customer_code', $this->code)->value('open_amount') ?? 0)
+            : 0;
+
+        $invoicesQuery = \App\Models\SalesInvoice::where('customer_id', $this->id)
+            ->whereNull('deleted_at')
+            ->where(function($q) {
+                $q->whereNull('einvoice_status')
+                  ->orWhereRaw('LOWER(einvoice_status) != ?', ['cancelled']);
+            });
+
+        $totalSales = (float)(clone $invoicesQuery)->sum('grand_total');
+        $totalReceived = (float)(clone $invoicesQuery)->sum('received_amount');
+
+        $currentOutstanding = max(0, $openAmount + $totalSales - $totalReceived);
+        $projected = $currentOutstanding + (float)$additionalAmount;
+        $exceeded = $projected > $creditLimit;
+
+        return [
+            'has_limit'             => true,
+            'exceeded'              => $exceeded,
+            'credit_limit'          => $creditLimit,
+            'current_outstanding'   => $currentOutstanding,
+            'projected_outstanding' => $projected,
+            'available_limit'       => max(0, $creditLimit - $currentOutstanding),
+            'exceeded_by'           => $exceeded ? ($projected - $creditLimit) : 0,
+        ];
     }
 }

@@ -139,7 +139,7 @@ class CustomerController extends Controller
                     'unique:customers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'payment_terms' => ['nullable', 'string', 'min:3', 'max:255', 'regex:/^[^<>]*$/', 'not_regex:/^0+$/'],
-                'credit_limit' => 'nullable|numeric|min:0|max:100',
+                'credit_limit' => 'nullable|numeric|min:0',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'box_discount_amount' => 'nullable|numeric|min:0',
                 // 'transport_rate' => 'nullable|numeric|min:0',

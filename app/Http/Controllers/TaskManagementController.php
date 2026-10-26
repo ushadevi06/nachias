@@ -495,33 +495,61 @@ class TaskManagementController extends Controller
                 ];
             }
 
+            $stageId = $request->input('stage_id');
+            $stage = ProcessSchedule::find($stageId);
+            $stageMaxQty = $stage ? (float)$stage->planned_qty : 0;
+            $jobCard = JobCardEntry::find($request->input('job_card_entry_id'));
+            $isAdditional = (bool)$request->input('is_additional');
+            if ($isAdditional && $request->input('job_card_fabric_detail_id')) {
+                $additionalBatch = \App\Models\JobCardFabricDetail::find($request->input('job_card_fabric_detail_id'));
+                if ($additionalBatch) {
+                    $stageMaxQty = (float)($additionalBatch->batch_total_qty ?? $stageMaxQty);
+                }
+            } elseif ($stageMaxQty <= 0 && $jobCard) {
+                $stageMaxQty = (float)($jobCard->grand_total_qty ?? 0);
+            }
+
             if ($request->status == 'Completed') {
+                $canBeCompleted = true;
+                $existingAssignments = $id ? TaskAssignEmployee::where('task_id', $id)->get() : collect();
+                
                 $totalIssue = 0;
                 $totalCompleted = 0;
-                $totalWastage = 0;
-
-                if ($id) {
-                    $task = Task::with('assignments')->find($id);
-                    $existingAssignments = $task ? $task->assignments->keyBy('id') : collect();
-                } else {
-                    $existingAssignments = collect();
-                }
+                $serviceDoneSums = [];
 
                 foreach ($assignments as $index => $assign) {
                     if (empty($assign['issued_to'])) continue;
                     
                     $issueQty = (float)($assign['issue_qty'] ?? 0);
                     $totalIssue += $issueQty;
-                    
-                    if ($id && isset($assign['id']) && $existingAssignments->has($assign['id'])) {
-                        $existing = $existingAssignments->get($assign['id']);
-                        $totalCompleted += (float) $existing->completed_qty;
-                        $totalWastage += (float) $existing->wastage_qty;
+                    $sId = $assign['service_id'] ?? null;
+                    if (is_array($sId)) $sId = $sId[0] ?? null;
+
+                    if ($id && isset($assign['id'])) {
+                        $existing = $existingAssignments->firstWhere('id', $assign['id']);
+                        if ($existing) {
+                            $done = (float)$existing->completed_qty + (float)$existing->wastage_qty;
+                            $totalCompleted += $done;
+                            if ($sId) {
+                                $serviceDoneSums[$sId] = ($serviceDoneSums[$sId] ?? 0) + $done;
+                            }
+                            if ($existing->status !== 'Completed') {
+                                $canBeCompleted = false;
+                            }
+                        } else {
+                            $canBeCompleted = false;
+                        }
+                    } else {
+                        $canBeCompleted = false;
                     }
                 }
                 
-                if ($totalIssue <= 0 || round($totalCompleted + $totalWastage, 2) < round($totalIssue, 2)) {
-                    return back()->withInput()->withErrors(['status' => 'This task cannot be marked as Completed because it is not fully finished. Please complete the remaining quantity before changing the status to Completed.'])->with('active_tab', 'issue');
+                if ($totalIssue <= 0 || round($totalCompleted, 2) < round($totalIssue, 2)) {
+                    $canBeCompleted = false;
+                }
+
+                if (!$canBeCompleted) {
+                    $request->merge(['status' => 'In Progress']);
                 }
             }
 
@@ -575,9 +603,19 @@ class TaskManagementController extends Controller
                         }
                     }
 
-                    if ($totalQty > $serviceMaxQty) {
+                    // Calculate how much has already been assigned in OTHER tasks of this stage
+                    $otherAssignedQuery = TaskAssignEmployee::whereHas('task', function($q) use ($stageId, $id) {
+                        $q->where('stage_id', $stageId);
+                        if ($id) {
+                            $q->where('id', '!=', $id);
+                        }
+                    })->where('service_id', $serviceId);
+                    $otherAssignedQty = (float)$otherAssignedQuery->sum('issue_qty');
+                    $remainingAllowed = max(0, $serviceMaxQty - $otherAssignedQty);
+
+                    if (round($totalQty, 2) > round($remainingAllowed, 2)) {
                         $serviceName = $service ? $service->service_name : 'Selected Service';
-                        throw new \Exception("Total quantity for service '$serviceName' ($totalQty) exceeds the allowed quantity ($serviceMaxQty PCS).");
+                        throw new \Exception("Total quantity for service '$serviceName' ($totalQty PCS) exceeds the remaining pending quantity ($remainingAllowed PCS). Stage Target: $serviceMaxQty PCS, Already Assigned in previous tasks: $otherAssignedQty PCS.");
                     }
                 }
             }
@@ -602,6 +640,9 @@ class TaskManagementController extends Controller
             }
 
             $commonData = $request->only(['job_card_entry_id', 'job_card_no', 'stage_id', 'is_additional', 'job_card_fabric_detail_id', 'issued_by', 'remarks', 'status']);
+            if ($request->filled('plan_date')) {
+                $commonData['issue_date'] = $this->formatDate($request->plan_date);
+            }
 
             DB::beginTransaction();
             try {
@@ -671,6 +712,13 @@ class TaskManagementController extends Controller
                         'task_id' => $task->id,
                         'issued_to' => $isAssigned ? $assign['issued_to'] : null,
                         'issue_qty' => $assign['issue_qty'] ?? 0,
+                        'completed_qty' => 0,
+                        'inprogress_qty' => 0,
+                        'wastage_qty' => 0,
+                        'qc_checked_qty' => 0,
+                        'qc_passed_qty' => 0,
+                        'qc_rejected_qty' => 0,
+                        'qc_status' => 'Pending',
                         'issue_date' => !empty($assign['issue_date']) ? $this->formatDate($assign['issue_date']) : null,
                         'due_date' => !empty($assign['due_date']) ? $this->formatDate($assign['due_date']) : null,
                         'remarks' => $assign['remarks'] ?? null,
@@ -690,8 +738,23 @@ class TaskManagementController extends Controller
                         $assignData['qc_rejected_qty'] = $existing->qc_rejected_qty ?? 0;
                         $assignData['qc_status'] = $existing->qc_status ?? 'Pending';
                         if (!empty($existing->status)) {
-                        $assignData['status'] = $existing->status;
+                            $assignData['status'] = $existing->status;
                         }
+                        if ($existing->status === 'Completed' || ($existing->issue_qty > 0 && ($existing->completed_qty + $existing->wastage_qty) >= $existing->issue_qty)) {
+                            if (!empty($existing->issue_date)) {
+                                $assignData['issue_date'] = $existing->issue_date;
+                            }
+                            if (!empty($existing->due_date)) {
+                                $assignData['due_date'] = $existing->due_date;
+                            }
+                        }
+                    }
+
+                    $completedAndWastage = (float)($assignData['completed_qty'] ?? 0) + (float)($assignData['wastage_qty'] ?? 0);
+                    if ((float)$assignData['issue_qty'] > 0 && $completedAndWastage >= (float)$assignData['issue_qty']) {
+                        $assignData['status'] = 'Completed';
+                    } elseif ($completedAndWastage > 0) {
+                        $assignData['status'] = 'In Progress';
                     }
 
                     $totalIssueQty += (float) ($assign['issue_qty'] ?? 0);
@@ -716,10 +779,58 @@ class TaskManagementController extends Controller
                     TaskAssignEmployee::create($assignData);
                 }
 
+                $allAssignments = TaskAssignEmployee::where('task_id', $task->id)->get();
+                $allAssignmentsDone = $allAssignments->isNotEmpty() && $allAssignments->every(function($as) {
+                    return $as->status === 'Completed';
+                });
+
+                // Decouple task completion from stage completion:
+                // An individual task is Completed when all assignments in THIS task are finished.
+                $finalTaskStatus = $task->status;
+                if ($allAssignmentsDone && $totalIssueQty > 0) {
+                    $finalTaskStatus = 'Completed';
+                } elseif ($task->status === 'Completed' && !$allAssignmentsDone) {
+                    $finalTaskStatus = 'In Progress';
+                }
+
                 $task->update([
                     'services' => array_values(array_unique($allServiceIds)),
-                    'issue_qty' => $totalIssueQty
+                    'issue_qty' => $totalIssueQty,
+                    'status' => $finalTaskStatus
                 ]);
+
+                // Update the overall stage (ProcessSchedule) based on total completed across ALL tasks for this stage
+                if ($task->stage_id) {
+                    $schedule = ProcessSchedule::find($task->stage_id);
+                    if ($schedule) {
+                        $stageTarget = (float)($schedule->planned_qty ?? 0);
+                        if ($stageTarget > 0) {
+                            $allStageTasks = Task::where('stage_id', $task->stage_id)->get();
+                            $allStageAssignments = TaskAssignEmployee::whereIn('task_id', $allStageTasks->pluck('id'))->get();
+                            $totalStageCompleted = (float)$allStageAssignments->sum(function($a) {
+                                return (float)$a->completed_qty + (float)$a->wastage_qty;
+                            });
+
+                            $isStageCompleted = round($totalStageCompleted, 2) >= round($stageTarget, 2);
+                            $newStageStatus = $isStageCompleted ? 'Completed' : 'In Progress';
+
+                            if ($schedule->status !== $newStageStatus) {
+                                $schedule->update(['status' => $newStageStatus]);
+
+                                if ($newStageStatus == 'Completed') {
+                                    $nextSchedule = ProcessSchedule::where('production_id', $schedule->production_id)
+                                        ->where('id', '>', $schedule->id)
+                                        ->orderBy('id', 'asc')
+                                        ->first();
+
+                                    if ($nextSchedule && $nextSchedule->status == 'Planned') {
+                                        $nextSchedule->update(['status' => 'Pending']);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 DB::commit();
                 return redirect('task_management')->with('success', 'Task(s) saved successfully');
@@ -739,17 +850,46 @@ class TaskManagementController extends Controller
 
         $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT);
         
-        $usersQuery = User::where('id', '!=', 1)->where('status', 'Active');
-        if (auth()->user() && auth()->user()->service_provider_id) {
-            $usersQuery->where('service_provider_id', auth()->user()->service_provider_id);
+        $services = [];
+        $finalStageId = request('stage_id') ?: ($task ? $task->stage_id : old('stage_id'));
+
+        $selectedSchedule = null;
+        if ($task && $task->stage && $task->stage_id == $finalStageId) {
+            $selectedSchedule = $task->stage;
+        } elseif ($finalStageId) {
+            $selectedSchedule = ProcessSchedule::with(['operationStage'])->find($finalStageId);
         }
-        $users = $usersQuery->get();
+
+        // Adjust planned_qty on selectedSchedule for display in task form
+        if ($selectedSchedule) {
+            if ($isAdditional && $additionalBatch) {
+                $selectedSchedule->planned_qty = $additionalBatch->batch_total_qty;
+            } elseif ($jobCard) {
+                $mainPlannedTotal = max(0, intval($jobCard->grand_total_qty) - intval($jobCard->additional_qty ?? 0));
+                $selectedSchedule->planned_qty = $mainPlannedTotal > 0 ? $mainPlannedTotal : ($selectedSchedule->planned_qty ?? 0);
+            }
+        }
+
+        $targetPlantId = null;
+        if (auth()->user() && auth()->user()->service_provider_id) {
+            $targetPlantId = auth()->user()->service_provider_id;
+        } elseif ($selectedSchedule && $selectedSchedule->scheduled_to) {
+            $targetPlantId = $selectedSchedule->scheduled_to;
+        } elseif ($jobCard && $jobCard->service_provider_id) {
+            $targetPlantId = $jobCard->service_provider_id;
+        }
+
+        $usersQuery = User::where('id', '!=', 1)->where('status', 'Active');
+        if ($targetPlantId && $targetPlantId != 'all') {
+            $usersQuery->where('service_provider_id', $targetPlantId);
+        }
+        $users = $usersQuery->orderBy('name', 'asc')->get();
 
         if ($task && $task->assignments) {
             $assignedUserIds = $task->assignments->pluck('issued_to')->filter()->toArray();
             if (!empty($assignedUserIds)) {
                 $extraUsers = User::whereIn('id', $assignedUserIds)->get();
-                $users = $users->merge($extraUsers)->unique('id');
+                $users = $users->merge($extraUsers)->unique('id')->values();
             }
         }
 
@@ -758,8 +898,8 @@ class TaskManagementController extends Controller
                 'Production Supervisor', 'Supervisor', 'Unit Supervisor', 'Cutting Supervisor', 'Store Executive'
             ])
             ->where('users.status', 'Active');
-        if (auth()->user() && auth()->user()->service_provider_id) {
-            $supervisorsQuery->where('users.service_provider_id', auth()->user()->service_provider_id);
+        if ($targetPlantId && $targetPlantId != 'all') {
+            $supervisorsQuery->where('users.service_provider_id', $targetPlantId);
         }
         $supervisors = $supervisorsQuery->select('users.*')->with('role')->get();
         $allStatuses = TaskStatus::pluck('name')->toArray();
@@ -784,35 +924,26 @@ class TaskManagementController extends Controller
             }
         }
 
-
-        $services = [];
-        $finalStageId = request('stage_id') ?: ($task ? $task->stage_id : old('stage_id'));
-
-        $selectedSchedule = null;
-        if ($task && $task->stage && $task->stage_id == $finalStageId) {
-            $selectedSchedule = $task->stage;
-        } elseif ($finalStageId) {
-            $selectedSchedule = ProcessSchedule::with(['operationStage'])->find($finalStageId);
-        }
-
-        // Adjust planned_qty on selectedSchedule for display in task form
+        $stageTotalPlanned = 0;
+        $stageAlreadyAssigned = 0;
+        $stageRemainingPending = 0;
         if ($selectedSchedule) {
-            if ($isAdditional && $additionalBatch) {
-                $selectedSchedule->planned_qty = $additionalBatch->batch_total_qty;
-            } elseif ($jobCard) {
-                $mainPlannedTotal = max(0, intval($jobCard->grand_total_qty) - intval($jobCard->additional_qty ?? 0));
-                $selectedSchedule->planned_qty = $mainPlannedTotal > 0 ? $mainPlannedTotal : ($selectedSchedule->planned_qty ?? 0);
-            }
-        }
+            $stageTotalPlanned = (float)($selectedSchedule->planned_qty ?? 0);
+            $stageAlreadyAssigned = (float)TaskAssignEmployee::whereHas('task', function($q) use ($selectedSchedule, $id) {
+                $q->where('stage_id', $selectedSchedule->id);
+                if ($id) {
+                    $q->where('id', '!=', $id);
+                }
+            })->sum('issue_qty');
+            $stageRemainingPending = max(0, $stageTotalPlanned - $stageAlreadyAssigned);
 
-        if ($selectedSchedule) {
             $query = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active');
             if ($jobCard && $jobCard->process_group_id) {
                 $query->whereHas('processGroups', function($q) use ($jobCard) {
                     $q->where('process_groups.id', $jobCard->process_group_id);
                 });
             }
-            $services = $query->orderBy('sequence', 'asc')->get()->map(function ($s) use ($selectedSchedule, $jobCard, $isAdditional, $additionalBatch) {
+            $services = $query->orderBy('sequence', 'asc')->get()->map(function ($s) use ($selectedSchedule, $jobCard, $isAdditional, $additionalBatch, $id) {
                 $qty = $selectedSchedule->planned_qty ?? 0;
                 if ($isAdditional && $additionalBatch) {
                     if ($s->base_quantity_source == 'FS Qty') {
@@ -839,13 +970,56 @@ class TaskManagementController extends Controller
                         $qty = $mainTotal > 0 ? $mainTotal : ($jobCard->grand_total_qty ?? $qty);
                     }
                 }
+
+                $otherAssignedQuery = TaskAssignEmployee::whereHas('task', function($q) use ($selectedSchedule, $id) {
+                    $q->where('stage_id', $selectedSchedule->id);
+                    if ($id) {
+                        $q->where('id', '!=', $id);
+                    }
+                })->where('service_id', $s->id);
+                $otherAssigned = (float)$otherAssignedQuery->sum('issue_qty');
+                $pendingQty = max(0, (float)$qty - $otherAssigned);
+
+                $stageCompletedQty = (float)TaskAssignEmployee::whereHas('task', function($q) use ($selectedSchedule) {
+                    $q->where('stage_id', $selectedSchedule->id);
+                })->where('service_id', $s->id)->sum('completed_qty');
+                $stagePendingQty = max(0, (float)$qty - $stageCompletedQty);
+
                 return [
                     'id' => $s->id,
                     'name' => ($s->service_name ?? ''),
-                    'qty' => $qty,
+                    'qty' => $pendingQty,
+                    'total_planned_qty' => $qty,
+                    'already_assigned_qty' => $otherAssigned,
+                    'achieved_qty' => $stageCompletedQty,
+                    'stage_pending_qty' => $stagePendingQty,
                     'multiplier' => 1
                 ];
             })->values()->all();
+
+            if (!empty($services)) {
+                $pendingCollection = collect($services)->pluck('qty');
+                $positivePending = $pendingCollection->filter(function($q) { return $q > 0; });
+                $thisTaskAllowedPending = $positivePending->isNotEmpty() ? $positivePending->min() : 0;
+            } else {
+                $thisTaskAllowedPending = $stageTotalPlanned;
+            }
+
+            $allTasksServicesMaxIssued = 0;
+            if ($selectedSchedule->id) {
+                $allStageTasks = Task::where('stage_id', $selectedSchedule->id)->pluck('id');
+                if ($allStageTasks->isNotEmpty()) {
+                    $allTasksServicesMaxIssued = (float)TaskAssignEmployee::whereIn('task_id', $allStageTasks)->selectRaw('service_id, sum(issue_qty) as total_issued')->groupBy('service_id')->pluck('total_issued')->max();
+                }
+            }
+
+            if (!$id) {
+                $stageRemainingPending = $thisTaskAllowedPending;
+                $stageAlreadyAssigned = max(0, $stageTotalPlanned - $stageRemainingPending);
+            } else {
+                $stageRemainingPending = max(0, $stageTotalPlanned - $allTasksServicesMaxIssued);
+                $stageAlreadyAssigned = max(0, $stageTotalPlanned - $stageRemainingPending);
+            }
         }
 
 
@@ -880,7 +1054,10 @@ class TaskManagementController extends Controller
             'jobCardGrnNo',
             'isAdditional',
             'batchId',
-            'additionalBatch'
+            'additionalBatch',
+            'stageTotalPlanned',
+            'stageAlreadyAssigned',
+            'stageRemainingPending'
         ));
     }
 
@@ -929,6 +1106,7 @@ class TaskManagementController extends Controller
                         'message' => 'This task cannot be marked as Completed because it is not fully finished. Please complete the remaining quantity before changing the status to Completed.'
                     ], 200);
                 }
+
             }
 
             if ($request->status === 'In Progress') {
@@ -948,6 +1126,39 @@ class TaskManagementController extends Controller
             TaskStatus::firstOrCreate(['name' => $request->status], ['color' => 'info', 'progress_percent' => 10]);
             $task->save();
             $this->logActivity($task->id, 'Status Change', 'Status changed to ' . $request->status);
+
+            // Update ProcessSchedule based on all tasks of this stage
+            if ($task->stage_id) {
+                $schedule = ProcessSchedule::find($task->stage_id);
+                if ($schedule) {
+                    $stageTarget = (float)($schedule->planned_qty ?? 0);
+                    if ($stageTarget > 0) {
+                        $allStageTasks = Task::where('stage_id', $task->stage_id)->get();
+                        $allStageAssignments = TaskAssignEmployee::whereIn('task_id', $allStageTasks->pluck('id'))->get();
+                        $totalStageCompleted = (float)$allStageAssignments->sum(function($a) {
+                            return (float)$a->completed_qty + (float)$a->wastage_qty;
+                        });
+
+                        $isStageCompleted = round($totalStageCompleted, 2) >= round($stageTarget, 2);
+                        $newStageStatus = $isStageCompleted ? 'Completed' : 'In Progress';
+
+                        if ($schedule->status !== $newStageStatus) {
+                            $schedule->update(['status' => $newStageStatus]);
+
+                            if ($newStageStatus == 'Completed') {
+                                $nextSchedule = ProcessSchedule::where('production_id', $schedule->production_id)
+                                    ->where('id', '>', $schedule->id)
+                                    ->orderBy('id', 'asc')
+                                    ->first();
+
+                                if ($nextSchedule && $nextSchedule->status == 'Planned') {
+                                    $nextSchedule->update(['status' => 'Pending']);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             $this->syncProductionMovements($task);
 
@@ -988,11 +1199,41 @@ class TaskManagementController extends Controller
 
         DB::beginTransaction();
         try {
-            $task = Task::findOrFail($request->task_id);
+            $task = Task::with('assignments')->findOrFail($request->task_id);
             $totalCompleted = 0;
             $totalAssigned = 0;
             $allCompleted = true;
             $anyStarted = false;
+
+            $stage = ProcessSchedule::find($task->stage_id);
+            $jobCard = JobCardEntry::find($task->job_card_entry_id);
+            $isAdditional = (bool)($task->is_additional ?? false);
+            $additionalBatch = null;
+            if ($isAdditional && $task->job_card_fabric_detail_id) {
+                $additionalBatch = \App\Models\JobCardFabricDetail::find($task->job_card_fabric_detail_id);
+            }
+
+            $stageTargetQty = 0;
+            if ($isAdditional && $additionalBatch) {
+                $stageTargetQty = (float)($additionalBatch->batch_total_qty ?? 0);
+            } elseif ($stage && (float)$stage->planned_qty > 0) {
+                $stageTargetQty = (float)$stage->planned_qty;
+            } elseif ($jobCard && (float)$jobCard->grand_total_qty > 0) {
+                $stageTargetQty = (float)$jobCard->grand_total_qty;
+            }
+
+            // Calculate total completed for each service across the task (including current request values)
+            $serviceCompletedSums = [];
+            foreach ($task->assignments as $a) {
+                $cVal = (float)$a->completed_qty + (float)$a->wastage_qty;
+                foreach ($request->assignments as $reqA) {
+                    if ($reqA['id'] == $a->id) {
+                        $cVal = (float)($reqA['completed_qty'] ?? 0) + (float)($reqA['wastage_qty'] ?? 0);
+                        break;
+                    }
+                }
+                $serviceCompletedSums[$a->service_id] = ($serviceCompletedSums[$a->service_id] ?? 0) + $cVal;
+            }
 
             foreach ($request->assignments as $assignData) {
                 $assignment = TaskAssignEmployee::findOrFail($assignData['id']);
@@ -1017,6 +1258,8 @@ class TaskManagementController extends Controller
                 }
 
                 $inprogress = max(0, $assignedQty - ($completed + $wastage));
+
+                $serviceTotalDone = $serviceCompletedSums[$assignment->service_id] ?? ($completed + $wastage);
 
                 if ($completed == 0 && $wastage == 0) {
                     $status = 'Open';
@@ -1077,8 +1320,30 @@ class TaskManagementController extends Controller
                 }
             }
 
+            $stage = ProcessSchedule::find($task->stage_id);
+            $jobCard = JobCardEntry::find($task->job_card_entry_id);
+            $isAdditional = (bool)($task->is_additional ?? false);
+            $additionalBatch = null;
+            if ($isAdditional && $task->job_card_fabric_detail_id) {
+                $additionalBatch = \App\Models\JobCardFabricDetail::find($task->job_card_fabric_detail_id);
+            }
+
+            $stageTargetQty = 0;
+            if ($isAdditional && $additionalBatch) {
+                $stageTargetQty = (float)($additionalBatch->batch_total_qty ?? 0);
+            } elseif ($stage && (float)$stage->planned_qty > 0) {
+                $stageTargetQty = (float)$stage->planned_qty;
+            } elseif ($jobCard && (float)$jobCard->grand_total_qty > 0) {
+                $stageTargetQty = (float)$jobCard->grand_total_qty;
+            }
+
+            $allTaskAssignments = TaskAssignEmployee::where('task_id', $task->id)->get();
+            $allAssignmentsCompleted = $allTaskAssignments->isNotEmpty() && $allTaskAssignments->every(function($as) {
+                return $as->status === 'Completed';
+            });
+
             $newStatus = $task->status;
-            if ($allCompleted) {
+            if ($allAssignmentsCompleted) {
                 $newStatus = 'Completed';
             } elseif ($anyStarted || $totalCompleted > 0) {
                 $newStatus = 'In Progress';
@@ -1088,24 +1353,39 @@ class TaskManagementController extends Controller
                 $task->status = $newStatus;
                 TaskStatus::firstOrCreate(['name' => $newStatus], ['color' => 'secondary']);
                 $task->save();
-                if ($task->stage_id) {
-                    $schedule = ProcessSchedule::find($task->stage_id);
-                    if ($schedule) {
-                        $schedule->update(['status' => $newStatus]);
+                $this->logActivity($task->id, 'Status Change', "Task status automatically updated to $newStatus");
+            }
 
-                        if ($newStatus == 'Completed') {
-                            $nextSchedule = ProcessSchedule::where('production_id', $schedule->production_id)
-                                ->where('id', '>', $schedule->id)
-                                ->orderBy('id', 'asc')
-                                ->first();
+            // Update ProcessSchedule based on all tasks of this stage
+            if ($task->stage_id) {
+                $schedule = ProcessSchedule::find($task->stage_id);
+                if ($schedule) {
+                    if ($stageTargetQty > 0) {
+                        $allStageTasks = Task::where('stage_id', $task->stage_id)->get();
+                        $allStageAssignments = TaskAssignEmployee::whereIn('task_id', $allStageTasks->pluck('id'))->get();
+                        $totalStageCompleted = (float)$allStageAssignments->sum(function($a) {
+                            return (float)$a->completed_qty + (float)$a->wastage_qty;
+                        });
 
-                            if ($nextSchedule && $nextSchedule->status == 'Planned') {
-                                $nextSchedule->update(['status' => 'Pending']);
+                        $isStageCompleted = round($totalStageCompleted, 2) >= round($stageTargetQty, 2);
+                        $newStageStatus = $isStageCompleted ? 'Completed' : 'In Progress';
+
+                        if ($schedule->status !== $newStageStatus) {
+                            $schedule->update(['status' => $newStageStatus]);
+
+                            if ($newStageStatus == 'Completed') {
+                                $nextSchedule = ProcessSchedule::where('production_id', $schedule->production_id)
+                                    ->where('id', '>', $schedule->id)
+                                    ->orderBy('id', 'asc')
+                                    ->first();
+
+                                if ($nextSchedule && $nextSchedule->status == 'Planned') {
+                                    $nextSchedule->update(['status' => 'Pending']);
+                                }
                             }
                         }
                     }
                 }
-                $this->logActivity($task->id, 'Status Change', "Task status automatically updated to $newStatus");
             }
 
             $this->syncProductionMovements($task);

@@ -161,7 +161,21 @@
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             message = xhr.responseJSON.message;
                         }
-                        alert(message);
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Approval Blocked!',
+                                html: '<div class="text-start p-2" style="font-size: 14px; line-height: 1.6;">' + message + '</div>',
+                                confirmButtonText: 'OK',
+                                customClass: {
+                                    confirmButton: 'btn btn-primary rounded-pill px-4'
+                                },
+                                buttonsStyling: false
+                            });
+                        } else {
+                            alert(message);
+                        }
                         table.ajax.reload(null, false);
                     }
                 });

@@ -30,6 +30,11 @@ class BackupDatabase extends Command
         $this->info('Starting backup process...');
 
         try {
+            // Auto-recover stale running backups (e.g. if previous process was killed or timed out)
+            Backup::where('status', 'Running')
+                ->where('created_at', '<', now()->subMinutes(30))
+                ->update(['status' => 'Failed', 'error_message' => 'Process timed out or was interrupted.']);
+
             // Check for existing running backups
             if (Backup::where('status', 'Running')->exists()) {
                 $this->error('A backup process is already running.');

@@ -1009,6 +1009,7 @@ $(document).ready(function() {
                 { data: 'status', name: 'status', className: 'text-center' },
                 { data: 'delivered_qty', name: 'delivered_qty', className: 'text-center' },
                 { data: 'pending_qty', name: 'pending_qty', className: 'text-center' },
+                { data: 'pending_arts_qty', name: 'pending_arts_qty', className: 'text-center' },
                 { data: 'partial_d_date', name: 'partial_d_date', className: 'text-nowrap' },
                 { data: 'despatch_complete_date', name: 'despatch_complete_date', className: 'text-nowrap' },
                 { data: 'reason', name: 'reason' }
@@ -1036,6 +1037,7 @@ $(document).ready(function() {
                 { data: 'zone', name: 'zone' },
                 { data: 'customer', name: 'customer' },
                 { data: 'bills_count', name: 'bills_count', className: 'text-center' },
+                { data: 'open_outstanding', name: 'open_outstanding', className: 'text-end' },
                 { data: 'total_sales', name: 'total_sales', className: 'text-end' },
                 { data: 'received', name: 'received', className: 'text-end' },
                 { data: 'outstanding', name: 'outstanding', className: 'text-end' }
@@ -1045,6 +1047,7 @@ $(document).ready(function() {
                 var json = api.ajax.json();
                 if (json && json.totals) {
                     $('#outstanding_report_bills_count').html(json.totals.bills_count);
+                    $('#outstanding_report_open_outstanding').html(json.totals.open_outstanding);
                     $('#outstanding_report_total_sales').html(json.totals.total_sales);
                     $('#outstanding_report_received').html(json.totals.received);
                     $('#outstanding_report_outstanding').html(json.totals.outstanding);
@@ -1242,6 +1245,10 @@ $(document).ready(function() {
         $('#reportTabsContent > .tab-pane').removeClass('show active');
         $('#' + selectedType).addClass('show active');
 
+        if (selectedType === 'despatch-report' && typeof backToDespatchMain === 'function') {
+            backToDespatchMain();
+        }
+
         if (selectedType === 'order-report') {
             if ($('#order-product-wise-tab').hasClass('active')) {
                 $('#order-product-wise-pane').addClass('show active');
@@ -1380,6 +1387,9 @@ $(document).ready(function() {
             }
             return;
         }
+        if (activeTabId === 'despatch-report' && typeof backToDespatchMain === 'function') {
+            backToDespatchMain();
+        }
         const config = tableConfigs[activeTabId];
         if (config && $.fn.DataTable.isDataTable(config.tableId)) {
             const dt = $(config.tableId).DataTable();
@@ -1396,13 +1406,6 @@ $(document).ready(function() {
         loadActiveTabTable(activeTabId, true);
     });
 
-    $('#comparison_year_filter').on('change', function() {
-        if ($('#report_type_select').val() === 'comparison-report') {
-            if (typeof window.initComparisonReportTable === 'function') {
-                window.initComparisonReportTable();
-            }
-        }
-    });
 
     var isOrderRootLevel = true;
 

@@ -10,7 +10,10 @@ use App\Models\Customer;
 use App\Models\SalesAgent;
 use App\Models\Zone;
 use App\Models\Brand;
+use App\Models\CustomerOpeningBalance;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class SalesMarketingReportController extends Controller
 {
@@ -1962,6 +1965,7 @@ class SalesMarketingReportController extends Controller
 
                     $data = [];
                     $sno = $start + 1;
+                    $totPendingArtsCount = 0;
                     foreach ($orders as $order) {
                         $validInvoices = $order->salesInvoices ? $order->salesInvoices->filter(function($inv) {
                             return empty($inv->einvoice_status) || strtolower((string)$inv->einvoice_status) !== 'cancelled';
@@ -2020,6 +2024,11 @@ class SalesMarketingReportController extends Controller
 
                         $statusBadge = $fulfillmentStatus == 'Delivered' ? '<span class="badge bg-label-success">Delivered</span>' : ($fulfillmentStatus == 'Partial Delivery' ? '<span class="badge bg-label-warning">Partial Delivery</span>' : '<span class="badge bg-label-secondary">Planned</span>');
 
+                        $pendingArts = $this->calculateOrderPendingArts($order, $validInvoices);
+                        $pending_art_count = $pendingArts['count'];
+                        $pending_art_qty = $pendingArts['qty'];
+                        $totPendingArtsCount += $pending_art_count;
+
                         $data[] = [
                             'sno' => $sno++,
                             'so_no' => '<span class="fw-bold text-primary">' . htmlspecialchars((string)($order->so_no ?? '-')) . '</span>',
@@ -2040,7 +2049,12 @@ class SalesMarketingReportController extends Controller
                             'delivery_date' => $order->delivery_date ? date('d-m-Y', strtotime((string)$order->delivery_date)) : ($order->request_date ? date('d-m-Y', strtotime((string)$order->request_date)) : '-'),
                             'status' => $statusBadge,
                             'delivered_qty' => '<span class="text-success fw-bold">' . number_format($delivered_qty, 0) . '</span>',
-                            'pending_qty' => '<span class="text-danger fw-bold">' . number_format($pending_qty, 0) . '</span>',
+                            'pending_qty' => ($pending_qty > 0)
+                                ? '<span class="text-danger fw-bold">' . number_format($pending_qty, 0) . '</span>'
+                                : '<span class="text-muted fw-semibold">0</span>',
+                            'pending_arts_qty' => ($pending_art_count > 0)
+                                ? '<a href="javascript:void(0)" class="text-primary fw-bold text-decoration-underline" onclick="showDespatchPendingItems(' . $order->id . ', \'' . htmlspecialchars($order->so_no ?? '', ENT_QUOTES) . '\')" title="Click to view ' . $pending_art_count . ' pending art numbers (' . number_format($pending_art_qty, 0) . ' pcs)">' . $pending_art_count . ' <i class="ri-list-check-2 small ms-1"></i></a>'
+                                : '<span class="text-muted fw-semibold">0</span>',
                             'partial_d_date' => $partial_d_date,
                             'despatch_complete_date' => $despatch_complete_date,
                             'reason' => htmlspecialchars((string)($order->reason_for_delay ?? '-')),
@@ -2062,11 +2076,12 @@ class SalesMarketingReportController extends Controller
                             'total_qty' => number_format($totOrderQty, 0),
                             'delivered_qty' => number_format($totDeliveredQty, 0),
                             'pending_qty' => number_format($totPendingQty, 0),
+                            'pending_arts_qty' => number_format($totPendingArtsCount, 0),
                         ]
                     ]);
 
                 case 'outstanding-report':
-                    $query = \App\Models\Customer::where('status', 'Active');
+                    $query = Customer::where('status', 'Active');
                     if ($customerId) $query->where('id', $customerId);
                     if ($search) {
                         $query->where(function($q) use ($search) {
@@ -2078,40 +2093,63 @@ class SalesMarketingReportController extends Controller
                         });
                     }
 
-                    $allCustomers = $query->with(['zone', 'salesInvoices' => function($invQ) use ($fromDate, $toDate) {
-                        $invQ->whereNull('deleted_at');
-                        if ($fromDate) $invQ->where('inv_date', '>=', $fromDate);
-                        if ($toDate) $invQ->where('inv_date', '<=', $toDate);
-                    }])->get();
+                    $hasOpenTable = Schema::hasTable('customer_opening_balances') && class_exists(CustomerOpeningBalance::class);
+                    $withRelations = [
+                        'zone',
+                        'salesInvoices' => function($invQ) use ($fromDate, $toDate) {
+                            $invQ->whereNull('deleted_at');
+                            if ($fromDate) $invQ->where('inv_date', '>=', $fromDate);
+                            if ($toDate) $invQ->where('inv_date', '<=', $toDate);
+                        }
+                    ];
+                    if ($hasOpenTable) {
+                        $withRelations[] = 'openingBalance';
+                    }
+
+                    $allCustomers = $query->with($withRelations)->get();
 
                     $outstandingReport = [];
                     $sumBills = 0;
+                    $sumOpenAmount = 0;
                     $sumSales = 0;
                     $sumReceived = 0;
                     $sumOutstanding = 0;
 
                     foreach ($allCustomers as $cust) {
+                        $openBal = $hasOpenTable ? $cust->openingBalance : null;
+                        $openAmount = $openBal ? (float)$openBal->open_amount : 0;
+                        $openQty = $openBal ? (float)$openBal->open_qty : 0;
+
                         $invoices = $cust->salesInvoices;
-                        if ($invoices->count() > 0) {
-                            $totalSales = (float)$invoices->sum('grand_total');
-                            $received = (float)$invoices->sum('received_amount');
-                            $outstanding = max(0, $totalSales - $received);
+                        $billsCount = $invoices ? $invoices->count() : 0;
+                        $totalSales = $invoices ? (float)$invoices->sum('grand_total') : 0;
+                        $received = $invoices ? (float)$invoices->sum('received_amount') : 0;
+                        $netOutstanding = max(0, $openAmount + $totalSales - $received);
 
-                            if ($outstanding > 0 || $totalSales > 0) {
-                                $sumBills += $invoices->count();
-                                $sumSales += $totalSales;
-                                $sumReceived += $received;
-                                $sumOutstanding += $outstanding;
+                        if ($openAmount > 0 || $totalSales > 0 || $netOutstanding > 0 || $billsCount > 0) {
+                            $sumBills += $billsCount;
+                            $sumOpenAmount += $openAmount;
+                            $sumSales += $totalSales;
+                            $sumReceived += $received;
+                            $sumOutstanding += $netOutstanding;
 
-                                $outstandingReport[] = [
-                                    'zone' => '<span class="badge bg-label-secondary">' . htmlspecialchars((string)($cust->zone->zone_name ?? '-')) . '</span>',
-                                    'customer' => '<div class="fw-bold text-dark">' . htmlspecialchars((string)$cust->name) . '</div><small class="text-muted">' . htmlspecialchars((string)$cust->code) . '</small>',
-                                    'bills_count' => '<span class="badge rounded-pill bg-label-info">' . $invoices->count() . '</span>',
-                                    'total_sales' => '₹' . number_format($totalSales, 2),
-                                    'received' => '<span class="text-success">₹' . number_format($received, 2) . '</span>',
-                                    'outstanding' => '<span class="fw-bold text-danger">₹' . number_format($outstanding, 2) . '</span>',
-                                ];
+                            $openDisplay = '<span class="text-muted">₹0.00</span>';
+                            if ($openAmount > 0 || $openQty > 0) {
+                                $openDisplay = '<div class="fw-semibold text-dark">₹' . number_format($openAmount, 2) . '</div>';
+                                if ($openQty > 0) {
+                                    $openDisplay .= '<small class="text-primary fw-medium font-monospace d-block">(' . number_format($openQty, 0) . ' pcs)</small>';
+                                }
                             }
+
+                            $outstandingReport[] = [
+                                'zone' => '<span class="badge bg-label-secondary">' . htmlspecialchars((string)($cust->zone->zone_name ?? '-')) . '</span>',
+                                'customer' => '<div class="fw-bold text-dark">' . htmlspecialchars((string)$cust->name) . '</div><small class="text-muted">' . htmlspecialchars((string)$cust->code) . '</small>',
+                                'bills_count' => '<span class="badge rounded-pill bg-label-info">' . $billsCount . '</span>',
+                                'open_outstanding' => $openDisplay,
+                                'total_sales' => '₹' . number_format($totalSales, 2),
+                                'received' => '<span class="text-success">₹' . number_format($received, 2) . '</span>',
+                                'outstanding' => '<span class="fw-bold text-danger fs-6">₹' . number_format($netOutstanding, 2) . '</span>',
+                            ];
                         }
                     }
 
@@ -2125,6 +2163,7 @@ class SalesMarketingReportController extends Controller
                         'data' => $pagedData,
                         'totals' => [
                             'bills_count' => number_format($sumBills),
+                            'open_outstanding' => '₹' . number_format($sumOpenAmount, 2),
                             'total_sales' => '₹' . number_format($sumSales, 2),
                             'received' => '₹' . number_format($sumReceived, 2),
                             'outstanding' => '₹' . number_format($sumOutstanding, 2),
@@ -2717,6 +2756,7 @@ class SalesMarketingReportController extends Controller
                 'sales_orders.id',
                 'sales_orders.so_no',
                 'sales_orders.so_date',
+                'sales_orders.total_qty',
                 'customers.name as customer_name'
             ]);
 
@@ -2856,6 +2896,35 @@ class SalesMarketingReportController extends Controller
             }
         }
 
+        $soTotalQty = floatval($so->total_qty ?? $soItems->sum('qty'));
+        $invTotalQty = floatval($invRows->sum('quantity'));
+        $netBalance = max(0, $soTotalQty - $invTotalQty);
+        $extraDelivered = max(0, $totalLostQty - $netBalance);
+
+        if ($netBalance <= 0) {
+            $lostItems = [];
+            $totalLostQty = 0;
+        } elseif ($totalLostQty > $netBalance) {
+            $excess = $totalLostQty - $netBalance;
+            for ($i = count($lostItems) - 1; $i >= 0 && $excess > 0; $i--) {
+                $itemQty = floatval($lostItems[$i]['qty_raw'] ?? 0);
+                if ($itemQty <= 0) continue;
+                $reduction = min($excess, $itemQty);
+                $newQty = $itemQty - $reduction;
+                $excess -= $reduction;
+                $lostItems[$i]['qty_raw'] = $newQty;
+                $lostItems[$i]['qty'] = '<span class="text-danger fw-bold">' . number_format($newQty, 0) . '</span>';
+            }
+            $lostItems = array_values(array_filter($lostItems, function($it) {
+                return (floatval($it['qty_raw'] ?? 0)) > 0;
+            }));
+            foreach ($lostItems as $idx => &$it) {
+                $it['sno'] = $idx + 1;
+            }
+            unset($it);
+            $totalLostQty = $netBalance;
+        }
+
         $search = $request->search['value'] ?? '';
         $filteredItems = $lostItems;
         if (!empty($search)) {
@@ -2877,17 +2946,118 @@ class SalesMarketingReportController extends Controller
         $pagedItems = $length != -1 ? array_slice($filteredItems, $start, $length) : $filteredItems;
 
         return response()->json([
-            'draw'            => $draw,
-            'recordsTotal'    => count($lostItems),
-            'recordsFiltered' => count($filteredItems),
-            'data'            => $pagedItems,
-            'total_lost_qty'  => number_format($totalLostQty, 0),
-            'so_no'           => $so->so_no,
-            'customer'        => $so->customer_name ?? '-',
-            'so_date'         => $so->so_date ? date('d-m-Y', strtotime($so->so_date)) : '-',
-            'status'          => true,
-            'items'           => $lostItems,
+            'draw'             => $draw,
+            'recordsTotal'     => count($lostItems),
+            'recordsFiltered'  => count($filteredItems),
+            'data'             => $pagedItems,
+            'total_lost_qty'   => number_format($totalLostQty, 0),
+            'order_qty'        => number_format($soTotalQty, 0),
+            'delivered_qty'    => number_format($invTotalQty, 0),
+            'net_balance_qty'  => number_format($netBalance, 0),
+            'extra_billed_qty' => number_format($extraDelivered, 0),
+            'so_no'            => $so->so_no,
+            'customer'         => $so->customer_name ?? '-',
+            'so_date'          => $so->so_date ? date('d-m-Y', strtotime($so->so_date)) : '-',
+            'status'           => true,
+            'items'            => $lostItems,
         ]);
+    }
+
+    protected function calculateOrderPendingArts($order, $validInvoices = null)
+    {
+        if (!$order) return ['qty' => 0, 'count' => 0];
+        $totalQty = (float)($order->total_qty ?? 0);
+
+        if ($validInvoices === null) {
+            $validInvoices = $order->salesInvoices ? $order->salesInvoices->filter(function($inv) {
+                return empty($inv->einvoice_status) || strtolower((string)$inv->einvoice_status) !== 'cancelled';
+            }) : collect();
+        }
+
+        $deliveredQty = 0;
+        foreach ($validInvoices as $inv) {
+            $deliveredQty += $inv->items ? $inv->items->sum('quantity') : 0;
+        }
+
+        if ($deliveredQty >= $totalQty && $totalQty > 0) {
+            return ['qty' => 0, 'count' => 0];
+        }
+
+        $invSkuPool = [];
+        $invArtNoTotals = [];
+        foreach ($validInvoices as $inv) {
+            if (!$inv->items) continue;
+            foreach ($inv->items as $sii) {
+                $sku = trim($sii->sku ?? '');
+                $q = floatval($sii->quantity ?? 0);
+                if (!empty($sku)) {
+                    $invSkuPool[$sku] = ($invSkuPool[$sku] ?? 0) + $q;
+                }
+                $norm = strtoupper(preg_replace('/\s+/', '', trim($sii->art_no ?? '')));
+                if (!empty($norm)) {
+                    $invArtNoTotals[$norm] = ($invArtNoTotals[$norm] ?? 0) + $q;
+                }
+            }
+        }
+
+        $soRemMap = [];
+        $consumedFromArt = [];
+        $soItems = $order->items ?? collect();
+        foreach ($soItems as $idx => $item) {
+            $sku = trim($item->barcode ?: ($item->sku ?: ''));
+            $norm = strtoupper(preg_replace('/\s+/', '', trim($item->art_no ?? '')));
+            $soQ = floatval($item->qty ?? 0);
+            $usedSku = 0;
+            if (!empty($sku) && isset($invSkuPool[$sku]) && $invSkuPool[$sku] > 0) {
+                $usedSku = min($soQ, $invSkuPool[$sku]);
+                $invSkuPool[$sku] -= $usedSku;
+                if (!empty($norm)) {
+                    $consumedFromArt[$norm] = ($consumedFromArt[$norm] ?? 0) + $usedSku;
+                }
+            }
+            $soRemMap[$idx] = [
+                'norm' => $norm,
+                'remQ' => $soQ - $usedSku,
+            ];
+        }
+
+        $unallocatedArtPool = [];
+        foreach ($invArtNoTotals as $norm => $totInv) {
+            $matched = $consumedFromArt[$norm] ?? 0;
+            $unallocatedArtPool[$norm] = max(0, $totInv - $matched);
+        }
+
+        $pendingArtQty = 0;
+        $pendingArtsMap = [];
+        foreach ($soRemMap as $idx => $entry) {
+            $remQ = $entry['remQ'];
+            $norm = $entry['norm'];
+            if ($remQ > 0 && !empty($norm) && isset($unallocatedArtPool[$norm]) && $unallocatedArtPool[$norm] > 0) {
+                $usedArt = min($remQ, $unallocatedArtPool[$norm]);
+                $unallocatedArtPool[$norm] -= $usedArt;
+                $remQ -= $usedArt;
+            }
+            if ($remQ > 0) {
+                $pendingArtQty += $remQ;
+                if (!empty($norm)) {
+                    $pendingArtsMap[$norm] = true;
+                }
+            }
+        }
+
+        $netPendingQty = max(0, $totalQty - $deliveredQty);
+        $finalPendingArtQty = min($netPendingQty, $pendingArtQty);
+
+        return [
+            'qty' => $finalPendingArtQty,
+            'count' => count($pendingArtsMap),
+        ];
+    }
+
+    protected function calculateOrderPendingArtQty($order, $validInvoices = null)
+    {
+        $res = $this->calculateOrderPendingArts($order, $validInvoices);
+        return is_array($res) ? ($res['qty'] ?? 0) : $res;
     }
 
     protected function buildLostItemRow($item, $qty, $sno = 1)
@@ -3018,4 +3188,189 @@ class SalesMarketingReportController extends Controller
 
         return $artNoMap;
     }
+
+    public function importTallyOutstanding(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:xls,xlsx,csv,txt|max:10240',
+        ], [
+            'import_file.required' => 'Please select a Tally Excel or CSV file to import.',
+            'import_file.mimes'    => 'Only .xlsx, .xls, and .csv files are supported.',
+            'import_file.max'      => 'File size cannot exceed 10MB.',
+        ]);
+
+        $file = $request->file('import_file');
+
+        try {
+            $spreadsheet = IOFactory::load($file->getRealPath());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, true, true, true);
+
+            if (empty($rows) || count($rows) < 2) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'The uploaded file is empty or contains no data rows.'
+                ], 422);
+            }
+
+            // Detect headers from row 1
+            $firstRow = reset($rows);
+            $colCode = null;
+            $colName = null;
+            $colQty = null;
+            $colAmount = null;
+            $colDate = null;
+            $colRemarks = null;
+
+            foreach ($firstRow as $colKey => $colHeader) {
+                $h = strtolower(trim((string)$colHeader));
+                if (empty($h)) continue;
+
+                if (!$colCode && (str_contains($h, 'code') || $h === 'cust_code' || $h === 'customer code' || $h === 'party code')) {
+                    $colCode = $colKey;
+                } elseif (!$colName && (str_contains($h, 'name') || str_contains($h, 'party') || str_contains($h, 'customer') || str_contains($h, 'ledger'))) {
+                    $colName = $colKey;
+                } elseif (!$colQty && (str_contains($h, 'qty') || str_contains($h, 'quantity') || str_contains($h, 'pieces') || str_contains($h, 'nos'))) {
+                    $colQty = $colKey;
+                } elseif (!$colAmount && (str_contains($h, 'amount') || str_contains($h, 'outstanding') || str_contains($h, 'balance') || str_contains($h, 'bal') || str_contains($h, 'open'))) {
+                    $colAmount = $colKey;
+                } elseif (!$colDate && str_contains($h, 'date')) {
+                    $colDate = $colKey;
+                } elseif (!$colRemarks && (str_contains($h, 'remark') || str_contains($h, 'note'))) {
+                    $colRemarks = $colKey;
+                }
+            }
+
+            // Fallback default column positions if headers didn't match keywords
+            if (!$colCode) $colCode = 'A';
+            if (!$colName) $colName = 'B';
+            if (!$colQty) $colQty = 'C';
+            if (!$colAmount) $colAmount = 'D';
+            if (!$colDate) $colDate = 'E';
+            if (!$colRemarks) $colRemarks = 'F';
+
+            $defaultDate = $request->filled('as_on_date') ? date('Y-m-d', strtotime((string)$request->as_on_date)) : now()->format('Y-m-d');
+            $defaultFinYear = $request->filled('financial_year') ? trim((string)$request->financial_year) : (date('n') >= 4 ? date('Y') . '-' . (date('Y') + 1) : (date('Y') - 1) . '-' . date('Y'));
+
+            // Preload active customers by code and lowercase name for fast lookup
+            $customersByCode = Customer::all()->keyBy(function($c) { return strtoupper(trim((string)$c->code)); });
+            $customersByName = Customer::all()->keyBy(function($c) { return strtolower(trim((string)$c->name)); });
+
+            $imported = 0;
+            $isFirst = true;
+
+            foreach ($rows as $row) {
+                if ($isFirst) {
+                    $isFirst = false;
+                    continue; // Skip header row
+                }
+
+                $codeVal = trim((string)($row[$colCode] ?? ''));
+                $nameVal = trim((string)($row[$colName] ?? ''));
+                $rawQty = trim((string)($row[$colQty] ?? '0'));
+                $rawAmt = trim((string)($row[$colAmount] ?? '0'));
+
+                if (empty($codeVal) && empty($nameVal)) {
+                    continue; // Skip blank line
+                }
+
+                // Clean numeric values (remove currency symbol, commas, spaces)
+                $cleanAmt = preg_replace('/[^0-9.-]/', '', $rawAmt);
+                $amtVal = is_numeric($cleanAmt) ? (float)$cleanAmt : 0;
+
+                $cleanQty = preg_replace('/[^0-9.-]/', '', $rawQty);
+                $qtyVal = is_numeric($cleanQty) ? (float)$cleanQty : 0;
+
+                // Match customer
+                $customer = null;
+                if (!empty($codeVal) && isset($customersByCode[strtoupper($codeVal)])) {
+                    $customer = $customersByCode[strtoupper($codeVal)];
+                } elseif (!empty($nameVal) && isset($customersByName[strtolower($nameVal)])) {
+                    $customer = $customersByName[strtolower($nameVal)];
+                }
+
+                $finalCode = !empty($codeVal) ? $codeVal : ($customer ? $customer->code : 'UNKNOWN');
+                $finalName = !empty($nameVal) ? $nameVal : ($customer ? $customer->name : '-');
+
+                $asOnDate = $defaultDate;
+                if ($colDate && !empty($row[$colDate])) {
+                    $parsed = strtotime(trim((string)$row[$colDate]));
+                    if ($parsed !== false && $parsed > 0) {
+                        $asOnDate = date('Y-m-d', $parsed);
+                    }
+                }
+
+                $remVal = $colRemarks && !empty($row[$colRemarks]) ? trim((string)$row[$colRemarks]) : 'Tally Import';
+
+                CustomerOpeningBalance::updateOrCreate(
+                    ['customer_code' => $finalCode],
+                    [
+                        'customer_id'    => $customer ? $customer->id : null,
+                        'customer_name'  => $finalName,
+                        'open_qty'       => $qtyVal,
+                        'open_amount'    => $amtVal,
+                        'as_on_date'     => $asOnDate,
+                        'financial_year' => $defaultFinYear,
+                        'remarks'        => $remVal,
+                        'created_by'     => auth()->id(),
+                    ]
+                );
+
+                $imported++;
+            }
+
+            return response()->json([
+                'status'   => true,
+                'message'  => "Successfully imported {$imported} customer opening balance(s) from Tally!",
+                'imported' => $imported,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Import failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function downloadTallyTemplate()
+    {
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="tally_opening_outstanding_template.csv"',
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
+        ];
+
+        $callback = function() {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Customer Code',
+                'Customer Name',
+                'Open Outstanding Qty',
+                'Open Outstanding Amount'
+            ]);
+
+            $sampleCusts = Customer::where('status', 'Active')->take(2)->get();
+            if ($sampleCusts->count() > 0) {
+                foreach ($sampleCusts as $idx => $c) {
+                    fputcsv($handle, [
+                        $c->code ?: ('CUST' . (1001 + $idx)),
+                        $c->name ?: 'Sample Textiles',
+                        $idx == 0 ? '120' : '0',
+                        $idx == 0 ? '75000.00' : '42500.00'
+                    ]);
+                }
+            } else {
+                fputcsv($handle, ['CUST001', 'Sample Textiles', '100', '50000.00']);
+                fputcsv($handle, ['CUST002', 'Modern Fashion Mart', '0', '25000.00']);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }
+

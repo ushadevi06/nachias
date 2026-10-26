@@ -394,6 +394,14 @@ class SalesOrderController extends Controller
 
                 $isNewApproval = false;
                 if ($request->status === 'Approved') {
+                    $customer = Customer::find($request->customer_id);
+                    if ($customer && (float)($customer->credit_limit ?? 0) > 0) {
+                        $check = $customer->getCreditLimitStatus($finalTotal ?? 0);
+                        if ($check['has_limit'] && $check['exceeded']) {
+                            return redirect()->back()->withInput()->with('error', "Approval Blocked! Customer '{$customer->name}' has exceeded Credit Limit (₹" . number_format($check['credit_limit'], 2) . "). Current Outstanding: ₹" . number_format($check['current_outstanding'], 2) . ", Order Amount: ₹" . number_format($finalTotal ?? 0, 2) . " (Exceeded by ₹" . number_format($check['exceeded_by'], 2) . "). You can save this order as 'Pending' or 'Draft', but cannot Approve until payment is received or Credit Limit is increased in Customer Master.");
+                        }
+                    }
+
                     if (!$id || SalesOrder::find($id)->status !== 'Approved') {
                         $soData['approved_by'] = auth()->id();
                         $soData['approved_date'] = now();
@@ -717,6 +725,21 @@ class SalesOrderController extends Controller
 
         if (!$valid) {
             return response()->json(['success' => false, 'message' => 'Invalid status transition from ' . $oldStatus . ' to ' . $newStatus], 422);
+        }
+
+        // Credit Limit Validation on Approval
+        if ($newStatus === 'Approved') {
+            $customer = $salesOrder->customer;
+            if ($customer && (float)($customer->credit_limit ?? 0) > 0) {
+                $check = $customer->getCreditLimitStatus($salesOrder->total_amount ?? 0);
+                if ($check['has_limit'] && $check['exceeded']) {
+                    return response()->json([
+                        'success' => false,
+                        'credit_limit_exceeded' => true,
+                        'message' => "Approval Blocked! Customer '{$customer->name}' has exceeded Credit Limit (₹" . number_format($check['credit_limit'], 2) . "). Current Outstanding: ₹" . number_format($check['current_outstanding'], 2) . ", Order Amount: ₹" . number_format($salesOrder->total_amount ?? 0, 2) . " (Exceeded by ₹" . number_format($check['exceeded_by'], 2) . "). Please clear pending dues or increase Credit Limit in Customer Master before approving!"
+                    ], 422);
+                }
+            }
         }
 
         DB::beginTransaction();

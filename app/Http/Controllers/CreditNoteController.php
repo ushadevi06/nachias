@@ -42,6 +42,8 @@ class CreditNoteController extends Controller
 
             $totalRecords = $query->count();
 
+
+
             if ($request->has('search') && !empty($request->search['value'])) {
                 $search = $request->search['value'];
                 $numericSearch = str_replace([',', '₹', 'Rs.', ' '], '', $search);

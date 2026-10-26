@@ -27,20 +27,37 @@ class HomeController extends Controller
     public function index()
     {
         $today = Carbon::today();
-        $monthStart = Carbon::now()->startOfMonth();
-        $yearStart = Carbon::now()->startOfYear();
+        $now = Carbon::now();
+        $monthStart = $now->copy()->startOfMonth();
+        $monthEnd = $now->copy()->endOfMonth();
+
+        // Indian Financial Year (Apr 1 to Mar 31)
+        $finYearStart = ($now->month >= 4) ? Carbon::create($now->year, 4, 1)->startOfDay() : Carbon::create($now->year - 1, 4, 1)->startOfDay();
+        $finYearEnd = ($now->month >= 4) ? Carbon::create($now->year + 1, 3, 31)->endOfDay() : Carbon::create($now->year, 3, 31)->endOfDay();
+        $yearStart = $finYearStart;
+
+        // Active sales filter: Exclude cancelled invoices
+        $activeSalesFilter = function ($q) {
+            $q->whereNull('sales_invoices.deleted_at')
+              ->where('sales_invoices.invoice_status', '!=', 'Cancelled')
+              ->where(function ($sq) {
+                  $sq->whereNull('sales_invoices.einvoice_status')
+                     ->orWhereRaw('LOWER(sales_invoices.einvoice_status) != ?', ['cancelled']);
+              })
+              ->whereNull('sales_invoices.cancellation_date');
+        };
 
         /*  Sales & Order Dashboard */
-        $sales_today = SalesInvoice::whereDate('inv_date', $today)->whereNull('deleted_at')->sum('grand_total');
-        $sales_month = SalesInvoice::whereBetween('inv_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->sum('grand_total');
-        $sales_year = SalesInvoice::whereBetween('inv_date', [$yearStart, Carbon::now()])->whereNull('deleted_at')->sum('grand_total');
+        $sales_today = SalesInvoice::whereDate('inv_date', $today)->where($activeSalesFilter)->sum('grand_total');
+        $sales_month = SalesInvoice::whereBetween('inv_date', [$monthStart, $monthEnd])->where($activeSalesFilter)->sum('grand_total');
+        $sales_year = SalesInvoice::whereBetween('inv_date', [$finYearStart, $finYearEnd])->where($activeSalesFilter)->sum('grand_total');
 
-        $sales_count_today = SalesInvoice::whereDate('inv_date', $today)->whereNull('deleted_at')->count();
-        $sales_count_month = SalesInvoice::whereBetween('inv_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->count();
-        $sales_count_year = SalesInvoice::whereBetween('inv_date', [$yearStart, Carbon::now()])->whereNull('deleted_at')->count();
+        $sales_count_today = SalesInvoice::whereDate('inv_date', $today)->where($activeSalesFilter)->count();
+        $sales_count_month = SalesInvoice::whereBetween('inv_date', [$monthStart, $monthEnd])->where($activeSalesFilter)->count();
+        $sales_count_year = SalesInvoice::whereBetween('inv_date', [$finYearStart, $finYearEnd])->where($activeSalesFilter)->count();
 
-        $orders_today = SalesOrder::whereDate('so_date', $today)->whereNull('deleted_at')->count();
-        $orders_month = SalesOrder::whereBetween('so_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->count();
+        $orders_today = SalesOrder::whereDate('so_date', $today)->whereNull('deleted_at')->where('status', '!=', 'Cancelled')->count();
+        $orders_month = SalesOrder::whereBetween('so_date', [$monthStart, $monthEnd])->whereNull('deleted_at')->where('status', '!=', 'Cancelled')->count();
         $total_stock = StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
         $urgent_orders = SalesOrder::where('status', 'Pending')->whereNull('deleted_at')->count();
 
@@ -48,8 +65,22 @@ class HomeController extends Controller
         $fgStoreId = DB::table('store_types')->where('store_type_name', 'FINISHED GOODS')->value('id') ?? 3;
 
         // Today Sales
-        $today_sales_qty = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->whereDate('sales_invoices.inv_date', $today)->where('sales_invoices.store_id', $fgStoreId)->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->sum('sales_invoice_items.quantity');
-        $today_sales_wot = DB::table('sales_invoices')->whereDate('inv_date', $today)->where('store_id', $fgStoreId)->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $today_sales_qty = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereDate('sales_invoices.inv_date', $today)
+            ->where(function ($q) use ($fgStoreId) {
+                $q->where('sales_invoices.store_id', $fgStoreId)->orWhereNull('sales_invoices.store_id');
+            })
+            ->where($activeSalesFilter)
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->sum('sales_invoice_items.quantity');
+        $today_sales_wot = DB::table('sales_invoices')
+            ->whereDate('inv_date', $today)
+            ->where(function ($q) use ($fgStoreId) {
+                $q->where('store_id', $fgStoreId)->orWhereNull('store_id');
+            })
+            ->where($activeSalesFilter)
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         // Today Sales Return (Credit Notes)
         $today_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereDate('credit_notes.note_date', $today)->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
@@ -59,23 +90,51 @@ class HomeController extends Controller
         $today_net_wot = max(0, $today_sales_wot - $today_return_wot);
 
         // Monthly Sales
-        $month_sales_qty = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->whereBetween('sales_invoices.inv_date', [$monthStart, Carbon::now()])->where('sales_invoices.store_id', $fgStoreId)->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->sum('sales_invoice_items.quantity');
-        $month_sales_wot = DB::table('sales_invoices')->whereBetween('inv_date', [$monthStart, Carbon::now()])->where('store_id', $fgStoreId)->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $month_sales_qty = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereBetween('sales_invoices.inv_date', [$monthStart, $monthEnd])
+            ->where(function ($q) use ($fgStoreId) {
+                $q->where('sales_invoices.store_id', $fgStoreId)->orWhereNull('sales_invoices.store_id');
+            })
+            ->where($activeSalesFilter)
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->sum('sales_invoice_items.quantity');
+        $month_sales_wot = DB::table('sales_invoices')
+            ->whereBetween('inv_date', [$monthStart, $monthEnd])
+            ->where(function ($q) use ($fgStoreId) {
+                $q->where('store_id', $fgStoreId)->orWhereNull('store_id');
+            })
+            ->where($activeSalesFilter)
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         // Monthly Sales Return
-        $month_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereBetween('credit_notes.note_date', [$monthStart, Carbon::now()])->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
-        $month_return_wot = DB::table('credit_notes')->whereBetween('note_date', [$monthStart, Carbon::now()])->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $month_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereBetween('credit_notes.note_date', [$monthStart, $monthEnd])->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
+        $month_return_wot = DB::table('credit_notes')->whereBetween('note_date', [$monthStart, $monthEnd])->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         $month_net_qty = max(0, $month_sales_qty - $month_return_qty);
         $month_net_wot = max(0, $month_sales_wot - $month_return_wot);
 
         // Yearly Sales
-        $year_sales_qty = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->whereBetween('sales_invoices.inv_date', [$yearStart, Carbon::now()])->where('sales_invoices.store_id', $fgStoreId)->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->sum('sales_invoice_items.quantity');
-        $year_sales_wot = DB::table('sales_invoices')->whereBetween('inv_date', [$yearStart, Carbon::now()])->where('store_id', $fgStoreId)->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $year_sales_qty = DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereBetween('sales_invoices.inv_date', [$finYearStart, $finYearEnd])
+            ->where(function ($q) use ($fgStoreId) {
+                $q->where('sales_invoices.store_id', $fgStoreId)->orWhereNull('sales_invoices.store_id');
+            })
+            ->where($activeSalesFilter)
+            ->whereNull('sales_invoice_items.deleted_at')
+            ->sum('sales_invoice_items.quantity');
+        $year_sales_wot = DB::table('sales_invoices')
+            ->whereBetween('inv_date', [$finYearStart, $finYearEnd])
+            ->where(function ($q) use ($fgStoreId) {
+                $q->where('store_id', $fgStoreId)->orWhereNull('store_id');
+            })
+            ->where($activeSalesFilter)
+            ->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         // Yearly Sales Return
-        $year_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereBetween('credit_notes.note_date', [$yearStart, Carbon::now()])->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
-        $year_return_wot = DB::table('credit_notes')->whereBetween('note_date', [$yearStart, Carbon::now()])->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
+        $year_return_qty = DB::table('credit_note_items')->join('credit_notes', 'credit_note_items.credit_note_id', '=', 'credit_notes.id')->whereBetween('credit_notes.note_date', [$finYearStart, $finYearEnd])->whereNull('credit_notes.deleted_at')->whereNull('credit_note_items.deleted_at')->sum('credit_note_items.quantity');
+        $year_return_wot = DB::table('credit_notes')->whereBetween('note_date', [$finYearStart, $finYearEnd])->whereNull('deleted_at')->sum(DB::raw('COALESCE(sub_total, grand_total)'));
 
         $year_net_qty = max(0, $year_sales_qty - $year_return_qty);
         $year_net_wot = max(0, $year_sales_wot - $year_return_wot);
@@ -98,6 +157,7 @@ class HomeController extends Controller
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('sales_invoice_items.deleted_at')
+            ->where($activeSalesFilter)
             ->select(
                 'sales_invoices.so_id',
                 DB::raw('SUM(sales_invoice_items.quantity) as invoiced_qty'),
@@ -151,10 +211,7 @@ class HomeController extends Controller
         $late_emp_today = Attendance::whereDate('date', $today)->where('status', 'Late')->count();
         $overtime_today = Attendance::whereDate('date', $today)->where('status', 'Overtime')->count();
 
-        $device_stats = Attendance::whereDate('date', $today)
-            ->select('device_serial_number', 'status', DB::raw('count(*) as count'))
-            ->groupBy('device_serial_number', 'status')
-            ->get();
+        $device_stats = Attendance::whereDate('date', $today)->select('device_serial_number', 'status', DB::raw('count(*) as count'))->groupBy('device_serial_number', 'status')->get();
 
         $attendance_chart_data = [];
         $attendance_chart_data['All'] = [
@@ -314,8 +371,8 @@ class HomeController extends Controller
             $monthEnd = $date->copy()->endOfMonth();
             $months_labels[] = $date->format('M');
 
-            $sales_chart_data[] = round(SalesInvoice::whereBetween('inv_date', [$monthStart, $monthEnd])->whereNull('deleted_at')->sum('grand_total'), 2);
-            $collection_chart_data[] = round(SalesInvoice::whereBetween('inv_date', [$monthStart, $monthEnd])->whereNull('deleted_at')->sum('received_amount'), 2);
+            $sales_chart_data[] = round(SalesInvoice::whereBetween('inv_date', [$monthStart, $monthEnd])->where($activeSalesFilter)->sum('grand_total'), 2);
+            $collection_chart_data[] = round(SalesInvoice::whereBetween('inv_date', [$monthStart, $monthEnd])->where($activeSalesFilter)->sum('received_amount'), 2);
 
             $purchase_chart_data[] = round(PurchaseInvoice::whereBetween('invoice_date', [$monthStart, $monthEnd])->whereNull('deleted_at')->sum('grand_total'), 2);
             $payment_chart_data[] = round(PurchaseInvoice::whereBetween('invoice_date', [$monthStart, $monthEnd])->whereNull('deleted_at')->sum('received_amount'), 2);
@@ -687,24 +744,16 @@ class HomeController extends Controller
      */
     protected function computeCuttingDashboardData($today)
     {
-        // 1. Employee Present -> total active employees present in Cutting Department
         $cuttingDept = \App\Models\Department::where('department', 'like', '%CUTTING%')->first();
         $cuttingDeptId = $cuttingDept ? $cuttingDept->id : 3;
 
-        $cuttingEmpUsers = \App\Models\User::where('status', 'Active')
-            ->where('department_id', $cuttingDeptId)
-            ->where('id', '!=', 1)
-            ->get();
+        $cuttingEmpUsers = \App\Models\User::where('status', 'Active')->where('department_id', $cuttingDeptId)->where('id', '!=', 1)->get();
 
         $empTotal = $cuttingEmpUsers->count();
         $empCodes = $cuttingEmpUsers->pluck('emp_id')->filter()->toArray();
 
-        $empPresent = Attendance::whereDate('date', $today)
-            ->whereIn('emp_code', $empCodes)
-            ->whereIn('status', ['Present', 'Late', 'Overtime'])
-            ->count();
+        $empPresent = Attendance::whereDate('date', $today)->whereIn('emp_code', $empCodes)->whereIn('status', ['Present', 'Late', 'Overtime'])->count();
 
-        // 2. Pieces Cut -> total pcs cutting today
         $cuttingStage = \App\Models\OperationStage::where('operation_stage_name', 'like', '%CUTTING%')->first();
         $cuttingStageId = $cuttingStage ? $cuttingStage->id : 1;
 
@@ -717,10 +766,7 @@ class HomeController extends Controller
         $movementOutwardToday = \App\Models\ProductionMovement::where('operation_stage_id', $cuttingStageId)->whereDate('created_at', $today)->whereNull('deleted_at')->sum('outward_qty');
 
         $taskCompletedToday = \App\Models\TaskAssignEmployee::whereIn('task_id', $cuttingTaskIds)->whereDate('updated_at', $today)->whereNull('deleted_at')->sum('completed_qty');
-
         $piecesCutToday = max(floatval($issueProducedToday), floatval($movementOutwardToday), floatval($taskCompletedToday));
-
-        // 4. Active Job Card -> show all job cards with completed
         $cuttingScheduleJcIds = ProcessSchedule::where('operation_stage_id', $cuttingStageId)->pluck('job_card_entry_id')->unique();
 
         $cuttingJobCardsQuery = JobCardEntry::whereIn('id', $cuttingScheduleJcIds)->whereNull('deleted_at');
@@ -729,7 +775,6 @@ class HomeController extends Controller
         $completedJobCardsCount = (clone $cuttingJobCardsQuery)->where('status', 'Production Completed')->count();
         $totalJobCardsCount = (clone $cuttingJobCardsQuery)->count();
 
-        // Detailed list for modal view
         $jobCardsList = JobCardEntry::with(['brand', 'item.style', 'serviceProvider', 'issueItems'])
             ->whereIn('id', $cuttingScheduleJcIds)
             ->whereNull('deleted_at')
@@ -750,20 +795,13 @@ class HomeController extends Controller
                 ];
             });
 
-        // 5. Target -> show today cutting target
         $tasksTargetToday = \App\Models\Task::whereHas('stage', function ($q) use ($cuttingStageId) {
             $q->where('operation_stage_id', $cuttingStageId);
         })->whereDate('issue_date', $today)->sum('issue_qty');
 
         $target = $tasksTargetToday > 0 ? floatval($tasksTargetToday) : floatval($cuttingStage->target ?? 3100);
-
-        // 6. Completed -> show today cutting completed count
         $completed = $piecesCutToday;
-
-        // 7. Pending -> target - completed
         $pending = max(0, $target - $completed);
-
-        // Efficiency
         $efficiency = $target > 0 ? round(($completed / $target) * 100, 1) : 0;
 
         return [
@@ -801,14 +839,9 @@ class HomeController extends Controller
         return ($isNeg ? '-' : '') . $intPart . $decPart;
     }
 
-    /**
-     * AJAX endpoint for Fabric Inventory Dashboard 3-level drill-down.
-     * Level 'style'  → filter by brand_id, group by style_id / style_name
-     * Level 'artno'  → filter by brand_id + style_id, group by art_no + fabric_width_id
-     */
     public function fabricInventoryDrilldown(Request $request)
     {
-        $level = $request->input('level', 'brand'); // 'brand' | 'style' | 'artno'
+        $level = $request->input('level', 'brand');
         $brandId = $request->input('brand_id');
         $styleId = $request->input('style_id');
 
@@ -829,10 +862,7 @@ class HomeController extends Controller
             return response()->json(['error' => 'style_id required'], 422);
         }
 
-        $base = DB::table('stock_entry_items as sei')
-            ->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
-            ->where('sei.store_category_id', 1)
-            ->whereNull('sei.deleted_at');
+        $base = DB::table('stock_entry_items as sei')->leftJoin('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')->where('sei.store_category_id', 1)->whereNull('sei.deleted_at');
 
         if ($level === 'brand') {
             $base->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
@@ -922,7 +952,6 @@ class HomeController extends Controller
                 $item['fabric_width'] = $row->fabric_width;
             }
 
-            // Apply universal search filtering across all columns
             if ($search !== '') {
                 $statusText = $item['shortage'] > 0 ? 'Shortage Reorder' : ($item['excess'] > 0 ? 'Excess' : 'Optimal Balanced');
                 $rowText = implode(' ', [
@@ -964,7 +993,6 @@ class HomeController extends Controller
             $data[] = $item;
         }
 
-        // DataTables / Manual Pagination
         $total = count($data);
         if ($request->has('start')) {
             $start = max(0, intval($request->input('start', 0)));

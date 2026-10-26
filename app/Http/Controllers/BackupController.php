@@ -85,6 +85,11 @@ class BackupController extends Controller
             return unauthorizedRedirect();
         }
         try {
+            // Auto-recover stale running backups
+            Backup::where('status', 'Running')
+                ->where('created_at', '<', now()->subMinutes(30))
+                ->update(['status' => 'Failed', 'error_message' => 'Process timed out or was interrupted.']);
+
             if (Backup::where('status', 'Running')->exists()) {
                 return response()->json(['status' => 'error', 'message' => 'A backup process is already running.']);
             }
@@ -106,34 +111,25 @@ class BackupController extends Controller
                 'created_by' => auth()->id(),
             ]);
 
-            $dbName = env('DB_DATABASE');
-            $dbUser = env('DB_USERNAME');
-            $dbPass = env('DB_PASSWORD');
-            $dbHost = env('DB_HOST');
+            set_time_limit(600);
+            @ini_set('memory_limit', '512M');
 
-            $dumpPath = env('MYSQLDUMP_PATH', 'mysqldump');
-            
-            if ($dumpPath !== 'mysqldump' && !file_exists($dumpPath)) {
-                $backup->update(['status' => 'Failed', 'error_message' => 'mysqldump binary not found at: ' . $dumpPath]);
-                return response()->json(['status' => 'error', 'message' => 'mysqldump binary not found. Please check MYSQLDUMP_PATH in .env']);
-            }
+            $driveService = new \App\Services\GoogleDriveBackupService();
+            $dumpRes = $driveService->dumpDatabase($path . $filename);
 
-            $passwordPart = $dbPass ? "--password=\"{$dbPass}\"" : "";
-            $command = "\"{$dumpPath}\" --user={$dbUser} {$passwordPart} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
-
-            exec($command, $output, $returnVar);
-
-            if ($returnVar === 0) {
+            if ($dumpRes['success']) {
                 $size = filesize($path . $filename);
                 $location = 'Local';
-
-                $driveService = new \App\Services\GoogleDriveBackupService();
                 $driveMsg = '';
+
                 if ($driveService->isConfigured()) {
-                    $driveRes = $driveService->uploadBackup($path . $filename, $filename);
+                    $driveRes = $driveService->uploadBackup($path . $filename, $filename, true, true);
                     if ($driveRes['success']) {
-                        $location = 'Local & Google Drive';
-                        $driveMsg = ' and uploaded to Google Drive';
+                        $dayFolder = $driveRes['day_folder'] ?? date('l');
+                        $location = "Local & Google Drive ({$dayFolder})";
+                        $driveMsg = " and uploaded to Google Drive ({$dayFolder} folder)";
+                    } else {
+                        Log::warning('Manual backup Google Drive upload warning: ' . ($driveRes['message'] ?? 'Unknown error'));
                     }
                 }
 
@@ -144,14 +140,14 @@ class BackupController extends Controller
                 ]);
                 return response()->json(['status' => 'success', 'message' => "Backup generated successfully{$driveMsg}."]);
             } else {
-                $errorMessage = implode("\n", $output);
-                Log::error("Backup failed. Return var: $returnVar. Output: " . $errorMessage);
+                $errorMessage = $dumpRes['message'] ?? 'Database export failed';
+                Log::error("Manual Backup failed: " . $errorMessage);
 
                 $backup->update([
                     'status' => 'Failed',
-                    'error_message' => 'mysqldump failed. Code: ' . $returnVar . '. Error: ' . $errorMessage,
+                    'error_message' => $errorMessage,
                 ]);
-                return response()->json(['status' => 'error', 'message' => 'Backup generation failed. Code: ' . $returnVar . ' Details: ' . $errorMessage]);
+                return response()->json(['status' => 'error', 'message' => 'Backup generation failed: ' . $errorMessage]);
             }
 
         } catch (\Exception $e) {
