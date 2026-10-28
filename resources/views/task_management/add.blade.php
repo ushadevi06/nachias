@@ -23,8 +23,8 @@
                                     @if(isset($jobCard->grand_total_qty))
                                         <span class="ms-2">| Total Qty: <span class="badge bg-label-primary fs-6 fw-bold">{{ (int) $jobCard->grand_total_qty }} PCS</span></span>
                                     @endif
-                                    @if(isset($stageRemainingPending) && isset($stageTotalPlanned) && $stageTotalPlanned > 0)
-                                        <span class="ms-2">| Stage Pending: <span class="badge bg-label-{{ $stageRemainingPending > 0 ? 'warning' : 'success' }} fs-6 fw-bold">{{ (int) $stageRemainingPending }} / {{ (int) $stageTotalPlanned }} PCS</span></span>
+                                    @if(isset($stageRemainingPending) && isset($stageTotalPlanned) && $stageTotalPlanned > 0 && $stageRemainingPending > 0)
+                                        <span class="ms-2">| Unassigned: <span class="badge bg-label-warning fs-6 fw-bold">{{ (int) $stageRemainingPending }} / {{ (int) $stageTotalPlanned }} PCS</span></span>
                                     @endif
                                 </p>
                             </div>
@@ -214,8 +214,8 @@
                                                     <div class="row g-2 text-center text-sm-start align-items-center">
                                                         @php 
                                                             $totPlanned = (int)($stageTotalPlanned ?? ($selectedStage->planned_qty ?? ($jobCard->grand_total_qty ?? 0)));
-                                                            $pndQty = (int)($stageRemainingPending ?? 0);
-                                                            $achievedVal = max(0, $totPlanned - $pndQty);
+                                                            $achievedVal = (int)($stageTotalAchieved ?? 0);
+                                                            $pendingToComplete = max(0, $totPlanned - $achievedVal);
                                                         @endphp
                                                         <div class="col-4">
                                                             <small class="text-muted d-block mb-1 text-truncate"><i class="ri ri-focus-2-line me-1"></i>STAGE TARGET</small>
@@ -223,11 +223,11 @@
                                                         </div>
                                                         <div class="col-4">
                                                             <small class="text-muted d-block mb-1 text-truncate"><i class="ri ri-checkbox-circle-line me-1"></i>STAGE ACHIEVED</small>
-                                                            <span class="badge bg-label-success fs-6 fw-bold">{{ $achievedVal }} PCS</span>
+                                                            <span class="badge bg-label-{{ $achievedVal >= $totPlanned && $totPlanned > 0 ? 'success' : ($achievedVal > 0 ? 'info' : 'secondary') }} fs-6 fw-bold">{{ $achievedVal }} PCS</span>
                                                         </div>
                                                         <div class="col-4">
                                                             <small class="text-muted d-block mb-1 text-truncate"><i class="ri ri-time-line me-1"></i>STAGE PENDING</small>
-                                                            <span class="badge bg-label-{{ $pndQty > 0 ? 'warning' : 'success' }} fs-6 fw-bold">{{ $pndQty }} PCS</span>
+                                                            <span class="badge bg-label-{{ $pendingToComplete > 0 ? 'warning' : 'success' }} fs-6 fw-bold">{{ $pendingToComplete }} PCS</span>
                                                         </div>
                                                     </div>
                                                 </div>

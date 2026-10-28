@@ -23,6 +23,20 @@ class SalesInvoice extends Model
         'remarks',
         'invoice_status',
         'delivery_status',
+        'checking_status',
+        'checked_by',
+        'checked_at',
+        'kachathu_status',
+        'kachathu_by',
+        'kachathu_at',
+        'kachathu_details',
+        'ready_for_dispatch',
+        'ready_for_dispatch_at',
+        'transport_sticker_printed',
+        'transport_sticker_printed_at',
+        'sent_to_accounts',
+        'sent_to_accounts_by',
+        'sent_to_accounts_at',
         'dispatch_completed_at',
         'payment_mode',
         'extra_input',
@@ -292,6 +306,29 @@ class SalesInvoice extends Model
     public function setInvNoAttribute($value)
     {
         $this->attributes['inv_no'] = self::formatDbInvNo($value);
+    }
+
+    public function checkedByUser()
+    {
+        return $this->belongsTo(User::class, 'checked_by');
+    }
+
+    public function accountsSentByUser()
+    {
+        return $this->belongsTo(User::class, 'sent_to_accounts_by');
+    }
+
+    public function kachathuByUser()
+    {
+        return $this->belongsTo(User::class, 'kachathu_by');
+    }
+
+    public function transportBookings()
+    {
+        if (!class_exists(\App\Models\TransportBooking::class)) {
+            return $this->hasMany(self::class, 'id')->whereRaw('1=0');
+        }
+        return $this->hasMany(\App\Models\TransportBooking::class, 'sales_invoice_id');
     }
 
     /**

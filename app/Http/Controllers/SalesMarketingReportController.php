@@ -1656,7 +1656,14 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $totalRecords = $countQuery->count();
-                    $invoicesQuery = $countQuery->with(['customer', 'salesOrder'])->orderBy('id', 'desc');
+
+                    $relations = ['customer', 'salesOrder', 'items', 'checkedByUser', 'accountsSentByUser'];
+                    $hasTbClass = class_exists(\App\Models\TransportBooking::class) && \Illuminate\Support\Facades\Schema::hasTable('transport_bookings');
+                    if ($hasTbClass) {
+                        $relations[] = 'transportBookings';
+                    }
+
+                    $invoicesQuery = $countQuery->with($relations)->orderBy('id', 'desc');
                     if ($length !== -1) {
                         $invoicesQuery->offset($start)->limit($length);
                     }
@@ -1670,9 +1677,70 @@ class SalesMarketingReportController extends Controller
                         $soDispatched = $invoice->salesOrder && strtolower((string)$invoice->salesOrder->status) == 'dispatched';
                         $dispatched = (!empty($invoice->delivery_status) && strtolower((string)$invoice->delivery_status) == 'dispatched') || $soDispatched ? true : false;
                         
+                        // 1. Picking calculation based on scanned_qty vs quantity
+                        $totQty = $invoice->items->sum('quantity');
+                        $totScanned = $invoice->items->sum('scanned_qty');
+                        $pickingCompleted = ($totQty > 0 && $totScanned >= $totQty);
+                        $pickingInProgress = ($totScanned > 0 && $totScanned < $totQty);
+
+                        // 2. Checking calculation
+                        $checkingCompleted = ($invoice->checking_status === 'completed');
+
+                        // 3. Kachathu calculation
+                        $kachathuCompleted = ($invoice->kachathu_status === 'completed');
+
                         $tickHtml = '<span class="text-success fw-bold fs-4" title="✔"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
                         $crossHtml = '<span class="text-danger fw-bold fs-4" title="✘"><i class="ri ri-close-line"></i><span class="export-symbol" style="display:none;">✘</span></span>';
                         
+                        // Picking HTML
+                        if ($pickingCompleted) {
+                            $pickingHtml = '<span class="text-success fw-bold fs-4" title="Picking Completed (' . $totScanned . '/' . $totQty . ')"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                        } elseif ($pickingInProgress) {
+                            $pickingHtml = '<span class="badge bg-warning text-dark px-2 py-1" title="Scanned ' . $totScanned . ' of ' . $totQty . '"><i class="ri-loader-4-line me-1"></i>' . $totScanned . '/' . $totQty . '</span>';
+                        } else {
+                            $pickingHtml = $crossHtml;
+                        }
+
+                        // Checking HTML (Read-only status)
+                        if ($checkingCompleted) {
+                            $checkerName = optional($invoice->checkedByUser)->name ?? 'User';
+                            $checkTime = $invoice->checked_at ? date('d-m-Y H:i', strtotime((string)$invoice->checked_at)) : '';
+                            $checkingHtml = '<span class="text-success fw-bold fs-4" title="Checked by ' . htmlspecialchars($checkerName) . ' (' . $checkTime . ')"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                        } else {
+                            $checkingHtml = $crossHtml;
+                        }
+
+                        // Kachathu HTML
+                        $kachathuHtml = $kachathuCompleted ? $tickHtml : $crossHtml;
+
+                        // 4. Ready for Dispatch (Triggered ONLY when Transport Sticker or Courier Sticker is printed)
+                        $readyForDispatch = !empty($invoice->transport_sticker_printed);
+
+                        if ($readyForDispatch) {
+                            $readyTime = $invoice->transport_sticker_printed_at ? date('d-m-Y H:i', strtotime((string)$invoice->transport_sticker_printed_at)) : ($invoice->ready_for_dispatch_at ? date('d-m-Y H:i', strtotime((string)$invoice->ready_for_dispatch_at)) : '');
+                            $readyHtml = '<span class="text-success fw-bold fs-4" title="Transport Sticker Printed' . ($readyTime ? ' (' . $readyTime . ')' : '') . '"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                        } else {
+                            $readyHtml = $crossHtml;
+                        }
+
+                        // 5. LR Updated (Either in Invoice lr_no OR tran_doc_no OR booked in transport bookings)
+                        $hasInvoiceLr = !empty($invoice->lr_no) || !empty($invoice->tran_doc_no);
+                        $hasBookingLr = false;
+                        $bookingLrNo = null;
+
+                        if ($hasTbClass && $invoice->relationLoaded('transportBookings') && $invoice->transportBookings) {
+                            $hasBookingLr = $invoice->transportBookings->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->isNotEmpty();
+                            $bookingLrNo = optional($invoice->transportBookings->whereNotNull('lr_no')->first())->lr_no;
+                        }
+
+                        $lrUpdated = ($hasInvoiceLr || $hasBookingLr);
+                        $lrNumberVal = $invoice->lr_no ?: ($invoice->tran_doc_no ?: $bookingLrNo);
+                        if ($lrUpdated) {
+                            $lrHtml = '<span class="text-success fw-bold fs-4" title="LR No: ' . htmlspecialchars($lrNumberVal ?? '') . '"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                        } else {
+                            $lrHtml = $crossHtml;
+                        }
+
                         $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
                         $invDateStr = $invoice->inv_date ? date('d-m-Y', strtotime((string)$invoice->inv_date)) : '-';
                         $custStr = htmlspecialchars((string)(optional($invoice->customer)->name ?? '-'));
@@ -1684,13 +1752,59 @@ class SalesMarketingReportController extends Controller
                             $invNoHtml .= '<br><span class="badge bg-danger rounded-pill px-2 py-1 mt-1" style="font-size: 10px;"><i class="ri ri-close-circle-line me-1"></i>Cancelled</span>';
                         }
 
+                        // 6. Sent to Accounts logic
+                        // If invoice has payment receipt OR sent_to_accounts is marked OR status Paid/Partially Paid
+                        $sentToAccounts = ($invoice->sent_to_accounts || in_array($invoice->invoice_status, ['Paid', 'Partially Paid']));
+                        $sentTime = $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime((string)$invoice->sent_to_accounts_at)) : '';
+                        $sentUser = optional($invoice->accountsSentByUser)->name ?? '';
+                        $sentTooltip = $sentToAccounts ? ('Sent to Accounts' . ($sentUser ? ' by ' . htmlspecialchars($sentUser) : '') . ($sentTime ? ' (' . $sentTime . ')' : '')) : 'Pending';
+                        $sentAccountsHtml = $sentToAccounts ? '<span class="text-success fw-bold fs-4" title="' . $sentTooltip . '"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>' : $crossHtml;
+
+                        // 7. Overall Row Status
+                        // All mandatory checklist items must be completed before an invoice can be marked as "Completed"
+                        $hasGst = !empty(optional($invoice->customer)->gst_no);
+                        $einvoiceSatisfied = $hasGst ? $einvoice_generated : true;
+                        $ewaybillSatisfied = $ewaybill_generated; // Must be generated
+
+                        $allStepsCompleted = $pickingCompleted 
+                            && $checkingCompleted 
+                            && $einvoice_generated 
+                            && $ewaybill_generated 
+                            && $kachathuCompleted 
+                            && $readyForDispatch 
+                            && $lrUpdated 
+                            && $sentToAccounts;
+
+                        if ($allStepsCompleted) {
+                            $statusBadge = '<span class="badge bg-success rounded-pill px-3 py-1">Completed</span>';
+                        } elseif (!$einvoice_generated && ($pickingCompleted || $checkingCompleted)) {
+                            $statusBadge = '<span class="badge bg-warning text-dark rounded-pill px-3 py-1">Awaiting E-Invoice</span>';
+                        } elseif ($einvoice_generated && !$ewaybill_generated && ($pickingCompleted || $checkingCompleted)) {
+                            $statusBadge = '<span class="badge bg-warning text-dark rounded-pill px-3 py-1">Awaiting E-Way Bill</span>';
+                        } elseif ($readyForDispatch && !$lrUpdated) {
+                            $statusBadge = '<span class="badge bg-warning text-dark rounded-pill px-3 py-1">Awaiting LR</span>';
+                        } elseif ($lrUpdated && !$sentToAccounts) {
+                            $statusBadge = '<span class="badge bg-info text-white rounded-pill px-3 py-1">Awaiting Accounts</span>';
+                        } elseif ($totScanned > 0 || $checkingCompleted || $kachathuCompleted) {
+                            $statusBadge = '<span class="badge bg-primary rounded-pill px-3 py-1">In Progress</span>';
+                        } else {
+                            $statusBadge = '<span class="badge bg-secondary rounded-pill px-3 py-1">Not Started</span>';
+                        }
+
                         $data[] = [
-                            'inv_no' => $invNoHtml,
                             'inv_date' => $invDateStr,
+                            'inv_no' => $invNoHtml,
                             'customer' => $custStr,
+                            'qty' => number_format($totQty),
+                            'picking' => $pickingHtml,
+                            'checking' => $checkingHtml,
                             'einvoice' => $einvoice_generated ? $tickHtml : $crossHtml,
                             'ewaybill' => $ewaybill_generated ? $tickHtml : $crossHtml,
-                            'dispatch' => $dispatched ? $tickHtml : $crossHtml,
+                            'kachathu' => $kachathuHtml,
+                            'ready_for_dispatch' => $readyHtml,
+                            'lr_updated' => $lrHtml,
+                            'sent_to_accounts' => $sentAccountsHtml,
+                            'status' => $statusBadge,
                         ];
                     }
 

@@ -498,7 +498,6 @@ class SalesInvoiceController extends Controller
             ->orderBy('rm.name', 'asc')
             ->get();
 
-        // Group stock items by raw_material_id, art_no, style_id, rate so duplicate stock entries are merged with total available quantity
         $grouped = [];
         $isFabricStore = ($storeId == 1 || str_contains(strtoupper($storeName ?? ''), 'FABRIC'));
 
@@ -1011,11 +1010,11 @@ class SalesInvoiceController extends Controller
                     addLog($id ? 'update' : 'create', 'Sales Invoice', 'sales_invoices', $invoice->id, $id ? $existingInvoice->toArray() : null, $invoice->toArray());
                 }
 
-                try {
-                    app(\App\Services\TransportBookingService::class)->generateBookingsForInvoice($invoice);
-                } catch (\Exception $tbe) {
-                    \Log::warning('Transport booking auto-generation: ' . $tbe->getMessage());
-                }
+                // try {
+                //     app(\App\Services\TransportBookingService::class)->generateBookingsForInvoice($invoice);
+                // } catch (\Exception $tbe) {
+                //     \Log::warning('Transport booking auto-generation: ' . $tbe->getMessage());
+                // }
 
                 DB::commit();
                 
@@ -1965,6 +1964,15 @@ class SalesInvoiceController extends Controller
     public function printTransportSticker($id)
     {
         $invoice = SalesInvoice::with(['customer.state', 'customer.city', 'customer.place'])->findOrFail($id);
+
+        // Auto mark Ready for Dispatch when Transport Sticker is printed
+        $invoice->update([
+            'ready_for_dispatch'           => 1,
+            'ready_for_dispatch_at'        => now(),
+            'transport_sticker_printed'    => 1,
+            'transport_sticker_printed_at' => now(),
+        ]);
+
         $totalPcs = $invoice->items->sum('quantity');
         $boxCount = (int) ($invoice->no_of_box ?: 1);
         $setting = Setting::with(['state', 'city'])->first();
@@ -1975,6 +1983,15 @@ class SalesInvoiceController extends Controller
     public function printCourierSticker($id)
     {
         $invoice = SalesInvoice::with(['customer.state', 'customer.city', 'customer.place'])->findOrFail($id);
+
+        // Auto mark Ready for Dispatch when Courier Sticker is printed
+        $invoice->update([
+            'ready_for_dispatch'           => 1,
+            'ready_for_dispatch_at'        => now(),
+            'transport_sticker_printed'    => 1,
+            'transport_sticker_printed_at' => now(),
+        ]);
+
         $totalPcs = $invoice->items->sum('quantity');
         $boxCount = (int) ($invoice->no_of_box ?: 1);
         $setting = Setting::with(['state', 'city'])->first();
@@ -2539,6 +2556,144 @@ class SalesInvoiceController extends Controller
             'dispatch_completed_at' => now()
         ]);
         return response()->json(['success' => true, 'message' => 'Dispatch completed successfully']);
+    }
+
+    public function updateCheckingStatus(Request $request, $id)
+    {
+        $invoice = SalesInvoice::with('items')->findOrFail($id);
+
+        if (strtolower($invoice->einvoice_status) === 'cancelled' || $invoice->invoice_status === 'Cancelled') {
+            return response()->json(['success' => false, 'message' => 'Cannot check a cancelled invoice.'], 400);
+        }
+
+        $totalQty = $invoice->items->sum('quantity');
+        $scannedQty = $invoice->items->sum('scanned_qty');
+
+        if ($totalQty <= 0 || $scannedQty < $totalQty) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Picking innum complete aagala! Scan all items before marking as checked.'
+            ], 400);
+        }
+
+        $status = $request->input('status', 'completed');
+        if ($status === 'completed') {
+            $invoice->update([
+                'checking_status' => 'completed',
+                'checked_by'      => auth()->id(),
+                'checked_at'      => now(),
+            ]);
+            $msg = 'Invoice checked and verified successfully!';
+        } else {
+            $invoice->update([
+                'checking_status' => 'pending',
+                'checked_by'      => null,
+                'checked_at'      => null,
+            ]);
+            $msg = 'Checking status reverted to pending.';
+        }
+
+        return response()->json([
+            'success'         => true,
+            'message'         => $msg,
+            'checking_status' => $invoice->checking_status,
+            'checked_at'      => $invoice->checked_at ? date('d-m-Y H:i', strtotime($invoice->checked_at)) : null,
+        ]);
+    }
+
+    public function updateAccountsStatus(Request $request, $id)
+    {
+        $invoice = SalesInvoice::with('accountsSentByUser')->findOrFail($id);
+
+        if (strtolower((string)$invoice->einvoice_status) === 'cancelled' || $invoice->invoice_status === 'Cancelled') {
+            return response()->json(['success' => false, 'message' => 'Cannot update accounts status for a cancelled invoice.'], 400);
+        }
+
+        $status = $request->input('status', 1);
+        $isSent = filter_var($status, FILTER_VALIDATE_BOOLEAN);
+
+        if (!$isSent) {
+            // Cannot revert if invoice is already Paid or Partially Paid (Accounts processed)
+            if (in_array($invoice->invoice_status, ['Paid', 'Partially Paid'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot revert! Accounts department has already processed payment for this invoice (' . $invoice->invoice_status . ').'
+                ], 400);
+            }
+        }
+
+        if ($isSent) {
+            $invoice->update([
+                'sent_to_accounts'    => 1,
+                'sent_to_accounts_by' => auth()->id(),
+                'sent_to_accounts_at' => now(),
+            ]);
+            $msg = 'Invoice marked as Sent to Accounts!';
+        } else {
+            $invoice->update([
+                'sent_to_accounts'    => 0,
+                'sent_to_accounts_by' => null,
+                'sent_to_accounts_at' => null,
+            ]);
+            $msg = 'Sent to Accounts status reverted.';
+        }
+
+        $invoice->load('accountsSentByUser');
+
+        return response()->json([
+            'success'             => true,
+            'message'             => $msg,
+            'sent_to_accounts'    => (int)$invoice->sent_to_accounts,
+            'sent_to_accounts_at' => $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime((string)$invoice->sent_to_accounts_at)) : null,
+            'sent_user'           => optional($invoice->accountsSentByUser)->name ?? auth()->user()->name ?? 'User'
+        ]);
+    }
+
+    public function updateLrDetails(Request $request, $id)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+
+        $request->validate([
+            'tran_doc_no'      => 'required|string|max:100',
+            'tran_doc_date'    => 'nullable|date',
+            'transporter_name' => 'nullable|string|max:255',
+            'vehicle_no'       => 'nullable|string|max:100',
+        ]);
+
+        $invoice->update([
+            'tran_doc_no'      => $request->tran_doc_no,
+            'lr_no'            => $request->tran_doc_no,
+            'tran_doc_date'    => $request->tran_doc_date ?: ($invoice->tran_doc_date ?: now()->toDateString()),
+            'transporter_name' => $request->transporter_name ?: $invoice->transporter_name,
+            'vehicle_no'       => $request->vehicle_no ?: $invoice->vehicle_no,
+        ]);
+
+        return response()->json([
+            'success'       => true,
+            'message'       => 'LR No & transport details updated successfully!',
+            'lr_no'         => $invoice->tran_doc_no,
+            'tran_doc_date' => $invoice->tran_doc_date ? date('d-m-Y', strtotime((string)$invoice->tran_doc_date)) : null
+        ]);
+    }
+
+    public function printKachathuCover(Request $request, $id)
+    {
+        $invoice = SalesInvoice::with(['customer.place', 'brand'])->findOrFail($id);
+        $setting = Setting::first();
+        
+        $customDetails = $request->only([
+            'tamil_name', 'tamil_address', 'tamil_place', 'mobile', 'no_of_box', 'lorry_office', 'booking_office'
+        ]);
+
+        // Auto mark kachathu_status when printed/generated
+        $invoice->update([
+            'kachathu_status'       => 'completed',
+            'kachathu_by'           => auth()->id(),
+            'kachathu_at'           => now(),
+            'kachathu_details'      => !empty($customDetails) ? json_encode($customDetails) : null,
+        ]);
+
+        return view('sales_invoice.kachathu_cover', compact('invoice', 'customDetails', 'setting'));
     }
 
     public function updateDeliveryStatus(Request $request)

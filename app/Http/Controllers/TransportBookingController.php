@@ -312,6 +312,121 @@ class TransportBookingController extends Controller
             $baseQuery->where('delivery_agent_id', $selectedDriverId);
         }
 
+        // Handle AJAX DataTables for Eligible / Blocked Tables
+        if ($request->ajax() && $request->filled('table_type')) {
+            $tableType = $request->table_type; // 'eligible' or 'blocked'
+            $query = clone $baseQuery;
+
+            if ($tableType === 'eligible') {
+                $query->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '');
+            } else {
+                $query->where(function ($q) {
+                    $q->whereNull('lr_no')->orWhere('lr_no', '');
+                });
+            }
+
+            // Global search
+            $searchValue = trim($request->input('search.value', ''));
+            if ($searchValue !== '') {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('lr_no', 'like', "%{$searchValue}%")
+                        ->orWhere('preferred_transport', 'like', "%{$searchValue}%")
+                        ->orWhere('box_number', 'like', "%{$searchValue}%")
+                        ->orWhere('delivery_agent_name', 'like', "%{$searchValue}%")
+                        ->orWhereHas('customer', function ($c) use ($searchValue) {
+                            $c->where('name', 'like', "%{$searchValue}%")
+                                ->orWhere('code', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhereHas('salesInvoice', function ($si) use ($searchValue) {
+                            $si->where('inv_no', 'like', "%{$searchValue}%");
+                        });
+                });
+            }
+
+            $totalRecords = (clone $baseQuery)->when($tableType === 'eligible', function($q) {
+                $q->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '');
+            }, function($q) {
+                $q->where(function ($sq) {
+                    $sq->whereNull('lr_no')->orWhere('lr_no', '');
+                });
+            })->count();
+
+            $filteredRecords = $query->count();
+
+            $start = (int)$request->input('start', 0);
+            $length = (int)$request->input('length', 10);
+            if ($length !== -1) {
+                $query->offset($start)->limit($length);
+            }
+
+            $rows = $query->orderBy('id', 'desc')->get();
+
+            $data = [];
+            foreach ($rows as $idx => $b) {
+                $customerHtml = '<strong class="d-block text-dark">' . e(optional($b->customer)->name ?? '-') . '</strong>' .
+                    '<small class="text-muted">' . e(optional($b->customer)->code ?? '') . '</small>';
+
+                $invoiceUrl = url('sales_invoices/show/' . $b->sales_invoice_id);
+                $invoiceHtml = '<a href="' . $invoiceUrl . '" target="_blank" class="fw-semibold text-primary">' .
+                    e(optional($b->salesInvoice)->inv_no ?? '-') . '</a>';
+
+                $boxHtml = '<span class="badge bg-dark fw-bold">' . e($b->box_number) . '</span>';
+                $driverName = optional($b->deliveryAgent)->name ?? ($b->delivery_agent_name ?: '-');
+
+                if ($tableType === 'eligible') {
+                    $statusHtml = $b->payment_status === 'Cleared'
+                        ? '<span class="badge bg-success">Cleared on ' . ($b->payment_cleared_date ? $b->payment_cleared_date->format('d-m-Y') : '') . '</span>'
+                        : '<span class="badge bg-label-warning">Eligible (Pending Clearance)</span>';
+
+                    $data[] = [
+                        'sno' => $start + $idx + 1,
+                        'customer' => $customerHtml,
+                        'invoice_no' => $invoiceHtml,
+                        'box' => $boxHtml,
+                        'qty' => (int)$b->quantity,
+                        'transport' => e($b->preferred_transport ?: '-'),
+                        'driver' => '<span class="badge bg-label-primary">' . e($driverName) . '</span>',
+                        'lr_number' => '<span class="badge bg-label-success fw-bold">' . e($b->lr_no) . '</span>',
+                        'booking_date' => $b->booking_date ? $b->booking_date->format('d-m-Y') : '-',
+                        'approved_price' => '<span class="text-end fw-bold text-success d-block">₹' . number_format($b->lr_price, 2) . '</span>',
+                        'payment_status' => $statusHtml
+                    ];
+                } else {
+                    $data[] = [
+                        'sno' => $start + $idx + 1,
+                        'customer' => $customerHtml,
+                        'invoice_no' => $invoiceHtml,
+                        'box' => '<span class="badge bg-secondary">' . e($b->box_number) . '</span>',
+                        'qty' => (int)$b->quantity,
+                        'transport' => e($b->preferred_transport ?: '-'),
+                        'driver' => '<span class="badge bg-label-secondary">' . e($driverName) . '</span>',
+                        'status' => '<span class="badge bg-label-secondary">' . e($b->status) . '</span>',
+                        'lr_status' => '<span class="badge bg-danger">NO LR NUMBER</span>',
+                        'claim_amount' => '<span class="text-end fw-bold text-danger d-block">₹0.00 (LOCKED)</span>'
+                    ];
+                }
+            }
+
+            // Summary metrics for cards
+            $eligibleCount = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->count();
+            $eligibleSum = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->sum('lr_price');
+            $blockedCount = (clone $baseQuery)->where(function ($q) {
+                $q->whereNull('lr_no')->orWhere('lr_no', '');
+            })->count();
+
+            return response()->json([
+                'draw' => (int)$request->input('draw', 1),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data,
+                'metrics' => [
+                    'eligible_count' => $eligibleCount,
+                    'eligible_amount' => number_format($eligibleSum, 2),
+                    'blocked_count' => $blockedCount,
+                ]
+            ]);
+        }
+
         if ($request->isMethod('post') && $request->action === 'clear_payment') {
             $eligibleIds = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->where('payment_status', '!=', 'Cleared')->pluck('id');
 
@@ -324,14 +439,16 @@ class TransportBookingController extends Controller
             return redirect()->route('transport_bookings.payment_clearance', $request->only(['driver_id', 'start_date', 'end_date']))->with('success', 'Weekly payout of ' . count($eligibleIds) . ' verified boxes successfully cleared!');
         }
 
-        $eligibleBookings = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->get();
-
+        $eligibleBookings = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->limit(10)->get();
         $blockedBookings = (clone $baseQuery)->where(function ($q) {
                 $q->whereNull('lr_no')->orWhere('lr_no', '');
-            })
-            ->get();
+            })->limit(10)->get();
 
-        $eligibleAmount = $eligibleBookings->sum('lr_price');
+        $eligibleCount = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->count();
+        $eligibleAmount = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->sum('lr_price');
+        $blockedCount = (clone $baseQuery)->where(function ($q) {
+            $q->whereNull('lr_no')->orWhere('lr_no', '');
+        })->count();
 
         return view('transport_bookings.payment_clearance', compact(
             'drivers',
@@ -340,7 +457,9 @@ class TransportBookingController extends Controller
             'endDate',
             'eligibleBookings',
             'blockedBookings',
-            'eligibleAmount'
+            'eligibleAmount',
+            'eligibleCount',
+            'blockedCount'
         ));
     }
 }

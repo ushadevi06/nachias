@@ -4019,6 +4019,11 @@
                         return;
                     }
 
+                    // Exception: Always allow entering/updating LR No and LR Date even after dispatch!
+                    if (nameAttr === 'tran_doc_no' || nameAttr === 'tran_doc_date') {
+                        return;
+                    }
+
                     if ($el.attr('type') === 'hidden' && (nameAttr === '_token' || nameAttr ===
                         '_method')) {
                         return;
@@ -4037,11 +4042,10 @@
                         }
                     } else if ($el.attr('type') === 'checkbox' || $el.attr('type') === 'radio' || $el.attr(
                             'type') === 'file' || $el.hasClass('flatpickr-input') || $el.hasClass(
-                            'date-picker') || nameAttr === 'inv_date' || nameAttr === 'due_date' ||
-                        nameAttr === 'tran_doc_date') {
+                            'date-picker') || nameAttr === 'inv_date' || nameAttr === 'due_date') {
                         $el.prop('disabled', true);
                         if ($el.hasClass('flatpickr-input') || $el.hasClass('date-picker') || nameAttr ===
-                            'inv_date' || nameAttr === 'due_date' || nameAttr === 'tran_doc_date') {
+                            'inv_date' || nameAttr === 'due_date') {
                             $el.css('pointer-events', 'none');
                         }
                     } else {
@@ -4050,7 +4054,7 @@
                 });
 
                 $('input').each(function() {
-                    if (this._flatpickr) {
+                    if (this.name !== 'tran_doc_date' && this._flatpickr) {
                         this._flatpickr.destroy();
                     }
                 });

@@ -576,46 +576,68 @@
                                         @endphp
                                         @if(!empty($existingStages))
                                             @foreach($existingStages as $index => $stage)
-                                                <tr class="stage-row">
+                                                @php
+                                                    $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
+                                                    $taskData = $stageTaskStatus[$currentStageId] ?? null;
+                                                    $hasTask = !empty($taskData);
+                                                    $issueDateVal = !empty($stage['issue_date']) ? (preg_match('/^\d{4}-\d{2}-\d{2}/', $stage['issue_date']) ? date('d-m-Y', strtotime($stage['issue_date'])) : $stage['issue_date']) : (!empty($stage['assigned_date']) ? date('d-m-Y', strtotime($stage['assigned_date'])) : '');
+                                                    $deadlineDateVal = !empty($stage['deadline_date']) ? (preg_match('/^\d{4}-\d{2}-\d{2}/', $stage['deadline_date']) ? date('d-m-Y', strtotime($stage['deadline_date'])) : $stage['deadline_date']) : '';
+                                                @endphp
+                                                <tr class="stage-row {{ $hasTask ? 'stage-row-locked' : '' }}">
                                                     <td>
-                                                        <select name="production_stages[{{ $index }}][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
-                                                            <option value="">Select Stage</option>
-                                                            @foreach($operationStages as $os)
-                                                                <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ ($stage['stage_id'] ?? $stage['operation_stage_id'] ?? '') == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                        @if($hasTask)
+                                                            <input type="hidden" name="production_stages[{{ $index }}][stage_id]" value="{{ $currentStageId }}">
+                                                            <select class="form-select select2 stage-select" disabled data-locked="true" style="background-color: #e9ecef; cursor: not-allowed; pointer-events: none; font-size: 12.5px; height: 38px;">
+                                                                <option value="">Select Stage</option>
+                                                                @foreach($operationStages as $os)
+                                                                    <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ $currentStageId == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        @else
+                                                            <select name="production_stages[{{ $index }}][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage" style="font-size: 12.5px; height: 38px;">
+                                                                <option value="">Select Stage</option>
+                                                                @foreach($operationStages as $os)
+                                                                    <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ ($stage['stage_id'] ?? $stage['operation_stage_id'] ?? '') == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        @endif
                                                         @error('production_stages.' . $index . '.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
-                                                        <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
-                                                            <option value="">Select Unit</option>
-                                                            @foreach($plants as $p)
-                                                                <option value="{{ $p->id }}" {{ ($stage['service_provider_id'] ?? '') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                        @if($hasTask)
+                                                            <input type="hidden" name="production_stages[{{ $index }}][service_provider_id]" value="{{ $stage['service_provider_id'] ?? '' }}">
+                                                            <select class="form-select select2 provider-select" disabled data-locked="true" style="background-color: #e9ecef; cursor: not-allowed; pointer-events: none; font-size: 12.5px; height: 38px;">
+                                                                <option value="">Select Unit</option>
+                                                                @foreach($plants as $p)
+                                                                    <option value="{{ $p->id }}" {{ ($stage['service_provider_id'] ?? '') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        @else
+                                                            <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit" style="font-size: 12.5px; height: 38px;">
+                                                                <option value="">Select Unit</option>
+                                                                @foreach($plants as $p)
+                                                                    <option value="{{ $p->id }}" {{ ($stage['service_provider_id'] ?? '') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        @endif
                                                         @error('production_stages.' . $index . '.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
-                                                        <input type="number" name="production_stages[{{ $index }}][rate]" class="form-control stage-rate bg-light" value="{{ $stage['rate'] ?? '' }}" step="0.01" min="0" placeholder="0.00" readonly tabindex="-1">
+                                                        <input type="number" name="production_stages[{{ $index }}][rate]" class="form-control stage-rate bg-light" value="{{ $stage['rate'] ?? '' }}" step="0.01" min="0" placeholder="0.00" readonly tabindex="-1" style="font-size: 12.5px; height: 38px;">
                                                         @error('production_stages.' . $index . '.rate') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
-                                                        <input type="text" name="production_stages[{{ $index }}][issue_date]" class="form-control issue-date" value="{{ !empty($stage['issue_date']) ? $stage['issue_date'] : (!empty($stage['assigned_date']) ? date('d-m-Y', strtotime($stage['assigned_date'])) : '') }}" placeholder="Enter Issue Date">
+                                                        <input type="text" name="production_stages[{{ $index }}][issue_date]" class="form-control {{ $hasTask ? 'bg-light' : 'issue-date' }}" value="{{ $issueDateVal }}" placeholder="Enter Issue Date" {{ $hasTask ? 'readonly data-locked=true style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;font-size:12.5px;height:38px; tabindex=-1' : 'style=font-size:12.5px;height:38px;' }}>
                                                         @error('production_stages.' . $index . '.issue_date') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
-                                                        <input type="text" name="production_stages[{{ $index }}][deadline_date]" class="form-control deadline-date" value="{{ !empty($stage['deadline_date']) ? date('d-m-Y', strtotime($stage['deadline_date'])) : '' }}" placeholder="Enter Deadline Date">
+                                                        <input type="text" name="production_stages[{{ $index }}][deadline_date]" class="form-control {{ $hasTask ? 'bg-light' : 'deadline-date' }}" value="{{ $deadlineDateVal }}" placeholder="Enter Deadline Date" {{ $hasTask ? 'readonly data-locked=true style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none;font-size:12.5px;height:38px; tabindex=-1' : 'style=font-size:12.5px;height:38px;' }}>
                                                         @error('production_stages.' . $index . '.deadline_date') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
-                                                        <textarea name="production_stages[{{ $index }}][remarks]" class="form-control" placeholder="Enter Remarks">{{ $stage['remarks'] ?? '' }}</textarea>
+                                                        <textarea name="production_stages[{{ $index }}][remarks]" class="form-control" placeholder="Enter Remarks" {{ $hasTask ? 'readonly data-locked=true style=background-color:#e9ecef;cursor:not-allowed;font-size:12.5px;' : 'style=font-size:12.5px;' }}>{{ $stage['remarks'] ?? '' }}</textarea>
                                                     </td>
                                                     <td>
-                                                        @php
-                                                            $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
-                                                            $taskData = $stageTaskStatus[$currentStageId] ?? null;
-                                                            $hasTask = !empty($taskData);
-                                                        @endphp
                                                         @if(!$hasTask)
                                                             <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
                                                         @endif
@@ -4218,6 +4240,9 @@
                 let currentRow = this;
                 let currentStageId = $(this).find('.stage-select').val();
                 let $providerSelect = $(this).find('.provider-select');
+                if ($providerSelect.is(':disabled') || $providerSelect.attr('data-locked') === 'true') {
+                    return; // Skip locked rows
+                }
                 let currentProviderId = $providerSelect.val();
 
                 $providerSelect.find('option').each(function() {
@@ -4754,3 +4779,44 @@
     }
 </style>
 @endsection
+
+<style>
+#production-stages-table th {
+    font-size: 11.5px !important;
+    letter-spacing: 0.5px;
+}
+
+#production-stages-table select,
+#production-stages-table .form-select,
+#production-stages-table input,
+#production-stages-table .form-control,
+#production-stages-table textarea {
+    font-size: 12.5px !important;
+    font-weight: 400 !important;
+}
+
+#production-stages-table select.form-select {
+    padding: 0.375rem 1.75rem 0.375rem 0.75rem !important;
+    height: 38px !important;
+    font-size: 12.5px !important;
+}
+
+#production-stages-table input.form-control {
+    padding: 0.375rem 0.75rem !important;
+    height: 38px !important;
+    font-size: 12.5px !important;
+}
+
+#production-stages-table textarea.form-control {
+    font-size: 12.5px !important;
+}
+
+.stage-row-locked input[readonly],
+.stage-row-locked select[disabled],
+.stage-row-locked textarea[readonly] {
+    background-color: #e9ecef !important;
+    cursor: not-allowed !important;
+    font-size: 12.5px !important;
+    color: #495057 !important;
+}
+</style>

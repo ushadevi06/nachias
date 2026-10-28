@@ -594,29 +594,60 @@
                             @endphp
                             @if($existingOps->count() > 0)
                                 @foreach($existingOps as $stIdx => $op)
-                                    <tr class="stage-row">
+                                    @php
+                                        $currentStageId = $op->operation_stage_id ?? null;
+                                        $taskData = $stageTaskStatus[$currentStageId] ?? null;
+                                        $hasTask = !empty($taskData);
+                                        $issueDateVal = old("production_stages.{$stIdx}.issue_date", $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '');
+                                        $deadlineDateVal = old("production_stages.{$stIdx}.deadline_date", $op->deadline_date ? date('d-m-Y', strtotime($op->deadline_date)) : '');
+                                    @endphp
+                                    <tr class="stage-row {{ $hasTask ? 'stage-row-locked' : '' }}">
                                         <td>
-                                            <select name="production_stages[{{ $stIdx }}][stage_id]" class="form-select form-select-sm select2 stage-select @error("production_stages.{$stIdx}.stage_id") is-invalid @enderror" data-placeholder="Select Stage">
-                                                <option value="">Select Stage</option>
-                                                @foreach($operationStages as $os)
-                                                    <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ (old("production_stages.{$stIdx}.stage_id", $op->operation_stage_id ?? '') == $os->id) ? 'selected' : '' }}>
-                                                        {{ $os->operation_stage_name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
+                                            @if($hasTask)
+                                                <input type="hidden" name="production_stages[{{ $stIdx }}][stage_id]" value="{{ $currentStageId }}">
+                                                <select class="form-select form-select-sm select2 stage-select" disabled data-locked="true" style="background-color: #e9ecef; cursor: not-allowed; pointer-events: none;">
+                                                    <option value="">Select Stage</option>
+                                                    @foreach($operationStages as $os)
+                                                        <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ $currentStageId == $os->id ? 'selected' : '' }}>
+                                                            {{ $os->operation_stage_name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            @else
+                                                <select name="production_stages[{{ $stIdx }}][stage_id]" class="form-select form-select-sm select2 stage-select @error("production_stages.{$stIdx}.stage_id") is-invalid @enderror" data-placeholder="Select Stage">
+                                                    <option value="">Select Stage</option>
+                                                    @foreach($operationStages as $os)
+                                                        <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ (old("production_stages.{$stIdx}.stage_id", $op->operation_stage_id ?? '') == $os->id) ? 'selected' : '' }}>
+                                                            {{ $os->operation_stage_name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            @endif
                                             @error("production_stages.{$stIdx}.stage_id")
                                                 <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
                                             @enderror
                                         </td>
                                         <td>
-                                            <select name="production_stages[{{ $stIdx }}][service_provider_id]" class="form-select form-select-sm select2 plant-select @error("production_stages.{$stIdx}.service_provider_id") is-invalid @enderror" data-placeholder="Select Unit">
-                                                <option value="">Select Unit</option>
-                                                @foreach($plants as $p)
-                                                    <option value="{{ $p->id }}" {{ (old("production_stages.{$stIdx}.service_provider_id", $op->service_provider_id ?? '') == $p->id) ? 'selected' : '' }}>
-                                                        {{ $p->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
+                                            @if($hasTask)
+                                                <input type="hidden" name="production_stages[{{ $stIdx }}][service_provider_id]" value="{{ $op->service_provider_id ?? '' }}">
+                                                <select class="form-select form-select-sm select2 plant-select" disabled data-locked="true" style="background-color: #e9ecef; cursor: not-allowed; pointer-events: none;">
+                                                    <option value="">Select Unit</option>
+                                                    @foreach($plants as $p)
+                                                        <option value="{{ $p->id }}" {{ ($op->service_provider_id ?? '') == $p->id ? 'selected' : '' }}>
+                                                            {{ $p->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            @else
+                                                <select name="production_stages[{{ $stIdx }}][service_provider_id]" class="form-select form-select-sm select2 plant-select @error("production_stages.{$stIdx}.service_provider_id") is-invalid @enderror" data-placeholder="Select Unit">
+                                                    <option value="">Select Unit</option>
+                                                    @foreach($plants as $p)
+                                                        <option value="{{ $p->id }}" {{ (old("production_stages.{$stIdx}.service_provider_id", $op->service_provider_id ?? '') == $p->id) ? 'selected' : '' }}>
+                                                            {{ $p->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            @endif
                                             @error("production_stages.{$stIdx}.service_provider_id")
                                                 <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
                                             @enderror
@@ -625,27 +656,22 @@
                                             <input type="number" step="0.01" min="0" name="production_stages[{{ $stIdx }}][rate]" class="form-control form-control-sm text-center stage-rate bg-light" value="{{ old("production_stages.{$stIdx}.rate", number_format(floatval($op->rate ?? 0), 2, '.', '')) }}" readonly>
                                         </td>
                                         <td>
-                                            <input type="text" name="production_stages[{{ $stIdx }}][issue_date]" class="form-control form-control-sm text-center flatpickr-date issue-date @error("production_stages.{$stIdx}.issue_date") is-invalid @enderror" placeholder="Enter Issue Date" value="{{ old("production_stages.{$stIdx}.issue_date", $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '') }}">
+                                            <input type="text" name="production_stages[{{ $stIdx }}][issue_date]" class="form-control form-control-sm text-center {{ $hasTask ? 'bg-light' : 'flatpickr-date issue-date' }} @error("production_stages.{$stIdx}.issue_date") is-invalid @enderror" placeholder="Enter Issue Date" value="{{ $issueDateVal }}" {{ $hasTask ? 'readonly data-locked=true style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none; tabindex=-1' : '' }}>
                                             @error("production_stages.{$stIdx}.issue_date")
                                                 <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
                                             @enderror
                                         </td>
                                         <td>
-                                            <input type="text" name="production_stages[{{ $stIdx }}][deadline_date]" class="form-control form-control-sm text-center flatpickr-date deadline-date @error("production_stages.{$stIdx}.deadline_date") is-invalid @enderror" placeholder="Enter Deadline Date" value="{{ old("production_stages.{$stIdx}.deadline_date", $op->deadline_date ? date('d-m-Y', strtotime($op->deadline_date)) : '') }}">
+                                            <input type="text" name="production_stages[{{ $stIdx }}][deadline_date]" class="form-control form-control-sm text-center {{ $hasTask ? 'bg-light' : 'flatpickr-date deadline-date' }} @error("production_stages.{$stIdx}.deadline_date") is-invalid @enderror" placeholder="Enter Deadline Date" value="{{ $deadlineDateVal }}" {{ $hasTask ? 'readonly data-locked=true style=background-color:#e9ecef;cursor:not-allowed;pointer-events:none; tabindex=-1' : '' }}>
                                             @error("production_stages.{$stIdx}.deadline_date")
                                                 <div class="text-danger small fw-bold mt-1" style="font-size: 11px;">{{ $message }}</div>
                                             @enderror
                                         </td>
                                         <td>
-                                            <input type="text" name="production_stages[{{ $stIdx }}][remarks]" class="form-control form-control-sm" placeholder="Enter Remarks" value="{{ old("production_stages.{$stIdx}.remarks", $op->remarks ?? '') }}">
+                                            <input type="text" name="production_stages[{{ $stIdx }}][remarks]" class="form-control form-control-sm" placeholder="Enter Remarks" value="{{ old("production_stages.{$stIdx}.remarks", $op->remarks ?? '') }}" {{ $hasTask ? 'readonly data-locked=true style=background-color:#e9ecef;cursor:not-allowed;' : '' }}>
                                         </td>
                                         <td class="text-center text-nowrap">
                                             <div class="d-flex align-items-center justify-content-center gap-1">
-                                                @php
-                                                    $currentStageId = $op->operation_stage_id ?? null;
-                                                    $taskData = $stageTaskStatus[$currentStageId] ?? null;
-                                                    $hasTask = !empty($taskData);
-                                                @endphp
                                                 @if(!$hasTask)
                                                     <button type="button" class="btn btn-sm btn-icon btn-danger btn-remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
                                                 @endif

@@ -60,8 +60,32 @@
                                 <i class="ri ri-printer-line back-arrow"></i>Sticker Print
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="stickerPrintDropdown">
-                                <li><a class="dropdown-item" href="{{ url('sales_invoices/transport-sticker/' . $invoice->id) }}" target="_blank">Transport Sticker</a></li>
-                                <li><a class="dropdown-item" href="{{ url('sales_invoices/courier-sticker/' . $invoice->id) }}" target="_blank">Courier Sticker</a></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/transport-sticker/' . $invoice->id) }}" target="_blank">
+                                        Transport Sticker
+                                        @if($invoice->transport_sticker_printed)
+                                            <span class="badge bg-success-subtle text-success ms-1">Printed ✔</span>
+                                        @endif
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/courier-sticker/' . $invoice->id) }}" target="_blank">
+                                        Courier Sticker
+                                        @if($invoice->transport_sticker_printed)
+                                            <span class="badge bg-success-subtle text-success ms-1">Printed ✔</span>
+                                        @endif
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item fw-bold {{ $invoice->kachathu_status === 'completed' ? 'text-success' : 'text-primary' }}" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#kachathuCoverModal">
+                                        @if($invoice->kachathu_status === 'completed')
+                                            <i class="ri ri-checkbox-circle-fill text-success me-1"></i> Parcel Cover (கச்சாத்து) <span class="badge bg-success-subtle text-success ms-1">Generated</span>
+                                        @else
+                                            <i class="ri ri-mail-line me-1"></i> Parcel Cover (கச்சாத்து அட்டை)
+                                        @endif
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                         @if(!$invoice->isRawMaterialOrScrap())
@@ -123,6 +147,28 @@
                                 <i class="ri ri-close-circle-line"></i> Invoice Cancelled
                             </button>
                         @endif
+
+                        @if($invoice->invoice_status !== 'Cancelled' && $invoice->einvoice_status !== 'cancelled')
+                            @php
+                                $isPaidOrPartiallyPaid = in_array($invoice->invoice_status, ['Paid', 'Partially Paid']);
+                            @endphp
+                            @if($invoice->sent_to_accounts)
+                                @if($isPaidOrPartiallyPaid)
+                                <button type="button" class="btn btn-success" disabled title="Accounts processed payment ({{ $invoice->invoice_status }}). Locked and cannot be reverted.">
+                                    <i class="ri ri-lock-2-line me-1"></i> Sent to Accounts (Locked)
+                                </button>
+                                @else
+                                <button type="button" class="btn btn-success" id="btnToggleAccounts" data-status="0" title="Sent to Accounts by {{ optional($invoice->accountsSentByUser)->name ?? 'User' }} on {{ $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime($invoice->sent_to_accounts_at)) : '' }}. Click to revert if needed.">
+                                    <i class="ri ri-checkbox-circle-fill me-1"></i> Sent to Accounts
+                                </button>
+                                @endif
+                            @else
+                            <button type="button" class="btn btn-outline-success" id="btnToggleAccounts" data-status="1" title="Mark as handed over to Accounts">
+                                <i class="ri ri-send-plane-2-line me-1"></i> Send to Accounts
+                            </button>
+                            @endif
+                        @endif
+
                         <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
                             <i class="ri ri-arrow-left-line back-arrow"></i>Back
                         </a>
@@ -240,6 +286,51 @@
                                 <div class="text-muted">{{ $invoice->hsn_sac ?? '-' }}</div>
                             </div>
                             @endif
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Transporter Name:</label>
+                                <div class="text-muted">{{ $invoice->transporter_name ?: ($invoice->customer->transport_name ?? '-') }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Vehicle No:</label>
+                                <div class="text-muted">{{ $invoice->vehicle_no ?: '-' }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Transport Doc No / LR No:</label>
+                                <div class="text-muted fw-bold text-dark">{{ $invoice->tran_doc_no ?: ($invoice->lr_no ?: '-') }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Transport Doc Date:</label>
+                                <div class="text-muted" id="displayLrDate">{{ $invoice->tran_doc_date ? date('d-m-Y', strtotime($invoice->tran_doc_date)) : '-' }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Ready for Dispatch:</label>
+                                <div class="text-muted">
+                                    @if($invoice->transport_sticker_printed)
+                                        <span class="badge bg-success"><i class="ri-checkbox-circle-line me-1"></i>Yes ({{ $invoice->transport_sticker_printed_at ? date('d-m-Y H:i', strtotime($invoice->transport_sticker_printed_at)) : 'Sticker Printed' }})</span>
+                                    @else
+                                        <span class="badge bg-light text-muted border"><i class="ri-time-line me-1"></i>Pending</span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">Sent to Accounts:</label>
+                                <div class="text-muted">
+                                    @if($invoice->sent_to_accounts)
+                                        <span class="badge bg-success"><i class="ri-checkbox-circle-line me-1"></i>Yes ({{ $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime($invoice->sent_to_accounts_at)) : '' }})</span>
+                                        @if(in_array($invoice->invoice_status, ['Paid', 'Partially Paid']))
+                                            <span class="badge bg-info text-white ms-1" title="Payment already processed"><i class="ri-lock-2-line me-1"></i>{{ $invoice->invoice_status }}</span>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-light text-muted border"><i class="ri-time-line me-1"></i>Pending</span>
+                                    @endif
+                                </div>
+                            </div>
 
                             <div class="col-lg-12">
                                 <hr>
@@ -393,10 +484,7 @@
                                                         $styleName = $item->item->style->style_name;
                                                     }
                                                     if (empty($styleName) && !empty($displayArtNo)) {
-                                                        $matchedSe = \App\Models\StockEntryItem::where('art_no', $displayArtNo)
-                                                            ->whereNotNull('style_id')
-                                                            ->with('style')
-                                                            ->first();
+                                                        $matchedSe = \App\Models\StockEntryItem::where('art_no', $displayArtNo)->whereNotNull('style_id')->with('style')->first();
                                                         if ($matchedSe && $matchedSe->style) {
                                                             $styleName = $matchedSe->style->style_name;
                                                         }
@@ -1056,6 +1144,61 @@
                 }, 1500);
             });
         });
+
+        // Send to Accounts Handler
+        $('#btnToggleAccounts').on('click', function() {
+            let currentStatus = $(this).data('status');
+            let isSending = (currentStatus == 1);
+
+            let confirmText = isSending 
+                ? "Do you want to mark this invoice as 'Sent to Accounts'?" 
+                : "Do you want to revert 'Sent to Accounts' status to pending?";
+
+            Swal.fire({
+                title: isSending ? 'Send to Accounts?' : 'Revert Accounts Status?',
+                text: confirmText,
+                icon: isSending ? 'question' : 'warning',
+                showCancelButton: true,
+                confirmButtonColor: isSending ? '#28a745' : '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: isSending ? 'Yes, Mark as Sent' : 'Yes, Revert'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Updating...',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    $.ajax({
+                        url: "{{ route('sales_invoices.update_accounts_status', $invoice->id) }}",
+                        type: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            status: isSending ? 1 : 0
+                        },
+                        success: function(res) {
+                            if (res.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success!',
+                                    text: res.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', res.message, 'error');
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to update accounts status', 'error');
+                        }
+                    });
+                }
+            });
+        });
     });
 </script>
 
@@ -1153,6 +1296,91 @@
             <div class="modal-footer bg-light py-2">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Kachathu / Parcel Cover Confirmation & Preview -->
+<div class="modal fade" id="kachathuCoverModal" tabindex="-1" aria-labelledby="kachathuCoverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <form action="{{ route('sales_invoices.kachathu_cover', $invoice->id) }}" method="POST" target="_blank">
+                @csrf
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title text-white fw-bold" id="kachathuCoverModalLabel">
+                        <i class="ri ri-mail-line me-1"></i> Parcel Cover (கச்சாத்து அட்டை) - Confirm Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    @if($invoice->kachathu_status === 'completed')
+                        <div class="alert alert-success d-flex align-items-center py-2 px-3 mb-3 border-0 shadow-sm" style="background-color: #e8f5e9;">
+                            <i class="ri ri-checkbox-circle-fill fs-4 text-success me-2"></i>
+                            <div>
+                                <span class="fw-bold text-success">Kachathu Cover Already Generated!</span><br>
+                                <small class="text-muted">Generated by <strong>{{ optional($invoice->kachathuByUser)->name ?? 'User' }}</strong> on {{ $invoice->kachathu_at ? date('d-m-Y H:i', strtotime($invoice->kachathu_at)) : '-' }}. You can reprint anytime.</small>
+                            </div>
+                        </div>
+                    @else
+                        <p class="text-muted mb-3">
+                            கீழே உள்ள தமிழ் விவரங்களை சரிபார்த்துவிட்டு <strong>"Generate & Print Cover"</strong> அழுத்தவும். தேவைப்பட்டால் இங்கேயே எடிட் செய்துகொள்ளலாம்.
+                        </p>
+
+                    @endif
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Customer Name (தமிழ்) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control border-primary fw-bold" name="tamil_name" 
+                                value="{{ $invoice->customer->tamil_name ?? $invoice->customer->name ?? '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Place / Town (தமிழ்) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control border-primary fw-bold" name="tamil_place" 
+                                value="{{ $invoice->customer->tamil_place ?? optional($invoice->customer->place)->place_name ?? '' }}" required>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Delivery Address (தமிழ்)</label>
+                            <input type="text" class="form-control" name="tamil_address" 
+                                value="{{ $invoice->customer->tamil_address ?? $invoice->customer->address_line_1 ?? '' }}">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Customer Mobile No</label>
+                            <input type="text" class="form-control" name="mobile" 
+                                value="{{ $invoice->customer->mobile_no ?? '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">ஜவுளி அட்டை பெட்டி (No of Boxes)</label>
+                            <input type="number" class="form-control text-center fw-bold" name="no_of_box" 
+                                value="{{ $invoice->no_of_box ?: 1 }}" min="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Payment Mode</label>
+                            <input type="text" class="form-control text-center fw-bold text-primary" 
+                                value="{{ strtoupper($invoice->payment_mode ?? 'TO PAY') }}" readonly>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">லாரி ஆபீஸ் (Transport Name)</label>
+                            <input type="text" class="form-control" name="lorry_office" 
+                                value="{{ $invoice->transporter_name ?: ($invoice->customer->transport_name ?? '') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">புக்கிங் ஆபீஸ் (Booking Office)</label>
+                            <input type="text" class="form-control" name="booking_office" 
+                                value="{{ $invoice->customer->booking_office ?? '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top py-3">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-semibold px-4">
+                        <i class="ri ri-printer-line me-1"></i> {{ $invoice->kachathu_status === 'completed' ? 'Reprint Cover' : 'Generate & Print Cover' }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

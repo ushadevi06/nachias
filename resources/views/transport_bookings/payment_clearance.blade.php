@@ -31,7 +31,7 @@
 
                     <!-- Filter Box -->
                     <div class="filter-box mb-4">
-                        <form method="GET" action="{{ route('transport_bookings.payment_clearance') }}">
+                        <form id="filterForm">
                             <div class="row g-3">
                                 <div class="col-lg-12">
                                     <h5>Filter Batches</h5>
@@ -47,15 +47,20 @@
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <input type="text" name="start_date" class="form-control flatpickr-date" value="{{ $startDate->format('d-m-Y') }}" placeholder="From Date">
+                                    <input type="text" name="start_date" id="start_date" class="form-control flatpickr-date" value="{{ $startDate->format('d-m-Y') }}" placeholder="From Date">
                                 </div>
                                 <div class="col-md-3">
-                                    <input type="text" name="end_date" class="form-control flatpickr-date" value="{{ $endDate->format('d-m-Y') }}" placeholder="To Date">
+                                    <input type="text" name="end_date" id="end_date" class="form-control flatpickr-date" value="{{ $endDate->format('d-m-Y') }}" placeholder="To Date">
                                 </div>
                                 <div class="col-md-2">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="menu-icon icon-base ri ri-filter-line"></i> Load Batches
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-primary flex-fill text-nowrap" id="btnFilterBatches">
+                                            <i class="menu-icon icon-base ri ri-filter-line"></i> Load Batches
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" id="btnResetFilter" title="Reset Filters">
+                                            <i class="ri ri-refresh-line"></i> Reset
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -68,12 +73,12 @@
                                 <div class="card-body py-3 d-flex justify-content-between align-items-center">
                                     <div>
                                         <span class="small text-uppercase fw-semibold text-muted">Eligible Boxes for Payout</span>
-                                        <h3 class="mb-0 fw-bold mt-1 text-success">{{ $eligibleBookings->count() }} Boxes</h3>
+                                        <h3 class="mb-0 fw-bold mt-1 text-success" id="kpi_eligible_count">{{ $eligibleCount ?? $eligibleBookings->count() }} Boxes</h3>
                                         <small class="text-muted">Verified with confirmed LR numbers</small>
                                     </div>
                                     <div class="text-end">
                                         <span class="small text-uppercase fw-semibold text-muted">Total Approved Payout</span>
-                                        <h3 class="mb-0 fw-bold mt-1 text-success">₹{{ number_format($eligibleAmount, 2) }}</h3>
+                                        <h3 class="mb-0 fw-bold mt-1 text-success" id="kpi_eligible_amount">₹{{ number_format($eligibleAmount, 2) }}</h3>
                                     </div>
                                 </div>
                             </div>
@@ -83,7 +88,7 @@
                                 <div class="card-body py-3 d-flex justify-content-between align-items-center">
                                     <div>
                                         <span class="small text-uppercase fw-semibold text-muted">Blocked / Pending LR Boxes</span>
-                                        <h3 class="mb-0 fw-bold mt-1 text-danger">{{ $blockedBookings->count() }} Boxes</h3>
+                                        <h3 class="mb-0 fw-bold mt-1 text-danger" id="kpi_blocked_count">{{ $blockedCount ?? $blockedBookings->count() }} Boxes</h3>
                                         <small class="text-muted">Payment strictly locked (No LR receipt)</small>
                                     </div>
                                     <div class="text-end">
@@ -99,24 +104,22 @@
                     <form method="POST" action="{{ route('transport_bookings.payment_clearance') }}" id="clearanceForm">
                         @csrf
                         <input type="hidden" name="action" value="clear_payment">
-                        <input type="hidden" name="driver_id" value="{{ $selectedDriverId }}">
-                        <input type="hidden" name="start_date" value="{{ $startDate->format('d-m-Y') }}">
-                        <input type="hidden" name="end_date" value="{{ $endDate->format('d-m-Y') }}">
+                        <input type="hidden" name="driver_id" id="post_driver_id" value="{{ $selectedDriverId }}">
+                        <input type="hidden" name="start_date" id="post_start_date" value="{{ $startDate->format('d-m-Y') }}">
+                        <input type="hidden" name="end_date" id="post_end_date" value="{{ $endDate->format('d-m-Y') }}">
 
                         <!-- Section 1: Eligible Table -->
                         <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
                             <h5 class="mb-0 text-success fw-bold">
                                 <i class="menu-icon icon-base ri ri-checkbox-circle-fill me-1"></i> 1. Eligible Consignments (LR Verified)
                             </h5>
-                            @if($eligibleBookings->count() > 0)
-                                <button type="button" class="btn btn-success" id="btnApproveClearance">
-                                    <i class="menu-icon icon-base ri ri-check-double-line"></i> Approve & Clear Payment (₹{{ number_format($eligibleAmount, 2) }})
-                                </button>
-                            @endif
+                            <button type="button" class="btn btn-success" id="btnApproveClearance" style="{{ ($eligibleCount ?? 0) > 0 ? '' : 'display: none;' }}">
+                                <i class="menu-icon icon-base ri ri-check-double-line"></i> <span id="clearanceBtnText">Approve & Clear Payment (₹{{ number_format($eligibleAmount, 2) }})</span>
+                            </button>
                         </div>
 
                         <div class="card-datatable table-responsive mb-4">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0 w-100" id="eligibleTable">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 3%;">#</th>
@@ -132,42 +135,7 @@
                                         <th>Payment Status</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @forelse($eligibleBookings as $idx => $b)
-                                        <tr>
-                                            <td>{{ $idx + 1 }}</td>
-                                            <td>
-                                                <strong class="d-block text-dark">{{ $b->customer->name ?? '-' }}</strong>
-                                                <small class="text-muted">{{ $b->customer->code ?? '' }}</small>
-                                            </td>
-                                            <td>
-                                                <a href="{{ url('sales_invoices/show/' . $b->sales_invoice_id) }}" class="fw-semibold text-primary">
-                                                    {{ $b->salesInvoice->inv_no ?? '-' }}
-                                                </a>
-                                            </td>
-                                            <td><span class="badge bg-dark fw-bold">{{ $b->box_number }}</span></td>
-                                            <td>{{ (int)$b->quantity }}</td>
-                                            <td>{{ $b->preferred_transport ?: '-' }}</td>
-                                            <td><span class="badge bg-label-primary">{{ $b->deliveryAgent->name ?? ($b->delivery_agent_name ?: '-') }}</span></td>
-                                            <td><span class="badge bg-label-success fw-bold">{{ $b->lr_no }}</span></td>
-                                            <td>{{ $b->booking_date ? $b->booking_date->format('d-m-Y') : '-' }}</td>
-                                            <td class="text-end fw-bold text-success">₹{{ number_format($b->lr_price, 2) }}</td>
-                                            <td>
-                                                @if($b->payment_status === 'Cleared')
-                                                    <span class="badge bg-success">Cleared on {{ $b->payment_cleared_date ? $b->payment_cleared_date->format('d-m-Y') : '' }}</span>
-                                                @else
-                                                    <span class="badge bg-label-warning">Eligible (Pending Clearance)</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="11" class="text-center py-4 text-muted">
-                                                No eligible bookings with confirmed LR numbers found for this period.
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
+                                <tbody></tbody>
                             </table>
                         </div>
 
@@ -179,7 +147,7 @@
                         </div>
 
                         <div class="card-datatable table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0 w-100" id="blockedTable">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 3%;">#</th>
@@ -194,30 +162,7 @@
                                         <th class="text-end">Claim Amount</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @forelse($blockedBookings as $idx => $b)
-                                        <tr class="table-light text-muted">
-                                            <td>{{ $idx + 1 }}</td>
-                                            <td>{{ $b->customer->name ?? '-' }}</td>
-                                            <td>{{ $b->salesInvoice->inv_no ?? '-' }}</td>
-                                            <td><span class="badge bg-secondary">{{ $b->box_number }}</span></td>
-                                            <td>{{ (int)$b->quantity }}</td>
-                                            <td>{{ $b->preferred_transport ?: '-' }}</td>
-                                            <td><span class="badge bg-label-secondary">{{ $b->deliveryAgent->name ?? ($b->delivery_agent_name ?: '-') }}</span></td>
-                                            <td><span class="badge bg-label-secondary">{{ $b->status }}</span></td>
-                                            <td>
-                                                <span class="badge bg-danger">NO LR NUMBER</span>
-                                            </td>
-                                            <td class="text-end fw-bold text-danger">₹0.00 (LOCKED)</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="10" class="text-center py-3 text-muted">
-                                                Great! No blocked boxes. All dispatched boxes have confirmed LR receipts.
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
+                                <tbody></tbody>
                             </table>
                         </div>
                     </form>
@@ -231,6 +176,9 @@
 @section('scripts')
 <script>
 $(function() {
+    let defaultStartDate = "{{ Carbon\Carbon::now()->subDays(7)->format('d-m-Y') }}";
+    let defaultEndDate = "{{ Carbon\Carbon::now()->format('d-m-Y') }}";
+
     if ($.fn.select2) {
         $('.select2').select2({
             allowClear: true,
@@ -247,11 +195,128 @@ $(function() {
         });
     }
 
+    // 1. Eligible DataTable (Server-side AJAX)
+    let eligibleTable = $('#eligibleTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ordering: false,
+        pageLength: 10,
+        lengthMenu: [10, 25, 50, 100],
+        ajax: {
+            url: "{{ route('transport_bookings.payment_clearance') }}",
+            type: "GET",
+            data: function(d) {
+                d.table_type = 'eligible';
+                d.driver_id = $('#driver_id').val();
+                d.start_date = $('#start_date').val();
+                d.end_date = $('#end_date').val();
+            },
+            dataSrc: function(json) {
+                if (json.metrics) {
+                    $('#kpi_eligible_count').text(json.metrics.eligible_count + ' Boxes');
+                    $('#kpi_eligible_amount').text('₹' + json.metrics.eligible_amount);
+                    $('#clearanceBtnText').text('Approve & Clear Payment (₹' + json.metrics.eligible_amount + ')');
+                    if (json.metrics.eligible_count > 0) {
+                        $('#btnApproveClearance').show();
+                    } else {
+                        $('#btnApproveClearance').hide();
+                    }
+                }
+                return json.data;
+            }
+        },
+        columns: [
+            { data: 'sno', className: 'text-center' },
+            { data: 'customer' },
+            { data: 'invoice_no' },
+            { data: 'box', className: 'text-center' },
+            { data: 'qty', className: 'text-center' },
+            { data: 'transport' },
+            { data: 'driver', className: 'text-center' },
+            { data: 'lr_number', className: 'text-center' },
+            { data: 'booking_date', className: 'text-center' },
+            { data: 'approved_price' },
+            { data: 'payment_status', className: 'text-center' }
+        ],
+        language: {
+            emptyTable: "No eligible bookings with confirmed LR numbers found for this period."
+        }
+    });
+
+    // 2. Blocked DataTable (Server-side AJAX)
+    let blockedTable = $('#blockedTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ordering: false,
+        pageLength: 10,
+        lengthMenu: [10, 25, 50, 100],
+        ajax: {
+            url: "{{ route('transport_bookings.payment_clearance') }}",
+            type: "GET",
+            data: function(d) {
+                d.table_type = 'blocked';
+                d.driver_id = $('#driver_id').val();
+                d.start_date = $('#start_date').val();
+                d.end_date = $('#end_date').val();
+            },
+            dataSrc: function(json) {
+                if (json.metrics) {
+                    $('#kpi_blocked_count').text(json.metrics.blocked_count + ' Boxes');
+                }
+                return json.data;
+            }
+        },
+        columns: [
+            { data: 'sno', className: 'text-center' },
+            { data: 'customer' },
+            { data: 'invoice_no' },
+            { data: 'box', className: 'text-center' },
+            { data: 'qty', className: 'text-center' },
+            { data: 'transport' },
+            { data: 'driver', className: 'text-center' },
+            { data: 'status', className: 'text-center' },
+            { data: 'lr_status', className: 'text-center' },
+            { data: 'claim_amount' }
+        ],
+        language: {
+            emptyTable: "Great! No blocked boxes. All dispatched boxes have confirmed LR receipts."
+        }
+    });
+
+    // AJAX Filter Trigger
+    function reloadTables() {
+        // Sync hidden post values for clearance form
+        $('#post_driver_id').val($('#driver_id').val());
+        $('#post_start_date').val($('#start_date').val());
+        $('#post_end_date').val($('#end_date').val());
+
+        eligibleTable.ajax.reload();
+        blockedTable.ajax.reload();
+    }
+
+    $('#btnFilterBatches').on('click', function(e) {
+        e.preventDefault();
+        reloadTables();
+    });
+
+    // Reset Filter Button
+    $('#btnResetFilter').on('click', function(e) {
+        e.preventDefault();
+        $('#driver_id').val('').trigger('change');
+        $('#start_date').val(defaultStartDate);
+        $('#end_date').val(defaultEndDate);
+        reloadTables();
+    });
+
+    // Approve Clearance
     $('#btnApproveClearance').on('click', function(e) {
         e.preventDefault();
+        let amountText = $('#kpi_eligible_amount').text();
+        let countText = $('#kpi_eligible_count').text();
+
         Swal.fire({
             title: 'Confirm Payment Clearance',
-            text: "Confirm clearing weekly payout of ₹{{ number_format($eligibleAmount, 2) }} for {{ $eligibleBookings->count() }} boxes?",
+            text: "Confirm clearing weekly payout of " + amountText + " for " + countText + "?",
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#28c76f',

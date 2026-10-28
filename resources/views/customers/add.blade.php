@@ -47,6 +47,15 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control @error('tamil_name') is-invalid @enderror" id="tamil_name" placeholder="Enter Customer Name (தமிழ்)" name="tamil_name" value="{{ old('tamil_name', $customer->tamil_name ?? '') }}">
+                                        <label for="tamil_name">Customer Name (தமிழ்)</label>
+                                    </div>
+                                    @error('tamil_name')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
                                         <input type="text" class="form-control @error('code') is-invalid @enderror" id="code" placeholder="Enter Code" name="code" value="{{ old('code', $customer->code ?? '') }}">
                                         <label for="code">Code <span class="text-danger">*</span> </label>
                                     </div>
@@ -185,6 +194,15 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control @error('tamil_place') is-invalid @enderror" id="tamil_place" placeholder="Enter Place / Town (தமிழ்)" name="tamil_place" value="{{ old('tamil_place', $customer->tamil_place ?? '') }}">
+                                        <label for="tamil_place">Place / Town (தமிழ்)</label>
+                                    </div>
+                                    @error('tamil_place')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
                                         <select name="zone_id" id="zone_id" class="select2 form-select @error('zone_id') is-invalid @enderror" data-placeholder="Select Zone">
                                             <option value="">Select Zone</option>
                                             @foreach($zones as $zone)
@@ -221,6 +239,15 @@
                                         <label for="address_line_3">Address Line 3</label>
                                     </div>
                                     @error('address_line_3')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-12 col-xl-8">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control @error('tamil_address') is-invalid @enderror" id="tamil_address" placeholder="Enter Delivery Address (தமிழ்)" name="tamil_address" value="{{ old('tamil_address', $customer->tamil_address ?? '') }}">
+                                        <label for="tamil_address">Delivery Address (தமிழ்)</label>
+                                    </div>
+                                    @error('tamil_address')
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -420,4 +447,103 @@
             </div>
         </div>
     </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function translateWordPhonetic(word) {
+        return new Promise((resolve) => {
+            if (!word || word.trim() === '') return resolve('');
+            
+            // 1. If word contains ANY digits or symbols (e.g. 256, 256/A, 12-B, #45, 638111), don't convert to Tamil numerals! Keep exact English numbers
+            if (/\d/.test(word) || /^[^a-zA-Z]+$/.test(word)) {
+                return resolve(word);
+            }
+            
+            let url = "https://inputtools.google.com/request?text=" + encodeURIComponent(word) + "&itc=ta-t-i0-und&num=1";
+            fetch(url)
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res[0] === 'SUCCESS' && res[1] && res[1][0] && res[1][0][1] && res[1][0][1][0]) {
+                        resolve(res[1][0][1][0]);
+                    } else {
+                        resolve(word);
+                    }
+                })
+                .catch(() => resolve(word));
+        });
+    }
+
+    async function translateText(text, targetInputId) {
+        if (!text || text.trim() === '') return;
+        let target = document.getElementById(targetInputId);
+        if (!target) return;
+
+        // If user already typed custom value, don't overwrite
+        if (target.value.trim() !== '' && target.getAttribute('data-autofilled') !== 'true') {
+            return;
+        }
+
+        let fullAddr = [
+            $('#address_line_1').val(),
+            $('#address_line_2').val(),
+            $('#address_line_3').val()
+        ].filter(Boolean).join(', ');
+
+        // Split by punctuation and spaces while preserving delimiters
+        let tokens = text.match(/[a-zA-Z]+|[0-9]+|[^a-zA-Z0-9\s]+|\s+/g) || [];
+        let promises = tokens.map(token => {
+            if (/^[a-zA-Z]+$/.test(token)) {
+                return translateWordPhonetic(token);
+            }
+            // Keep numbers, slashes, commas, hyphens, spaces exact as-is
+            return Promise.resolve(token);
+        });
+        let converted = await Promise.all(promises);
+        target.value = converted.join('').replace(/\s+/g, ' ').trim();
+        target.setAttribute('data-autofilled', 'true');
+    }
+
+    // 1. Name on blur/change
+    let nameInput = document.getElementById('name');
+    if (nameInput) {
+        nameInput.addEventListener('blur', function() {
+            translateText(this.value, 'tamil_name');
+        });
+    }
+
+    // 2. Place on change
+    $('#place_id').on('change', function() {
+        let placeText = $(this).find('option:selected').text();
+        if (placeText && placeText !== 'Select Place') {
+            translateText(placeText, 'tamil_place');
+        }
+    });
+
+    // 3. Address on blur
+    ['address_line_1', 'address_line_2', 'address_line_3'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('blur', function() {
+                let a1 = document.getElementById('address_line_1')?.value || '';
+                let a2 = document.getElementById('address_line_2')?.value || '';
+                let a3 = document.getElementById('address_line_3')?.value || '';
+                let full = [a1, a2, a3].filter(Boolean).join(', ');
+                if (full) {
+                    translateText(full, 'tamil_address');
+                }
+            });
+        }
+    });
+
+    // Reset autofilled flag if user types manually
+    ['tamil_name', 'tamil_place', 'tamil_address'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', function() {
+                this.removeAttribute('data-autofilled');
+            });
+        }
+    });
+});
+</script>
 @endsection

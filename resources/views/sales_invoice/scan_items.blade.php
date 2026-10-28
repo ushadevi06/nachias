@@ -10,6 +10,15 @@
                     <a href="{{ url('sales_invoices/view/' . $invoice->id) }}" class="btn btn-secondary text-white">
                         <i class="ri ri-arrow-left-line back-arrow"></i> Back to Invoice
                     </a>
+                    @if($invoice->checking_status === 'completed')
+                        <button class="btn btn-outline-success" id="checking_btn" data-status="completed">
+                            <i class="ri ri-checkbox-circle-fill me-1"></i> Checked (ERP) ✅
+                        </button>
+                    @else
+                        <button class="btn btn-primary" id="checking_btn" data-status="pending" disabled>
+                            <i class="ri ri-check-line me-1"></i> Mark as Checked (ERP)
+                        </button>
+                    @endif
                     @if($invoice->delivery_status !== 'Dispatched' && strtolower($invoice->einvoice_status) !== 'cancelled')
                         <button class="btn btn-success" id="complete_dispatch_btn" disabled>
                             <i class="ri ri-check-double-line me-1"></i> Complete Dispatch
@@ -64,26 +73,26 @@
 
                     <hr>
 
-                        <div class="col-md-12 text-center">
-                            <label class="form-label fw-bold">Scan Barcode</label>
-                            @if($invoice->delivery_status === 'Dispatched')
-                                <div class="alert alert-success">This invoice has already been dispatched. No further scanning is allowed.</div>
-                            @elseif(strtolower($invoice->einvoice_status) === 'cancelled')
-                                <div class="alert alert-danger"><i class="ri-close-circle-line me-1"></i> <strong>E-Invoice Cancelled:</strong> This invoice has been cancelled. No further scanning is allowed.</div>
-                            @else
-                                <div class="input-group mb-2 mx-auto" style="max-width: 500px;">
-                                    <input type="text" id="barcode_input" class="form-control border-primary" placeholder="Scan item barcode here..." autofocus autocomplete="off">
-                                    <button class="btn btn-outline-primary" type="button" id="btn_camera_scan">
-                                        <i class="ri-camera-line me-1"></i> Camera
-                                    </button>
-                                </div>
-                                <div id="reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; max-width: 500px; border: 1px solid #00bcd4;"></div>
-                            @endif
-                            
-                            <div id="scan_alert" class="alert alert-danger mt-3 mx-auto" style="display: none; max-width: 500px;">
-                                <span id="scan_msg"></span>
+                    <div class="col-md-12 text-center">
+                        <label class="form-label fw-bold">Scan Barcode</label>
+                        @if($invoice->delivery_status === 'Dispatched')
+                            <div class="alert alert-success">This invoice has already been dispatched. No further scanning is allowed.</div>
+                        @elseif(strtolower($invoice->einvoice_status) === 'cancelled')
+                            <div class="alert alert-danger"><i class="ri-close-circle-line me-1"></i> <strong>E-Invoice Cancelled:</strong> This invoice has been cancelled. No further scanning is allowed.</div>
+                        @else
+                            <div class="input-group mb-2 mx-auto" style="max-width: 500px;">
+                                <input type="text" id="barcode_input" class="form-control border-primary" placeholder="Scan item barcode here..." autofocus autocomplete="off">
+                                <button class="btn btn-outline-primary" type="button" id="btn_camera_scan">
+                                    <i class="ri-camera-line me-1"></i> Camera
+                                </button>
                             </div>
+                            <div id="reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; max-width: 500px; border: 1px solid #00bcd4;"></div>
+                        @endif
+                        
+                        <div id="scan_alert" class="alert alert-danger mt-3 mx-auto" style="display: none; max-width: 500px;">
+                            <span id="scan_msg"></span>
                         </div>
+                    </div>
                 </div>
             </div>
 
@@ -279,7 +288,6 @@
                                         } elseif ($scan > 0) {
                                             $statusBadge = '<span class="badge bg-warning text-dark">In Progress</span>';
                                         }
-                                        
                                         $sizeStr = $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-');
                                         $colorStr = $item->api_color ?: ($item->color ? $item->color->color_name : '-');
                                     @endphp
@@ -355,6 +363,7 @@
         padding: 15px;
         text-align: center;
         background: #f8f9fa;
+
     }
     .stat-card h6 {
         margin-bottom: 5px;
@@ -402,8 +411,14 @@
             
             if (tScan >= tReq && tReq > 0) {
                 $('#complete_dispatch_btn').prop('disabled', false);
+                if ($('#checking_btn').attr('data-status') !== 'completed') {
+                    $('#checking_btn').prop('disabled', false);
+                }
             } else {
                 $('#complete_dispatch_btn').prop('disabled', true);
+                if ($('#checking_btn').attr('data-status') !== 'completed') {
+                    $('#checking_btn').prop('disabled', true);
+                }
             }
         }
 
@@ -601,6 +616,57 @@
             });
         }
         
+        $('#checking_btn').click(function() {
+            let currentStatus = $(this).attr('data-status');
+            let newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+            let confirmMsg = newStatus === 'completed' 
+                ? 'Confirm that all items have been physically checked against this ERP invoice?' 
+                : 'Do you want to revert checking status back to pending?';
+
+            Swal.fire({
+                title: newStatus === 'completed' ? 'Mark as Checked?' : 'Revert Checking?',
+                text: confirmMsg,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: newStatus === 'completed' ? 'Yes, Mark Checked' : 'Yes, Revert'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ route('sales_invoices.update_checking_status', $invoice->id) }}",
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            status: newStatus
+                        },
+                        success: function(response) {
+                            if (response.checking_status === 'completed') {
+                                $('#checking_btn')
+                                    .removeClass('btn-primary')
+                                    .addClass('btn-outline-success')
+                                    .attr('data-status', 'completed')
+                                    .html('<i class="ri-checkbox-circle-fill me-1"></i> Checked (ERP) ✅')
+                                    .prop('disabled', false);
+                            } else {
+                                $('#checking_btn')
+                                    .removeClass('btn-outline-success')
+                                    .addClass('btn-primary')
+                                    .attr('data-status', 'pending')
+                                    .html('<i class="ri-check-line me-1"></i> Mark as Checked (ERP)');
+                                updateStats();
+                            }
+                            Swal.fire('Updated!', response.message, 'success');
+                        },
+                        error: function(err) {
+                            let msg = (err.responseJSON && err.responseJSON.message) ? err.responseJSON.message : 'Error updating checking status.';
+                            Swal.fire('Error!', msg, 'error');
+                        }
+                    });
+                }
+            });
+        });
+
         $('#complete_dispatch_btn').click(function() {
             Swal.fire({
                 title: 'Complete Dispatch?',

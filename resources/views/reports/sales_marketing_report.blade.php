@@ -732,12 +732,19 @@ $(document).ready(function() {
             tableId: '#invoiceReportTable',
             type: 'invoice-report',
             columns: [
-                { data: 'inv_no', name: 'inv_no', className: 'fw-bold text-primary' },
                 { data: 'inv_date', name: 'inv_date', className: 'text-nowrap' },
+                { data: 'inv_no', name: 'inv_no', className: 'fw-bold text-primary' },
                 { data: 'customer', name: 'customer' },
+                { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
+                { data: 'picking', name: 'picking', className: 'text-center' },
+                { data: 'checking', name: 'checking', className: 'text-center' },
                 { data: 'einvoice', name: 'einvoice', className: 'text-center' },
                 { data: 'ewaybill', name: 'ewaybill', className: 'text-center' },
-                { data: 'dispatch', name: 'dispatch', className: 'text-center' }
+                { data: 'kachathu', name: 'kachathu', className: 'text-center' },
+                { data: 'ready_for_dispatch', name: 'ready_for_dispatch', className: 'text-center' },
+                { data: 'lr_updated', name: 'lr_updated', className: 'text-center' },
+                { data: 'sent_to_accounts', name: 'sent_to_accounts', className: 'text-center' },
+                { data: 'status', name: 'status', className: 'text-center' }
             ]
         },
         'pending-report': {

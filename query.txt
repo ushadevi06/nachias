@@ -1,3 +1,38 @@
-ALTER TABLE `sales_invoice_items`
-ADD COLUMN `stock_allocations` JSON NULL
-AFTER `stock_entry_item_id`;
+-- 1. Sales Invoice Checking Status
+ALTER TABLE `sales_invoices`
+    ADD COLUMN `checking_status` VARCHAR(50) NOT NULL DEFAULT 'pending' AFTER `delivery_status`,
+    ADD COLUMN `checked_by` BIGINT UNSIGNED NULL AFTER `checking_status`,
+    ADD COLUMN `checked_at` DATETIME NULL AFTER `checked_by`,
+    ADD INDEX `sales_invoices_checking_status_index` (`checking_status`);
+
+
+-- 2. Customer Tamil Details
+ALTER TABLE `customers`
+    ADD COLUMN `tamil_name` VARCHAR(255) NULL AFTER `name`,
+    ADD COLUMN `tamil_address` TEXT NULL AFTER `address_line_3`,
+    ADD COLUMN `tamil_place` VARCHAR(255) NULL AFTER `tamil_address`;
+
+
+-- 3. Sales Invoice Kachathu Details
+ALTER TABLE `sales_invoices`
+    ADD COLUMN `kachathu_status` VARCHAR(50) NOT NULL DEFAULT 'pending' AFTER `checking_status`,
+    ADD COLUMN `kachathu_by` BIGINT UNSIGNED NULL AFTER `kachathu_status`,
+    ADD COLUMN `kachathu_at` DATETIME NULL AFTER `kachathu_by`,
+    ADD COLUMN `kachathu_details` TEXT NULL AFTER `kachathu_at`,
+    ADD INDEX `sales_invoices_kachathu_status_index` (`kachathu_status`);
+
+
+-- 4. Sent to Accounts
+ALTER TABLE `sales_invoices`
+    ADD COLUMN `sent_to_accounts` TINYINT(1) NOT NULL DEFAULT 0 AFTER `kachathu_details`,
+    ADD COLUMN `sent_to_accounts_by` BIGINT UNSIGNED NULL AFTER `sent_to_accounts`,
+    ADD COLUMN `sent_to_accounts_at` DATETIME NULL AFTER `sent_to_accounts_by`,
+    ADD INDEX `sales_invoices_sent_to_accounts_index` (`sent_to_accounts`);
+
+
+-- 5. Ready for Dispatch and Transport Sticker
+ALTER TABLE `sales_invoices`
+    ADD COLUMN `ready_for_dispatch` TINYINT(1) NOT NULL DEFAULT 0 AFTER `kachathu_details`,
+    ADD COLUMN `ready_for_dispatch_at` TIMESTAMP NULL AFTER `ready_for_dispatch`,
+    ADD COLUMN `transport_sticker_printed` TINYINT(1) NOT NULL DEFAULT 0 AFTER `ready_for_dispatch_at`,
+    ADD COLUMN `transport_sticker_printed_at` TIMESTAMP NULL AFTER `transport_sticker_printed`;

@@ -1020,6 +1020,25 @@ class TaskManagementController extends Controller
                 $stageRemainingPending = max(0, $stageTotalPlanned - $allTasksServicesMaxIssued);
                 $stageAlreadyAssigned = max(0, $stageTotalPlanned - $stageRemainingPending);
             }
+
+            $stageTotalAchieved = 0;
+            if ($selectedSchedule && $selectedSchedule->id) {
+                $allStageTasks = Task::where('stage_id', $selectedSchedule->id)->pluck('id');
+                if ($allStageTasks->isNotEmpty()) {
+                    $stageAssignments = TaskAssignEmployee::whereIn('task_id', $allStageTasks)->get();
+                    if ($stageAssignments->isNotEmpty()) {
+                        $assignedServiceIds = $stageAssignments->pluck('service_id')->unique()->filter()->toArray();
+                        if (!empty($assignedServiceIds)) {
+                            $serviceCompletions = collect($assignedServiceIds)->map(function ($sId) use ($stageAssignments) {
+                                return (float)$stageAssignments->where('service_id', $sId)->sum('completed_qty');
+                            });
+                            $stageTotalAchieved = (float)$serviceCompletions->min();
+                        } else {
+                            $stageTotalAchieved = (float)$stageAssignments->sum('completed_qty');
+                        }
+                    }
+                }
+            }
         }
 
 
@@ -1057,7 +1076,8 @@ class TaskManagementController extends Controller
             'additionalBatch',
             'stageTotalPlanned',
             'stageAlreadyAssigned',
-            'stageRemainingPending'
+            'stageRemainingPending',
+            'stageTotalAchieved'
         ));
     }
 
