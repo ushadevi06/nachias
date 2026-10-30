@@ -4,5 +4,13 @@
     },
     "dejavusans-bold": {
         "normal": "dejavusans_bold_normal_5e03509fd124bd244d99d36a9b426ae3"
+    },
+    "customarial": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/customarial_normal_d3a199417d1b61c68dbd91738e00849a",
+        "bold": "customarial_bold_f082e3ecd65cb0bb5eb8d90ed9bdcb41"
+    },
+    "arial": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/arial_normal_d3a199417d1b61c68dbd91738e00849a",
+        "bold": "arial_bold_f082e3ecd65cb0bb5eb8d90ed9bdcb41"
     }
 }

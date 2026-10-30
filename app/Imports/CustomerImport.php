@@ -152,6 +152,16 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 $name = trim($name);
             }
 
+            // Resolve Tamil Fields
+            $tamilName = $row['tamil_name'] ?? ($row['tamil_customer_name'] ?? ($row['customer_tamil_name'] ?? ($row['name_in_tamil'] ?? null)));
+            if ($tamilName !== null) $tamilName = trim($tamilName);
+
+            $tamilAddress = $row['tamil_address'] ?? ($row['address_in_tamil'] ?? ($row['customer_tamil_address'] ?? null));
+            if ($tamilAddress !== null) $tamilAddress = trim($tamilAddress);
+
+            $tamilPlace = $row['tamil_place'] ?? ($row['place_in_tamil'] ?? ($row['tamil_city'] ?? null));
+            if ($tamilPlace !== null) $tamilPlace = trim($tamilPlace);
+
             // Resolve Mobile Number
             $mobileNo = null;
             if (isset($row['mobile_number']) && trim((string)$row['mobile_number']) !== '') {
@@ -175,6 +185,9 @@ class CustomerImport implements ToCollection, WithHeadingRow
             $data = [
                 'category'            => $row['category'] ?? ($existing ? $existing->category : 'Retailer'),
                 'name'                => $name ?: ($existing ? $existing->name : null),
+                'tamil_name'          => $tamilName ?: ($existing ? $existing->tamil_name : null),
+                'tamil_address'       => $tamilAddress ?: ($existing ? $existing->tamil_address : null),
+                'tamil_place'         => $tamilPlace ?: ($existing ? $existing->tamil_place : null),
                 'code'                => $code,
                 'mobile_no'           => $mobileNo ?: ($existing ? $existing->mobile_no : null),
                 'email'               => $row['email'] ?? ($existing ? $existing->email : null),
@@ -332,6 +345,9 @@ class CustomerImport implements ToCollection, WithHeadingRow
                     if (!empty($d['zip_code']) && $d['zip_code'] !== '-') $fieldsToUpdate['zip_code'] = $d['zip_code'];
                     if (!empty($d['gst_no']) && $d['gst_no'] !== '-') $fieldsToUpdate['gst_no'] = $d['gst_no'];
                     if (!empty($d['pan_no']) && $d['pan_no'] !== '-') $fieldsToUpdate['pan_no'] = $d['pan_no'];
+                    if (!empty($d['tamil_name']) && $d['tamil_name'] !== '-') $fieldsToUpdate['tamil_name'] = $d['tamil_name'];
+                    if (!empty($d['tamil_address']) && $d['tamil_address'] !== '-') $fieldsToUpdate['tamil_address'] = $d['tamil_address'];
+                    if (!empty($d['tamil_place']) && $d['tamil_place'] !== '-') $fieldsToUpdate['tamil_place'] = $d['tamil_place'];
 
                     $fieldsToUpdate['updated_by'] = auth()->id() ?? 1;
 

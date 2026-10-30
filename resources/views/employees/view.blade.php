@@ -9,10 +9,10 @@
                 <h4 class="mb-0">Employees</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create employees'))
                 <div class="d-flex gap-2">
-                    {{-- <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
                         data-bs-target="#importModal">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
-                    </button> --}}
+                    </button>
                     <a class="btn btn-outline-success" href="{{ url('employees/export-excel') }}">
                         <i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Export
                     </a>
@@ -50,13 +50,13 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-3">
+                            {{-- <div class="col-md-3">
                                 <select id="type" class="form-select select2" data-placeholder="Select Type">
                                     <option value="">Select Type</option>
                                     <option value="On Roll">On Roll</option>
                                     <option value="Off Roll">Off Roll</option>
                                 </select>
-                            </div>
+                            </div> --}}
 
                             <div class="col-md-3">
                                 <button type="button" class="btn btn-primary" id="filter-btn">
@@ -78,7 +78,7 @@
                                     <th>Image</th>
                                     <th>Role</th>
                                     <th>Department</th>
-                                    <th>Type</th>
+                                    {{-- <th>Type</th> --}}
                                     <th>Service Provider</th>
                                     <th>Operation Stage</th>
                                     <th>Contact Info</th>
@@ -167,7 +167,7 @@
                 data: function(d) {
                     d.department = $('#department').val();
                     d.role = $('#role').val();
-                    d.type = $('#type').val();
+                   // d.type = $('#type').val();
                 }
             },
             columns: [{
@@ -189,9 +189,9 @@
                 {
                     data: 'department'
                 },
-                {
-                    data: 'type'
-                },
+                // {
+                //     data: 'type'
+                // },
                 {
                     data: 'service_provider'
                 },
@@ -220,7 +220,7 @@
         $('#reset-btn').on('click', function() {
             $('#department').val('').trigger('change');
             $('#role').val('').trigger('change');
-            $('#type').val('').trigger('change');
+            // $('#type').val('').trigger('change');
             table.ajax.reload();
         });
     });

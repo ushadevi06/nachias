@@ -6,7 +6,7 @@
     <title>Kachathu Cover - {{ $invoice->inv_no }}</title>
     <style>
         @page {
-            size: 6.5in 4.1in; /* Exact Custom Envelope Cover Size (6.5 inches x 4.1 inches) */
+            size: 6.5in 4.1in; 
             margin: 0;
         }
         * {
@@ -111,17 +111,21 @@
 
         /* Main To Address Section */
         .to-section {
-            border: 2px solid transparent;
-            border-radius: 6px;
-            padding: 0 14px;
+            border: none;
+            padding: 0;
             margin: 0;
+            position: absolute;
+            top: 17.5mm; 
+            left: 24mm;  
+            width: 140mm;
             display: block;
         }
         .to-title {
             display: none !important;
         }
         .to-content {
-            padding-left: 12px;
+            padding: 0;
+            margin: 0;
             color: #000;
             display: block;
         }
@@ -129,16 +133,16 @@
             font-size: 18px;
             font-weight: 900;
             color: #000;
-            height: 31px;
-            line-height: 30px;
+            height: 8mm;
+            line-height: 7.5mm; 
             white-space: nowrap;
         }
         .address-line {
             font-size: 18px;
             font-weight: 900 !important;
             color: #000;
-            height: 31px;
-            line-height: 30px;
+            height: 8mm;
+            line-height: 7.5mm; 
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -147,8 +151,8 @@
             font-size: 18px;
             font-weight: 900 !important;
             color: #000;
-            height: 31px;
-            line-height: 30px;
+            height: 8mm;
+            line-height: 7.5mm; 
             white-space: nowrap;
         }
         .phone-line {
@@ -156,8 +160,8 @@
             font-weight: 900;
             letter-spacing: 1.5px;
             color: #000;
-            height: 31px;
-            line-height: 30px;
+            height: 8mm;
+            line-height: 7.5mm; 
             display: flex;
             align-items: center;
             gap: 6px;
@@ -200,35 +204,33 @@
         }
 
         .transport-section {
-            width: 50%;
-            font-size: 12px;
-            font-weight: bold;
-            padding-top: 48px;
+            position: absolute;
+            top: 84.5mm;
+            left: 100mm;
+            width: 60mm;
+            display: block;
+            margin: 0;
+            padding: 0;
         }
         .transport-row {
-            margin-bottom: 2px;
-            display: flex;
-            align-items: center;
+            height: 9mm;
+            line-height: 8.5mm;
+            display: block;
+            margin: 0;
+            padding: 0;
+            white-space: nowrap;
         }
         .transport-label {
-            width: 74px;
-            min-width: 74px;
-            max-width: 74px;
-            display: inline-block;
-            font-size: 13px;
-            visibility: hidden !important;
+            display: none !important;
         }
         .transport-value {
-            border-bottom: 1.5px solid transparent;
-            flex-grow: 1;
-            padding-left: 2px;
+            display: block;
             font-size: 15px;
             font-weight: 900;
-            min-height: 22px;
-            line-height: 22px;
+            height: 9mm;
+            line-height: 8.5mm;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: visible;
             color: #000;
         }
 

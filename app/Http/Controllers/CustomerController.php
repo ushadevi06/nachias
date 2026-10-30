@@ -113,9 +113,9 @@ class CustomerController extends Controller
                 'mobile_no' => 'required|numeric|digits_between:10,15|regex:/[1-9]/',
                 'email' => 'nullable|email:rfc,dns|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
-                'transport_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
-                'alt_transport_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
-                'booking_office' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
+                'transport_name' => 'nullable|string|min:2|max:100',
+                'alt_transport_name' => 'nullable|string|min:2|max:100',
+                'booking_office' => 'nullable|string|min:2|max:100',
                 'zone_id' => 'required|exists:zones,id',
                 'store_id' => 'nullable|exists:store_types,id',
                 'status' => 'required|in:Active,Inactive',
@@ -331,17 +331,7 @@ class CustomerController extends Controller
 
     public function downloadSample()
     {
-        $headers = ['Category','Code', 'Name', 'Mobile Number','Email','Website URL','State','City','Place','Address','Zip Code','Transport Name','Alternate Transport Name','Booking Office','Zone','Contact Person Name','Contact Mobile No','Contact Email','Status','GST No','Payment Terms', 'Sales Discount', 'Box Discount Amount(Per Pcs)'];
-
-        $callback = function() use ($headers) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $headers);
-            fclose($file);
-        };
-
-        return response()->streamDownload($callback, 'Customer_Sample_Format.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
+        return Excel::download(new \App\Exports\CustomerSampleExport, 'Customer_Sample_Format.xlsx');
     }
 
     public function exportExcel()

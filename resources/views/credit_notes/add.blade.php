@@ -12,6 +12,19 @@
         margin-top: 6px !important;
         display: inline-block;
     }
+    .art-no-filter-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 0.75rem;
+    }
+    .art-no-filter-input {
+        width: 280px;
+    }
+    @media (max-width: 767.98px) {
+        .art-no-filter-input {
+            width: 100%;
+        }
+    }
 </style>
 @endsection
 @section('content')
@@ -179,6 +192,12 @@
                             </div>
                         </div>
                         <div class="table-responsive p-1">
+                            <div class="d-flex justify-content-end mt-2 mb-2" id="art_no_filter_container">
+                                <div class="form-floating form-floating-outline" style="width: 280px; max-width: 100%;">
+                                    <input type="text" id="art_no_filter" class="form-control" placeholder="Search by Art No or Size">
+                                    <label for="art_no_filter">Search By Art No / Size</label>
+                                </div>
+                            </div>
                             <table class="table table-bordered align-middle" id="itemTable">
                                 <thead class="table-light">
                                     <tr>
@@ -862,6 +881,7 @@ $(document).ready(function() {
             }
             updateSerialNumbers();
             calculateTotal();
+            applyArtNoFilter();
             return;
         }
 
@@ -950,6 +970,7 @@ $(document).ready(function() {
                     }
 
                     calculateTotal();
+                    applyArtNoFilter();
                 }
             }
         });
@@ -985,9 +1006,12 @@ $(document).ready(function() {
 
         let index = $('#item-rows .item-row').length;
         let returnQty = initialQty;
+        let sizeVal = item.size_name || item.size || '';
+        let artNoVal = item.art_no || '';
+        let skuVal = item.sku || item.product_barcode || '';
 
         let rowHtml = `
-            <tr class="item-row" data-item-id="${item.id || item.product_barcode}" data-barcode="${item.product_barcode || ''}" data-name="${(item.item_name || '').toLowerCase()}" data-code="${(item.item_code || '').toLowerCase()}">
+            <tr class="item-row" data-item-id="${item.id || item.product_barcode}" data-barcode="${item.product_barcode || ''}" data-sku="${skuVal.toLowerCase()}" data-name="${(item.item_name || '').toLowerCase()}" data-code="${(item.item_code || '').toLowerCase()}" data-art-no="${artNoVal.toLowerCase()}" data-size="${sizeVal.toLowerCase()}" data-invoice-no="${(item.invoice_no || '').toLowerCase()}">
                 <td class="text-center s-no">${index + 1}</td>
                 <td>
                     <input type="hidden" name="items[${index}][invoice_no]" value="${item.invoice_no || ''}">
@@ -1077,7 +1101,87 @@ $(document).ready(function() {
         $('#item-rows').append(rowHtml);
         updateSerialNumbers();
         calculateTotal();
+        applyArtNoFilter();
     };
+
+    function getRowArtNo($row) {
+        return String(
+            $row.attr('data-art-no') ||
+            $row.data('art-no') ||
+            $row.find('input[name*="[art_no]"]').val() ||
+            $row.find('td:nth-child(6)').text() ||
+            ''
+        ).trim().toLowerCase();
+    }
+
+    function getRowSize($row) {
+        return String(
+            $row.attr('data-size') ||
+            $row.data('size') ||
+            $row.find('input[name*="[size]"]').val() ||
+            $row.find('td:nth-child(8)').text() ||
+            ''
+        ).trim().toLowerCase();
+    }
+
+    function getRowSku($row) {
+        return String(
+            $row.attr('data-sku') ||
+            $row.data('sku') ||
+            $row.attr('data-barcode') ||
+            $row.data('barcode') ||
+            $row.find('input[name*="[sku]"]').val() ||
+            ''
+        ).trim().toLowerCase();
+    }
+
+    function getRowName($row) {
+        return String(
+            $row.attr('data-name') ||
+            $row.data('name') ||
+            $row.find('input[name*="[item_name]"]').val() ||
+            ''
+        ).trim().toLowerCase();
+    }
+
+    window.applyArtNoFilter = function() {
+        let term = ($('#art_no_filter').val() || '').trim().toLowerCase();
+        let isFiltering = term.length > 0;
+
+        let $itemRows = $('#item-rows .item-row');
+        let visibleCount = 0;
+
+        $itemRows.each(function() {
+            let $row = $(this);
+            let matches = !isFiltering || 
+                          getRowArtNo($row).includes(term) || 
+                          getRowSize($row).includes(term) || 
+                          getRowSku($row).includes(term) ||
+                          getRowName($row).includes(term);
+            $row.toggle(matches);
+            if (matches) {
+                visibleCount++;
+            }
+        });
+
+        // Toggle empty row when filtering with 0 matches
+        let $emptyRow = $('#item-rows .art-no-filter-empty-row');
+        if (isFiltering && visibleCount === 0 && $itemRows.length > 0) {
+            if (!$emptyRow.length) {
+                $('#item-rows').append(
+                    `<tr class="art-no-filter-empty-row"><td colspan="16" class="text-center text-muted py-3">No matching items found for "${term}"</td></tr>`
+                );
+            } else {
+                $emptyRow.find('td').text(`No matching items found for "${term}"`);
+            }
+        } else {
+            $emptyRow.remove();
+        }
+    };
+
+    $(document).on('input', '#art_no_filter', function() {
+        applyArtNoFilter();
+    });
 
     window.updateSerialNumbers = function() {
         $('#item-rows .item-row').each(function(index) {
@@ -1102,6 +1206,7 @@ $(document).ready(function() {
             $('#item-rows').html('<tr class="empty-row text-center"><td colspan="16">No items added. Use the search box above to scan or search items.</td></tr>');
         }
         calculateTotal();
+        applyArtNoFilter();
     });
 
     // Preload and render items on page load if editing or has old values
@@ -1112,6 +1217,7 @@ $(document).ready(function() {
             addInvoiceItem(item, item.quantity, item.add_to_inventory);
         });
         calculateTotal();
+        applyArtNoFilter();
 
         let initialInvoiceIds = $('#sales_invoice_ids').val();
         if (initialInvoiceIds && initialInvoiceIds.length > 0) {
@@ -1263,13 +1369,15 @@ $(document).ready(function() {
                 return;
             }
 
-            var matchedItem = window.availableInvoiceItems.find(function(item) {
+            var matchedItems = window.availableInvoiceItems.filter(function(item) {
                 return (item.product_barcode && String(item.product_barcode).toLowerCase() === barcode.toLowerCase()) || 
                        (item.sku && String(item.sku).toLowerCase() === barcode.toLowerCase()) || 
-                       (item.item_code && String(item.item_code).toLowerCase() === barcode.toLowerCase());
+                       (item.item_code && String(item.item_code).toLowerCase() === barcode.toLowerCase()) ||
+                       (item.art_no && String(item.art_no).toLowerCase() === barcode.toLowerCase());
             });
 
-            if (matchedItem) {
+            if (matchedItems.length === 1) {
+                var matchedItem = matchedItems[0];
                 if (parseFloat(matchedItem.balance_qty) <= 0) {
                     Swal.fire({
                         icon: 'warning',
@@ -1290,6 +1398,10 @@ $(document).ready(function() {
                     showConfirmButton: false,
                     timer: 1500
                 });
+            } else if (matchedItems.length > 1) {
+                // If multiple sizes exist for this Art No, trigger autocomplete so user can choose size
+                $(this).autocomplete('search', barcode);
+                return;
             } else {
                 Swal.fire({
                     icon: 'error',

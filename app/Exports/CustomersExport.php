@@ -22,9 +22,9 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
-            'ID',
             'Code',
             'Name',
+            'Tamil Name',
             'Category',
             'Mobile Number',
             'Email',
@@ -34,8 +34,10 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping
             'State',
             'City',
             'Place',
+            'Tamil Place',
             'Zone',
             'Address',
+            'Tamil Address',
             'Zip Code',
             'GST No',
             'PAN No',
@@ -48,9 +50,9 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping
         $this->count++;
 
         return [
-            $customer->id,
             $customer->code ?? '',
             $customer->name ?? '',
+            $customer->tamil_name ?? '',
             $customer->category ?? '',
             $customer->mobile_no ?? '',
             $customer->email ?? '',
@@ -60,8 +62,10 @@ class CustomersExport implements FromCollection, WithHeadings, WithMapping
             $customer->state->state_name ?? '',
             $customer->city->city_name ?? '',
             $customer->place->place_name ?? '',
+            $customer->tamil_place ?? '',
             $customer->zone->zone_name ?? '',
             $customer->address_line_1 ?? '',
+            $customer->tamil_address ?? '',
             $customer->zip_code ?? '',
             $customer->gst_no ?? '',
             $customer->pan_no ?? '',

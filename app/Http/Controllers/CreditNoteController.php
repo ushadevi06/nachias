@@ -568,6 +568,12 @@ class CreditNoteController extends Controller
                 }
 
                 $artNo = $item->art_no ?: ($item->stockEntryItem ? $item->stockEntryItem->art_no : '');
+                if (empty($artNo) && !empty($item->sku)) {
+                    $artNo = \App\Models\StockEntryItem::where('sku', $item->sku)->value('art_no') ?: '';
+                }
+                if (empty($artNo) && !empty($item->stock_entry_item_id)) {
+                    $artNo = \App\Models\StockEntryItem::withTrashed()->where('id', $item->stock_entry_item_id)->value('art_no') ?: '';
+                }
                 $colorName = $item->api_color ?: null;
                 if (empty($colorName) && !empty($artNo) && strpos($artNo, '-') !== false) {
                     $parts = explode('-', (string)$artNo);
@@ -1070,17 +1076,14 @@ class CreditNoteController extends Controller
             return response()->json([]);
         }
 
-        $returnStoreId = \App\Models\StoreType::where('store_type_name', 'RETURN GOODS STORE')->value('id') ?? 14;
-
         $items = \App\Models\StockEntryItem::with(['color', 'uom', 'brand', 'item', 'storeType', 'stockEntry'])
             ->where('stock_type', 'finished_goods')
-            ->where('store_type_id', $returnStoreId)
-            ->whereRaw('(qty_in - qty_out) > 0')
             ->where(function($q) use ($term) {
                 $q->where('sku', 'like', "%{$term}%")
                   ->orWhere('art_no', 'like', "%{$term}%")
                   ->orWhere('finished_item_code', 'like', "%{$term}%");
             })
+            ->latest('id')
             ->limit(20)
             ->get();
 
@@ -1124,7 +1127,7 @@ class CreditNoteController extends Controller
                 'sleeve_type' => $item->sleeve_type,
                 'invoice_qty' => '-',
                 'returned_qty' => '-',
-                'balance_qty' => $netQty,
+                'balance_qty' => '-',
                 'mrp' => $mrp,
                 'rate' => $rate,
             ];

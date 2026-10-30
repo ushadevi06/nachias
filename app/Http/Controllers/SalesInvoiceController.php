@@ -2020,7 +2020,7 @@ class SalesInvoiceController extends Controller
         $mode = $request->query('mode', 'portrait');
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
 
-        if ($mode === 'landscape') {
+        if ($mode === 'landscape' || $mode === 'new') {
             $pdf = Pdf::loadView('sales_invoice.delivery_order_landscape', compact('invoice', 'setting', 'totalPcs'));
             $pdf->setPaper('A4', 'landscape');
             return $pdf->stream('Delivery_Order_Landscape_' . $safeInvoiceNo . '.pdf');
@@ -2052,7 +2052,7 @@ class SalesInvoiceController extends Controller
         $mode = $request->query('mode', 'portrait');
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
 
-        if ($mode === 'landscape') {
+        if ($mode === 'landscape' || $mode === 'new') {
             $pdf = Pdf::loadView('sales_invoice.open_delivery_order_landscape', compact('invoice', 'setting', 'totalPcs'));
             $pdf->setPaper('A4', 'landscape');
             return $pdf->stream('Open_Delivery_Order_Landscape_' . $safeInvoiceNo . '.pdf');
