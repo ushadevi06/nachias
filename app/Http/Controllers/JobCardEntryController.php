@@ -1198,7 +1198,7 @@ class JobCardEntryController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('issue-item job-card')) {
             return unauthorizedRedirect();
         }
-        $jobCard = JobCardEntry::with(['brand', 'issueStore', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems', 'sleeveMeters', 'operations', 'cuttingSizeRatios'])->findOrFail($id);
+        $jobCard = JobCardEntry::with(['brand', 'issueStore', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'fabricDetails.layMarks', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems', 'sleeveMeters', 'operations', 'cuttingSizeRatios'])->findOrFail($id);
         $issueItemMap = $jobCard->issueItems->keyBy('job_card_article_matrix_id');
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
         $grnItems = GrnEntryItem::whereIn('grn_entry_id', function ($query) use ($invoiceIds) {

@@ -40,12 +40,14 @@ class Setting extends Model
 		'upi_id',
         'ifsc_code',
         'terms_and_conditions',
+        'refinishing_amount',
     ];
 
     protected $casts = [
         'cgst' => 'float',
         'sgst' => 'float',
         'igst' => 'float',
+        'refinishing_amount' => 'float',
     ];
 
     /**

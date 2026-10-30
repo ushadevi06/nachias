@@ -333,6 +333,13 @@
             <td>:</td>
             <td>{{ $creditNote->note_date->format('d/m/Y') }}</td>
           </tr>
+          @if(!empty($creditNote->reference_no))
+          <tr>
+            <td>Ref No.</td>
+            <td>:</td>
+            <td>{{ $creditNote->reference_no }}</td>
+          </tr>
+          @endif
           <tr>
             <td>Doc No.</td>
             <td>:</td>

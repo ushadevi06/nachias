@@ -766,11 +766,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('/generate-payslip-pdf', [SalaryController::class, 'generatePayslipPdf'])->name('generate.payslip.pdf');
     Route::get('/view-payslip/{id}', [SalaryController::class, 'viewPayslip'])->name('view.payslip');
     Route::get('/print-payslip/{id}', [SalaryController::class, 'printPayslip'])->name('print.payslip');
-    Route::get('/download-payslip/{id}', [SalaryController::class, 'downloadPayslip'])
-        ->name('download.payslip');
+    Route::get('/download-payslip/{id}', [SalaryController::class, 'downloadPayslip'])->name('download.payslip');
     Route::get('/salary-generation/search', [SalaryController::class, 'searchSalaryGeneration'])->name('salary-generation.search');
-    Route::get('/monthly-payroll-export', [SalaryController::class, 'exportExcel'])
-        ->name('monthly-payroll.export');
+    Route::get('/monthly-payroll-export', [SalaryController::class, 'exportExcel'])->name('monthly-payroll.export');
 
     /* Payroll Report */
     Route::get('payroll_reports', [PayrollReportController::class, 'index']);
@@ -779,6 +777,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Sales & Marketing Report */
     Route::get('sales_marketing_reports', [SalesMarketingReportController::class, 'index']);
     Route::get('sales_marketing_reports/ajax/{type}', [SalesMarketingReportController::class, 'ajaxReportData']);
+    Route::post('sales_marketing_reports/update_gst_filing', [SalesMarketingReportController::class, 'updateGstFiling']);
     Route::get('sales_marketing_reports/brandwise_lost_sales_orders', [SalesMarketingReportController::class, 'getBrandwiseLostSalesOrders']);
     Route::get('sales_marketing_reports/brandwise_lost_sales_items', [SalesMarketingReportController::class, 'getLostItemsDetail']);
     Route::get('sales_marketing_reports/lost_items_detail/{so_id}', [SalesMarketingReportController::class, 'getLostItemsDetail']);
@@ -868,7 +867,6 @@ Route::get('/run-customer-tamil-translation', function (\Illuminate\Http\Request
     set_time_limit(0);
     ini_set('max_execution_time', '0');
 
-    // Release session lock so other pages / tabs are never blocked!
     if (session_status() === PHP_SESSION_ACTIVE || session()->isStarted()) {
         session()->save();
     }

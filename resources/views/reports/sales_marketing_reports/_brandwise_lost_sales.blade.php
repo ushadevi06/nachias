@@ -27,37 +27,34 @@
     </table>
 </div>
 
-<!-- Level 2: Brand Orders Drilldown Table -->
-<div id="lostSalesOrdersContainer" class="card-datatable table-responsive" style="display: none;">
-    <table class="datatables-products table table-hover" id="brandwiseLostSalesOrdersTable">
-        <thead class="table-light">
-            <tr>
-                <th>SO No</th>
-                <th>Customer</th>
-                <th class="text-center">Order Date</th>
-                <th class="text-center">Ordered Qty</th>
-                <th class="text-center">Ordered Invoiced Qty</th>
-                <th class="text-center">Open Order Qty</th>
-                <th class="text-center">Total Qty</th>
-                <th class="text-center">Lost Qty</th>
-                <th class="text-center">Lost Revenue</th>
-                <th>Reason for Delay</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot class="table-light border-top">
-            <tr class="bg-light fw-bold">
-                <th colspan="3" class="text-end fw-bold">TOTAL</th>
-                <th class="text-center fw-bold text-primary" id="lostOrdersFootOrdered">0</th>
-                <th class="text-center fw-bold text-primary" id="lostOrdersFootInvoiced">0</th>
-                <th class="text-center fw-bold text-info" id="lostOrdersFootOpenOrder">0</th>
-                <th class="text-center fw-bold text-dark" id="lostOrdersFootTotalQty">0</th>
-                <th class="text-center fw-bold text-warning" id="lostOrdersFootLostQty">0</th>
-                <th class="text-center fw-bold text-danger" id="lostOrdersFootLostVal">₹0.00</th>
-                <th></th>
-            </tr>
-        </tfoot>
-    </table>
+<!-- Level 2: Brand Orders Drilldown Section -->
+<div id="lostSalesOrdersContainer" style="display: none;">
+    <!-- Orders List Table -->
+    <div id="brandOrdersListContainer" class="card-datatable table-responsive">
+        <table class="datatables-products table table-hover" id="brandwiseLostSalesOrdersTable">
+            <thead class="table-light">
+                <tr>
+                    <th>SO No</th>
+                    <th>Art No</th>
+                    <th>Customer Name</th>
+                    <th class="text-center">Lost Qty</th>
+                    <th class="text-end">Selling Price</th>
+                    <th class="text-end">Lost Revenue</th>
+                    <th>Reason for Loss</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot class="table-light border-top">
+                <tr class="bg-light fw-bold">
+                    <th colspan="3" class="text-end fw-bold">TOTAL</th>
+                    <th class="text-center fw-bold text-danger" id="lostOrdersFootLostQty">0</th>
+                    <th></th>
+                    <th class="text-end fw-bold text-danger" id="lostOrdersFootLostVal">₹0.00</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
 </div>
 
 <!-- Level 3: Lost Items Drilldown Sub Page -->
@@ -68,7 +65,7 @@
             <div class="row align-items-center g-2">
                 <div class="col-md-3">
                     <small class="text-muted d-block">Sales Order</small>
-                    <span class="fw-bold text-dark fs-6" id="lostItemsSoNoHeader">-</span>
+                    <span class="fw-bold text-primary fs-6" id="lostItemsSoNoHeader">-</span>
                 </div>
                 <div class="col-md-4">
                     <small class="text-muted d-block">Customer</small>
@@ -86,16 +83,15 @@
         </div>
     </div>
 
-    <!-- Items Table -->
-    <div class="card-datatable table-responsive">
+    <!-- View: Product Wise Table -->
+    <div id="lostItemsProductContainer" class="card-datatable table-responsive">
         <table class="datatables-products table table-hover border-top align-middle" id="brandwiseLostItemsTable">
             <thead class="table-light">
                 <tr>
                     <th class="text-center" style="width: 45px;">#</th>
                     <th>Art No</th>
-                    <th>Item Description</th>
+                    <th>Description</th>
                     <th>Barcode</th>
-                    <th class="text-center">Color</th>
                     <th class="text-center">Size</th>
                     <th class="text-center">Sleeve</th>
                     <th class="text-center">Lost Qty</th>
@@ -104,7 +100,7 @@
             <tbody></tbody>
             <tfoot class="table-light border-top">
                 <tr class="bg-light fw-bold">
-                    <th colspan="7" class="text-end fw-bold">TOTAL LOST QTY</th>
+                    <th colspan="6" class="text-end fw-bold">TOTAL LOST QTY</th>
                     <th class="text-center fw-bold text-danger" id="lostItemsFootTotalQty">0</th>
                 </tr>
             </tfoot>
@@ -114,7 +110,8 @@
 
 <style>
     #brandwiseLostSalesBrandsTable tbody tr.clickable-brand-row:hover td,
-    #brandwiseLostSalesBrandsTable tbody tr:hover td {
+    #brandwiseLostSalesBrandsTable tbody tr:hover td,
+    #brandwiseLostSalesOrdersTable tbody tr:hover td {
         background-color: rgba(105, 108, 255, 0.08) !important;
         cursor: pointer;
         transition: all 0.2s ease-in-out;
@@ -142,6 +139,7 @@ var currentLostSalesSoId = null;
 var currentLostSalesSoNo = '';
 var currentLostSalesCustomer = '';
 var currentLostSalesSoDate = '';
+var currentLostSalesArtNo = '';
 
 function lostSalesGoBack() {
     if (lostSalesLevel === 3) {
@@ -235,6 +233,7 @@ function renderLostSalesBrandLevel() {
             zeroRecords: "No matching records found"
         },
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        order: [[0, 'asc']],
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
@@ -252,11 +251,15 @@ function drillDownToLostSalesBrand(brandName) {
     $('#lostSalesBrandsContainer').hide();
     $('#lostSalesItemsContainer').hide();
     $('#lostSalesOrdersContainer').show();
+    $('#brandOrdersListContainer').show();
 
+    loadBrandOrdersTable();
+}
+
+function loadBrandOrdersTable() {
     if ($.fn.DataTable.isDataTable('#brandwiseLostSalesOrdersTable')) {
         $('#brandwiseLostSalesOrdersTable').DataTable().clear().destroy();
     }
-
     $('#brandwiseLostSalesOrdersTable tbody').empty();
 
     if (typeof showReportLoading === 'function') {
@@ -272,6 +275,7 @@ function drillDownToLostSalesBrand(brandName) {
             type: "GET",
             data: function (d) {
                 d.brand_name = currentLostSalesBrand;
+                d.view_type = 'orders';
                 d.from_date = $('.start_date').val();
                 d.to_date = $('.end_date').val();
                 d.customer_id = $('select[name="customer_id"]').val();
@@ -280,24 +284,21 @@ function drillDownToLostSalesBrand(brandName) {
         },
         columns: [
             { data: 'so_no', name: 'so_no' },
+            { data: 'art_no', name: 'art_no' },
             { data: 'customer', name: 'customer' },
-            { data: 'so_date', name: 'so_date', className: 'text-center' },
-            { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center' },
-            { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center' },
-            { data: 'open_order_qty', name: 'open_order_qty', className: 'text-center' },
-            { data: 'total_qty', name: 'total_qty', className: 'text-center' },
             {
                 data: 'lost_qty', name: 'lost_qty', className: 'text-center',
                 render: function(data, type, row) {
                     if (type === 'display') {
-                        var rawQty = $(data).text().trim();
+                        var rawQty = $(data).text().trim() || row.lost_qty_raw || data;
                         if (!rawQty || rawQty === '0') return data;
-                        return '<a href="javascript:void(0);" class="text-danger fw-bold lost-qty-drill-link" data-so-id="' + row.so_id + '" data-so-no="' + (row.so_no_plain || '') + '" data-customer="' + (row.customer || '') + '" data-so-date="' + (row.so_date || '') + '" title="View Lost Items Detail">' + rawQty + ' <i class="ri ri-arrow-right-s-line" style="font-size:13px;"></i></a>';
+                        return '<a href="javascript:void(0);" class="text-danger fw-bold lost-qty-drill-link" data-so-id="' + row.so_id + '" data-so-no="' + (row.so_no_plain || '') + '" data-customer="' + (row.customer_plain || row.customer || '') + '" data-so-date="' + (row.so_date || '') + '" data-art-no="' + (row.art_no_raw || '') + '" title="View Lost Items Detail">' + rawQty + ' <i class="ri ri-arrow-right-s-line" style="font-size:13px;"></i></a>';
                     }
                     return data;
                 }
             },
-            { data: 'lost_value', name: 'lost_value', className: 'text-center' },
+            { data: 'selling_price', name: 'selling_price', className: 'text-end' },
+            { data: 'lost_revenue', name: 'lost_revenue', className: 'text-end' },
             { data: 'reason', name: 'reason' }
         ],
         drawCallback: function() {
@@ -310,10 +311,6 @@ function drillDownToLostSalesBrand(brandName) {
             var json = api.ajax.json();
 
             if (json && json.totals) {
-                $('#lostOrdersFootOrdered').html(fmt(json.totals.ordered_qty));
-                $('#lostOrdersFootInvoiced').html(fmt(json.totals.invoiced_qty));
-                $('#lostOrdersFootOpenOrder').html(fmt(json.totals.open_order_qty));
-                $('#lostOrdersFootTotalQty').html(fmt(json.totals.total_qty));
                 $('#lostOrdersFootLostQty').html(fmt(json.totals.lost_qty));
                 $('#lostOrdersFootLostVal').html(cur(json.totals.lost_value));
             } else {
@@ -325,12 +322,8 @@ function drillDownToLostSalesBrand(brandName) {
                     }
                     return 0;
                 };
-                $('#lostOrdersFootOrdered').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-                $('#lostOrdersFootInvoiced').html(fmt(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-                $('#lostOrdersFootOpenOrder').html(fmt(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-                $('#lostOrdersFootTotalQty').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-                $('#lostOrdersFootLostQty').html(fmt(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-                $('#lostOrdersFootLostVal').html(cur(api.column(8, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostOrdersFootLostQty').html(fmt(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+                $('#lostOrdersFootLostVal').html(cur(api.column(5, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
             }
         },
         initComplete: function() {
@@ -343,24 +336,27 @@ function drillDownToLostSalesBrand(brandName) {
             zeroRecords: "No matching sales orders found"
         },
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        order: [[0, 'desc']],
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
 }
 
-function drillDownToLostSalesItems(soId, soNo, customer, soDate) {
+function drillDownToLostSalesItems(soId, soNo, customer, soDate, artNo) {
     lostSalesLevel = 3;
     currentLostSalesSoId = soId;
     currentLostSalesSoNo = soNo || ('SO #' + soId);
     currentLostSalesCustomer = customer || '-';
     currentLostSalesSoDate = soDate || '-';
+    currentLostSalesArtNo = artNo || '';
 
     $('#lostSalesBreadcrumbs').removeAttr('style').attr('style', 'display: flex !important;');
     $('#lostSalesBackBtnText').text('Back to Orders');
     $('#lostSalesBreadcrumbText').html(
         'All Brands &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; ' +
         '<span class="text-secondary cursor-pointer" onclick="drillDownToLostSalesBrand(\'' + currentLostSalesBrand.replace(/'/g, "\\'") + '\')">' + currentLostSalesBrand + '</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; ' +
-        'Order No: <span class="text-primary fw-bold">' + currentLostSalesSoNo + '</span> &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; ' +
+        'Order No: <span class="text-primary fw-bold">' + currentLostSalesSoNo + '</span>' +
+        (currentLostSalesArtNo ? ' (<span class="text-secondary">' + currentLostSalesArtNo + '</span>)' : '') + ' &nbsp; <i class="ri ri-arrow-right-s-line"></i> &nbsp; ' +
         '<span class="text-danger fw-bold">Lost Items Detail</span>'
     );
 
@@ -375,6 +371,10 @@ function drillDownToLostSalesItems(soId, soNo, customer, soDate) {
     $('#lostSalesOrdersContainer').hide();
     $('#lostSalesItemsContainer').show();
 
+    loadLostItemsProductTable();
+}
+
+function loadLostItemsProductTable() {
     if ($.fn.DataTable.isDataTable('#brandwiseLostItemsTable')) {
         $('#brandwiseLostItemsTable').DataTable().clear().destroy();
     }
@@ -394,6 +394,7 @@ function drillDownToLostSalesItems(soId, soNo, customer, soDate) {
             data: function (d) {
                 d.so_id = currentLostSalesSoId;
                 d.brand_name = currentLostSalesBrand;
+                d.art_no = currentLostSalesArtNo;
             }
         },
         columns: [
@@ -401,7 +402,6 @@ function drillDownToLostSalesItems(soId, soNo, customer, soDate) {
             { data: 'art_no', name: 'art_no' },
             { data: 'description', name: 'description' },
             { data: 'barcode', name: 'barcode' },
-            { data: 'color', name: 'color', className: 'text-center' },
             { data: 'size', name: 'size', className: 'text-center' },
             { data: 'sleeve', name: 'sleeve', className: 'text-center' },
             { data: 'qty', name: 'qty', className: 'text-center' }
@@ -432,7 +432,7 @@ function drillDownToLostSalesItems(soId, soNo, customer, soDate) {
                     }
                     return 0;
                 };
-                var total = api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+                var total = api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
                 var formattedTotal = total.toLocaleString('en-IN');
                 $('#lostItemsTotalQtyBadge').text(formattedTotal);
                 $('#lostItemsFootTotalQty').text(formattedTotal);
@@ -448,6 +448,7 @@ function drillDownToLostSalesItems(soId, soNo, customer, soDate) {
             zeroRecords: "No matching items found"
         },
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        order: [[0, 'asc']],
         lengthMenu: [10, 25, 50, 100],
         pageLength: 10
     });
@@ -457,23 +458,9 @@ window.initBrandwiseLostSalesTable = function() {
     if (lostSalesLevel === 1) {
         renderLostSalesBrandLevel();
     } else if (lostSalesLevel === 2) {
-        if ($.fn.DataTable.isDataTable('#brandwiseLostSalesOrdersTable')) {
-            var dtOrders = $('#brandwiseLostSalesOrdersTable').DataTable();
-            if (dtOrders.ajax && typeof dtOrders.ajax.reload === 'function' && dtOrders.ajax.url()) {
-                dtOrders.ajax.reload(null, false);
-                return;
-            }
-        }
         drillDownToLostSalesBrand(currentLostSalesBrand);
     } else if (lostSalesLevel === 3) {
-        if ($.fn.DataTable.isDataTable('#brandwiseLostItemsTable')) {
-            var dtItems = $('#brandwiseLostItemsTable').DataTable();
-            if (dtItems.ajax && typeof dtItems.ajax.reload === 'function' && dtItems.ajax.url()) {
-                dtItems.ajax.reload(null, false);
-                return;
-            }
-        }
-        drillDownToLostSalesItems(currentLostSalesSoId, currentLostSalesSoNo, currentLostSalesCustomer, currentLostSalesSoDate);
+        drillDownToLostSalesItems(currentLostSalesSoId, currentLostSalesSoNo, currentLostSalesCustomer, currentLostSalesSoDate, currentLostSalesArtNo);
     }
 };
 
@@ -500,6 +487,17 @@ $(document).on('click', '.view-lost-brand-orders', function(e) {
     }
 });
 
+// Row click handler in Level 2 Table
+$(document).on('click', '#brandwiseLostSalesOrdersTable tbody tr', function(e) {
+    if ($(e.target).is('a') || $(e.target).is('button') || $(e.target).closest('a').length > 0 || $(e.target).closest('button').length > 0) {
+        return;
+    }
+    var $link = $(this).find('.lost-qty-drill-link');
+    if ($link.length > 0) {
+        $link.trigger('click');
+    }
+});
+
 // Lost Qty click handler in Level 2 Table (Drill down to Level 3)
 $(document).on('click', '.lost-qty-drill-link', function(e) {
     e.preventDefault();
@@ -507,9 +505,10 @@ $(document).on('click', '.lost-qty-drill-link', function(e) {
     var soNo     = $(this).data('so-no') || ('SO #' + soId);
     var customer = $(this).data('customer') || '-';
     var soDate   = $(this).data('so-date') || '-';
+    var artNo    = $(this).data('art-no') || '';
     if (!soId) return;
 
-    drillDownToLostSalesItems(soId, soNo, customer, soDate);
+    drillDownToLostSalesItems(soId, soNo, customer, soDate, artNo);
 });
 
 // Auto-init if tab is active

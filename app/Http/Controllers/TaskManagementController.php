@@ -988,6 +988,7 @@ class TaskManagementController extends Controller
                 return [
                     'id' => $s->id,
                     'name' => ($s->service_name ?? ''),
+                    'base_quantity_source' => $s->base_quantity_source,
                     'qty' => $pendingQty,
                     'total_planned_qty' => $qty,
                     'already_assigned_qty' => $otherAssigned,
@@ -1005,19 +1006,54 @@ class TaskManagementController extends Controller
                 $thisTaskAllowedPending = $stageTotalPlanned;
             }
 
-            $allTasksServicesMaxIssued = 0;
-            if ($selectedSchedule->id) {
-                $allStageTasks = Task::where('stage_id', $selectedSchedule->id)->pluck('id');
-                if ($allStageTasks->isNotEmpty()) {
-                    $allTasksServicesMaxIssued = (float)TaskAssignEmployee::whereIn('task_id', $allStageTasks)->selectRaw('service_id, sum(issue_qty) as total_issued')->groupBy('service_id')->pluck('total_issued')->max();
-                }
-            }
-
             if (!$id) {
                 $stageRemainingPending = $thisTaskAllowedPending;
                 $stageAlreadyAssigned = max(0, $stageTotalPlanned - $stageRemainingPending);
             } else {
-                $stageRemainingPending = max(0, $stageTotalPlanned - $allTasksServicesMaxIssued);
+                if (!empty($services)) {
+                    $allAssignedAssignments = TaskAssignEmployee::whereHas('task', function($q) use ($selectedSchedule) {
+                        $q->where('stage_id', $selectedSchedule->id);
+                    })->get();
+
+                    $assignedServiceIds = $allAssignedAssignments->pluck('service_id')->unique()->filter()->toArray();
+
+                    $totalQtyServices = collect($services)->filter(function($s) {
+                        return empty($s['base_quantity_source']) || $s['base_quantity_source'] === 'Total Qty';
+                    });
+
+                    $relevantServices = $totalQtyServices->filter(function($s) use ($assignedServiceIds) {
+                        return in_array($s['id'], $assignedServiceIds);
+                    });
+
+                    if ($relevantServices->isEmpty()) {
+                        $relevantServices = $totalQtyServices->isNotEmpty() ? $totalQtyServices : collect($services);
+                    }
+
+                    $unassignedList = [];
+                    foreach ($relevantServices as $srv) {
+                        $assignedAll = (float)$allAssignedAssignments->where('service_id', $srv['id'])->sum('issue_qty');
+                        $diff = max(0, (float)$srv['total_planned_qty'] - $assignedAll);
+                        if ($diff > 0) {
+                            $unassignedList[] = $diff;
+                        }
+                    }
+
+                    if (!empty($unassignedList)) {
+                        $stageRemainingPending = min($unassignedList);
+                    } else {
+                        $anyRemaining = collect($services)->map(function($srv) use ($allAssignedAssignments) {
+                            $assignedAll = (float)$allAssignedAssignments->where('service_id', $srv['id'])->sum('issue_qty');
+                            return max(0, (float)$srv['total_planned_qty'] - $assignedAll);
+                        })->filter(fn($q) => $q > 0);
+
+                        $stageRemainingPending = $anyRemaining->isNotEmpty() ? $anyRemaining->max() : 0;
+                    }
+                } else {
+                    $assignedAll = (float)TaskAssignEmployee::whereHas('task', function($q) use ($selectedSchedule) {
+                        $q->where('stage_id', $selectedSchedule->id);
+                    })->sum('issue_qty');
+                    $stageRemainingPending = max(0, $stageTotalPlanned - $assignedAll);
+                }
                 $stageAlreadyAssigned = max(0, $stageTotalPlanned - $stageRemainingPending);
             }
 

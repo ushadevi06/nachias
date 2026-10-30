@@ -34,7 +34,7 @@
                                     <button type="button" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold" id="btn-view-history" data-task-id="{{ $task->id }}"><i class="ri ri-time-line me-1"></i> History</button>
                                     @if($task->job_card_entry_id && $task->stage_id && isset($stageRemainingPending) && $stageRemainingPending > 0)
                                     <a href="{{ route('task_management.add', ['job_card_id' => $task->job_card_entry_id, 'stage_id' => $task->stage_id]) }}" class="btn btn-success rounded-pill px-3 py-2 fw-bold shadow-sm" target="_blank">
-                                        <i class="ri ri-add-circle-line me-1"></i> + Create Next Task ({{ (int)$stageRemainingPending }} PCS)
+                                        <i class="ri ri-add-circle-line me-1"></i> + Add Next Task ({{ (int)$stageRemainingPending }} PCS)
                                     </a>
                                     @endif
                                     @endif
@@ -954,7 +954,7 @@
                             var $row = $(this);
                             var rowStatus = $row.find('input[name*="[status]"]').val() || $row.find('.status-select-row').val();
                             if (rowStatus === 'Completed') {
-                                return; // Completed batches must never be modified by Plan Date change!
+                                return; 
                             }
                             var $rowDate = $row.find('.flatpickr-assignment.issue-date');
                             var fp = $rowDate[0] ? $rowDate[0]._flatpickr : null;
@@ -1200,7 +1200,6 @@
                     $submitBtn.attr('disabled', false);
                 }
 
-                // Update row Add (+) button visibility: show ONLY IF service has remaining pending qty > 0
                 $('#assignment-cards-container .assignment-row').each(function() {
                     var $row = $(this);
                     var sId = $row.find('.services-select').val();

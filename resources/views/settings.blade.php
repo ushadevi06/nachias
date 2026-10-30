@@ -44,9 +44,7 @@
                                     @enderror
                                     @if(isset($setting) && $setting->logo)
                                     <div class="mt-2">
-                                        <img src="{{ url('uploads/logo/' . $setting->logo) }}"
-                                            alt="Current Logo"
-                                            style="max-width: 100px; max-height: 100px;">
+                                        <img src="{{ url('uploads/logo/' . $setting->logo) }}" alt="Current Logo" style="max-width: 100px; max-height: 100px;">
                                     </div>
                                     @endif
                                 </div>
@@ -304,10 +302,7 @@
                                             $endDay = $rangeParts[1] ?? '';
                                         @endphp
                                         @foreach($daysList as $day)
-                                            <div class="day-pill px-3 py-2 border rounded-pill cursor-pointer text-center" 
-                                                 data-day="{{ $day }}" 
-                                                 style="min-width: 90px; transition: all 0.3s ease; cursor: pointer; user-select: none;">
-                                                {{ substr($day, 0, 3) }}
+                                            <div class="day-pill px-3 py-2 border rounded-pill cursor-pointer text-center" data-day="{{ $day }}" style="min-width: 90px; transition: all 0.3s ease; cursor: pointer; user-select: none;">{{ substr($day, 0, 3) }}
                                             </div>
                                         @endforeach
                                     </div>
@@ -360,6 +355,15 @@
 
                             <div class="col-lg-12">
                                 <h6>Other:</h6>
+                            </div>
+                            <div class="col-md-6 col-xl-4 mb-3">
+                                <div class="form-floating form-floating-outline">
+                                    <input class="form-control @error('refinishing_amount') is-invalid @enderror" id="refinishing_amount" name="refinishing_amount" type="number" step="any" placeholder="Enter Refinishing Amount / Rate per Piece" value="{{ old('refinishing_amount', $setting->refinishing_amount ?? '0') }}" />
+                                    <label for="refinishing_amount">Refinishing Amount / PCS (₹)</label>
+                                    @error('refinishing_amount')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                             <div class="col-md-12">
                                 <div class="form-floating form-floating-outline">

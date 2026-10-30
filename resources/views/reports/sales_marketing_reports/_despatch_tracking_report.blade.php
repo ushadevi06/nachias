@@ -109,6 +109,10 @@
                     <th class="text-center">Size</th>
                     <th class="text-center">Sleeve</th>
                     <th class="text-center text-danger fw-bold">Pending Qty</th>
+                    <th class="text-center text-success fw-bold">FG Stocks</th>
+                    <th>Cutting No</th>
+                    <th>Unit</th>
+                    <th>Stage Status</th>
                 </tr>
             </thead>
             <tbody id="despatchDrilldownTbody">
@@ -117,6 +121,7 @@
                 <tr>
                     <th colspan="5" class="text-end text-uppercase">Total Pending Qty:</th>
                     <th class="text-center text-danger fs-6" id="despatchDrilldownTfootTotal">0</th>
+                    <th colspan="4"></th>
                 </tr>
             </tfoot>
         </table>
@@ -229,7 +234,7 @@ window.drillDownToDespatchPending = function(soId, soNo) {
             tbody.empty();
 
             if (!items.length) {
-                tbody.html('<tr><td colspan="6" class="text-center py-4 text-muted"><i class="ri-checkbox-circle-line ri-2x text-success d-block mb-1"></i>No pending items for this order. All items delivered!</td></tr>');
+                tbody.html('<tr><td colspan="10" class="text-center py-4 text-muted"><i class="ri-checkbox-circle-line ri-2x text-success d-block mb-1"></i>No pending items for this order. All items delivered!</td></tr>');
                 return;
             }
 
@@ -239,6 +244,10 @@ window.drillDownToDespatchPending = function(soId, soNo) {
                 var size = item.size || '-';
                 var sleeve = item.sleeve || '-';
                 var qty = item.qty_raw !== undefined ? item.qty_raw : (parseFloat(item.qty) || 0);
+                var fgStock = item.fg_stock_html || (item.fg_stock > 0 ? ('<span class="badge bg-label-success fw-bold">' + item.fg_stock + ' pcs</span>') : '<span class="text-muted fw-bold">0</span>');
+                var cuttingNo = item.cutting_no_html || '<span class="text-muted">-</span>';
+                var unit = item.unit_html || '<span class="text-muted">-</span>';
+                var stageStatus = item.stage_status_html || '<span class="badge bg-label-secondary">Not in Production</span>';
 
                 var row = '<tr>' +
                     '<td class="text-center fw-semibold text-muted">' + (idx + 1) + '</td>' +
@@ -247,6 +256,10 @@ window.drillDownToDespatchPending = function(soId, soNo) {
                     '<td class="text-center">' + size + '</td>' +
                     '<td class="text-center">' + sleeve + '</td>' +
                     '<td class="text-center text-danger fw-bold">' + Number(qty).toLocaleString('en-IN') + '</td>' +
+                    '<td class="text-center">' + fgStock + '</td>' +
+                    '<td>' + cuttingNo + '</td>' +
+                    '<td>' + unit + '</td>' +
+                    '<td>' + stageStatus + '</td>' +
                 '</tr>';
                 tbody.append(row);
             });
@@ -271,7 +284,7 @@ window.drillDownToDespatchPending = function(soId, soNo) {
         error: function(err) {
             $('#despatchDrilldownLoader').hide();
             $('#despatchDrilldownTable').show();
-            $('#despatchDrilldownTbody').html('<tr><td colspan="6" class="text-center py-4 text-danger"><i class="ri-error-warning-line ri-2x d-block mb-1"></i>Failed to load pending items. Please try again.</td></tr>');
+            $('#despatchDrilldownTbody').html('<tr><td colspan="10" class="text-center py-4 text-danger"><i class="ri-error-warning-line ri-2x d-block mb-1"></i>Failed to load pending items. Please try again.</td></tr>');
         }
     });
 };
@@ -283,6 +296,22 @@ window.backToDespatchMain = function() {
     $('#despatchMainTableWrapper').fadeIn(150);
     if ($.fn.DataTable.isDataTable('#despatchReportTable')) {
         $('#despatchReportTable').DataTable().columns.adjust();
+    }
+};
+
+window.toggleCuttingExpansion = function(uniqueId, btnElem, count) {
+    var $extras = $('.extra-cut-' + uniqueId);
+    var $btn = $(btnElem);
+    if ($extras.is(':visible')) {
+        $extras.slideUp(150);
+        $btn.html('+ ' + count + ' more <i class="ri-arrow-down-s-line"></i>')
+            .removeClass('bg-label-secondary text-secondary')
+            .addClass('bg-label-info text-primary');
+    } else {
+        $extras.slideDown(150);
+        $btn.html('Show less <i class="ri-arrow-up-s-line"></i>')
+            .removeClass('bg-label-info text-primary')
+            .addClass('bg-label-secondary text-secondary');
     }
 };
 </script>

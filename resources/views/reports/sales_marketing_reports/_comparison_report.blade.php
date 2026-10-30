@@ -77,6 +77,28 @@ function formatComparisonNumber(num) {
     return Number(val.toFixed(0)).toLocaleString('en-IN');
 }
 
+function formatComparisonValue(curr, prev) {
+    var c = parseFloat(curr) || 0;
+    var p = parseFloat(prev) || 0;
+
+    if (c === 0 && p === 0) {
+        return '<span class="text-muted opacity-50">-</span>';
+    }
+
+    var formatted = Number(c.toFixed(0)).toLocaleString('en-IN');
+    if (c === 0) {
+        formatted = '0';
+    }
+
+    if (c > p) {
+        return '<span class="text-success fw-bold">' + formatted + '</span>';
+    } else if (c < p) {
+        return '<span class="text-danger fw-bold">' + formatted + '</span>';
+    } else {
+        return '<span class="text-dark fw-semibold">' + formatted + '</span>';
+    }
+}
+
 function renderComparisonMatrix(data) {
     if ($.fn.DataTable.isDataTable('#comparisonReportTable')) {
         try {
@@ -136,11 +158,11 @@ function renderComparisonMatrix(data) {
             brands.forEach(function(b) {
                 var bData = (m.brands && m.brands[b.id]) ? m.brands[b.id] : { prev_qty: 0, curr_qty: 0 };
                 row.append('<td class="text-end px-2 border-start">' + formatComparisonNumber(bData.prev_qty) + '</td>');
-                row.append('<td class="text-end px-2 border-end fw-semibold text-primary">' + formatComparisonNumber(bData.curr_qty) + '</td>');
+                row.append('<td class="text-end px-2 border-end">' + formatComparisonValue(bData.curr_qty, bData.prev_qty) + '</td>');
             });
 
             row.append('<td class="text-end px-2 fw-semibold bg-light">' + formatComparisonNumber(m.total_prev) + '</td>');
-            row.append('<td class="text-end px-2 fw-bold text-primary bg-light">' + formatComparisonNumber(m.total_curr) + '</td>');
+            row.append('<td class="text-end px-2 bg-light">' + formatComparisonValue(m.total_curr, m.total_prev) + '</td>');
 
             var growthHtml = '-';
             var gVal = parseFloat(m.growth);
@@ -168,11 +190,11 @@ function renderComparisonMatrix(data) {
     brands.forEach(function(b) {
         var bt = brandTotals[b.id] || { prev: 0, curr: 0 };
         trFoot.append('<th class="text-end px-2 border-start text-dark fw-bold">' + formatComparisonNumber(bt.prev) + '</th>');
-        trFoot.append('<th class="text-end px-2 border-end text-primary fw-bold">' + formatComparisonNumber(bt.curr) + '</th>');
+        trFoot.append('<th class="text-end px-2 border-end">' + formatComparisonValue(bt.curr, bt.prev) + '</th>');
     });
 
     trFoot.append('<th class="text-end px-2 fw-bold text-dark bg-light">' + formatComparisonNumber(grandTotal.prev) + '</th>');
-    trFoot.append('<th class="text-end px-2 fw-bold text-primary bg-light fs-6">' + formatComparisonNumber(grandTotal.curr) + '</th>');
+    trFoot.append('<th class="text-end px-2 bg-light fs-6">' + formatComparisonValue(grandTotal.curr, grandTotal.prev) + '</th>');
 
     var grandGVal = parseFloat(grandTotal.growth);
     var grandGrowthHtml = '-';

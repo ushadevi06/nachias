@@ -5,6 +5,7 @@
                 <th>CN No</th>
                 <th>Date</th>
                 <th>Customer</th>
+                <th>Reference No</th>
                 <th>Zone</th>
                 <th>Sales Executive</th>
                 <th>Reason</th>
@@ -20,7 +21,7 @@
         <tbody></tbody>
         <tfoot class="bg-light fw-bold">
             <tr>
-                <th colspan="6" class="text-end text-uppercase">Total:</th>
+                <th colspan="7" class="text-end text-uppercase">Total:</th>
                 <th class="text-center text-primary fw-bold" id="cn_report_total_qty">0</th>
                 <th class="text-end text-primary fw-bold" id="cn_report_sub_total">₹0.00</th>
                 <th class="text-end text-danger fw-bold" id="cn_report_discount">₹0.00</th>

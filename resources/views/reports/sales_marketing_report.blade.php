@@ -61,7 +61,36 @@
                     </select>
                 </div>
 
-                <div class="col-12 col-md-2 col-xl-2">
+                <div class="col-12 col-md-3 col-xl-2" id="incentive_fy_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted"><i class="ri-calendar-line me-1"></i>Financial Year</label>
+                    <select class="form-select select2" name="incentive_fy" id="incentive_fy_filter">
+                        @php
+                            $currM = (int)date('n');
+                            $currY = (int)date('Y');
+                            $currentFyStart = ($currM >= 4) ? $currY : $currY - 1;
+                        @endphp
+                        @for($fy = $currentFyStart + 1; $fy >= $currentFyStart - 4; $fy--)
+                            @php
+                                $fyVal = $fy . '-' . ($fy + 1);
+                            @endphp
+                            <option value="{{ $fyVal }}" {{ $fy == $currentFyStart ? 'selected' : '' }}>
+                                {{ $fyVal }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 col-xl-2" id="incentive_quarter_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted"><i class="ri-pie-chart-line me-1"></i>Quarter</label>
+                    <select class="form-select select2" name="incentive_quarter" id="incentive_quarter_filter">
+                        <option value="ALL" selected>Full Year (Apr - Mar)</option>
+                        <option value="Q1">Q1 (Apr - Jun)</option>
+                        <option value="Q2">Q2 (Jul - Sep)</option>
+                        <option value="Q3">Q3 (Oct - Dec)</option>
+                        <option value="Q4">Q4 (Jan - Mar)</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-2 col-xl-2" id="customer_filter_col">
                     <label class="form-label small fw-bold text-muted">Customer</label>
                     <select class="form-select select2" name="customer_id" data-placeholder="Select Customer">
                         <option value=""></option>
@@ -113,6 +142,14 @@
                         <option value="">All</option>
                         <option value="generated" {{ request('einvoice_status') == 'generated' ? 'selected' : '' }}>Generated</option>
                         <option value="not_generated" {{ request('einvoice_status') == 'not_generated' ? 'selected' : '' }}>Not Generated</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 col-xl-1" id="gst_filing_status_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted">GST Filing</label>
+                    <select class="form-select select2" name="gst_filing_status" id="gst_filing_status_filter" data-placeholder="All Status">
+                        <option value="">All</option>
+                        <option value="pending" {{ request('gst_filing_status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="filed" {{ request('gst_filing_status') == 'filed' ? 'selected' : '' }}>Filed</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-1 col-xl-1 d-flex gap-1">
@@ -311,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .premium-content-card {
         border-radius: 12px;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .kpi-card {
@@ -357,13 +394,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .table thead th {
         border-top: none;
-        border-bottom: 2px solid #e2e8f0;
+        border-bottom: 2px solid #cbd5e1 !important;
         text-transform: uppercase;
-        font-size: 0.7rem;
+        font-size: 0.72rem;
         letter-spacing: 0.05em;
         font-weight: 700;
         color: #475569;
-        padding: 1rem 0.75rem;
+        padding: 0.85rem 0.75rem;
+        background-color: #f1f5f9 !important;
+        vertical-align: middle;
     }
 
     .table tbody td {
@@ -553,6 +592,18 @@ $.extend(true, $.fn.dataTable.defaults, {
 });
 
 $(document).ready(function() {
+    window.reportsDatatables = window.reportsDatatables || {};
+    var currentIncentiveAgentId = null;
+    var currentIncentiveAgentName = '';
+
+    function renderIncentiveExecutiveLevel() {
+        currentIncentiveAgentId = null;
+        currentIncentiveAgentName = '';
+        $('#incentiveBrandLevelContainer').hide();
+        $('#incentiveBreadcrumbs').hide();
+        $('#incentiveMainLevelContainer').show();
+    }
+
     const tableConfigs = {
         'order-report': {
             tableId: '#orderReportTable',
@@ -652,6 +703,7 @@ $(document).ready(function() {
             tableId: '#salesGstReportTable',
             type: 'sales-gst-report',
             columns: [
+                { data: 'checkbox', name: 'checkbox', orderable: false, searchable: false, className: 'text-center' },
                 { data: 'sno', name: 'sno', className: 'text-center' },
                 { data: 'inv_no', name: 'inv_no', className: 'fw-bold text-primary' },
                 { data: 'inv_date', name: 'inv_date', className: 'text-nowrap' },
@@ -660,6 +712,7 @@ $(document).ready(function() {
                 { data: 'place', name: 'place' },
                 { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
                 { data: 'sub_total', name: 'sub_total', className: 'text-end fw-semibold text-dark' },
+                { data: 'discount_percent', name: 'discount_percent', className: 'text-center' },
                 { data: 'discount', name: 'discount', className: 'text-end fw-semibold text-danger' },
                 { data: 'taxable_value', name: 'taxable_value', className: 'text-end fw-semibold text-dark' },
                 { data: 'cgst_percent', name: 'cgst_percent', className: 'text-center' },
@@ -670,21 +723,25 @@ $(document).ready(function() {
                 { data: 'igst_amount', name: 'igst_amount', className: 'text-end fw-semibold text-dark' },
                 { data: 'round_off', name: 'round_off', className: 'text-end fw-semibold text-secondary' },
                 { data: 'total_amount', name: 'total_amount', className: 'text-end fw-bold text-success' },
-                { data: 'einvoice_status', name: 'einvoice_status', className: 'text-center' }
+                { data: 'einvoice_status', name: 'einvoice_status', className: 'text-center' },
+                { data: 'gst_filing_status', name: 'gst_filing_status', className: 'text-center' }
             ],
             footerCallback: function (row, data, start, end, display) {
                 var api = this.api();
                 var json = api.ajax.json();
-                if (json && json.totals) {
-                    $('#sales_gst_report_total_qty').html(json.totals.qty);
-                    $('#sales_gst_report_total_subtotal').html(json.totals.sub_total);
-                    $('#sales_gst_report_total_discount').html(json.totals.discount);
-                    $('#sales_gst_report_total_taxable').html(json.totals.taxable_value);
-                    $('#sales_gst_report_total_cgst').html(json.totals.cgst_amount);
-                    $('#sales_gst_report_total_sgst').html(json.totals.sgst_amount);
-                    $('#sales_gst_report_total_igst').html(json.totals.igst_amount);
-                    $('#sales_gst_report_total_round_off').html(json.totals.round_off);
-                    $('#sales_gst_report_total_amount').html(json.totals.total_amount);
+                if (json) {
+                    window.gstPendingCount = (json.pending_gst_count !== undefined) ? json.pending_gst_count : 0;
+                    if (json.totals) {
+                        $('#sales_gst_report_total_qty').html(json.totals.qty);
+                        $('#sales_gst_report_total_subtotal').html(json.totals.sub_total);
+                        $('#sales_gst_report_total_discount').html(json.totals.discount);
+                        $('#sales_gst_report_total_taxable').html(json.totals.taxable_value);
+                        $('#sales_gst_report_total_cgst').html(json.totals.cgst_amount);
+                        $('#sales_gst_report_total_sgst').html(json.totals.sgst_amount);
+                        $('#sales_gst_report_total_igst').html(json.totals.igst_amount);
+                        $('#sales_gst_report_total_round_off').html(json.totals.round_off);
+                        $('#sales_gst_report_total_amount').html(json.totals.total_amount);
+                    }
                 }
             }
         },
@@ -692,6 +749,7 @@ $(document).ready(function() {
             tableId: '#salesGstReportTable',
             type: 'sales-gst-report',
             columns: [
+                { data: 'checkbox', name: 'checkbox', orderable: false, searchable: false, className: 'text-center' },
                 { data: 'sno', name: 'sno', className: 'text-center' },
                 { data: 'inv_no', name: 'inv_no', className: 'fw-bold text-primary' },
                 { data: 'inv_date', name: 'inv_date', className: 'text-nowrap' },
@@ -700,6 +758,7 @@ $(document).ready(function() {
                 { data: 'place', name: 'place' },
                 { data: 'qty', name: 'qty', className: 'text-center fw-bold' },
                 { data: 'sub_total', name: 'sub_total', className: 'text-end fw-semibold text-dark' },
+                { data: 'discount_percent', name: 'discount_percent', className: 'text-center' },
                 { data: 'discount', name: 'discount', className: 'text-end fw-semibold text-danger' },
                 { data: 'taxable_value', name: 'taxable_value', className: 'text-end fw-semibold text-dark' },
                 { data: 'cgst_percent', name: 'cgst_percent', className: 'text-center' },
@@ -710,21 +769,25 @@ $(document).ready(function() {
                 { data: 'igst_amount', name: 'igst_amount', className: 'text-end fw-semibold text-dark' },
                 { data: 'round_off', name: 'round_off', className: 'text-end fw-semibold text-secondary' },
                 { data: 'total_amount', name: 'total_amount', className: 'text-end fw-bold text-success' },
-                { data: 'einvoice_status', name: 'einvoice_status', className: 'text-center' }
+                { data: 'einvoice_status', name: 'einvoice_status', className: 'text-center' },
+                { data: 'gst_filing_status', name: 'gst_filing_status', className: 'text-center' }
             ],
             footerCallback: function (row, data, start, end, display) {
                 var api = this.api();
                 var json = api.ajax.json();
-                if (json && json.totals) {
-                    $('#sales_gst_report_total_qty').html(json.totals.qty);
-                    $('#sales_gst_report_total_subtotal').html(json.totals.sub_total);
-                    $('#sales_gst_report_total_discount').html(json.totals.discount);
-                    $('#sales_gst_report_total_taxable').html(json.totals.taxable_value);
-                    $('#sales_gst_report_total_cgst').html(json.totals.cgst_amount);
-                    $('#sales_gst_report_total_sgst').html(json.totals.sgst_amount);
-                    $('#sales_gst_report_total_igst').html(json.totals.igst_amount);
-                    $('#sales_gst_report_total_round_off').html(json.totals.round_off);
-                    $('#sales_gst_report_total_amount').html(json.totals.total_amount);
+                if (json) {
+                    window.gstPendingCount = (json.pending_gst_count !== undefined) ? json.pending_gst_count : 0;
+                    if (json.totals) {
+                        $('#sales_gst_report_total_qty').html(json.totals.qty);
+                        $('#sales_gst_report_total_subtotal').html(json.totals.sub_total);
+                        $('#sales_gst_report_total_discount').html(json.totals.discount);
+                        $('#sales_gst_report_total_taxable').html(json.totals.taxable_value);
+                        $('#sales_gst_report_total_cgst').html(json.totals.cgst_amount);
+                        $('#sales_gst_report_total_sgst').html(json.totals.sgst_amount);
+                        $('#sales_gst_report_total_igst').html(json.totals.igst_amount);
+                        $('#sales_gst_report_total_round_off').html(json.totals.round_off);
+                        $('#sales_gst_report_total_amount').html(json.totals.total_amount);
+                    }
                 }
             }
         },
@@ -944,20 +1007,60 @@ $(document).ready(function() {
                 { data: 'achieved', name: 'achieved', className: 'text-center fw-bold' },
                 { data: 'discount_qty', name: 'discount_qty', className: 'text-center text-muted' },
                 { data: 'return_qty', name: 'return_qty', className: 'text-center text-danger fw-semibold' },
-                { data: 'incentive_qty', name: 'incentive_qty', className: 'text-center text-primary fw-bold' },
+                { data: 'incentive_qty', name: 'incentive_qty', className: 'text-center text-info fw-bold' },
                 { data: 'rate_per_pcs', name: 'rate_per_pcs', className: 'text-end' },
-                { data: 'incentive_amt', name: 'incentive_amt', className: 'text-end fw-bold text-success' }
+                { data: 'incentive_amt', name: 'incentive_amt', className: 'text-end fw-semibold text-dark' },
+                { data: 'refinishing_amt', name: 'refinishing_amt', className: 'text-end text-danger fw-semibold' },
+                { data: 'net_incentive_amt', name: 'net_incentive_amt', className: 'text-end fw-bold text-success' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json) {
+                    if (json.period) {
+                        $('#incentivePeriodBadge').text(json.period);
+                        $('#incentivePeriodWrapper').show();
+                    } else {
+                        $('#incentivePeriodWrapper').hide();
+                    }
+                    if (json.totals) {
+                        $('#incentive_report_total_target').html(json.totals.total_target || 0);
+                        $('#incentive_report_total_achieved').html(json.totals.total_achieved || 0);
+                        $('#incentive_report_total_discount').html(json.totals.total_discount || 0);
+                        $('#incentive_report_total_return').html(json.totals.total_return || 0);
+                        $('#incentive_report_total_incentive_qty').html(json.totals.total_incentive_qty || 0);
+                        $('#incentive_report_total_gross_incentive').html(json.totals.gross_incentive_amt || '₹0.00');
+                        $('#incentive_report_total_refinishing').html(json.totals.total_refinishing || '₹0.00');
+                        $('#incentive_report_total_net_incentive').html(json.totals.net_incentive_amt || '₹0.00');
+                    }
+                }
+            }
+        },
+        'incentive-brand-drilldown': {
+            tableId: '#incentiveBrandReportTable',
+            type: 'incentive-brand-drilldown',
+            columns: [
+                { data: 'brand', name: 'brand' },
+                { data: 'achieved', name: 'achieved', className: 'text-center fw-bold' },
+                { data: 'discount_qty', name: 'discount_qty', className: 'text-center text-muted' },
+                { data: 'return_qty', name: 'return_qty', className: 'text-center text-danger fw-semibold' },
+                { data: 'incentive_qty', name: 'incentive_qty', className: 'text-center text-info fw-bold' },
+                { data: 'rate_per_pcs', name: 'rate_per_pcs', className: 'text-end' },
+                { data: 'incentive_amt', name: 'incentive_amt', className: 'text-end fw-semibold text-dark' },
+                { data: 'refinishing_amt', name: 'refinishing_amt', className: 'text-end text-danger fw-semibold' },
+                { data: 'net_incentive_amt', name: 'net_incentive_amt', className: 'text-end fw-bold text-success' }
             ],
             footerCallback: function (row, data, start, end, display) {
                 var api = this.api();
                 var json = api.ajax.json();
                 if (json && json.totals) {
-                    $('#incentive_report_total_target').html(json.totals.total_target || 0);
-                    $('#incentive_report_total_achieved').html(json.totals.total_achieved || 0);
-                    $('#incentive_report_total_discount').html(json.totals.total_discount || 0);
-                    $('#incentive_report_total_return').html(json.totals.total_return || 0);
-                    $('#incentive_report_total_incentive_qty').html(json.totals.total_incentive_qty || 0);
-                    $('#incentive_report_total_incentive').html(json.totals.incentive_amt || '₹0.00');
+                    $('#incentive_brand_total_achieved').html(json.totals.total_achieved || 0);
+                    $('#incentive_brand_total_discount').html(json.totals.total_discount || 0);
+                    $('#incentive_brand_total_return').html(json.totals.total_return || 0);
+                    $('#incentive_brand_total_incentive_qty').html(json.totals.total_incentive_qty || 0);
+                    $('#incentive_brand_total_gross_incentive').html(json.totals.gross_incentive_amt || '₹0.00');
+                    $('#incentive_brand_total_refinishing').html(json.totals.total_refinishing || '₹0.00');
+                    $('#incentive_brand_total_net_incentive').html(json.totals.net_incentive_amt || '₹0.00');
                 }
             }
         },
@@ -968,6 +1071,7 @@ $(document).ready(function() {
                 { data: 'note_no', name: 'note_no', className: 'fw-bold' },
                 { data: 'note_date', name: 'note_date', className: 'text-nowrap' },
                 { data: 'customer', name: 'customer' },
+                { data: 'reference_no', name: 'reference_no' },
                 { data: 'zone', name: 'zone' },
                 { data: 'agent', name: 'agent' },
                 { data: 'reason', name: 'reason' },
@@ -1130,6 +1234,8 @@ $(document).ready(function() {
 
         if ($.fn.DataTable.isDataTable(config.tableId)) {
             const dt = tableElem.DataTable();
+            window.reportsDatatables = window.reportsDatatables || {};
+            window.reportsDatatables[tabPaneId] = dt;
             if (dt && dt.ajax && typeof dt.ajax.url === 'function' && dt.ajax.url()) {
                 try {
                     dt.ajax.reload(function() { showReportLoading(false); }, resetPaging);
@@ -1142,7 +1248,7 @@ $(document).ready(function() {
             }
         }
 
-        tableElem.DataTable({
+        const initializedDt = tableElem.DataTable({
             processing: true,
             serverSide: true,
             autoWidth: false,
@@ -1171,10 +1277,14 @@ $(document).ready(function() {
                     d.from_date = fromVal;
                     d.to_date = toVal;
                     d.customer_id = $('select[name="customer_id"]').val();
-                    d.agent_id = $('select[name="agent_id"]').val();
+                    d.agent_id = (config.type === 'incentive-brand-drilldown' && currentIncentiveAgentId) ? currentIncentiveAgentId : $('select[name="agent_id"]').val();
+                    d.drilldown_agent_id = currentIncentiveAgentId;
                     d.brand_id = $('select[name="brand_id"]').val();
                     d.einvoice_status = $('select[name="einvoice_status"]').val();
                     d.invoice_status = $('select[name="invoice_status"]').val();
+                    d.gst_filing_status = $('select[name="gst_filing_status"]').val();
+                    d.incentive_fy = $('select[name="incentive_fy"]').val();
+                    d.incentive_quarter = $('select[name="incentive_quarter"]').val();
                 }
             },
             initComplete: function() {
@@ -1202,29 +1312,57 @@ $(document).ready(function() {
             lengthMenu: [10, 25, 50, 100],
             pageLength: 10
         });
+        window.reportsDatatables = window.reportsDatatables || {};
+        window.reportsDatatables[tabPaneId] = initializedDt;
     }
 
     function updateFilterVisibility(reportType) {
-        if (reportType === 'comparison-report') {
+        if (reportType === 'incentive-report') {
+            $('#sales_marketing_date_range_col').hide();
+            $('#comparison_year_filter_col').hide();
+            $('#incentive_fy_filter_col').show();
+            $('#incentive_quarter_filter_col').show();
+            $('#customer_filter_col').hide();
+            $('select[name="customer_id"]').val('').trigger('change.select2');
+            $('#invoice_status_filter_col').hide();
+            $('select[name="invoice_status"]').val('').trigger('change.select2');
+            $('#einvoice_status_filter_col').hide();
+            $('select[name="einvoice_status"]').val('').trigger('change.select2');
+            $('#gst_filing_status_filter_col').hide();
+            $('select[name="gst_filing_status"]').val('').trigger('change.select2');
+            $('#brand_filter_col').hide();
+            $('select[name="brand_id"]').val('').trigger('change.select2');
+        } else if (reportType === 'comparison-report') {
+            $('#customer_filter_col').show();
             $('#sales_marketing_date_range_col').hide();
             $('#comparison_year_filter_col').show();
+            $('#incentive_fy_filter_col').hide();
+            $('#incentive_quarter_filter_col').hide();
             $('#brand_filter_col').show();
             $('#invoice_status_filter_col').hide();
             $('select[name="invoice_status"]').val('').trigger('change.select2');
             $('#einvoice_status_filter_col').hide();
             $('select[name="einvoice_status"]').val('').trigger('change.select2');
+            $('#gst_filing_status_filter_col').hide();
+            $('select[name="gst_filing_status"]').val('').trigger('change.select2');
         } else {
+            $('#customer_filter_col').show();
             $('#sales_marketing_date_range_col').show();
             $('#comparison_year_filter_col').hide();
+            $('#incentive_fy_filter_col').hide();
+            $('#incentive_quarter_filter_col').hide();
             if (reportType === 'sales-gst-report' || reportType === 'sales-report') {
                 $('#invoice_status_filter_col').show();
                 $('#einvoice_status_filter_col').show();
+                $('#gst_filing_status_filter_col').show();
                 $('#brand_filter_col').hide();
                 $('select[name="brand_id"]').val('').trigger('change.select2');
             } else if (reportType === 'invoice-report') {
                 $('#invoice_status_filter_col').hide();
                 $('select[name="invoice_status"]').val('').trigger('change.select2');
                 $('#einvoice_status_filter_col').show();
+                $('#gst_filing_status_filter_col').hide();
+                $('select[name="gst_filing_status"]').val('').trigger('change.select2');
                 $('#brand_filter_col').hide();
                 $('select[name="brand_id"]').val('').trigger('change.select2');
             } else if (reportType === 'regular-discount' || reportType === 'discount' || reportType === 'brandwise-lost-sales' || reportType === 'dispatch-report') {
@@ -1232,12 +1370,16 @@ $(document).ready(function() {
                 $('select[name="invoice_status"]').val('').trigger('change.select2');
                 $('#einvoice_status_filter_col').hide();
                 $('select[name="einvoice_status"]').val('').trigger('change.select2');
+                $('#gst_filing_status_filter_col').hide();
+                $('select[name="gst_filing_status"]').val('').trigger('change.select2');
                 $('#brand_filter_col').show();
             } else {
                 $('#invoice_status_filter_col').hide();
                 $('select[name="invoice_status"]').val('').trigger('change.select2');
                 $('#einvoice_status_filter_col').hide();
                 $('select[name="einvoice_status"]').val('').trigger('change.select2');
+                $('#gst_filing_status_filter_col').hide();
+                $('select[name="gst_filing_status"]').val('').trigger('change.select2');
                 $('#brand_filter_col').hide();
                 $('select[name="brand_id"]').val('').trigger('change.select2');
             }
@@ -1250,6 +1392,7 @@ $(document).ready(function() {
         $('#active_report_title').html(selectedText);
 
         $('#reportTabsContent > .tab-pane').removeClass('show active');
+
         $('#' + selectedType).addClass('show active');
 
         if (selectedType === 'despatch-report' && typeof backToDespatchMain === 'function') {
@@ -1292,6 +1435,10 @@ $(document).ready(function() {
 
         if (selectedType === 'brandwise-lost-sales' && typeof renderLostSalesBrandLevel === 'function') {
             renderLostSalesBrandLevel();
+        }
+
+        if (selectedType === 'incentive-report') {
+            renderIncentiveExecutiveLevel();
         }
 
         updateFilterVisibility(selectedType);
@@ -1340,6 +1487,12 @@ $(document).ready(function() {
         if (activeTabId === 'comparison-report') {
             if (typeof window.initComparisonReportTable === 'function') {
                 window.initComparisonReportTable();
+                return;
+            }
+        }
+        if (activeTabId === 'incentive-report') {
+            if (currentIncentiveAgentId) {
+                loadActiveTabTable('incentive-brand-drilldown', true);
                 return;
             }
         }
@@ -1620,11 +1773,53 @@ $(document).ready(function() {
         $('select[name="brand_id"]').val('').trigger('change');
         $('select[name="invoice_status"]').val('').trigger('change');
         $('select[name="einvoice_status"]').val('').trigger('change');
+        $('select[name="gst_filing_status"]').val('').trigger('change');
         $('#comparison_year_filter').val(new Date().getFullYear()).trigger('change.select2');
+        $('#incentive_fy_filter').prop('selectedIndex', 0).trigger('change.select2');
+        $('#incentive_quarter_filter').prop('selectedIndex', 0).trigger('change.select2');
         if (typeof renderLostSalesBrandLevel === 'function') {
             renderLostSalesBrandLevel();
         }
+        renderIncentiveExecutiveLevel();
         $('#salesMarketingReportForm').trigger('submit');
+    });
+
+    // Handle Zone Wise Incentive Executive Row Click to Drilldown to Brand Level
+    $(document).on('click', '#incentiveReportTable tbody tr', function(e) {
+        if ($(e.target).is('a, button, input, select')) return;
+        if (!$.fn.DataTable.isDataTable('#incentiveReportTable')) return;
+
+        const dt = $('#incentiveReportTable').DataTable();
+        const rowData = dt.row(this).data();
+
+        if (rowData && rowData.agent_id) {
+            currentIncentiveAgentId = rowData.agent_id;
+            currentIncentiveAgentName = rowData.agent_raw_name || 'Sales Executive';
+
+            $('#incentiveMainLevelContainer').hide();
+            $('#incentiveBrandLevelContainer').show();
+            $('#incentiveDrilldownExecutiveName').text(currentIncentiveAgentName);
+            $('#incentiveBreadcrumbs').css('display', 'inline-flex');
+
+            loadActiveTabTable('incentive-brand-drilldown', true);
+        }
+    });
+
+    // Handle Back Button from Brand Level to All Executives
+    $(document).on('click', '#btnBackToIncentiveLevel', function(e) {
+        e.preventDefault();
+        renderIncentiveExecutiveLevel();
+        loadActiveTabTable('incentive-report', false);
+    });
+
+    $(document).on('change', '#incentive_fy_filter, #incentive_quarter_filter', function() {
+        if ($('#report_type_select').val() === 'incentive-report') {
+            if (currentIncentiveAgentId) {
+                loadActiveTabTable('incentive-brand-drilldown', true);
+            } else {
+                loadActiveTabTable('incentive-report', true);
+            }
+        }
     });
 
     // Export Handlers
@@ -1732,6 +1927,331 @@ $(document).ready(function() {
     });
     $('#btn-print').on('click', function() {
         triggerSalesMarketingExport('.buttons-print');
+    });
+
+    // GST Filing Checkbox selection & actions
+    window.gstSelectAllMatching = false;
+    window.gstPendingCount = 0;
+
+    function resetGstSelection() {
+        window.gstSelectAllMatching = false;
+        $('#gstSelectAll').prop('checked', false);
+        $('.gst-invoice-cb').prop('checked', false);
+        $('#gstSelectAllPagesBanner').addClass('d-none');
+        $('#gstBannerContent').removeClass('d-none');
+        $('#gstBannerAllSelectedContent').addClass('d-none');
+        updateGstActionButtons();
+    }
+
+    function updateGstActionButtons() {
+        if (window.gstSelectAllMatching) {
+            var count = window.gstPendingCount;
+            $('#gstSelectedCount').text(count);
+            $('#gstSelectionNotice').show();
+            $('#gstSelectionBadge').text(count + ' pending invoice(s) selected (All Pages)');
+            $('#btnMarkGstFiled').prop('disabled', count === 0);
+            return;
+        }
+
+        var selectedCbs = $('.gst-invoice-cb:checked');
+        var count = selectedCbs.length;
+        $('#gstSelectedCount').text(count);
+        
+        if (count > 0) {
+            $('#gstSelectionNotice').show();
+            $('#gstSelectionBadge').text(count + ' invoice(s) selected');
+            $('#btnMarkGstFiled').prop('disabled', false);
+        } else {
+            $('#gstSelectionNotice').hide();
+            $('#btnMarkGstFiled').prop('disabled', true);
+        }
+    }
+
+    $(document).on('change', '#gstSelectAll', function() {
+        var isChecked = $(this).is(':checked');
+        $('.gst-invoice-cb').prop('checked', isChecked);
+        window.gstSelectAllMatching = false;
+
+        var pageCbs = $('.gst-invoice-cb').length;
+        if (isChecked && pageCbs > 0 && window.gstPendingCount > pageCbs) {
+            $('#gstPageCountText').text(pageCbs);
+            $('#gstTotalFilteredPendingCount').text(window.gstPendingCount);
+            $('#gstBannerContent').removeClass('d-none');
+            $('#gstBannerAllSelectedContent').addClass('d-none');
+            $('#gstSelectAllPagesBanner').removeClass('d-none');
+        } else {
+            $('#gstSelectAllPagesBanner').addClass('d-none');
+        }
+
+        updateGstActionButtons();
+    });
+
+    $(document).on('click', '#btnSelectAllMatching', function(e) {
+        e.preventDefault();
+        window.gstSelectAllMatching = true;
+        $('#gstBannerContent').addClass('d-none');
+        $('#gstAllSelectedPendingCount').text(window.gstPendingCount);
+        $('#gstBannerAllSelectedContent').removeClass('d-none');
+        updateGstActionButtons();
+    });
+
+    $(document).on('click', '#btnClearAllSelection', function(e) {
+        e.preventDefault();
+        resetGstSelection();
+    });
+
+    $(document).on('change', '.gst-invoice-cb', function() {
+        if (window.gstSelectAllMatching) {
+            window.gstSelectAllMatching = false;
+            $('#gstSelectAllPagesBanner').addClass('d-none');
+        }
+        var total = $('.gst-invoice-cb').length;
+        var checked = $('.gst-invoice-cb:checked').length;
+        $('#gstSelectAll').prop('checked', total > 0 && total === checked);
+        if (total === 0 || total !== checked) {
+            $('#gstSelectAllPagesBanner').addClass('d-none');
+        }
+        updateGstActionButtons();
+    });
+
+    // Reset checkboxes on datatable draw
+    $(document).on('draw.dt', '#salesGstReportTable', function() {
+        resetGstSelection();
+    });
+
+    // Handle Mark as Filed
+    $(document).on('click', '#btnMarkGstFiled', function() {
+        var isSelectAllMatching = window.gstSelectAllMatching ? 1 : 0;
+        var ids = [];
+        if (!isSelectAllMatching) {
+            $('.gst-invoice-cb:checked').each(function() {
+                ids.push($(this).val());
+            });
+
+            if (ids.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'No Invoices Selected', text: 'Please select at least one invoice to mark as GST Filed.' });
+                return;
+            }
+        } else {
+            if (!window.gstPendingCount || window.gstPendingCount <= 0) {
+                Swal.fire({ icon: 'warning', title: 'No Pending Invoices', text: 'There are no pending invoices to mark as GST Filed.' });
+                return;
+            }
+        }
+
+        var confirmCount = isSelectAllMatching ? window.gstPendingCount : ids.length;
+        var confirmMsg = isSelectAllMatching 
+            ? 'Are you sure you want to mark all ' + confirmCount + ' pending invoice(s) matching current filters across all pages as GST Filed?' 
+            : 'Are you sure you want to mark ' + confirmCount + ' selected invoice(s) as GST Filed?';
+
+        Swal.fire({
+            title: 'Mark as GST Filed?',
+            text: confirmMsg,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Mark as Filed'
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                var postData = {
+                    _token: "{{ csrf_token() }}",
+                    select_all_matching: isSelectAllMatching,
+                    action: 'file'
+                };
+
+                if (isSelectAllMatching) {
+                    var fromVal = $('.start_date').val();
+                    var toVal = $('.end_date').val();
+                    if (!fromVal || !toVal) {
+                        var rangeText = $('#sales_marketing_date_range').val() || '';
+                        if (rangeText.indexOf(' to ') !== -1) {
+                            var parts = rangeText.split(' to ');
+                            fromVal = parts[0].trim();
+                            toVal = parts[1].trim();
+                        } else if (rangeText.trim()) {
+                            fromVal = rangeText.trim();
+                            toVal = rangeText.trim();
+                        }
+                    }
+                    postData.from_date = fromVal;
+                    postData.to_date = toVal;
+                    postData.customer_id = $('select[name="customer_id"]').val();
+                    postData.agent_id = $('select[name="agent_id"]').val();
+                    postData.invoice_status = $('select[name="invoice_status"]').val();
+                    postData.einvoice_status = $('select[name="einvoice_status"]').val();
+                    
+                    var dt = null;
+                    if ($.fn.DataTable.isDataTable('#salesGstReportTable')) {
+                        dt = $('#salesGstReportTable').DataTable();
+                    } else if (typeof window.reportsDatatables !== 'undefined') {
+                        dt = window.reportsDatatables['sales-gst-report'] || window.reportsDatatables['sales-report'];
+                    }
+                    postData.search = dt ? dt.search() : ($('#salesGstReportTable_filter input').val() || '');
+                } else {
+                    postData.invoice_ids = ids;
+                }
+
+                $.ajax({
+                    url: "{{ url('sales_marketing_reports/update_gst_filing') }}",
+                    type: 'POST',
+                    data: postData,
+                    beforeSend: function() {
+                        $('#btnMarkGstFiled').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Processing...');
+                    },
+                    success: function(res) {
+                        Swal.fire({ icon: 'success', title: 'Success', text: res.message, timer: 2000, showConfirmButton: false });
+                        resetGstSelection();
+                        if ($.fn.DataTable.isDataTable('#salesGstReportTable')) {
+                            $('#salesGstReportTable').DataTable().ajax.reload(null, false);
+                        } else if (typeof window.reportsDatatables !== 'undefined' && window.reportsDatatables['sales-gst-report']) {
+                            window.reportsDatatables['sales-gst-report'].ajax.reload(null, false);
+                        } else if (typeof window.reportsDatatables !== 'undefined' && window.reportsDatatables['sales-report']) {
+                            window.reportsDatatables['sales-report'].ajax.reload(null, false);
+                        }
+                    },
+                    error: function(xhr) {
+                        var err = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to update GST filing status.';
+                        Swal.fire({ icon: 'error', title: 'Error', text: err });
+                    },
+                    complete: function() {
+                        $('#btnMarkGstFiled').html('<i class="ri ri-checkbox-circle-line me-1"></i> Mark as GST Filed (<span id="gstSelectedCount">0</span>)');
+                        updateGstActionButtons();
+                    }
+                });
+            }
+        });
+    });
+
+    // View GST Filing Details Popup on Click
+    $(document).on('click', '.view-gst-info-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var invNo = $(this).data('inv') || '-';
+        var userName = $(this).data('user') || 'Staff';
+        var filedDate = $(this).data('date') || '-';
+
+        Swal.fire({
+            title: '<h5 class="fw-bold mb-0 text-success"><i class="ri ri-checkbox-circle-line me-1"></i> GST Filing Details</h5>',
+            html: `
+                <div class="card border shadow-none mt-3 text-start bg-light">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted fw-semibold">Invoice No:</span>
+                            <span class="fw-bold text-primary">${invNo}</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted fw-semibold">GST Status:</span>
+                            <span class="badge bg-success">Filed</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted fw-semibold">Filed By:</span>
+                            <span class="fw-bold text-dark">${userName}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted fw-semibold">Filing Date & Time:</span>
+                            <span class="fw-semibold text-dark">${filedDate}</span>
+                        </div>
+                    </div>
+                </div>
+            `,
+            confirmButtonText: 'Close',
+            confirmButtonColor: '#696cff'
+        });
+    });
+
+    // =========================================================================
+    // Global Sticky Table Header on Page Scroll for All Report Tables
+    // =========================================================================
+    function handleStickyTableHeaders() {
+        var scrollTop = $(window).scrollTop();
+        var $navbar = $('#layout-navbar');
+        var $menu = $('#layout-menu');
+
+        var navbarOffset = 0;
+        if ($navbar.length && $navbar.is(':visible')) {
+            navbarOffset += $navbar.outerHeight();
+        }
+        if ($menu.length && $menu.is(':visible')) {
+            navbarOffset += $menu.outerHeight();
+        }
+        if (navbarOffset === 0) {
+            navbarOffset = 118;
+        }
+
+        var $activeTables = $('.tab-pane.active:visible, .tab-pane.show:visible').find('table');
+        if (!$activeTables.length) {
+            $activeTables = $('.card-datatable:visible table');
+        }
+
+        $activeTables.each(function() {
+            var $table = $(this);
+            if (!$table.is(':visible')) return;
+
+            var $thead = $table.find('> thead');
+            if (!$thead.length) return;
+
+            var tableOffset = $table.offset();
+            if (!tableOffset) return;
+
+            var tableTop = tableOffset.top;
+            var tableHeight = $table.outerHeight();
+            var theadHeight = $thead.outerHeight();
+
+            var diff = (scrollTop + navbarOffset) - tableTop;
+            var maxDiff = tableHeight - theadHeight - 45;
+
+            var translateY = 0;
+            if (diff > 0 && diff < maxDiff) {
+                translateY = diff;
+            } else if (diff >= maxDiff && maxDiff > 0) {
+                translateY = maxDiff;
+            }
+
+            var $thCells = $thead.find('th, td');
+            if (translateY > 0) {
+                $thCells.css({
+                    'transform': 'translateY(' + translateY + 'px)',
+                    'z-index': 20,
+                    'background-color': '#f1f5f9',
+                    'box-shadow': '0 2px 4px rgba(0,0,0,0.08)'
+                });
+            } else {
+                $thCells.css({
+                    'transform': '',
+                    'z-index': '',
+                    'background-color': '',
+                    'box-shadow': ''
+                });
+            }
+        });
+    }
+
+    var ticking = false;
+    $(window).on('scroll', function() {
+        if (!ticking) {
+            window.requestAnimationFrame(function() {
+                handleStickyTableHeaders();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    });
+
+    $(window).on('resize', function() {
+        handleStickyTableHeaders();
+    });
+
+    $(document).on('shown.bs.tab change draw.dt', function() {
+        setTimeout(function() {
+            $('table thead th, table thead td').css({
+                'transform': '',
+                'z-index': '',
+                'background-color': '',
+                'box-shadow': ''
+            });
+            handleStickyTableHeaders();
+        }, 150);
     });
 });
 </script>

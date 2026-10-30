@@ -68,6 +68,7 @@ class SettingController extends Controller
             'ifsc_code' => 'nullable|string|max:20',
             'upi_id' => 'nullable|string|max:255',
             'terms_and_conditions' => 'required|string',
+            'refinishing_amount' => 'nullable|numeric|min:0',
         ];
 
         $messages = [
@@ -109,6 +110,7 @@ class SettingController extends Controller
             'account_no' => $request->account_no,
             'ifsc_code' => $request->ifsc_code,
             'upi_id' => $request->upi_id,
+            'refinishing_amount' => $request->refinishing_amount ?? 0,
         ];
 
         if ($request->hasFile('logo')) {

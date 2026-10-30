@@ -70,6 +70,10 @@
                             <div class="fw-bold text-dark">{{ $creditNote->note_date->format('d M, Y') }}</div>
                         </div>
                         <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Reference No</div>
+                            <div class="fw-bold text-dark">{{ $creditNote->reference_no ?: '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Customer</div>
                             <div class="fw-bold text-dark">
                                 {{ $creditNote->customer ? $creditNote->customer->name : 'N/A' }}

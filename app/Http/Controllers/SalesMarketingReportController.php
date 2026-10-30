@@ -511,32 +511,19 @@ class SalesMarketingReportController extends Controller
 
                 case 'pending-report':
                 case 'pending-product-wise':
-                    $delSub = DB::table('sales_invoices as si')
-                        ->join('sales_invoice_items as sii', 'sii.sales_invoice_id', '=', 'si.id')
-                        ->whereNull('si.deleted_at')
-                        ->whereNull('sii.deleted_at')
-                        ->where(function($q) {
-                            $q->whereNull('si.einvoice_status')
-                              ->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
-                        })
-                        ->select('si.so_id', DB::raw('SUM(sii.quantity) as delivered_qty'))
-                        ->groupBy('si.so_id');
-
-                    $pendingSoQuery = DB::table('sales_orders')
-                        ->leftJoinSub($delSub, 'del', 'del.so_id', '=', 'sales_orders.id')
+                    $soQuery = DB::table('sales_orders')
                         ->whereNull('sales_orders.deleted_at')
                         ->where(function($q) {
                             $q->whereNull('sales_orders.status')
                               ->orWhereRaw('LOWER(sales_orders.status) != ?', ['cancelled']);
-                        })
-                        ->whereRaw('(sales_orders.total_qty - COALESCE(del.delivered_qty, 0)) > 0');
+                        });
 
-                    if ($fromDate) $pendingSoQuery->where('sales_orders.so_date', '>=', $fromDate);
-                    if ($toDate) $pendingSoQuery->where('sales_orders.so_date', '<=', $toDate);
-                    if ($customerId) $pendingSoQuery->where('sales_orders.customer_id', $customerId);
-                    if ($agentId) $pendingSoQuery->where('sales_orders.agent_id', $agentId);
+                    if ($fromDate) $soQuery->where('sales_orders.so_date', '>=', $fromDate);
+                    if ($toDate) $soQuery->where('sales_orders.so_date', '<=', $toDate);
+                    if ($customerId) $soQuery->where('sales_orders.customer_id', $customerId);
+                    if ($agentId) $soQuery->where('sales_orders.agent_id', $agentId);
 
-                    $pendingSoIds = $pendingSoQuery->pluck('sales_orders.id')->toArray();
+                    $pendingSoIds = $soQuery->pluck('sales_orders.id')->toArray();
 
                     if (empty($pendingSoIds)) {
                         return response()->json([
@@ -553,6 +540,12 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $pwBaseQuery = DB::table('sales_order_items')->join('sales_orders', 'sales_order_items.sale_order_id', '=', 'sales_orders.id')->leftJoin('colors', 'sales_order_items.color_id', '=', 'colors.id')->leftJoin('stock_entry_items as sei', 'sales_order_items.stock_entry_item_id', '=', 'sei.id')->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')->leftJoin('styles as st', 'sei.style_id', '=', 'st.id')->leftJoin('items as it', 'sei.item_id', '=', 'it.id')->whereIn('sales_order_items.sale_order_id', $pendingSoIds)->whereNull('sales_order_items.deleted_at');
+
+                    if ($brandId) {
+                        $pwBaseQuery->where(function($q) use ($brandId) {
+                            $q->where('sei.brand_id', $brandId)->orWhere('b.id', $brandId);
+                        });
+                    }
 
                     if ($search) {
                         $pwBaseQuery->where(function($q) use ($search) {
@@ -594,18 +587,110 @@ class SalesMarketingReportController extends Controller
                      ->orderBy('display_item_name', 'asc')
                      ->get();
 
-                    $recordsTotal = count($summaryData);
-                    $tot36 = floatval($summaryData->sum('size_36'));
-                    $tot38 = floatval($summaryData->sum('size_38'));
-                    $tot40 = floatval($summaryData->sum('size_40'));
-                    $tot42 = floatval($summaryData->sum('size_42'));
-                    $tot44 = floatval($summaryData->sum('size_44'));
-                    $tot46 = floatval($summaryData->sum('size_46'));
-                    $tot48 = floatval($summaryData->sum('size_48'));
-                    $tot50 = floatval($summaryData->sum('size_50'));
-                    $totAllQty = floatval($summaryData->sum('total_qty'));
+                    $dispBaseQuery = DB::table('sales_invoice_items as sii')
+                        ->join('sales_invoices as si', 'sii.sales_invoice_id', '=', 'si.id')
+                        ->leftJoin('colors as col', 'sii.color_id', '=', 'col.id')
+                        ->leftJoin('stock_entry_items as sei', 'sii.stock_entry_item_id', '=', 'sei.id')
+                        ->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
+                        ->leftJoin('styles as st', 'sei.style_id', '=', 'st.id')
+                        ->leftJoin('items as it', 'sei.item_id', '=', 'it.id')
+                        ->whereNull('sii.deleted_at')
+                        ->whereNull('si.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('si.einvoice_status')->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
+                        });
 
-                    $pagedPw = ($length !== -1) ? $summaryData->slice($start, $length)->values() : $summaryData;
+                    if ($fromDate) $dispBaseQuery->where('si.inv_date', '>=', $fromDate);
+                    if ($toDate) $dispBaseQuery->where('si.inv_date', '<=', $toDate);
+                    if ($customerId) $dispBaseQuery->where('si.customer_id', $customerId);
+                    if ($agentId) $dispBaseQuery->where('si.agent_id', $agentId);
+                    if ($brandId) {
+                        $dispBaseQuery->where(function($q) use ($brandId) {
+                            $q->where('sei.brand_id', $brandId)->orWhere('b.id', $brandId);
+                        });
+                    }
+                    if ($search) {
+                        $dispBaseQuery->where(function($q) use ($search) {
+                            $q->where('sii.art_no', 'like', "%{$search}%")
+                              ->orWhere('b.brand_name', 'like', "%{$search}%")
+                              ->orWhere('st.style_name', 'like', "%{$search}%")
+                              ->orWhere('it.name', 'like', "%{$search}%")
+                              ->orWhere('col.color_name', 'like', "%{$search}%")
+                              ->orWhere('sii.api_color', 'like', "%{$search}%");
+                        });
+                    }
+
+                    $dispTotals = (clone $dispBaseQuery)->select(
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "36" THEN sii.quantity ELSE 0 END) as tot_36'),
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "38" THEN sii.quantity ELSE 0 END) as tot_38'),
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "40" THEN sii.quantity ELSE 0 END) as tot_40'),
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "42" THEN sii.quantity ELSE 0 END) as tot_42'),
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "44" THEN sii.quantity ELSE 0 END) as tot_44'),
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "46" THEN sii.quantity ELSE 0 END) as size_46'),
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "48" THEN sii.quantity ELSE 0 END) as size_48'),
+                        DB::raw('SUM(CASE WHEN TRIM(sii.size) = "50" THEN sii.quantity ELSE 0 END) as size_50')
+                    )->first();
+
+                    $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
+                    $globalPending = [];
+                    $totAllQty = 0;
+
+                    foreach ($sizes as $sz) {
+                        $so = floatval($summaryData->sum('size_' . $sz));
+                        $dispKey = in_array($sz, ['46', '48', '50']) ? 'size_' . $sz : 'tot_' . $sz;
+                        $disp = floatval($dispTotals->{$dispKey} ?? 0);
+                        $rem = max(0, $so - $disp);
+                        $globalPending[$sz] = $rem;
+                        $totAllQty += $rem;
+                    }
+
+                    $tot36 = $globalPending['36'];
+                    $tot38 = $globalPending['38'];
+                    $tot40 = $globalPending['40'];
+                    $tot42 = $globalPending['42'];
+                    $tot44 = $globalPending['44'];
+                    $tot46 = $globalPending['46'];
+                    $tot48 = $globalPending['48'];
+                    $tot50 = $globalPending['50'];
+
+                    // Distribute global pending across order rows proportionally by ordered qty
+                    $pendingPool = $globalPending;
+                    $pendingRows = collect();
+
+                    $sortedSummary = $summaryData->sortByDesc('total_qty')->values();
+
+                    foreach ($sortedSummary as $row) {
+                        $rowPending = [];
+                        $rowTot = 0;
+                        foreach ($sizes as $sz) {
+                            $ord = floatval($row->{'size_' . $sz});
+                            $needed = $pendingPool[$sz];
+                            $take = min($ord, $needed);
+                            $rowPending['size_' . $sz] = $take;
+                            $pendingPool[$sz] -= $take;
+                            $rowTot += $take;
+                        }
+
+                        if ($rowTot > 0) {
+                            $newRow = clone $row;
+                            foreach ($sizes as $sz) {
+                                $newRow->{'size_' . $sz} = $rowPending['size_' . $sz];
+                            }
+                            $newRow->total_qty = $rowTot;
+                            $pendingRows->push($newRow);
+                        }
+                    }
+
+                    // Any remaining in pool add to first row
+                    foreach ($sizes as $sz) {
+                        if ($pendingPool[$sz] > 0 && $pendingRows->count() > 0) {
+                            $pendingRows[0]->{'size_' . $sz} += $pendingPool[$sz];
+                            $pendingRows[0]->total_qty += $pendingPool[$sz];
+                        }
+                    }
+
+                    $recordsTotal = $pendingRows->count();
+                    $pagedPw = ($length !== -1) ? $pendingRows->slice($start, $length)->values() : $pendingRows;
 
                     $pwData = [];
                     $sno = $start + 1;
@@ -659,32 +744,19 @@ class SalesMarketingReportController extends Controller
                     ]);
 
                 case 'pending-party-wise':
-                    $delSub = DB::table('sales_invoices as si')
-                        ->join('sales_invoice_items as sii', 'sii.sales_invoice_id', '=', 'si.id')
-                        ->whereNull('si.deleted_at')
-                        ->whereNull('sii.deleted_at')
-                        ->where(function($q) {
-                            $q->whereNull('si.einvoice_status')
-                              ->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
-                        })
-                        ->select('si.so_id', DB::raw('SUM(sii.quantity) as delivered_qty'))
-                        ->groupBy('si.so_id');
-
-                    $pendingSoQuery = DB::table('sales_orders')
-                        ->leftJoinSub($delSub, 'del', 'del.so_id', '=', 'sales_orders.id')
+                    $soQuery = DB::table('sales_orders')
                         ->whereNull('sales_orders.deleted_at')
                         ->where(function($q) {
                             $q->whereNull('sales_orders.status')
                               ->orWhereRaw('LOWER(sales_orders.status) != ?', ['cancelled']);
-                        })
-                        ->whereRaw('(sales_orders.total_qty - COALESCE(del.delivered_qty, 0)) > 0');
+                        });
 
-                    if ($fromDate) $pendingSoQuery->where('sales_orders.so_date', '>=', $fromDate);
-                    if ($toDate) $pendingSoQuery->where('sales_orders.so_date', '<=', $toDate);
-                    if ($customerId) $pendingSoQuery->where('sales_orders.customer_id', $customerId);
-                    if ($agentId) $pendingSoQuery->where('sales_orders.agent_id', $agentId);
+                    if ($fromDate) $soQuery->where('sales_orders.so_date', '>=', $fromDate);
+                    if ($toDate) $soQuery->where('sales_orders.so_date', '<=', $toDate);
+                    if ($customerId) $soQuery->where('sales_orders.customer_id', $customerId);
+                    if ($agentId) $soQuery->where('sales_orders.agent_id', $agentId);
 
-                    $pendingSoIds = $pendingSoQuery->pluck('sales_orders.id')->toArray();
+                    $pendingSoIds = $soQuery->pluck('sales_orders.id')->toArray();
 
                     if (empty($pendingSoIds)) {
                         return response()->json([
@@ -701,6 +773,12 @@ class SalesMarketingReportController extends Controller
                     }
 
                     $partyBaseQuery = DB::table('sales_order_items')->join('sales_orders', 'sales_order_items.sale_order_id', '=', 'sales_orders.id')->leftJoin('customers', 'sales_orders.customer_id', '=', 'customers.id')->leftJoin('places', 'customers.place_id', '=', 'places.id')->leftJoin('cities', 'customers.city_id', '=', 'cities.id')->leftJoin('sales_agents', 'sales_orders.agent_id', '=', 'sales_agents.id')->leftJoin('zones', 'sales_orders.zone_id', '=', 'zones.id')->leftJoin('colors', 'sales_order_items.color_id', '=', 'colors.id')->leftJoin('stock_entry_items as sei', 'sales_order_items.stock_entry_item_id', '=', 'sei.id')->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')->leftJoin('styles as st', 'sei.style_id', '=', 'st.id')->leftJoin('items as it', 'sei.item_id', '=', 'it.id')->whereIn('sales_order_items.sale_order_id', $pendingSoIds)->whereNull('sales_order_items.deleted_at');
+
+                    if ($brandId) {
+                        $partyBaseQuery->where(function($q) use ($brandId) {
+                            $q->where('sei.brand_id', $brandId)->orWhere('b.id', $brandId);
+                        });
+                    }
 
                     if ($search) {
                         $partyBaseQuery->where(function($q) use ($search) {
@@ -752,51 +830,100 @@ class SalesMarketingReportController extends Controller
                         'stock_prod_name', 'item_tbl_name'
                     )->orderBy('sales_orders.id', 'desc');
 
-                    if ($search) {
-                        $summaryData = $partyGrouped->get();
+                    $delPartyQuery = DB::table('sales_invoice_items as sii')
+                        ->join('sales_invoices as si', 'sii.sales_invoice_id', '=', 'si.id')
+                        ->leftJoin('colors as col', 'sii.color_id', '=', 'col.id')
+                        ->whereIn('si.so_id', $pendingSoIds)
+                        ->whereNull('si.deleted_at')
+                        ->whereNull('sii.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('si.einvoice_status')->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
+                        })
+                        ->select(
+                            'si.so_id',
+                            'sii.art_no',
+                            DB::raw('COALESCE(col.color_name, sii.api_color, "-") as color'),
+                            'sii.sleeve_type as sleeve',
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "36" THEN sii.quantity ELSE 0 END) as size_36'),
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "38" THEN sii.quantity ELSE 0 END) as size_38'),
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "40" THEN sii.quantity ELSE 0 END) as size_40'),
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "42" THEN sii.quantity ELSE 0 END) as size_42'),
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "44" THEN sii.quantity ELSE 0 END) as size_44'),
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "46" THEN sii.quantity ELSE 0 END) as size_46'),
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "48" THEN sii.quantity ELSE 0 END) as size_48'),
+                            DB::raw('SUM(CASE WHEN TRIM(sii.size) = "50" THEN sii.quantity ELSE 0 END) as size_50'),
+                            DB::raw('SUM(sii.quantity) as total_qty')
+                        )->groupBy('si.so_id', 'sii.art_no', 'color', 'sii.sleeve_type')->get();
 
-                        $partyRecordsTotal = count($summaryData);
-                        $tot36 = floatval($summaryData->sum('size_36'));
-                        $tot38 = floatval($summaryData->sum('size_38'));
-                        $tot40 = floatval($summaryData->sum('size_40'));
-                        $tot42 = floatval($summaryData->sum('size_42'));
-                        $tot44 = floatval($summaryData->sum('size_44'));
-                        $tot46 = floatval($summaryData->sum('size_46'));
-                        $tot48 = floatval($summaryData->sum('size_48'));
-                        $tot50 = floatval($summaryData->sum('size_50'));
-                        $totAllQty = floatval($summaryData->sum('total_qty'));
+                    $normPartySleeveFunc = function($s) {
+                        if (!empty($s) && str_starts_with(trim($s), '[')) {
+                            $dec = json_decode($s, true);
+                            $s = is_array($dec) ? ($dec[0] ?? '') : $s;
+                        }
+                        $u = strtoupper(trim((string)$s));
+                        if ($u === 'FULL' || $u === 'FULL SLEEVE' || $u === 'FS' || $u === 'F/S') return 'FS';
+                        if ($u === 'HALF' || $u === 'HALF SLEEVE' || $u === 'HS' || $u === 'H/S') return 'HS';
+                        return $u ?: '-';
+                    };
 
-                        $pagedParty = ($length !== -1) ? $summaryData->slice($start, $length)->values() : $summaryData;
-                    } else {
-                        $sizeTotals = DB::table('sales_order_items')
-                            ->whereIn('sale_order_id', $pendingSoIds)
-                            ->whereNull('deleted_at')
-                            ->select(
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "36" THEN qty ELSE 0 END) as tot_36'),
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "38" THEN qty ELSE 0 END) as tot_38'),
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "40" THEN qty ELSE 0 END) as tot_40'),
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "42" THEN qty ELSE 0 END) as tot_42'),
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "44" THEN qty ELSE 0 END) as tot_44'),
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "46" THEN qty ELSE 0 END) as tot_46'),
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "48" THEN qty ELSE 0 END) as tot_48'),
-                                DB::raw('SUM(CASE WHEN TRIM(size_id) = "50" THEN qty ELSE 0 END) as tot_50'),
-                                DB::raw('SUM(qty) as tot_all')
-                            )->first();
-
-                        $partyRecordsTotal = DB::table('sales_order_items')->whereIn('sale_order_id', $pendingSoIds)->whereNull('deleted_at')->count(DB::raw('DISTINCT CONCAT(sale_order_id, "_", COALESCE(item_name, ""), "_", COALESCE(art_no, ""), "_", COALESCE(color_id, ""), "_", COALESCE(sleeve, ""))'));
-
-                        $tot36 = floatval($sizeTotals->tot_36 ?? 0);
-                        $tot38 = floatval($sizeTotals->tot_38 ?? 0);
-                        $tot40 = floatval($sizeTotals->tot_40 ?? 0);
-                        $tot42 = floatval($sizeTotals->tot_42 ?? 0);
-                        $tot44 = floatval($sizeTotals->tot_44 ?? 0);
-                        $tot46 = floatval($sizeTotals->tot_46 ?? 0);
-                        $tot48 = floatval($sizeTotals->tot_48 ?? 0);
-                        $tot50 = floatval($sizeTotals->tot_50 ?? 0);
-                        $totAllQty = floatval($sizeTotals->tot_all ?? 0);
-
-                        $pagedParty = ($length !== -1) ? $partyGrouped->offset($start)->limit($length)->get() : $partyGrouped->get();
+                    $delPartyMap = [];
+                    foreach ($delPartyQuery as $d) {
+                        $k = $d->so_id . '|' . trim($d->art_no) . '|' . trim($d->color) . '|' . $normPartySleeveFunc($d->sleeve);
+                        $delPartyMap[$k] = [
+                            '36' => floatval($d->size_36),
+                            '38' => floatval($d->size_38),
+                            '40' => floatval($d->size_40),
+                            '42' => floatval($d->size_42),
+                            '44' => floatval($d->size_44),
+                            '46' => floatval($d->size_46),
+                            '48' => floatval($d->size_48),
+                            '50' => floatval($d->size_50),
+                            'total' => floatval($d->total_qty),
+                        ];
                     }
+
+                    $allPartyRows = $partyGrouped->get();
+                    $pendingPartyRows = collect();
+                    $tot36 = $tot38 = $tot40 = $tot42 = $tot44 = $tot46 = $tot48 = $tot50 = $totAllQty = 0;
+                    $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
+
+                    foreach ($allPartyRows as $row) {
+                        $k = $row->so_id . '|' . trim($row->art_no) . '|' . trim($row->color) . '|' . $normPartySleeveFunc($row->sleeve);
+                        $d = $delPartyMap[$k] ?? null;
+
+                        $remSizes = [];
+                        $rowTot = 0;
+                        foreach ($sizes as $sz) {
+                            $ord = floatval($row->{'size_' . $sz});
+                            $dsp = $d ? floatval($d[$sz] ?? 0) : 0;
+                            $rem = max(0, $ord - $dsp);
+                            $remSizes['size_' . $sz] = $rem;
+                            $rowTot += $rem;
+                        }
+
+                        if ($rowTot > 0) {
+                            $newRow = clone $row;
+                            foreach ($sizes as $sz) {
+                                $newRow->{'size_' . $sz} = $remSizes['size_' . $sz];
+                            }
+                            $newRow->total_qty = $rowTot;
+
+                            $tot36 += $remSizes['size_36'];
+                            $tot38 += $remSizes['size_38'];
+                            $tot40 += $remSizes['size_40'];
+                            $tot42 += $remSizes['size_42'];
+                            $tot44 += $remSizes['size_44'];
+                            $tot46 += $remSizes['size_46'];
+                            $tot48 += $remSizes['size_48'];
+                            $tot50 += $remSizes['size_50'];
+                            $totAllQty += $rowTot;
+
+                            $pendingPartyRows->push($newRow);
+                        }
+                    }
+
+                    $partyRecordsTotal = $pendingPartyRows->count();
+                    $pagedParty = ($length !== -1) ? $pendingPartyRows->slice($start, $length)->values() : $pendingPartyRows;
 
                     $partyData = [];
                     $sno = $start + 1;
@@ -1444,6 +1571,17 @@ class SalesMarketingReportController extends Controller
                               ->orWhereRaw('LOWER(einvoice_status) != ?', ['generated']);
                         });
                     }
+
+                    if ($request->filled('gst_filing_status')) {
+                        $gstStatus = strtolower(trim((string)$request->gst_filing_status));
+                        if ($gstStatus === 'filed') {
+                            $countQuery->where('is_gst_filed', 1);
+                        } elseif ($gstStatus === 'pending') {
+                            $countQuery->where(function($q) {
+                                $q->whereNull('is_gst_filed')->orWhere('is_gst_filed', 0);
+                            });
+                        }
+                    }
                     if ($search) {
                         $countQuery->where(function($q) use ($search) {
                             $q->where('inv_no', 'like', "%{$search}%");
@@ -1479,6 +1617,9 @@ class SalesMarketingReportController extends Controller
 
                     $unfilteredRecords = SalesInvoice::whereNull('deleted_at')->count();
                     $filteredRecords = $countQuery->count();
+                    $pendingGstCount = (clone $countQuery)->where(function($q) {
+                        $q->whereNull('is_gst_filed')->orWhere('is_gst_filed', 0);
+                    })->count();
                     $totalCgst = (float)(clone $countQuery)->sum('cgst');
                     $totalSgst = (float)(clone $countQuery)->sum('sgst');
                     $totalIgst = (float)(clone $countQuery)->sum('igst');
@@ -1507,7 +1648,7 @@ class SalesMarketingReportController extends Controller
                         18 => 'einvoice_status',
                     ];
 
-                    $invoicesQuery = $countQuery->with(['customer.place', 'customer.city', 'items']);
+                    $invoicesQuery = $countQuery->with(['customer.place', 'customer.city', 'items', 'gstFiledBy']);
                     if ($orderColIdx !== null && isset($columnMap[$orderColIdx])) {
                         $invoicesQuery->orderBy($columnMap[$orderColIdx], $orderDir);
                     } else {
@@ -1528,7 +1669,35 @@ class SalesMarketingReportController extends Controller
                             : '<span class="badge bg-label-danger rounded-pill px-3 py-1"><i class="ri ri-close-circle-line me-1"></i>Not Generated</span>';
                         $einvoiceStatusRaw = $isGenerated ? 'Generated' : 'Not Generated';
 
+                        $isGstFiled = (bool)($invoice->is_gst_filed ?? false);
+                        $filedByName = $invoice->gstFiledBy ? htmlspecialchars((string)$invoice->gstFiledBy->name) : 'Staff';
+                        $filedDateShort = $invoice->gst_filed_at ? date('d-m-Y', strtotime((string)$invoice->gst_filed_at)) : '';
+                        $filedDateFull = $invoice->gst_filed_at ? date('d-M-Y h:i A', strtotime((string)$invoice->gst_filed_at)) : '';
+
                         $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
+
+                        if ($isGstFiled) {
+                            $gstStatusBadge = '
+                                <div class="d-flex flex-column align-items-center">
+                                    <span class="badge bg-label-success rounded-pill px-2 py-1 view-gst-info-btn cursor-pointer" 
+                                          style="cursor: pointer;" 
+                                          title="Click to view details"
+                                          data-inv="' . $invNoStr . '"
+                                          data-user="' . $filedByName . '"
+                                          data-date="' . $filedDateFull . '">
+                                        <i class="ri ri-checkbox-circle-line me-1"></i>Filed <i class="ri ri-information-line ms-1" style="font-size: 11px;"></i>
+                                    </span>
+                                    <small class="text-muted mt-1" style="font-size: 10px; line-height: 1.2;">
+                                        <span class="fw-semibold text-dark">' . $filedByName . '</span><br>' . $filedDateShort . '
+                                    </small>
+                                </div>';
+                        } else {
+                            $gstStatusBadge = '<span class="badge bg-label-warning text-dark rounded-pill px-2 py-1"><i class="ri ri-time-line me-1"></i>Pending</span>';
+                        }
+
+                        $checkboxHtml = $isGstFiled 
+                            ? '<span class="text-success" title="Already Filed"><i class="ri ri-checkbox-circle-fill"></i></span>' 
+                            : '<input type="checkbox" class="form-check-input gst-invoice-cb" value="' . $invoice->id . '">';
                         $invViewUrl = url('sales_invoices/view/' . $invoice->id);
                         $invNoHtml = '<a href="' . $invViewUrl . '" target="_blank" class="fw-bold text-primary">' . $invNoStr . '</a>';
 
@@ -1560,6 +1729,15 @@ class SalesMarketingReportController extends Controller
                         $grandTotal = (float)($invoice->grand_total ?? 0);
                         $itemQty = (float)($invoice->items ? $invoice->items->sum('quantity') : 0);
 
+                        $discountPercentVal = (float)($invoice->sales_discount ?? 0);
+                        if ($discountPercentVal <= 0 && !empty($invoice->discount_percent)) {
+                            $discountPercentVal = (float)$invoice->discount_percent;
+                        }
+                        if ($discountPercentVal <= 0 && $discountAmt > 0 && $subTotal > 0) {
+                            $discountPercentVal = ($discountAmt / $subTotal) * 100;
+                        }
+                        $discountPercentDisplay = ($discountPercentVal > 0) ? (number_format($discountPercentVal, 2) . '%') : '-';
+
                         $roundOffVal = (float)($invoice->round_off ?? 0);
                         if (in_array(strtolower((string)$invoice->round_off_type), ['less', 'subtract', '-'])) {
                             $roundOffVal = -$roundOffVal;
@@ -1567,6 +1745,7 @@ class SalesMarketingReportController extends Controller
                         $roundOffDisplay = ($roundOffVal != 0) ? (($roundOffVal < 0 ? '-' : '') . '₹' . number_format(abs($roundOffVal), 2)) : '-';
 
                         $data[] = [
+                            'checkbox' => $checkboxHtml,
                             'sno' => $sno++,
                             'inv_no' => $invNoHtml,
                             'inv_no_raw' => $invNoStr,
@@ -1576,6 +1755,7 @@ class SalesMarketingReportController extends Controller
                             'place' => $place,
                             'qty' => number_format($itemQty),
                             'sub_total' => '₹' . number_format($subTotal, 2),
+                            'discount_percent' => $discountPercentDisplay,
                             'discount' => ($discountAmt > 0) ? '₹' . number_format($discountAmt, 2) : '-',
                             'taxable_value' => '₹' . number_format($taxableValue, 2),
                             'cgst_percent' => number_format($cgstPercent, 2) . '%',
@@ -1588,6 +1768,8 @@ class SalesMarketingReportController extends Controller
                             'total_amount' => '₹' . number_format($grandTotal, 2),
                             'einvoice_status' => $einvoiceStatusBadge,
                             'einvoice_status_raw' => $einvoiceStatusRaw,
+                            'gst_filing_status' => $gstStatusBadge,
+                            'is_gst_filed' => $isGstFiled ? 1 : 0,
                         ];
                     }
 
@@ -1597,6 +1779,7 @@ class SalesMarketingReportController extends Controller
                         'draw' => $draw,
                         'recordsTotal' => $unfilteredRecords,
                         'recordsFiltered' => $filteredRecords,
+                        'pending_gst_count' => $pendingGstCount,
                         'data' => $data,
                         'totals' => [
                             'qty' => number_format($totalQty),
@@ -1628,6 +1811,17 @@ class SalesMarketingReportController extends Controller
                             $q->whereNull('einvoice_status')
                               ->orWhereRaw('LOWER(einvoice_status) != ?', ['generated']);
                         });
+                    }
+
+                    if ($request->filled('gst_filing_status')) {
+                        $gstStatus = strtolower(trim((string)$request->gst_filing_status));
+                        if ($gstStatus === 'filed') {
+                            $countQuery->where('is_gst_filed', 1);
+                        } elseif ($gstStatus === 'pending') {
+                            $countQuery->where(function($q) {
+                                $q->whereNull('is_gst_filed')->orWhere('is_gst_filed', 0);
+                            });
+                        }
                     }
                     if ($search) {
                         $countQuery->where(function($q) use ($search) {
@@ -1723,7 +1917,6 @@ class SalesMarketingReportController extends Controller
                             $readyHtml = $crossHtml;
                         }
 
-                        // 5. LR Updated (Either in Invoice lr_no OR tran_doc_no OR booked in transport bookings)
                         $hasInvoiceLr = !empty($invoice->lr_no) || !empty($invoice->tran_doc_no);
                         $hasBookingLr = false;
                         $bookingLrNo = null;
@@ -1752,19 +1945,15 @@ class SalesMarketingReportController extends Controller
                             $invNoHtml .= '<br><span class="badge bg-danger rounded-pill px-2 py-1 mt-1" style="font-size: 10px;"><i class="ri ri-close-circle-line me-1"></i>Cancelled</span>';
                         }
 
-                        // 6. Sent to Accounts logic
-                        // If invoice has payment receipt OR sent_to_accounts is marked OR status Paid/Partially Paid
                         $sentToAccounts = ($invoice->sent_to_accounts || in_array($invoice->invoice_status, ['Paid', 'Partially Paid']));
                         $sentTime = $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime((string)$invoice->sent_to_accounts_at)) : '';
                         $sentUser = optional($invoice->accountsSentByUser)->name ?? '';
                         $sentTooltip = $sentToAccounts ? ('Sent to Accounts' . ($sentUser ? ' by ' . htmlspecialchars($sentUser) : '') . ($sentTime ? ' (' . $sentTime . ')' : '')) : 'Pending';
                         $sentAccountsHtml = $sentToAccounts ? '<span class="text-success fw-bold fs-4" title="' . $sentTooltip . '"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>' : $crossHtml;
 
-                        // 7. Overall Row Status
-                        // All mandatory checklist items must be completed before an invoice can be marked as "Completed"
                         $hasGst = !empty(optional($invoice->customer)->gst_no);
                         $einvoiceSatisfied = $hasGst ? $einvoice_generated : true;
-                        $ewaybillSatisfied = $ewaybill_generated; // Must be generated
+                        $ewaybillSatisfied = $ewaybill_generated; 
 
                         $allStepsCompleted = $pickingCompleted 
                             && $checkingCompleted 
@@ -1826,27 +2015,77 @@ class SalesMarketingReportController extends Controller
                         }
                     }
 
-                    // Sales orders grouped by agent: regular vs discount orders
-                    $salesOrdersData = DB::table('sales_orders')
-                        ->whereNull('deleted_at')
+                    $currMonth = (int)date('n');
+                    $currYear = (int)date('Y');
+                    $defaultFy = ($currMonth >= 4) ? ($currYear . '-' . ($currYear + 1)) : (($currYear - 1) . '-' . $currYear);
+
+                    $selectedFy = $request->filled('incentive_fy') ? trim((string)$request->incentive_fy) : $defaultFy;
+                    $fyParts = explode('-', $selectedFy);
+                    $fyStartYear = (int)($fyParts[0] ?? $currYear);
+                    $fyEndYear = (int)($fyParts[1] ?? ($fyStartYear + 1));
+
+                    $selectedQuarter = $request->filled('incentive_quarter') ? strtoupper(trim((string)$request->incentive_quarter)) : 'ALL';
+
+                    $multiplier = 12;
+                    switch ($selectedQuarter) {
+                        case 'Q1':
+                            $incentiveFromDate = "{$fyStartYear}-04-01";
+                            $incentiveToDate = "{$fyStartYear}-06-30";
+                            $multiplier = 3;
+                            break;
+                        case 'Q2':
+                            $incentiveFromDate = "{$fyStartYear}-07-01";
+                            $incentiveToDate = "{$fyStartYear}-09-30";
+                            $multiplier = 3;
+                            break;
+                        case 'Q3':
+                            $incentiveFromDate = "{$fyStartYear}-10-01";
+                            $incentiveToDate = "{$fyStartYear}-12-31";
+                            $multiplier = 3;
+                            break;
+                        case 'Q4':
+                            $incentiveFromDate = "{$fyEndYear}-01-01";
+                            $incentiveToDate = "{$fyEndYear}-03-31";
+                            $multiplier = 3;
+                            break;
+                        case 'ALL':
+                        default:
+                            $incentiveFromDate = "{$fyStartYear}-04-01";
+                            $incentiveToDate = "{$fyEndYear}-03-31";
+                            $multiplier = 12;
+                            break;
+                    }
+
+                    $quarterLabels = [
+                        'ALL' => 'Full Year (Apr - Mar)',
+                        'Q1' => 'Q1 (Apr - Jun)',
+                        'Q2' => 'Q2 (Jul - Sep)',
+                        'Q3' => 'Q3 (Oct - Dec)',
+                        'Q4' => 'Q4 (Jan - Mar)',
+                    ];
+                    $periodLabel = ($quarterLabels[$selectedQuarter] ?? $selectedQuarter) . " (FY {$selectedFy})";
+
+                    $salesOrdersData = DB::table('sales_order_items as soi')
+                        ->join('sales_orders as so', 'soi.sale_order_id', '=', 'so.id')
+                        ->whereNull('so.deleted_at')
+                        ->whereNull('soi.deleted_at')
                         ->where(function($q) {
-                            $q->whereNull('status')
-                              ->orWhereRaw('LOWER(status) != ?', ['cancelled']);
+                            $q->whereNull('so.status')
+                              ->orWhereRaw('LOWER(so.status) != ?', ['cancelled']);
                         })
-                        ->when($fromDate, fn($q) => $q->where('so_date', '>=', $fromDate))
-                        ->when($toDate, fn($q) => $q->where('so_date', '<=', $toDate))
-                        ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
-                        ->when($agentId, fn($q) => $q->where('agent_id', $agentId))
-                        ->groupBy('agent_id')
+                        ->where('so.so_date', '>=', $incentiveFromDate)
+                        ->where('so.so_date', '<=', $incentiveToDate)
+                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId))
+                        ->when($agentId, fn($q) => $q->where('so.agent_id', $agentId))
+                        ->groupBy('so.agent_id')
                         ->select(
-                            'agent_id',
-                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(order_type, '')) NOT LIKE '%discount%' THEN total_qty ELSE 0 END) as regular_qty"),
-                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(order_type, '')) LIKE '%discount%' THEN total_qty ELSE 0 END) as discount_qty")
+                            'so.agent_id',
+                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) NOT LIKE '%discount%' AND COALESCE(so.sales_discount_percent, 0) <= 10 THEN soi.qty ELSE 0 END) as regular_qty"),
+                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) LIKE '%discount%' OR COALESCE(so.sales_discount_percent, 0) > 10 THEN soi.qty ELSE 0 END) as discount_qty")
                         )
                         ->get()
                         ->keyBy('agent_id');
 
-                    // Credit note returns grouped by agent where reason is Unorder PCS or Customer Non Moving
                     $returnQuantities = DB::table('credit_note_items as cni')
                         ->join('credit_notes as cn', 'cni.credit_note_id', '=', 'cn.id')
                         ->whereNull('cn.deleted_at')
@@ -1856,8 +2095,8 @@ class SalesMarketingReportController extends Controller
                               ->orWhereRaw('LOWER(cn.status) != ?', ['cancelled']);
                         })
                         ->whereIn('cn.reason', ['Unorder PCS', 'Customer Non Moving'])
-                        ->when($fromDate, fn($q) => $q->where('cn.note_date', '>=', $fromDate))
-                        ->when($toDate, fn($q) => $q->where('cn.note_date', '<=', $toDate))
+                        ->where('cn.note_date', '>=', $incentiveFromDate)
+                        ->where('cn.note_date', '<=', $incentiveToDate)
                         ->when($customerId, fn($q) => $q->where('cn.customer_id', $customerId))
                         ->when($agentId, fn($q) => $q->where('cn.agent_id', $agentId))
                         ->groupBy('cn.agent_id')
@@ -1865,12 +2104,17 @@ class SalesMarketingReportController extends Controller
                         ->pluck('return_qty', 'cn.agent_id');
 
                     $incentiveReport = [];
+                    $setting = \App\Models\Setting::first();
+                    $refinishingRate = floatval($setting->refinishing_amount ?? 0);
+
                     $sumTotalTarget = 0;
                     $sumTotalAchieved = 0;
                     $sumTotalDiscount = 0;
                     $sumTotalReturn = 0;
                     $sumTotalIncentiveQty = 0;
-                    $sumTotalIncentiveAmt = 0;
+                    $sumTotalGrossIncentiveAmt = 0;
+                    $sumTotalRefinishing = 0;
+                    $sumTotalNetIncentiveAmt = 0;
 
                     foreach ($agents as $agent) {
                         if ($agentId && $agent->id != $agentId) continue;
@@ -1886,18 +2130,21 @@ class SalesMarketingReportController extends Controller
                             $zoneName = $cityIdToZone[$agent->city_id] ?? 'Unassigned';
                         }
 
-                        $target = floatval($agent->sales_target ?? 0);
+                        $monthlyTarget = floatval($agent->sales_target ?? 0);
+                        $target = $monthlyTarget * $multiplier;
                         $achieved = floatval($salesOrdersData[$agent->id]->regular_qty ?? 0);
                         $discountQty = floatval($salesOrdersData[$agent->id]->discount_qty ?? 0);
                         $returnQty = floatval($returnQuantities[$agent->id] ?? 0);
                         $ratePerPcs = floatval($agent->commission_value ?? 0);
 
-                        // Incentive Qty: (Achieved - Target) - Return Qty, min 0
                         $netExcess = ($achieved - $target) - $returnQty;
                         $incentiveQty = max(0, $netExcess);
-                        $incentiveAmt = $incentiveQty * $ratePerPcs;
+                        $grossIncentiveAmt = $incentiveQty * $ratePerPcs;
 
-                        // Include agent if they have target, sales, discount, returns, or if searched/filtered
+                        $refinishingAmt = $returnQty * $refinishingRate;
+
+                        $netIncentiveAmt = max(0, $grossIncentiveAmt - $refinishingAmt);
+
                         if ($target > 0 || $achieved > 0 || $discountQty > 0 || $returnQty > 0 || $agentId) {
                             if ($search) {
                                 if (stripos((string)$zoneName, $search) === false && stripos((string)$agent->name, $search) === false && stripos((string)$agent->code, $search) === false) {
@@ -1910,9 +2157,13 @@ class SalesMarketingReportController extends Controller
                             $sumTotalDiscount += $discountQty;
                             $sumTotalReturn += $returnQty;
                             $sumTotalIncentiveQty += $incentiveQty;
-                            $sumTotalIncentiveAmt += $incentiveAmt;
+                            $sumTotalGrossIncentiveAmt += $grossIncentiveAmt;
+                            $sumTotalRefinishing += $refinishingAmt;
+                            $sumTotalNetIncentiveAmt += $netIncentiveAmt;
 
                             $incentiveReport[] = [
+                                'agent_id' => $agent->id,
+                                'agent_raw_name' => (string)$agent->name . ' (' . (string)$agent->code . ')',
                                 'zone' => '<span class="fw-bold text-primary">' . htmlspecialchars((string)$zoneName) . '</span>',
                                 'agent' => htmlspecialchars((string)$agent->name) . ' <small class="text-muted">(' . htmlspecialchars((string)$agent->code) . ')</small>',
                                 'target' => '<span class="fw-semibold">' . number_format($target, 0) . '</span>',
@@ -1922,10 +2173,14 @@ class SalesMarketingReportController extends Controller
                                     ? '<span class="text-danger fw-semibold">-' . number_format($returnQty, 0) . '</span>' 
                                     : '<span class="text-muted">0</span>',
                                 'incentive_qty' => $incentiveQty > 0 
-                                    ? '<span class="badge bg-label-primary fs-7">' . number_format($incentiveQty, 0) . '</span>' 
+                                    ? '<span class="badge bg-label-info fs-7">' . number_format($incentiveQty, 0) . '</span>' 
                                     : '<span class="text-muted">0</span>',
                                 'rate_per_pcs' => '₹' . number_format($ratePerPcs, 2),
-                                'incentive_amt' => '<span class="text-success fw-bold">' . ($incentiveAmt > 0 ? '₹' . number_format($incentiveAmt, 2) : '₹0.00') . '</span>',
+                                'incentive_amt' => '<span class="fw-semibold text-dark">' . ($grossIncentiveAmt > 0 ? '₹' . number_format($grossIncentiveAmt, 2) : '₹0.00') . '</span>',
+                                'refinishing_amt' => $refinishingAmt > 0 
+                                    ? '<span class="text-danger fw-semibold">-₹' . number_format($refinishingAmt, 2) . '</span>' . ($refinishingRate > 0 ? '<small class="text-muted d-block" style="font-size:11px;">(@ ₹' . number_format($refinishingRate, 2) . '/pc)</small>' : '')
+                                    : '<span class="text-muted">₹0.00</span>',
+                                'net_incentive_amt' => '<span class="text-success fw-bold">' . ($netIncentiveAmt > 0 ? '₹' . number_format($netIncentiveAmt, 2) : '₹0.00') . '</span>',
                             ];
                         }
                     }
@@ -1938,13 +2193,320 @@ class SalesMarketingReportController extends Controller
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
                         'data' => $pagedIncentives,
+                        'period' => $periodLabel,
                         'totals' => [
                             'total_target' => number_format($sumTotalTarget, 0),
                             'total_achieved' => number_format($sumTotalAchieved, 0),
                             'total_discount' => number_format($sumTotalDiscount, 0),
                             'total_return' => number_format($sumTotalReturn, 0),
                             'total_incentive_qty' => number_format($sumTotalIncentiveQty, 0),
-                            'incentive_amt' => '₹' . number_format($sumTotalIncentiveAmt, 2)
+                            'gross_incentive_amt' => '₹' . number_format($sumTotalGrossIncentiveAmt, 2),
+                            'total_refinishing' => ($sumTotalRefinishing > 0 ? '-₹' . number_format($sumTotalRefinishing, 2) : '₹0.00'),
+                            'net_incentive_amt' => '₹' . number_format($sumTotalNetIncentiveAmt, 2),
+                            'incentive_amt' => '₹' . number_format($sumTotalNetIncentiveAmt, 2)
+                        ]
+                    ]);
+
+                case 'incentive-brand-drilldown':
+                    $targetAgentId = $request->agent_id ?: $request->drilldown_agent_id;
+                    if (!$targetAgentId) {
+                        return response()->json([
+                            'draw' => $draw,
+                            'recordsTotal' => 0,
+                            'recordsFiltered' => 0,
+                            'data' => [],
+                            'totals' => []
+                        ]);
+                    }
+
+                    $agent = SalesAgent::find($targetAgentId);
+                    if (!$agent) {
+                        return response()->json([
+                            'draw' => $draw,
+                            'recordsTotal' => 0,
+                            'recordsFiltered' => 0,
+                            'data' => [],
+                            'totals' => []
+                        ]);
+                    }
+
+                    $currMonth = (int)date('n');
+                    $currYear = (int)date('Y');
+                    $defaultFy = ($currMonth >= 4) ? ($currYear . '-' . ($currYear + 1)) : (($currYear - 1) . '-' . $currYear);
+
+                    $selectedFy = $request->filled('incentive_fy') ? trim((string)$request->incentive_fy) : $defaultFy;
+                    $fyParts = explode('-', $selectedFy);
+                    $fyStartYear = (int)($fyParts[0] ?? $currYear);
+                    $fyEndYear = (int)($fyParts[1] ?? ($fyStartYear + 1));
+
+                    $selectedQuarter = $request->filled('incentive_quarter') ? strtoupper(trim((string)$request->incentive_quarter)) : 'ALL';
+
+                    $multiplier = 12;
+                    switch ($selectedQuarter) {
+                        case 'Q1':
+                            $incentiveFromDate = "{$fyStartYear}-04-01";
+                            $incentiveToDate = "{$fyStartYear}-06-30";
+                            $multiplier = 3;
+                            break;
+                        case 'Q2':
+                            $incentiveFromDate = "{$fyStartYear}-07-01";
+                            $incentiveToDate = "{$fyStartYear}-09-30";
+                            $multiplier = 3;
+                            break;
+                        case 'Q3':
+                            $incentiveFromDate = "{$fyStartYear}-10-01";
+                            $incentiveToDate = "{$fyStartYear}-12-31";
+                            $multiplier = 3;
+                            break;
+                        case 'Q4':
+                            $incentiveFromDate = "{$fyEndYear}-01-01";
+                            $incentiveToDate = "{$fyEndYear}-03-31";
+                            $multiplier = 3;
+                            break;
+                        case 'ALL':
+                        default:
+                            $incentiveFromDate = "{$fyStartYear}-04-01";
+                            $incentiveToDate = "{$fyEndYear}-03-31";
+                            $multiplier = 12;
+                            break;
+                    }
+
+                    $allBrands = \App\Models\Brand::all();
+                    $setting = \App\Models\Setting::first();
+                    $refinishingRate = floatval($setting->refinishing_amount ?? 0);
+
+                    $soItems = DB::table('sales_order_items as soi')
+                        ->join('sales_orders as so', 'soi.sale_order_id', '=', 'so.id')
+                        ->leftJoin('stock_entry_items as sei', 'soi.stock_entry_item_id', '=', 'sei.id')
+                        ->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
+                        ->whereNull('so.deleted_at')
+                        ->whereNull('soi.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('so.status')
+                              ->orWhereRaw('LOWER(so.status) != ?', ['cancelled']);
+                        })
+                        ->where('so.agent_id', $targetAgentId)
+                        ->where('so.so_date', '>=', $incentiveFromDate)
+                        ->where('so.so_date', '<=', $incentiveToDate)
+                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId))
+                        ->select(
+                            'soi.id',
+                            'soi.qty',
+                            'soi.rate',
+                            'soi.amount',
+                            'soi.art_no',
+                            'soi.sku',
+                            'soi.item_name',
+                            'soi.category_name',
+                            'soi.categories_path_val',
+                            'so.order_type',
+                            'so.sales_discount_percent',
+                            'sei.brand_id as stock_brand_id',
+                            'b.brand_name as stock_brand_name'
+                        )
+                        ->get();
+
+                    $cnItems = DB::table('credit_note_items as cni')
+                        ->join('credit_notes as cn', 'cni.credit_note_id', '=', 'cn.id')
+                        ->leftJoin('stock_entry_items as sei1', 'cni.stock_entry_item_id', '=', 'sei1.id')
+                        ->leftJoin('brands as b1', 'sei1.brand_id', '=', 'b1.id')
+                        ->leftJoin('sales_invoice_items as sii', 'cni.sales_invoice_item_id', '=', 'sii.id')
+                        ->leftJoin('stock_entry_items as sei2', 'sii.stock_entry_item_id', '=', 'sei2.id')
+                        ->leftJoin('brands as b2', 'sei2.brand_id', '=', 'b2.id')
+                        ->whereNull('cn.deleted_at')
+                        ->whereNull('cni.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('cn.status')
+                              ->orWhereRaw('LOWER(cn.status) != ?', ['cancelled']);
+                        })
+                        ->whereIn('cn.reason', ['Unorder PCS', 'Customer Non Moving'])
+                        ->where('cn.agent_id', $targetAgentId)
+                        ->where('cn.note_date', '>=', $incentiveFromDate)
+                        ->where('cn.note_date', '<=', $incentiveToDate)
+                        ->when($customerId, fn($q) => $q->where('cn.customer_id', $customerId))
+                        ->select(
+                            'cni.id',
+                            'cni.quantity',
+                            'cni.art_no',
+                            'cni.sku',
+                            'sii.art_no as sii_art_no',
+                            'sii.sku as sii_sku',
+                            'b1.brand_name as brand1',
+                            'b2.brand_name as brand2'
+                        )
+                        ->get();
+
+                    $brandData = [];
+
+                    foreach ($soItems as $item) {
+                        $brandName = null;
+                        if (!empty($item->stock_brand_name)) {
+                            $brandName = trim($item->stock_brand_name);
+                        } else {
+                            $resolved = $this->resolveBrandFromOrderItem($item, $allBrands);
+                            $brandName = $resolved ? trim($resolved['name']) : 'Uncategorized';
+                        }
+
+                        if (!isset($brandData[$brandName])) {
+                            $brandData[$brandName] = [
+                                'brand_name' => $brandName,
+                                'achieved' => 0,
+                                'discount_qty' => 0,
+                                'return_qty' => 0,
+                                'revenue_amt' => 0,
+                            ];
+                        }
+
+                        $orderType = strtolower((string)($item->order_type ?? ''));
+                        $discPercent = floatval($item->sales_discount_percent ?? 0);
+                        $qty = floatval($item->qty ?? 0);
+                        $amt = floatval($item->amount ?: ($qty * floatval($item->rate ?? 0)));
+
+                        if (str_contains($orderType, 'discount') || $discPercent > 10) {
+                            $brandData[$brandName]['discount_qty'] += $qty;
+                        } else {
+                            $brandData[$brandName]['achieved'] += $qty;
+                        }
+                        $brandData[$brandName]['revenue_amt'] += $amt;
+                    }
+
+                    foreach ($cnItems as $item) {
+                        $brandName = null;
+                        if (!empty($item->brand1)) {
+                            $brandName = trim($item->brand1);
+                        } elseif (!empty($item->brand2)) {
+                            $brandName = trim($item->brand2);
+                        } else {
+                            $tempItem = (object)[
+                                'art_no' => $item->art_no ?: $item->sii_art_no,
+                                'sku' => $item->sku ?: $item->sii_sku,
+                                'item_name' => '',
+                                'category_name' => '',
+                                'categories_path_val' => '',
+                                'stock_brand_name' => '',
+                                'cat_brand_name' => ''
+                            ];
+                            $resolved = $this->resolveBrandFromOrderItem($tempItem, $allBrands);
+                            $brandName = $resolved ? trim($resolved['name']) : 'Uncategorized';
+                        }
+
+                        if (!isset($brandData[$brandName])) {
+                            $brandData[$brandName] = [
+                                'brand_name' => $brandName,
+                                'achieved' => 0,
+                                'discount_qty' => 0,
+                                'return_qty' => 0,
+                                'revenue_amt' => 0,
+                            ];
+                        }
+
+                        $brandData[$brandName]['return_qty'] += floatval($item->quantity ?? 0);
+                    }
+
+                    ksort($brandData);
+
+                    $monthlyTarget = floatval($agent->sales_target ?? 0);
+                    $totalExecutiveTarget = $monthlyTarget * $multiplier;
+                    $ratePerPcs = floatval($agent->commission_value ?? 0);
+
+                    $totalExecutiveAchieved = 0;
+                    $totalExecutiveDiscount = 0;
+                    $totalExecutiveReturn = 0;
+                    $totalExecutiveRevenue = 0;
+
+                    foreach ($brandData as $b) {
+                        $totalExecutiveAchieved += $b['achieved'];
+                        $totalExecutiveDiscount += $b['discount_qty'];
+                        $totalExecutiveReturn += $b['return_qty'];
+                        $totalExecutiveRevenue += $b['revenue_amt'];
+                    }
+
+                    $netExcess = ($totalExecutiveAchieved - $totalExecutiveTarget) - $totalExecutiveReturn;
+                    $totalExecutiveIncentiveQty = max(0, $netExcess);
+
+                    $rows = [];
+                    $allocatedIncentiveQty = 0;
+                    $sumGrossIncentiveAmt = 0;
+                    $sumRefinishingAmt = 0;
+                    $sumNetIncentiveAmt = 0;
+
+                    // First pass: find the last brand with activity for rounding adjustment
+                    $lastBrandKey = null;
+                    foreach ($brandData as $bName => $b) {
+                        if ($b['achieved'] > 0 || $b['discount_qty'] > 0 || $b['return_qty'] > 0 || $b['revenue_amt'] > 0) {
+                            $lastBrandKey = $bName;
+                        }
+                    }
+
+                    foreach ($brandData as $bName => $b) {
+                        if ($search && stripos($bName, $search) === false) {
+                            continue;
+                        }
+
+                        $achieved = $b['achieved'];
+                        $discountQty = $b['discount_qty'];
+                        $returnQty = $b['return_qty'];
+                        $revenue = $b['revenue_amt'];
+
+                        if ($achieved == 0 && $discountQty == 0 && $returnQty == 0 && $revenue == 0) {
+                            continue;
+                        }
+
+                        $brandIncentiveQty = 0;
+                        if ($totalExecutiveIncentiveQty > 0 && $totalExecutiveAchieved > 0 && $achieved > 0) {
+                            if ($bName === $lastBrandKey) {
+                                $brandIncentiveQty = max(0, $totalExecutiveIncentiveQty - $allocatedIncentiveQty);
+                            } else {
+                                $brandIncentiveQty = round($totalExecutiveIncentiveQty * ($achieved / $totalExecutiveAchieved));
+                                $allocatedIncentiveQty += $brandIncentiveQty;
+                            }
+                        }
+
+                        $brandGross = $brandIncentiveQty * $ratePerPcs;
+                        $brandRefinishing = $returnQty * $refinishingRate;
+                        $brandNet = max(0, $brandGross - $brandRefinishing);
+
+                        $sumGrossIncentiveAmt += $brandGross;
+                        $sumRefinishingAmt += $brandRefinishing;
+                        $sumNetIncentiveAmt += $brandNet;
+
+                        $rows[] = [
+                            'brand' => '<span class="fw-bold text-dark">' . htmlspecialchars($bName) . '</span>',
+                            'achieved' => '<span class="fw-bold text-dark">' . number_format($achieved, 0) . '</span>',
+                            'discount_qty' => '<span class="text-muted">' . number_format($discountQty, 0) . '</span>',
+                            'return_qty' => $returnQty > 0 
+                                ? '<span class="text-danger fw-semibold">-' . number_format($returnQty, 0) . '</span>' 
+                                : '<span class="text-muted">0</span>',
+                            'incentive_qty' => $brandIncentiveQty > 0 
+                                ? '<span class="badge bg-label-info fs-7">' . number_format($brandIncentiveQty, 0) . '</span>' 
+                                : '<span class="text-muted">0</span>',
+                            'rate_per_pcs' => '₹' . number_format($ratePerPcs, 2),
+                            'incentive_amt' => '<span class="fw-semibold text-dark">' . ($brandGross > 0 ? '₹' . number_format($brandGross, 2) : '₹0.00') . '</span>',
+                            'refinishing_amt' => $brandRefinishing > 0 
+                                ? '<span class="text-danger fw-semibold">-₹' . number_format($brandRefinishing, 2) . '</span>' 
+                                : '<span class="text-muted">₹0.00</span>',
+                            'net_incentive_amt' => '<span class="text-success fw-bold">' . ($brandNet > 0 ? '₹' . number_format($brandNet, 2) : '₹0.00') . '</span>',
+                        ];
+                    }
+
+                    $totalRecords = count($rows);
+                    $pagedRows = ($length > 0 && $length !== -1) ? array_slice($rows, $start, $length) : $rows;
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalRecords,
+                        'recordsFiltered' => $totalRecords,
+                        'data' => $pagedRows,
+                        'totals' => [
+                            'total_target' => number_format($totalExecutiveTarget, 0),
+                            'total_achieved' => number_format($totalExecutiveAchieved, 0),
+                            'total_discount' => number_format($totalExecutiveDiscount, 0),
+                            'total_return' => number_format($totalExecutiveReturn, 0),
+                            'total_incentive_qty' => number_format($totalExecutiveIncentiveQty, 0),
+                            'gross_incentive_amt' => '₹' . number_format($sumGrossIncentiveAmt, 2),
+                            'total_refinishing' => ($sumRefinishingAmt > 0 ? '-₹' . number_format($sumRefinishingAmt, 2) : '₹0.00'),
+                            'net_incentive_amt' => '₹' . number_format($sumNetIncentiveAmt, 2),
+                            'total_revenue' => '₹' . number_format($totalExecutiveRevenue, 2),
                         ]
                     ]);
 
@@ -1957,6 +2519,7 @@ class SalesMarketingReportController extends Controller
                     if ($search) {
                         $countQuery->where(function($q) use ($search) {
                             $q->where('note_no', 'like', "%{$search}%")
+                              ->orWhere('reference_no', 'like', "%{$search}%")
                               ->orWhereHas('customer', function($c) use ($search) {
                                   $c->where('name', 'like', "%{$search}%");
                               });
@@ -1986,6 +2549,7 @@ class SalesMarketingReportController extends Controller
 
                         $data[] = [
                             'note_no' => '<strong>' . htmlspecialchars((string)($note->note_no ?? '-')) . '</strong>',
+                            'reference_no' => htmlspecialchars((string)($note->reference_no ?? '-')),
                             'note_date' => $note->note_date ? date('d-M-Y', strtotime((string)$note->note_date)) : '-',
                             'customer' => htmlspecialchars((string)(optional($note->customer)->name ?? '-')),
                             'zone' => '<span class="badge bg-label-info rounded-pill">' . htmlspecialchars((string)(optional($note->zone)->zone_name ?? '-')) . '</span>',
@@ -2295,7 +2859,9 @@ class SalesMarketingReportController extends Controller
                             DB::raw("SUM(CASE WHEN discount = 0 THEN sub_total ELSE 0 END) as regular_sales"),
                             DB::raw("SUM(CASE WHEN discount > 0 THEN sub_total ELSE 0 END) as discount_sales_raw"),
                             DB::raw("SUM(discount) as discount_amount"),
-                            DB::raw("SUM(sub_total - discount) as net_revenue")
+                            DB::raw("SUM(sub_total - discount) as net_revenue"),
+                            DB::raw("COUNT(DISTINCT CASE WHEN discount > 0 THEN id ELSE NULL END) as discount_inv_count"),
+                            DB::raw("COUNT(DISTINCT CASE WHEN discount > 0 THEN customer_id ELSE NULL END) as discount_cust_count")
                         )
                         ->whereNull('deleted_at');
 
@@ -2344,6 +2910,7 @@ class SalesMarketingReportController extends Controller
 
                     foreach ($regularDiscount as $item) {
                         $discount_pc = $item->discount_sales_raw > 0 ? ($item->discount_amount / $item->discount_sales_raw) * 100 : 0;
+                        $discount_share_pc = ($item->total_sales > 0 && $item->discount_sales_raw > 0) ? ($item->discount_sales_raw / $item->total_sales) * 100 : 0;
 
                         $data[] = [
                             'period' => '<strong>' . $item->period . '</strong>',
@@ -2352,6 +2919,8 @@ class SalesMarketingReportController extends Controller
                             'discount_sales' => '₹' . number_format($item->discount_sales_raw ?? 0, 2),
                             'discount_amount' => '₹' . number_format($item->discount_amount ?? 0, 2),
                             'discount_pc' => '<span class="text-danger">' . number_format($discount_pc, 1) . '%</span>',
+                            'discount_invoices' => '<span class="fw-bold text-dark">' . number_format($item->discount_inv_count ?? 0) . '</span> <span class="text-muted fw-normal">(' . number_format($item->discount_cust_count ?? 0) . ')</span>',
+                            'discount_share_pc' => '<span class="fw-semibold text-primary">' . number_format($discount_share_pc, 1) . '%</span>',
                             'net_revenue' => '<span class="text-success fw-bold">₹' . number_format($item->net_revenue ?? 0, 2) . '</span>'
                         ];
                     }
@@ -2627,7 +3196,13 @@ class SalesMarketingReportController extends Controller
                 'sales_order_items.category_name',
                 'sales_order_items.categories_path_val',
                 'sales_order_items.qty',
+                'sales_order_items.rate',
                 'sales_order_items.amount',
+                'sales_order_items.size_id',
+                'sales_order_items.sleeve',
+                'stock_entry_items.size as stock_size',
+                'stock_entry_items.sleeve_type as stock_sleeve',
+                'stock_entry_items.barcode',
                 'b_stock.brand_name as stock_brand_name',
                 'brand_categories.name as cat_brand_name'
             )
@@ -2719,16 +3294,51 @@ class SalesMarketingReportController extends Controller
                     'ordered_value'     => 0,
                     'so_art_nos'        => [],
                     'art_rates'         => [],
+                    'items'             => [],
                 ];
             }
+
+            $itemRate = floatval($item->rate ?? 0);
+            if ($itemRate <= 0 && $ordQ > 0 && $ordAmt > 0) {
+                $itemRate = $ordAmt / $ordQ;
+            }
+            $formattedCategory = null;
+            if (!empty($item->category_name)) {
+                $catStr = str_replace([' ', '_'], '-', trim($item->category_name));
+                $parts = array_filter(explode('-', $catStr));
+                $formattedParts = array_map(function($p) {
+                    $pUpper = strtoupper($p);
+                    if ($pUpper === 'FS' || $pUpper === 'F/S') return 'F/S';
+                    if ($pUpper === 'HS' || $pUpper === 'H/S') return 'H/S';
+                    return ucfirst(strtolower($p));
+                }, $parts);
+                $formattedCategory = implode('-', $formattedParts);
+            }
+            $itemDesc = $formattedCategory ?: ($item->item_name ?: ($item->sku ?: '-'));
+
+            $soMap[$soId]['items'][] = [
+                'art_no'        => $artNo,
+                'norm_art_no'   => $normArtNo,
+                'qty'           => $ordQ,
+                'rate'          => $itemRate,
+                'amount'        => $ordAmt,
+                'description'   => $itemDesc,
+                'barcode'       => !empty($item->barcode) ? $item->barcode : (!empty($item->sku) ? $item->sku : '-'),
+                'size'          => !empty($item->size_id) ? $item->size_id : (!empty($item->stock_size) ? $item->stock_size : '-'),
+                'sleeve'        => !empty($item->sleeve) ? $item->sleeve : (!empty($item->stock_sleeve) ? $item->stock_sleeve : '-'),
+            ];
 
             $soMap[$soId]['ordered_qty']   += $ordQ;
             $soMap[$soId]['ordered_value'] += $ordAmt;
 
             if (!empty($normArtNo)) {
                 $soMap[$soId]['so_art_nos'][$normArtNo] = ($soMap[$soId]['so_art_nos'][$normArtNo] ?? 0) + $ordQ;
+                $soMap[$soId]['art_amounts'][$normArtNo] = ($soMap[$soId]['art_amounts'][$normArtNo] ?? 0) + $ordAmt;
+                if (!isset($soMap[$soId]['art_display_names'][$normArtNo]) || empty($soMap[$soId]['art_display_names'][$normArtNo])) {
+                    $soMap[$soId]['art_display_names'][$normArtNo] = $artNo;
+                }
                 if ($ordQ > 0) {
-                    $soMap[$soId]['art_rates'][$normArtNo] = $ordAmt / $ordQ;
+                    $soMap[$soId]['art_rates'][$normArtNo] = ($soMap[$soId]['art_amounts'][$normArtNo] / $soMap[$soId]['so_art_nos'][$normArtNo]);
                 }
             }
         }
@@ -2756,92 +3366,311 @@ class SalesMarketingReportController extends Controller
 
         $allOrders = [];
         $orderSno = 1;
-        $totOrdAll     = 0;
-        $totInvAll     = 0;
-        $totOpenOrdAll = 0;
-        $totQtyAll     = 0;
         $totLostQtyAll = 0;
         $totLostValAll = 0;
 
         foreach ($soMap as $soId => $data) {
-            $soInvQty  = 0;
-            $lostValue = 0;
-            $soArtNos  = $data['so_art_nos'];
-            $artRates  = $data['art_rates'];
+            $soArtNos   = $data['so_art_nos'];
+            $artAmounts = $data['art_amounts'] ?? [];
+            $artDisplay = $data['art_display_names'] ?? [];
 
             foreach ($soArtNos as $normArt => $ordQ) {
                 $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
-                $effectiveInvQ = min($ordQ, $invQ);
-                $soInvQty += $effectiveInvQ;
+                $lostQty = max(0, $ordQ - $invQ);
 
-                $itemPending = max(0, $ordQ - $invQ);
-                $rate = $artRates[$normArt] ?? 0;
-                $lostValue += ($itemPending * $rate);
-            }
+                if ($lostQty <= 0) {
+                    continue;
+                }
 
-            $openOrderQty = 0;
-            if (!empty($invoicedArtNosMap[$soId])) {
-                foreach ($invoicedArtNosMap[$soId] as $invNormArtNo => $invQ) {
-                    if (!isset($soArtNos[$invNormArtNo])) {
-                        $openOrderQty += $invQ;
-                    } elseif ($invQ > $soArtNos[$invNormArtNo]) {
-                        $openOrderQty += ($invQ - $soArtNos[$invNormArtNo]);
+                $ordAmt = floatval($artAmounts[$normArt] ?? 0);
+                $rate = $ordQ > 0 ? ($ordAmt / $ordQ) : 0;
+                $lostRev = $lostQty * $rate;
+
+                $displayArtNo = !empty($artDisplay[$normArt]) ? $artDisplay[$normArt] : $normArt;
+
+                $soNoHtml = '<a href="' . url('sales_orders/view/' . $soId) . '" target="_blank" class="fw-bold text-primary">' . htmlspecialchars($data['so_no']) . '</a>';
+                if ($data['is_orderaxe']) {
+                    $orderaxeText = ($data['orderaxe_order_no'] !== '-') ? htmlspecialchars($data['orderaxe_order_no']) : '';
+                    if ($orderaxeText) {
+                        $soNoHtml .= '<div class="d-flex align-items-center mt-1"><span class="text-secondary fw-semibold small">' . $orderaxeText . '</span></div>';
                     }
+                }
+
+                $reasonHtml = $data['reason'] !== '-' ? htmlspecialchars($data['reason']) : '<span class="text-muted">-</span>';
+
+                $allOrders[] = [
+                    'sno'               => $orderSno++,
+                    'so_id'             => $soId,
+                    'so_no_plain'       => $data['so_no'],
+                    'so_no'             => $soNoHtml,
+                    'art_no'            => '<span class="fw-bold text-primary">' . htmlspecialchars($displayArtNo) . '</span>',
+                    'art_no_raw'        => $displayArtNo,
+                    'customer'          => htmlspecialchars($data['customer']),
+                    'customer_plain'    => $data['customer'],
+                    'so_date'           => $data['so_date'],
+                    'lost_qty'          => '<a href="javascript:void(0);" class="text-danger fw-bold lost-qty-drill-link" data-so-id="' . $soId . '" data-so-no="' . htmlspecialchars($data['so_no']) . '" data-customer="' . htmlspecialchars($data['customer']) . '" data-so-date="' . htmlspecialchars($data['so_date']) . '" data-art-no="' . htmlspecialchars($displayArtNo) . '" title="View Lost Items Detail">' . number_format($lostQty, 0) . ' <i class="ri ri-arrow-right-s-line" style="font-size:13px;"></i></a>',
+                    'lost_qty_raw'      => $lostQty,
+                    'selling_price'     => '₹' . number_format($rate, 2),
+                    'selling_price_raw' => $rate,
+                    'lost_revenue'      => '<span class="text-danger fw-bold">₹' . number_format($lostRev, 2) . '</span>',
+                    'lost_revenue_raw'  => $lostRev,
+                    'reason'            => $reasonHtml,
+                    'reason_raw'        => $data['reason'],
+                ];
+
+                $totLostQtyAll += $lostQty;
+                $totLostValAll += $lostRev;
+            }
+        }
+
+        $viewType = $request->view_type ?? 'orders';
+
+        if ($viewType === 'party') {
+            $partyMap = [];
+            foreach ($soMap as $soId => $data) {
+                $soInvQty  = 0;
+                $soArtNos  = $data['so_art_nos'];
+
+                foreach ($soArtNos as $normArt => $ordQ) {
+                    $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
+                    $effectiveInvQ = min($ordQ, $invQ);
+                    $soInvQty += $effectiveInvQ;
+                }
+                $pendingQty = max(0, $data['ordered_qty'] - $soInvQty);
+                if ($pendingQty <= 0) continue;
+
+                foreach ($data['items'] as $it) {
+                    $normArt = $it['norm_art_no'];
+                    $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
+                    $remQ = max(0, $it['qty'] - $invQ);
+                    if ($remQ <= 0) continue;
+
+                    $artNo = $it['art_no'];
+                    $cust = $data['customer'];
+                    $rate = $it['rate'];
+                    $reason = $data['reason'];
+                    $key = strtoupper($artNo) . '|' . strtoupper($cust) . '|' . number_format($rate, 2) . '|' . $reason;
+
+                    if (!isset($partyMap[$key])) {
+                        $partyMap[$key] = [
+                            'art_no'        => $artNo,
+                            'customer_name' => $cust,
+                            'order_qty'     => 0,
+                            'rate'          => $rate,
+                            'reason'        => $reason,
+                        ];
+                    }
+                    $partyMap[$key]['order_qty'] += $it['qty'];
                 }
             }
 
-            $totalOrdQty = $data['ordered_qty'];
-            $pendingQty  = max(0, $totalOrdQty - $soInvQty);
+            $partyRows = [];
+            $partySno = 1;
+            $totPartyOrd = 0;
+            $totPartyRev = 0;
 
-            if ($pendingQty <= 0) {
-                continue;
+            foreach ($partyMap as $p) {
+                $ordQ = $p['order_qty'];
+                $rate = $p['rate'];
+                $rev = $ordQ * $rate;
+                $totPartyOrd += $ordQ;
+                $totPartyRev += $rev;
+
+                $partyRows[] = [
+                    'sno'           => $partySno++,
+                    'art_no'        => '<span class="fw-bold text-primary">' . htmlspecialchars($p['art_no']) . '</span>',
+                    'art_no_raw'    => $p['art_no'],
+                    'customer_name' => htmlspecialchars($p['customer_name']),
+                    'order_qty'     => '<span class="fw-bold text-dark">' . number_format($ordQ, 0) . '</span>',
+                    'order_qty_raw' => $ordQ,
+                    'selling_price' => '₹' . number_format($rate, 2),
+                    'selling_price_raw' => $rate,
+                    'revenue'       => '<span class="fw-bold text-danger">₹' . number_format($rev, 2) . '</span>',
+                    'revenue_raw'   => $rev,
+                    'reason'        => $p['reason'] !== '-' ? htmlspecialchars($p['reason']) : '<span class="text-muted">-</span>',
+                    'reason_raw'    => $p['reason'],
+                ];
             }
 
-            $totalInvoicedQty = $soInvQty + $openOrderQty;
-
-            $totOrdAll     += $totalOrdQty;
-            $totInvAll     += $soInvQty;
-            $totOpenOrdAll += $openOrderQty;
-            $totQtyAll     += $totalInvoicedQty;
-            $totLostQtyAll += $pendingQty;
-            $totLostValAll += $lostValue;
-
-            $soNoHtml = '<a href="' . url('sales_orders/view/' . $soId) . '" target="_blank" class="fw-bold text-primary">' . htmlspecialchars($data['so_no']) . '</a>';
-            if ($data['is_orderaxe']) {
-                $orderaxeText = ($data['orderaxe_order_no'] !== '-') ? htmlspecialchars($data['orderaxe_order_no']) : '';
-                $soNoHtml .= '<div class="d-flex align-items-center mt-1">' . ($orderaxeText ? '<span class="text-secondary fw-semibold small ms-1">' . $orderaxeText . '</span>' : '') . '</div>';
+            $filteredParty = $partyRows;
+            if (!empty($search)) {
+                $searchLower = strtolower($search);
+                $filteredParty = array_values(array_filter($partyRows, function($it) use ($searchLower) {
+                    return (str_contains(strtolower($it['art_no_raw'] ?? ''), $searchLower))
+                        || (str_contains(strtolower($it['customer_name'] ?? ''), $searchLower))
+                        || (str_contains(strtolower((string)$it['order_qty_raw']), $searchLower))
+                        || (str_contains(strtolower((string)$it['selling_price_raw']), $searchLower))
+                        || (str_contains(strtolower((string)$it['revenue_raw']), $searchLower))
+                        || (str_contains(strtolower($it['reason_raw'] ?? ''), $searchLower));
+                }));
             }
 
-            $orderaxeNoHtml = $data['orderaxe_order_no'] !== '-'
-                ? '<span class="fw-semibold text-dark">' . htmlspecialchars($data['orderaxe_order_no']) . '</span>'
-                : '<span class="text-muted">-</span>';
+            $pagedParty = $length != -1 ? array_slice($filteredParty, $start, $length) : $filteredParty;
 
-            $reasonHtml = $data['reason'] !== '-' ? htmlspecialchars($data['reason']) : '<span class="text-muted">-</span>';
+            return response()->json([
+                'draw'            => $draw,
+                'recordsTotal'    => count($partyRows),
+                'recordsFiltered' => count($filteredParty),
+                'data'            => $pagedParty,
+                'totals'          => [
+                    'order_qty' => $totPartyOrd,
+                    'revenue'   => $totPartyRev,
+                ],
+            ]);
+        }
 
-            $allOrders[] = [
-                'sno' => $orderSno++,
-                'so_id' => $soId,
-                'so_no_plain' => $data['so_no'],
-                'so_no' => $soNoHtml,
-                'orderaxe_order_no' => $orderaxeNoHtml,
-                'customer' => htmlspecialchars($data['customer']),
-                'so_date' => $data['so_date'],
-                'ordered_qty' => number_format($totalOrdQty, 0),
-                'invoiced_qty' => '<span class="text-primary fw-bold">' . number_format($soInvQty, 0) . '</span>',
-                'open_order_qty' => $openOrderQty > 0
-                    ? '<span class="text-info fw-bold">' . number_format($openOrderQty, 0) . '</span>'
-                    : '<span class="text-muted">0</span>',
-                'total_qty' => '<span class="text-dark fw-bold">' . number_format($totalInvoicedQty, 0) . '</span>',
-                'lost_qty' => '<span class="text-danger fw-bold">' . number_format($pendingQty, 0) . '</span>',
-                'lost_value' => '<span class="text-danger fw-bold">₹' . number_format($lostValue, 2) . '</span>',
-                'reason' => $reasonHtml,
-            ];
+        if ($viewType === 'product') {
+            $prodMap = [];
+            foreach ($soMap as $soId => $data) {
+                $soInvQty  = 0;
+                $soArtNos  = $data['so_art_nos'];
+
+                foreach ($soArtNos as $normArt => $ordQ) {
+                    $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
+                    $effectiveInvQ = min($ordQ, $invQ);
+                    $soInvQty += $effectiveInvQ;
+                }
+                $pendingQty = max(0, $data['ordered_qty'] - $soInvQty);
+                if ($pendingQty <= 0) continue;
+
+                foreach ($data['items'] as $it) {
+                    $normArt = $it['norm_art_no'];
+                    $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
+                    $remQ = max(0, $it['qty'] - $invQ);
+                    if ($remQ <= 0) continue;
+
+                    $artNo = $it['art_no'];
+                    $desc = $it['description'];
+                    $barcode = $it['barcode'];
+                    $size = $it['size'];
+                    $sleeve = $it['sleeve'];
+                    $key = strtoupper($artNo) . '|' . strtoupper($barcode) . '|' . $size . '|' . $sleeve;
+
+                    if (!isset($prodMap[$key])) {
+                        $prodMap[$key] = [
+                            'art_no'      => $artNo,
+                            'description' => $desc,
+                            'barcode'     => $barcode,
+                            'size'        => $size,
+                            'sleeve'      => $sleeve,
+                            'lost_qty'    => 0,
+                        ];
+                    }
+                    $prodMap[$key]['lost_qty'] += $remQ;
+                }
+            }
+
+            $prodRows = [];
+            $prodSno = 1;
+            $totLostQ = 0;
+
+            foreach ($prodMap as $p) {
+                $lQ = $p['lost_qty'];
+                $totLostQ += $lQ;
+
+                $rawSleeve = $p['sleeve'];
+                if (!empty($rawSleeve) && is_string($rawSleeve) && str_starts_with(trim($rawSleeve), '[')) {
+                    $decoded = json_decode($rawSleeve, true);
+                    $rawSleeve = is_array($decoded) && !empty($decoded) ? $decoded[0] : $rawSleeve;
+                }
+                $sleeveUpper = strtoupper(trim((string)$rawSleeve));
+                if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL' || $sleeveUpper === 'FULL SLEEVE') {
+                    $sleeveFormatted = 'Full';
+                } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF' || $sleeveUpper === 'HALF SLEEVE') {
+                    $sleeveFormatted = 'Half';
+                } else {
+                    $sleeveFormatted = $rawSleeve ?: '-';
+                }
+
+                $prodRows[] = [
+                    'sno'         => $prodSno++,
+                    'art_no'      => '<span class="fw-bold text-primary">' . htmlspecialchars($p['art_no']) . '</span>',
+                    'art_no_raw'  => $p['art_no'],
+                    'description' => htmlspecialchars($p['description']),
+                    'barcode'     => '<span class="badge bg-label-secondary font-monospace">' . htmlspecialchars($p['barcode']) . '</span>',
+                    'barcode_raw' => $p['barcode'],
+                    'size'        => '<span class="badge bg-label-info">' . htmlspecialchars($p['size']) . '</span>',
+                    'size_raw'    => $p['size'],
+                    'sleeve'      => '<span class="badge bg-label-secondary">' . htmlspecialchars($sleeveFormatted) . '</span>',
+                    'qty'         => '<span class="text-danger fw-bold">' . number_format($lQ, 0) . '</span>',
+                    'lost_qty'    => '<span class="text-danger fw-bold">' . number_format($lQ, 0) . '</span>',
+                    'qty_raw'     => $lQ,
+                ];
+            }
+
+            $filteredProd = $prodRows;
+            if (!empty($search)) {
+                $searchLower = strtolower($search);
+                $filteredProd = array_values(array_filter($prodRows, function($it) use ($searchLower) {
+                    return (str_contains(strtolower($it['art_no_raw'] ?? ''), $searchLower))
+                        || (str_contains(strtolower($it['description'] ?? ''), $searchLower))
+                        || (str_contains(strtolower($it['barcode_raw'] ?? ''), $searchLower))
+                        || (str_contains(strtolower($it['size_raw'] ?? ''), $searchLower))
+                        || (str_contains(strtolower((string)$it['qty_raw']), $searchLower));
+                }));
+            }
+
+            $pagedProd = $length != -1 ? array_slice($filteredProd, $start, $length) : $filteredProd;
+
+            return response()->json([
+                'draw'            => $draw,
+                'recordsTotal'    => count($prodRows),
+                'recordsFiltered' => count($filteredProd),
+                'data'            => $pagedProd,
+                'totals'          => [
+                    'lost_qty' => $totLostQ,
+                ],
+            ]);
+        }
+
+        $filteredOrders = $allOrders;
+        if (!empty($search)) {
+            $searchLower = strtolower($search);
+            $filteredOrders = array_values(array_filter($allOrders, function($it) use ($searchLower) {
+                return (str_contains(strtolower($it['so_no_plain'] ?? ''), $searchLower))
+                    || (str_contains(strtolower($it['art_no_raw'] ?? ''), $searchLower))
+                    || (str_contains(strtolower($it['customer_plain'] ?? ''), $searchLower))
+                    || (str_contains(strtolower((string)$it['lost_qty_raw']), $searchLower))
+                    || (str_contains(strtolower((string)$it['selling_price_raw']), $searchLower))
+                    || (str_contains(strtolower((string)$it['lost_revenue_raw']), $searchLower))
+                    || (str_contains(strtolower($it['reason_raw'] ?? ''), $searchLower));
+            }));
+        }
+
+        $orderColIdx = $request->input('order.0.column');
+        $orderDir = strtolower($request->input('order.0.dir', 'asc'));
+        $sortColMap = [
+            0 => 'so_no_plain',
+            1 => 'art_no_raw',
+            2 => 'customer_plain',
+            3 => 'lost_qty_raw',
+            4 => 'selling_price_raw',
+            5 => 'lost_revenue_raw',
+            6 => 'reason_raw',
+        ];
+
+        if (isset($sortColMap[$orderColIdx])) {
+            $colKey = $sortColMap[$orderColIdx];
+            usort($filteredOrders, function($a, $b) use ($colKey, $orderDir) {
+                if ($colKey === 'so_no_plain') {
+                    $cmp = ((int)($a['so_id'] ?? 0) <=> (int)($b['so_id'] ?? 0));
+                } else {
+                    $valA = $a[$colKey] ?? '';
+                    $valB = $b[$colKey] ?? '';
+                    if (is_numeric($valA) && is_numeric($valB)) {
+                        $cmp = ($valA <=> $valB);
+                    } else {
+                        $cmp = strcasecmp((string)$valA, (string)$valB);
+                    }
+                }
+                return $orderDir === 'desc' ? -$cmp : $cmp;
+            });
         }
 
         $recordsTotal = count($allOrders);
-        $recordsFiltered = $recordsTotal;
+        $recordsFiltered = count($filteredOrders);
 
-        $pagedOrders = $length != -1 ? array_slice($allOrders, $start, $length) : $allOrders;
+        $pagedOrders = $length != -1 ? array_slice($filteredOrders, $start, $length) : $filteredOrders;
 
         return response()->json([
             'draw' => $draw,
@@ -2849,10 +3678,6 @@ class SalesMarketingReportController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data' => $pagedOrders,
             'totals' => [
-                'ordered_qty'    => $totOrdAll,
-                'invoiced_qty'   => $totInvAll,
-                'open_order_qty' => $totOpenOrdAll,
-                'total_qty'      => $totQtyAll,
                 'lost_qty'       => $totLostQtyAll,
                 'lost_value'     => $totLostValAll,
             ],
@@ -2871,6 +3696,8 @@ class SalesMarketingReportController extends Controller
                 'sales_orders.so_no',
                 'sales_orders.so_date',
                 'sales_orders.total_qty',
+                'sales_orders.reason_for_delay',
+                'sales_orders.internal_remarks',
                 'customers.name as customer_name'
             ]);
 
@@ -2901,6 +3728,8 @@ class SalesMarketingReportController extends Controller
                 'sales_order_items.sku',
                 'sales_order_items.sleeve',
                 'sales_order_items.qty',
+                'sales_order_items.rate',
+                'sales_order_items.amount',
                 'sales_order_items.api_color',
                 'sales_order_items.size_id',
                 'sales_order_items.category_name',
@@ -2957,7 +3786,6 @@ class SalesMarketingReportController extends Controller
             }
         }
 
-        // Pass 1: Match by exact SKU / barcode first across all SO items
         $soRemMap = [];
         $consumedFromArt = [];
 
@@ -3010,9 +3838,15 @@ class SalesMarketingReportController extends Controller
             }
         }
 
+        $matchedInvQty = 0;
+        foreach ($soArtNos as $norm => $ordQ) {
+            $invQ = $invArtNoTotals[$norm] ?? 0;
+            $matchedInvQty += min($ordQ, $invQ);
+        }
+
         $soTotalQty = floatval($so->total_qty ?? $soItems->sum('qty'));
-        $invTotalQty = floatval($invRows->sum('quantity'));
-        $netBalance = max(0, $soTotalQty - $invTotalQty);
+        $invTotalQty = $matchedInvQty;
+        $netBalance = max(0, $soTotalQty - $matchedInvQty);
         $extraDelivered = max(0, $totalLostQty - $netBalance);
 
         if ($netBalance <= 0) {
@@ -3038,6 +3872,345 @@ class SalesMarketingReportController extends Controller
             unset($it);
             $totalLostQty = $netBalance;
         }
+
+        if (!empty($request->art_no)) {
+            $filterArtNorm = strtoupper(preg_replace('/\s+/', '', trim($request->art_no)));
+            $lostItems = array_values(array_filter($lostItems, function($it) use ($filterArtNorm) {
+                $norm = strtoupper(preg_replace('/\s+/', '', trim($it['art_no_raw'] ?? '')));
+                return $norm === $filterArtNorm;
+            }));
+            $itemSno = 1;
+            $totalLostQty = 0;
+            foreach ($lostItems as &$li) {
+                $li['sno'] = $itemSno++;
+                $totalLostQty += floatval($li['qty_raw'] ?? 0);
+            }
+            unset($li);
+        }
+
+        $reasonText = !empty($so->reason_for_delay) ? trim($so->reason_for_delay) : '-';
+        $customerName = $so->customer_name ?: '-';
+
+        $partyMap = [];
+        foreach ($soRemMap as $idx => $entry) {
+            $remQ = $entry['remQ'];
+            if ($remQ <= 0) continue;
+            $item = $entry['item'];
+            $artNo = trim($item->art_no ?? '-');
+            $rate = floatval($item->rate ?? 0);
+            if ($rate <= 0 && floatval($item->qty ?? 0) > 0 && floatval($item->amount ?? 0) > 0) {
+                $rate = floatval($item->amount) / floatval($item->qty);
+            }
+            $ordQ = floatval($item->qty ?? 0);
+            $key = strtoupper($artNo) . '|' . number_format($rate, 2);
+
+            if (!isset($partyMap[$key])) {
+                $partyMap[$key] = [
+                    'art_no'        => $artNo,
+                    'customer_name' => $customerName,
+                    'order_qty'     => 0,
+                    'rate'          => $rate,
+                    'reason'        => $reasonText,
+                ];
+            }
+            $partyMap[$key]['order_qty'] += $ordQ;
+        }
+
+        $partyRows = [];
+        $partySno = 1;
+        $totPartyOrdQty = 0;
+        $totPartyRevenue = 0;
+
+        foreach ($partyMap as $p) {
+            $ordQ = $p['order_qty'];
+            $rate = $p['rate'];
+            $rev = $ordQ * $rate;
+            $totPartyOrdQty += $ordQ;
+            $totPartyRevenue += $rev;
+
+            $partyRows[] = [
+                'sno'           => $partySno++,
+                'art_no'        => '<span class="fw-bold text-primary">' . htmlspecialchars($p['art_no']) . '</span>',
+                'art_no_raw'    => $p['art_no'],
+                'customer_name' => htmlspecialchars($p['customer_name']),
+                'order_qty'     => '<span class="fw-bold text-dark">' . number_format($ordQ, 0) . '</span>',
+                'order_qty_raw' => $ordQ,
+                'selling_price' => '₹' . number_format($rate, 2),
+                'selling_price_raw' => $rate,
+                'revenue'       => '<span class="fw-bold text-danger">₹' . number_format($rev, 2) . '</span>',
+                'revenue_raw'   => $rev,
+                'reason'        => $p['reason'] !== '-' ? htmlspecialchars($p['reason']) : '<span class="text-muted">-</span>',
+                'reason_raw'    => $p['reason'],
+            ];
+        }
+
+        if ($request->view_type === 'party') {
+            $search = $request->search['value'] ?? '';
+            $filteredParty = $partyRows;
+            if (!empty($search)) {
+                $searchLower = strtolower($search);
+                $filteredParty = array_values(array_filter($partyRows, function($it) use ($searchLower) {
+                    return (str_contains(strtolower($it['art_no_raw'] ?? ''), $searchLower))
+                        || (str_contains(strtolower($it['customer_name'] ?? ''), $searchLower))
+                        || (str_contains(strtolower((string)$it['order_qty_raw']), $searchLower))
+                        || (str_contains(strtolower((string)$it['selling_price_raw']), $searchLower))
+                        || (str_contains(strtolower((string)$it['revenue_raw']), $searchLower))
+                        || (str_contains(strtolower($it['reason_raw'] ?? ''), $searchLower));
+                }));
+            }
+
+            $draw = intval($request->draw ?? 1);
+            $start = intval($request->start ?? 0);
+            $rawLen = intval($request->length ?? 10);
+            $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
+            $pagedParty = $length != -1 ? array_slice($filteredParty, $start, $length) : $filteredParty;
+
+            return response()->json([
+                'draw'             => $draw,
+                'recordsTotal'     => count($partyRows),
+                'recordsFiltered'  => count($filteredParty),
+                'data'             => $pagedParty,
+                'total_order_qty'  => number_format($totPartyOrdQty, 0),
+                'total_revenue'    => number_format($totPartyRevenue, 2),
+                'totals'           => [
+                    'order_qty' => $totPartyOrdQty,
+                    'revenue'   => $totPartyRevenue,
+                ],
+                'so_no'            => $so->so_no,
+                'customer'         => $so->customer_name ?? '-',
+                'so_date'          => $so->so_date ? date('d-m-Y', strtotime($so->so_date)) : '-',
+                'reason'           => $reasonText,
+                'status'           => true,
+            ]);
+        }
+
+        $allArtNos = [];
+        foreach ($lostItems as $li) {
+            $rawArt = trim($li['art_no_raw'] ?? '');
+            if (!empty($rawArt) && $rawArt !== '-') {
+                $allArtNos[] = $rawArt;
+            }
+        }
+        $allArtNos = array_values(array_unique($allArtNos));
+
+        $fgStockMap = [];
+        $cuttingMap = [];
+
+        if (!empty($allArtNos)) {
+            $stockRows = DB::table('stock_entry_items')
+                ->where('stock_type', 'finished_goods')
+                ->whereNull('deleted_at')
+                ->where(function($q) use ($allArtNos) {
+                    $q->whereIn('art_no', $allArtNos)
+                      ->orWhereIn('finished_item_code', $allArtNos);
+                })
+                ->select(
+                    'art_no',
+                    'finished_item_code',
+                    'size',
+                    'sleeve_type',
+                    DB::raw('SUM(qty_in - qty_out) as balance')
+                )
+                ->groupBy('art_no', 'finished_item_code', 'size', 'sleeve_type')
+                ->get();
+
+            foreach ($stockRows as $sr) {
+                $artKey = strtoupper(preg_replace('/\s+/', '', $sr->art_no ?: $sr->finished_item_code));
+                $sizeKey = strtoupper(trim((string)$sr->size));
+                $slvKey = strtoupper(trim((string)$sr->sleeve_type));
+                if (str_starts_with($slvKey, 'FULL') || $slvKey === 'FS' || $slvKey === 'F/S') $slvKey = 'FULL';
+                elseif (str_starts_with($slvKey, 'HALF') || $slvKey === 'HS' || $slvKey === 'H/S') $slvKey = 'HALF';
+
+                $balVal = floatval($sr->balance);
+                $fgStockMap[$artKey][$sizeKey][$slvKey] = ($fgStockMap[$artKey][$sizeKey][$slvKey] ?? 0) + $balVal;
+                $fgStockMap[$artKey][$sizeKey]['ALL'] = ($fgStockMap[$artKey][$sizeKey]['ALL'] ?? 0) + $balVal;
+                $fgStockMap[$artKey]['TOTAL'] = ($fgStockMap[$artKey]['TOTAL'] ?? 0) + $balVal;
+            }
+
+            // 2. Active Cuttings from job_card_entries & job_card_fabric_details
+            $activeJcs = DB::table('job_card_entries as jce')
+                ->join('job_card_fabric_details as jcfd', 'jce.id', '=', 'jcfd.job_card_entry_id')
+                ->leftJoin('service_providers as sp', 'jce.service_provider_id', '=', 'sp.id')
+                ->where(function($q) use ($allArtNos) {
+                    $q->whereIn('jcfd.art_no', $allArtNos)
+                      ->orWhereIn('jcfd.fg_art_no', $allArtNos);
+                })
+                ->whereNull('jce.deleted_at')
+                ->whereNull('jcfd.deleted_at')
+                ->whereNotIn('jce.status', ['Completed', 'Cancel', 'Cancelled'])
+                ->select(
+                    'jce.id',
+                    'jce.job_card_no',
+                    'jce.status as jc_status',
+                    'jcfd.art_no',
+                    'jcfd.fg_art_no',
+                    'sp.name as unit_name',
+                    'sp.code as unit_code'
+                )
+                ->distinct()
+                ->get();
+
+            $jcIds = $activeJcs->pluck('id')->unique()->toArray();
+
+            $schedulesByJc = DB::table('process_schedules')->whereIn('job_card_entry_id', $jcIds)->whereNull('deleted_at')->orderBy('operation_stage_id', 'asc')->get()->groupBy('job_card_entry_id');
+
+            $tasksByJc = DB::table('tasks')->whereIn('job_card_entry_id', $jcIds)->whereNull('deleted_at')->get()->groupBy('job_card_entry_id');
+
+            foreach ($activeJcs as $jc) {
+                $matchedArts = array_filter([$jc->art_no, $jc->fg_art_no]);
+                $schedules = $schedulesByJc->get($jc->id, collect());
+                $currentStage = 'CUTTING';
+
+                if ($schedules->isNotEmpty()) {
+                    $tasks = $tasksByJc->get($jc->id, collect());
+                    $isAllDone = true;
+                    foreach ($schedules as $sched) {
+                        $schedTasks = $tasks->where('stage_id', $sched->id);
+                        $isDone = false;
+                        if (strtolower(trim($sched->status ?? '')) === 'completed') {
+                            $isDone = true;
+                        } elseif ($schedTasks->isNotEmpty() && $schedTasks->every(function($t) {
+                            return strtolower(trim($t->status ?? '')) === 'completed';
+                        })) {
+                            $isDone = true;
+                        }
+                        if (!$isDone) {
+                            $currentStage = strtoupper(trim($sched->stage ?? ''));
+                            $isAllDone = false;
+                            break;
+                        }
+                    }
+                    if ($isAllDone) {
+                        $currentStage = 'COMPLETED';
+                    }
+                }
+
+                // Skip completed or cancelled cuttings — only active in-progress pipeline should be tracked here
+                if ($currentStage === 'COMPLETED' || in_array(strtolower(trim($jc->jc_status ?? '')), ['completed', 'production completed', 'cancel', 'cancelled'])) {
+                    continue;
+                }
+
+                $unitDisplay = !empty($jc->unit_name) ? $jc->unit_name : (!empty($jc->unit_code) ? $jc->unit_code : '-');
+
+                foreach ($matchedArts as $aNo) {
+                    $normArt = strtoupper(preg_replace('/\s+/', '', $aNo));
+                    if (!isset($cuttingMap[$normArt])) {
+                        $cuttingMap[$normArt] = [];
+                    }
+                    $exists = false;
+                    foreach ($cuttingMap[$normArt] as $existing) {
+                        if ($existing['id'] == $jc->id) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    if (!$exists) {
+                        $cuttingMap[$normArt][] = [
+                            'id'          => $jc->id,
+                            'job_card_no' => $jc->job_card_no,
+                            'unit'        => $unitDisplay,
+                            'stage'       => $currentStage,
+                        ];
+                    }
+                }
+            }
+        }
+
+        foreach ($lostItems as &$li) {
+            $rawArt = trim($li['art_no_raw'] ?? '');
+            $normArt = strtoupper(preg_replace('/\s+/', '', $rawArt));
+            $rawSize = strtoupper(trim($li['size_raw'] ?? ''));
+            $rawSlv = strtoupper(trim(strip_tags($li['sleeve'] ?? '')));
+            if (str_starts_with($rawSlv, 'FULL') || $rawSlv === 'FS' || $rawSlv === 'F/S') $rawSlv = 'FULL';
+            elseif (str_starts_with($rawSlv, 'HALF') || $rawSlv === 'HS' || $rawSlv === 'H/S') $rawSlv = 'HALF';
+
+            $bal = $fgStockMap[$normArt][$rawSize][$rawSlv] 
+                ?? $fgStockMap[$normArt][$rawSize]['ALL'] 
+                ?? 0;
+
+            if ($bal > 0) {
+                $li['fg_stock_html'] = '<span class="badge bg-label-success fw-bold">' . number_format($bal, 0) . ' pcs</span>';
+                $li['fg_stock'] = $bal;
+            } else {
+                $li['fg_stock_html'] = '<span class="text-muted fw-bold">0</span>';
+                $li['fg_stock'] = 0;
+            }
+
+            $cuttings = $cuttingMap[$normArt] ?? [];
+            if (!empty($cuttings)) {
+                $cutLines = [];
+                $unitLines = [];
+                $stageLines = [];
+
+                $maxShow = 3;
+                $sliceCuttings = array_slice($cuttings, 0, $maxShow);
+                $remainingCount = count($cuttings) - $maxShow;
+                $rowUniqueId = 'cut_' . ($li['sno'] ?? rand(100, 999)) . '_' . substr(md5($normArt . $rawSize . $rawSlv), 0, 6);
+
+                foreach ($sliceCuttings as $c) {
+                    $cutLines[] = '<div class="text-nowrap fw-bold text-primary mb-1">' . htmlspecialchars($c['job_card_no']) . '</div>';
+                    $unitLines[] = '<div class="text-nowrap fw-semibold text-dark mb-1">' . htmlspecialchars($c['unit']) . '</div>';
+
+                    $stg = $c['stage'];
+                    $badgeClass = 'bg-label-primary';
+                    if (str_contains($stg, 'STITCHING')) {
+                        $badgeClass = 'bg-label-warning text-dark';
+                    } elseif (str_contains($stg, 'KAJA') || str_contains($stg, 'BUTTON')) {
+                        $badgeClass = 'bg-label-info';
+                    } elseif (str_contains($stg, 'TRIMMING') || str_contains($stg, 'CHECKING')) {
+                        $badgeClass = 'bg-label-dark';
+                    } elseif (str_contains($stg, 'IRONING') || str_contains($stg, 'PACKING') || str_contains($stg, 'COMPLETED')) {
+                        $badgeClass = 'bg-label-success';
+                    }
+
+                    $stageLines[] = '<div class="text-nowrap mb-1"><span class="badge ' . $badgeClass . '">' . htmlspecialchars($stg) . '</span></div>';
+                }
+
+                if ($remainingCount > 0) {
+                    $extraCutLines = [];
+                    $extraUnitLines = [];
+                    $extraStageLines = [];
+
+                    foreach (array_slice($cuttings, $maxShow) as $remC) {
+                        $extraCutLines[] = '<div class="text-nowrap fw-bold text-primary mb-1">' . htmlspecialchars($remC['job_card_no']) . '</div>';
+                        $extraUnitLines[] = '<div class="text-nowrap fw-semibold text-dark mb-1">' . htmlspecialchars($remC['unit']) . '</div>';
+
+                        $remStg = $remC['stage'];
+                        $remBadgeClass = 'bg-label-primary';
+                        if (str_contains($remStg, 'STITCHING')) {
+                            $remBadgeClass = 'bg-label-warning text-dark';
+                        } elseif (str_contains($remStg, 'KAJA') || str_contains($remStg, 'BUTTON')) {
+                            $remBadgeClass = 'bg-label-info';
+                        } elseif (str_contains($remStg, 'TRIMMING') || str_contains($remStg, 'CHECKING')) {
+                            $remBadgeClass = 'bg-label-dark';
+                        } elseif (str_contains($remStg, 'IRONING') || str_contains($remStg, 'PACKING') || str_contains($remStg, 'COMPLETED')) {
+                            $remBadgeClass = 'bg-label-success';
+                        }
+
+                        $extraStageLines[] = '<div class="text-nowrap mb-1"><span class="badge ' . $remBadgeClass . '">' . htmlspecialchars($remStg) . '</span></div>';
+                    }
+
+                    $cutLines[] = '<div class="extra-cuttings extra-cut-' . $rowUniqueId . '" style="display: none;">' . implode('', $extraCutLines) . '</div>';
+                    $unitLines[] = '<div class="extra-cuttings extra-cut-' . $rowUniqueId . '" style="display: none;">' . implode('', $extraUnitLines) . '</div>';
+                    $stageLines[] = '<div class="extra-cuttings extra-cut-' . $rowUniqueId . '" style="display: none;">' . implode('', $extraStageLines) . '</div>';
+
+                    $cutLines[] = '<a href="javascript:void(0)" class="toggle-cut-btn badge bg-label-info text-primary fw-bold text-decoration-none d-inline-block mt-1" onclick="toggleCuttingExpansion(\'' . $rowUniqueId . '\', this, ' . $remainingCount . ')">+ ' . $remainingCount . ' more <i class="ri-arrow-down-s-line"></i></a>';
+                    $unitLines[] = '<div class="toggle-cut-spacer-' . $rowUniqueId . '" style="height: 22px;">&nbsp;</div>';
+                    $stageLines[] = '<div class="toggle-cut-spacer-' . $rowUniqueId . '" style="height: 22px;">&nbsp;</div>';
+                }
+
+                $li['cutting_no_html'] = implode('', $cutLines);
+                $li['unit_html'] = implode('', $unitLines);
+                $li['stage_status_html'] = implode('', $stageLines);
+                $li['has_cutting'] = true;
+            } else {
+                $li['cutting_no_html'] = '<span class="text-muted">-</span>';
+                $li['unit_html'] = '<span class="text-muted">-</span>';
+                $li['stage_status_html'] = '<span class="badge bg-label-secondary">Not in Production</span>';
+                $li['has_cutting'] = false;
+            }
+        }
+        unset($li);
 
         $search = $request->search['value'] ?? '';
         $filteredItems = $lostItems;
@@ -3065,6 +4238,8 @@ class SalesMarketingReportController extends Controller
             'recordsFiltered'  => count($filteredItems),
             'data'             => $pagedItems,
             'total_lost_qty'   => number_format($totalLostQty, 0),
+            'total_order_qty'  => number_format($totPartyOrdQty, 0),
+            'total_revenue'    => number_format($totPartyRevenue, 2),
             'order_qty'        => number_format($soTotalQty, 0),
             'delivered_qty'    => number_format($invTotalQty, 0),
             'net_balance_qty'  => number_format($netBalance, 0),
@@ -3072,8 +4247,10 @@ class SalesMarketingReportController extends Controller
             'so_no'            => $so->so_no,
             'customer'         => $so->customer_name ?? '-',
             'so_date'          => $so->so_date ? date('d-m-Y', strtotime($so->so_date)) : '-',
+            'reason'           => $reasonText,
             'status'           => true,
             'items'            => $lostItems,
+            'party_items'      => $partyRows,
         ]);
     }
 
@@ -3218,10 +4395,69 @@ class SalesMarketingReportController extends Controller
             'barcode_raw' => $barcode,
             'color'       => htmlspecialchars($color),
             'size'        => '<span class="badge bg-label-info">' . htmlspecialchars($size) . '</span>',
+            'size_raw'    => $size,
             'sleeve'      => '<span class="badge bg-label-secondary">' . htmlspecialchars($sleeveFormatted) . '</span>',
             'qty'         => '<span class="text-danger fw-bold">' . number_format($qty, 0) . '</span>',
             'qty_raw'     => $qty,
         ];
+    }
+
+    protected function resolveJobCardCurrentStage($jobCardId, $schedulesByJc, $tasksByJc, $opsByJc)
+    {
+        if (!$jobCardId) return '-';
+
+        $schedules = $schedulesByJc->get($jobCardId, collect());
+        if ($schedules->isNotEmpty()) {
+            $tasks = $tasksByJc->get($jobCardId, collect());
+
+            foreach ($schedules as $schedule) {
+                $scheduleTasks = $tasks->where('stage_id', $schedule->id);
+
+                $isCompleted = false;
+                if (strtolower(trim($schedule->status ?? '')) === 'completed') {
+                    $isCompleted = true;
+                } elseif ($scheduleTasks->isNotEmpty() && $scheduleTasks->every(function($t) {
+                    return strtolower(trim($t->status ?? '')) === 'completed';
+                })) {
+                    $isCompleted = true;
+                }
+
+                if (!$isCompleted) {
+                    return strtoupper(trim($schedule->stage ?? ''));
+                }
+            }
+
+            return 'COMPLETED';
+        }
+
+        $operations = $opsByJc->get($jobCardId, collect());
+        if ($operations->isNotEmpty()) {
+            $tasks = $tasksByJc->get($jobCardId, collect());
+
+            foreach ($operations as $op) {
+                $stageName = strtoupper(trim($op->operation_stage_name ?? ''));
+                $osId = $op->operation_stage_id;
+
+                $opTasks = $tasks->filter(function($t) use ($osId) {
+                    return $t->stage_id == $osId;
+                });
+
+                $isCompleted = false;
+                if ($opTasks->isNotEmpty() && $opTasks->every(function($t) {
+                    return strtolower(trim($t->status ?? '')) === 'completed';
+                })) {
+                    $isCompleted = true;
+                }
+
+                if (!$isCompleted) {
+                    return $stageName ?: 'CUTTING';
+                }
+            }
+
+            return 'COMPLETED';
+        }
+
+        return 'CUTTING';
     }
 
     protected function resolveBrandFromOrderItem($item, $allBrands)
@@ -3327,7 +4563,6 @@ class SalesMarketingReportController extends Controller
                 ], 422);
             }
 
-            // Detect headers from row 1
             $firstRow = reset($rows);
             $colCode = null;
             $colName = null;
@@ -3355,7 +4590,6 @@ class SalesMarketingReportController extends Controller
                 }
             }
 
-            // Fallback default column positions if headers didn't match keywords
             if (!$colCode) $colCode = 'A';
             if (!$colName) $colName = 'B';
             if (!$colQty) $colQty = 'C';
@@ -3366,7 +4600,6 @@ class SalesMarketingReportController extends Controller
             $defaultDate = $request->filled('as_on_date') ? date('Y-m-d', strtotime((string)$request->as_on_date)) : now()->format('Y-m-d');
             $defaultFinYear = $request->filled('financial_year') ? trim((string)$request->financial_year) : (date('n') >= 4 ? date('Y') . '-' . (date('Y') + 1) : (date('Y') - 1) . '-' . date('Y'));
 
-            // Preload active customers by code and lowercase name for fast lookup
             $customersByCode = Customer::all()->keyBy(function($c) { return strtoupper(trim((string)$c->code)); });
             $customersByName = Customer::all()->keyBy(function($c) { return strtolower(trim((string)$c->name)); });
 
@@ -3376,7 +4609,7 @@ class SalesMarketingReportController extends Controller
             foreach ($rows as $row) {
                 if ($isFirst) {
                     $isFirst = false;
-                    continue; // Skip header row
+                    continue; 
                 }
 
                 $codeVal = trim((string)($row[$colCode] ?? ''));
@@ -3385,17 +4618,15 @@ class SalesMarketingReportController extends Controller
                 $rawAmt = trim((string)($row[$colAmount] ?? '0'));
 
                 if (empty($codeVal) && empty($nameVal)) {
-                    continue; // Skip blank line
+                    continue; 
                 }
 
-                // Clean numeric values (remove currency symbol, commas, spaces)
                 $cleanAmt = preg_replace('/[^0-9.-]/', '', $rawAmt);
                 $amtVal = is_numeric($cleanAmt) ? (float)$cleanAmt : 0;
 
                 $cleanQty = preg_replace('/[^0-9.-]/', '', $rawQty);
                 $qtyVal = is_numeric($cleanQty) ? (float)$cleanQty : 0;
 
-                // Match customer
                 $customer = null;
                 if (!empty($codeVal) && isset($customersByCode[strtoupper($codeVal)])) {
                     $customer = $customersByCode[strtoupper($codeVal)];
@@ -3485,6 +4716,135 @@ class SalesMarketingReportController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function updateGstFiling(Request $request)
+    {
+        $userName = auth()->user() ? auth()->user()->name : 'User';
+        $userId = auth()->id();
+        $isSelectAllMatching = $request->boolean('select_all_matching');
+
+        if ($isSelectAllMatching) {
+            $parseDate = function($dateStr) {
+                if (empty($dateStr) || $dateStr === 'DD-MM-YYYY' || trim($dateStr) === '') {
+                    return null;
+                }
+                try {
+                    return \Carbon\Carbon::createFromFormat('d-m-Y', trim($dateStr))->format('Y-m-d');
+                } catch (\Exception $e) {
+                    try {
+                        $ts = strtotime(trim($dateStr));
+                        return ($ts !== false && $ts > 0) ? date('Y-m-d', $ts) : null;
+                    } catch (\Exception $e2) {
+                        return null;
+                    }
+                }
+            };
+
+            $query = SalesInvoice::whereNull('deleted_at')
+                ->where(function($q) {
+                    $q->whereNull('is_gst_filed')->orWhere('is_gst_filed', 0);
+                });
+
+            $fromDate = $parseDate($request->from_date);
+            $toDate = $parseDate($request->to_date);
+
+            if ($fromDate) $query->where('inv_date', '>=', $fromDate);
+            if ($toDate) $query->where('inv_date', '<=', $toDate);
+            if ($request->filled('customer_id')) $query->where('customer_id', $request->customer_id);
+            if ($request->filled('agent_id')) $query->where('agent_id', $request->agent_id);
+
+            if ($request->filled('invoice_status')) {
+                $invStatus = trim((string)$request->invoice_status);
+                if ($invStatus === 'Cancelled') {
+                    $query->where(function($q) {
+                        $q->where('invoice_status', 'Cancelled')
+                          ->orWhereRaw('LOWER(einvoice_status) = ?', ['cancelled']);
+                    });
+                } else {
+                    $query->where('invoice_status', $invStatus);
+                }
+            }
+
+            if ($request->filled('einvoice_status')) {
+                $einvoiceStatus = strtolower(trim((string)$request->einvoice_status));
+                if ($einvoiceStatus === 'generated') {
+                    $query->whereRaw('LOWER(einvoice_status) = ?', ['generated']);
+                } elseif ($einvoiceStatus === 'not_generated') {
+                    $query->where(function($q) {
+                        $q->whereNull('einvoice_status')
+                          ->orWhereRaw('LOWER(einvoice_status) != ?', ['generated']);
+                    });
+                }
+            }
+
+            if ($request->filled('search')) {
+                $search = trim((string)$request->search);
+                $query->where(function($q) use ($search) {
+                    $q->where('inv_no', 'like', "%{$search}%");
+
+                    if (preg_match('/^CD\/(\d+)/i', $search, $sm)) {
+                        $sNum = (int)$sm[1];
+                        if ($sNum > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                            $dbNum = ($sNum >= 316) ? ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($sNum - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                            $q->orWhere('inv_no', 'like', "%CDW/{$dbNum}%");
+                        }
+                    } elseif (is_numeric(trim($search))) {
+                        $numVal = (int)trim($search);
+                        if ($numVal > \App\Models\SalesInvoice::CDW_CD_OFFSET) {
+                            $cdwNum = ($numVal >= 316) ? ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET + 1) : ($numVal - \App\Models\SalesInvoice::CDW_CD_OFFSET);
+                            $q->orWhere('inv_no', 'like', "%CDW/{$cdwNum}/%");
+                        }
+                    } elseif (stripos($search, 'CD') !== false && stripos($search, 'CDW') === false) {
+                        $q->orWhere('inv_no', 'like', "%CDW/%");
+                    }
+
+                    $q->orWhereHas('customer', function($c) use ($search) {
+                        $c->where('name', 'like', "%{$search}%")
+                          ->orWhere('gst_no', 'like', "%{$search}%")
+                          ->orWhereHas('place', function($pl) use ($search) {
+                              $pl->where('place_name', 'like', "%{$search}%");
+                          })
+                          ->orWhereHas('city', function($ct) use ($search) {
+                              $ct->where('city_name', 'like', "%{$search}%");
+                          });
+                    });
+                });
+            }
+
+            $invoices = $query->get();
+        } else {
+            $request->validate([
+                'invoice_ids' => 'required|array|min:1',
+                'invoice_ids.*' => 'exists:sales_invoices,id',
+            ]);
+            $invoices = SalesInvoice::whereIn('id', $request->invoice_ids)->get();
+        }
+
+        $count = 0;
+        foreach ($invoices as $inv) {
+            if ($inv->is_gst_filed) {
+                continue;
+            }
+            $oldData = $inv->only(['is_gst_filed', 'gst_filed_at', 'gst_filed_by']);
+            $inv->update([
+                'is_gst_filed' => 1,
+                'gst_filed_at' => now(),
+                'gst_filed_by' => $userId,
+            ]);
+            $newData = $inv->fresh()->only(['is_gst_filed', 'gst_filed_at', 'gst_filed_by']);
+            if (function_exists('addLog')) {
+                addLog('gst_filed', 'Sales GST Report', 'sales_invoices', $inv->id, $oldData, $newData, "Invoice {$inv->inv_no} marked as GST Filed by {$userName}");
+            }
+            $count++;
+        }
+
+        $msg = "{$count} Invoice(s) marked as GST Filed successfully.";
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $msg
+        ]);
     }
 }
 

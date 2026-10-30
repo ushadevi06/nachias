@@ -7,7 +7,8 @@
                 <th class="text-end fw-bold">Regular Sales</th>
                 <th class="text-end fw-bold">Discount Sales</th>
                 <th class="text-end fw-bold">Discount Amount</th>
-                <th class="text-center fw-bold">Discount %</th>
+                <th class="text-center fw-bold" title="Discount Invoices (Customers)">Disc. Invoices (Cust)</th>
+                <th class="text-center fw-bold" title="Percentage of Total Sales from Discount Billing">% of Total Sales</th>
                 <th class="text-end fw-bold">Net Revenue</th>
             </tr>
         </thead>
@@ -20,7 +21,8 @@
                 <th class="text-end fw-bold text-primary" id="regFootSales">₹0.00</th>
                 <th class="text-end fw-bold text-warning" id="regFootDiscountSales">₹0.00</th>
                 <th class="text-end fw-bold text-danger" id="regFootDiscount">₹0.00</th>
-                <th></th>
+                <th class="text-center fw-bold text-dark" id="regFootDiscInv">-</th>
+                <th class="text-center fw-bold text-primary" id="regFootDiscShare">-</th>
                 <th class="text-end fw-bold text-success" id="regFootNet">₹0.00</th>
             </tr>
         </tfoot>
@@ -52,7 +54,8 @@ window.initRegularDiscountTable = function() {
             { data: 'regular_sales', name: 'regular_sales', className: 'text-end' },
             { data: 'discount_sales', name: 'discount_sales', className: 'text-end' },
             { data: 'discount_amount', name: 'discount_amount', className: 'text-end text-danger' },
-            { data: 'discount_pc', name: 'discount_pc', className: 'text-center', orderable: false },
+            { data: 'discount_invoices', name: 'discount_invoices', className: 'text-center', orderable: false },
+            { data: 'discount_share_pc', name: 'discount_share_pc', className: 'text-center', orderable: false },
             { data: 'net_revenue', name: 'net_revenue', className: 'text-end' }
         ],
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
@@ -69,11 +72,27 @@ window.initRegularDiscountTable = function() {
                 return 0;
             };
             var cur = function (num) { return '₹' + parseFloat(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-            $('#regFootTotalSales').html(cur(api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#regFootSales').html(cur(api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#regFootDiscountSales').html(cur(api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#regFootDiscount').html(cur(api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
-            $('#regFootNet').html(cur(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
+            
+            var totalSales = api.column(1, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var regSales = api.column(2, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var discSales = api.column(3, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var discAmt = api.column(4, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+            var discInvoices = api.column(5, { page: 'current' }).data().reduce(function (a, b) {
+                var match = ('' + b).replace(/<[^>]*>/g, '').match(/^([\d,]+)/);
+                var val = match ? parseFloat(match[1].replace(/,/g, '')) : 0;
+                return a + (isNaN(val) ? 0 : val);
+            }, 0);
+            var netRev = api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0);
+
+            var overallDiscShare = totalSales > 0 ? ((discSales / totalSales) * 100).toFixed(1) + '%' : '-';
+
+            $('#regFootTotalSales').html(cur(totalSales));
+            $('#regFootSales').html(cur(regSales));
+            $('#regFootDiscountSales').html(cur(discSales));
+            $('#regFootDiscount').html(cur(discAmt));
+            $('#regFootDiscInv').html(discInvoices > 0 ? discInvoices.toLocaleString('en-IN') : '-');
+            $('#regFootDiscShare').html(overallDiscShare);
+            $('#regFootNet').html(cur(netRev));
         }
     });
 };

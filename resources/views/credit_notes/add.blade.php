@@ -35,7 +35,7 @@
                         </div>
                         <div class="row g-4">
                             <!-- 1. Credit Note No (Auto Generated) -->
-                            <div class="col-lg-4">
+                            <div class="col-md-6 col-lg-3">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="note_no" placeholder="Enter Credit Note No." name="note_no" value="{{ old('note_no', $creditNote->note_no ?? $nextNoteNo) }}" readonly>
                                     <label for="note_no">Credit Note No. *</label>
@@ -44,16 +44,25 @@
                             </div>
                             
                             <!-- 2. Date -->
-                            <div class="col-lg-4">
+                            <div class="col-md-6 col-lg-3">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control flatpickr" id="note_date" name="note_date" placeholder="Enter Date" value="{{ old('note_date', isset($creditNote) ? $creditNote->note_date->format('d-m-Y') : date('d-m-Y')) }}">
                                     <label for="note_date">Credit Note Date *</label>
                                     @error('note_date') <small class="text-danger">{{ $message }}</small> @enderror
                                 </div>
                             </div>
+
+                            <!-- Reference No -->
+                            <div class="col-md-6 col-lg-3">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="reference_no" name="reference_no" placeholder="Enter Reference No" value="{{ old('reference_no', $creditNote->reference_no ?? '') }}">
+                                    <label for="reference_no">Reference No</label>
+                                    @error('reference_no') <small class="text-danger">{{ $message }}</small> @enderror
+                                </div>
+                            </div>
                             
                             <!-- 3. Customer -->
-                            <div class="col-lg-4">
+                            <div class="col-md-6 col-lg-3">
                                 <div class="form-floating form-floating-outline">
                                     <select class="select2 form-select" name="customer_id" id="customer_id" data-placeholder="Select Customer/Buyer" {{ isset($creditNote) ? 'disabled' : '' }}>
                                         <option value="">Select Customer/Buyer</option>

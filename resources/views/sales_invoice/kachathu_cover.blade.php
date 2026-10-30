@@ -19,7 +19,7 @@
         body {
             font-family: 'Mukta Malar', 'Latha', 'Segoe UI', Arial, sans-serif;
             background: #fff;
-            color: #0b2265; /* Deep Navy Blue matching the photo */
+            color: #000;
             width: 6.5in;
             height: 4.1in;
             margin: 0 auto;
@@ -29,15 +29,15 @@
         .cover-wrapper {
             width: 100%;
             height: 100%;
-            border: 2px solid #0b2265;
+            border: 2px solid transparent;
             border-radius: 6px;
             padding: 8px 12px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
-            overflow: hidden;
-            background: #fff;
+            overflow: visible;
+            background: transparent;
         }
 
         /* Top Header */
@@ -45,7 +45,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #0b2265;
+            border-bottom: 2px solid transparent;
             padding-bottom: 6px;
         }
         .brand-section {
@@ -57,6 +57,7 @@
             height: 32px;
             width: auto;
             object-fit: contain;
+            visibility: hidden !important;
         }
         .company-logo-img {
             height: 22px;
@@ -64,34 +65,39 @@
             object-fit: contain;
             vertical-align: middle;
             margin-right: 4px;
+            visibility: hidden !important;
         }
         .brand-logo-text {
             font-size: 25px;
             font-weight: 900;
             letter-spacing: 2px;
             text-transform: uppercase;
+            visibility: hidden !important;
         }
         .box-title-pill {
-            background-color: #0b2265;
-            color: #fff;
             padding: 4px 14px;
             border-radius: 14px;
             font-size: 15px;
             font-weight: bold;
             display: inline-block;
+            visibility: hidden !important;
         }
         .box-count-box {
             display: inline-block;
-            border: 2px solid #0b2265;
-            min-width: 40px;
+            border: 2px solid transparent;
+            width: 46px;
             height: 32px;
-            line-height: 28px;
+            line-height: 30px;
             text-align: center;
-            font-size: 20px;
-            font-weight: 900;
-            margin-left: 4px;
+            font-family: Arial, 'Segoe UI', sans-serif !important;
+            font-size: 24px !important;
+            font-weight: 900 !important;
+            margin-left: -76px;
+            position: relative;
+            top: 2px;
             vertical-align: middle;
             border-radius: 4px;
+            color: #000 !important;
         }
         .payment-mode-section {
             display: flex;
@@ -100,47 +106,69 @@
             font-size: 24px;
             font-weight: 900;
             letter-spacing: 1px;
+            visibility: hidden !important;
         }
 
         /* Main To Address Section */
         .to-section {
-            border: 2px solid #0b2265;
+            border: 2px solid transparent;
             border-radius: 6px;
-            padding: 8px 14px;
-            margin: 6px 0;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
+            padding: 0 14px;
+            margin: 0;
+            display: block;
         }
         .to-title {
-            font-size: 15px;
-            font-weight: 900;
-            margin-bottom: 4px;
+            display: none !important;
         }
         .to-content {
             padding-left: 12px;
-            font-size: 18px;
-            line-height: 1.5;
-            font-weight: bold;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-            flex-grow: 1;
+            color: #000;
+            display: block;
         }
         .customer-name {
-            font-size: 25px;
+            font-size: 18px;
             font-weight: 900;
             color: #000;
-            margin-bottom: 4px;
-            line-height: 1.25;
+            height: 31px;
+            line-height: 30px;
+            white-space: nowrap;
+        }
+        .address-line {
+            font-size: 18px;
+            font-weight: 900 !important;
+            color: #000;
+            height: 31px;
+            line-height: 30px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .place-line {
+            font-size: 18px;
+            font-weight: 900 !important;
+            color: #000;
+            height: 31px;
+            line-height: 30px;
+            white-space: nowrap;
         }
         .phone-line {
-            font-size: 22px;
+            font-size: 19px;
             font-weight: 900;
             letter-spacing: 1.5px;
             color: #000;
-            margin-top: 4px;
+            height: 31px;
+            line-height: 30px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .phone-svg {
+            display: inline-block;
+            vertical-align: middle;
+            fill: #000;
+            width: 17px;
+            height: 17px;
+            flex-shrink: 0;
         }
 
         /* Bottom Footer Row */
@@ -148,55 +176,60 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            border-top: 2px solid #0b2265;
-            padding-top: 6px;
+            border-top: 2px solid transparent;
+            padding-top: 14px;
         }
         .from-section {
-            width: 55%;
+            width: 48%;
+            visibility: hidden !important;
         }
         .from-title {
             font-size: 12px;
             font-weight: 900;
             text-transform: uppercase;
-            color: #0b2265;
         }
         .company-name {
             font-size: 15px;
             font-weight: 900;
             margin: 2px 0 2px 0;
-            color: #0b2265;
         }
         .company-address {
             font-size: 11px;
             line-height: 1.4;
-            color: #0b2265;
             font-weight: 600;
         }
 
         .transport-section {
-            width: 43%;
+            width: 50%;
             font-size: 12px;
             font-weight: bold;
+            padding-top: 48px;
         }
         .transport-row {
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             display: flex;
             align-items: center;
         }
         .transport-label {
-            min-width: 90px;
+            width: 74px;
+            min-width: 74px;
+            max-width: 74px;
+            display: inline-block;
             font-size: 13px;
+            visibility: hidden !important;
         }
         .transport-value {
-            border-bottom: 1.5px solid #0b2265;
+            border-bottom: 1.5px solid transparent;
             flex-grow: 1;
-            padding-left: 6px;
+            padding-left: 2px;
             font-size: 15px;
             font-weight: 900;
             min-height: 22px;
+            line-height: 22px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: #000;
         }
 
         /* Print Button / Controls (Screen only) */
@@ -213,7 +246,8 @@
                 background: #fff;
                 width: 6.5in;
                 height: 4.1in;
-                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                border: 1px solid #cbd5e1;
             }
             .screen-controls {
                 width: 6.5in;
@@ -245,11 +279,14 @@
                 margin: 0;
                 width: 6.5in;
                 height: 4.1in;
+                background: transparent !important;
             }
             .cover-wrapper {
                 width: 6.5in;
                 height: 4.1in;
-                border: 2px solid #0b2265;
+                border: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
                 page-break-inside: avoid;
             }
             .screen-controls {
@@ -315,16 +352,18 @@
             <div class="to-title">To :</div>
             <div class="to-content">
                 <div class="customer-name">{{ $cName }}</div>
-                @if($cAddr)
-                    <div>{{ $cAddr }}</div>
-                @endif
-                <div>{{ $cPlace }} {{ $cZip }}</div>
+                <div class="address-line">{{ $cAddr }}</div>
+                <div class="place-line">{{ $cPlace }} {{ $cZip }}</div>
                 @if($cMobile && $cMobile !== '-')
-                    <div class="phone-line">{{ $cMobile }}</div>
+                    <div class="phone-line">
+                        <svg class="phone-svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                        </svg>
+                        <span>{{ $cMobile }}</span>
+                    </div>
                 @endif
             </div>
         </div>
-
         <!-- Bottom Row -->
         <div class="bottom-row">
             <div class="from-section">
@@ -368,7 +407,6 @@
     </div>
 
     <script>
-        // Auto trigger print when page opens if requested
         @if(request()->get('autoprint'))
             window.onload = function() {
                 window.print();

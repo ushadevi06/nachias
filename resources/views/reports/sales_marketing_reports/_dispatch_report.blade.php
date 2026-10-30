@@ -42,8 +42,8 @@
                 <tbody id="dispatchProductWiseTbody">
                 </tbody>
                 <tfoot class="table-light fw-bold">
-                    <tr>
-                        <th colspan="5" class="text-end text-uppercase">Total:</th>
+                    <tr class="border-top">
+                        <th colspan="5" class="text-end text-uppercase text-dark">Total Dispatch:</th>
                         <th class="text-center text-primary" id="dispatch_pw_total_36">0</th>
                         <th class="text-center text-primary" id="dispatch_pw_total_38">0</th>
                         <th class="text-center text-primary" id="dispatch_pw_total_40">0</th>
@@ -90,8 +90,8 @@
                 <tbody id="dispatchPartyWiseTbody">
                 </tbody>
                 <tfoot class="table-light fw-bold">
-                    <tr>
-                        <th colspan="11" class="text-end text-uppercase">Total:</th>
+                    <tr class="border-top">
+                        <th colspan="11" class="text-end text-uppercase text-dark">Total Dispatch:</th>
                         <th class="text-center text-primary" id="dispatch_party_total_36">0</th>
                         <th class="text-center text-primary" id="dispatch_party_total_38">0</th>
                         <th class="text-center text-primary" id="dispatch_party_total_40">0</th>

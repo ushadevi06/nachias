@@ -70,6 +70,7 @@ class CreditNoteController extends Controller
 
                 $query->where(function ($q) use ($search, $numericSearch, $matchingInvoiceIds) {
                     $q->where('note_no', 'like', "%{$search}%")
+                      ->orWhere('reference_no', 'like', "%{$search}%")
                       ->orWhereRaw("DATE_FORMAT(note_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                       ->orWhere('sub_total', 'like', "%{$numericSearch}%")
                       ->orWhere('discount', 'like', "%{$numericSearch}%")
@@ -166,9 +167,14 @@ class CreditNoteController extends Controller
                 $discount = $note->discount ?? 0;
                 $taxableValue = max(0, $subTotal - $discount);
 
+                $noteNoHtml = '<strong>' . htmlspecialchars($note->note_no) . '</strong>';
+                if (!empty($note->reference_no)) {
+                    $noteNoHtml .= '<br><span class="badge bg-label-secondary" style="font-size:11px;">Ref: ' . htmlspecialchars($note->reference_no) . '</span>';
+                }
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
-                    'note_no' => $note->note_no,
+                    'note_no' => $noteNoHtml,
                     'note_date' => $note->note_date ? $note->note_date->format('d-m-Y') : '-',
                     'sales_invoice_no' => $invoiceNos,
                     'customer_name' => $note->customer ? $note->customer->name : '-',
@@ -241,6 +247,7 @@ class CreditNoteController extends Controller
             $request->validate([
                 'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'note_date' => 'required|date_format:d-m-Y',
+                'reference_no' => 'nullable|string|max:100',
                 'sales_invoice_ids' => 'nullable|array',
                 'sales_invoice_ids.*' => 'exists:sales_invoices,id',
                 'customer_id' => 'required|exists:customers,id',
@@ -334,6 +341,7 @@ class CreditNoteController extends Controller
                 $creditNoteData = [
                     'note_no' => $request->note_no,
                     'note_date' => $noteDate ?? \Carbon\Carbon::now()->format('Y-m-d'),
+                    'reference_no' => $request->reference_no,
                     'sales_invoice_ids' => $request->sales_invoice_ids ?? [],
                     'customer_id' => $request->customer_id,
                     'reason' => $request->reason,

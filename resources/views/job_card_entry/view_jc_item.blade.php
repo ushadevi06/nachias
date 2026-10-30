@@ -278,8 +278,34 @@
                                                     $itemDisplayNamePlain = implode(' / ', $displayItems);
                                                 }
 
+                                                // Calculate Matrix Need
+                                                $matrixNeed = 0;
+                                                foreach ($group['items'] as $gi) {
+                                                    if ($gi->layMarks && $gi->layMarks->count() > 0) {
+                                                        $matrixNeed += $gi->layMarks->sum(function($lm) {
+                                                            return floatval($lm->lay_mark_meter ?? 0) * floatval($lm->no_of_lay ?? 0);
+                                                        });
+                                                    } else {
+                                                        $consMap = $gi->consumptions ? $gi->consumptions->keyBy('size') : collect();
+                                                        foreach ($gi->quantities as $qty) {
+                                                            $cons = $consMap[$qty->size] ?? null;
+                                                            $fsC = $cons ? floatval($cons->fs_cons ?? 0) : 0;
+                                                            $hsC = $cons ? floatval($cons->hs_cons ?? 0) : 0;
+                                                            if ($fsC > 0 || $hsC > 0) {
+                                                                $matrixNeed += (floatval($qty->qty_fs ?? 0) * $fsC) + (floatval($qty->qty_hs ?? 0) * $hsC);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
                                                 $issue = $total_mtr > 0 ? $total_mtr : floatval($savedItem->qty_issue ?? 0);
-                                                $used = floatval($savedItem->qty_used ?? 0);
+                                                if ($savedItem && $savedItem->qty_used !== null && floatval($savedItem->qty_used) > 0) {
+                                                    $used = floatval($savedItem->qty_used);
+                                                } elseif ($matrixNeed > 0) {
+                                                    $used = $matrixNeed;
+                                                } else {
+                                                    $used = floatval($savedItem->qty_used ?? 0);
+                                                }
                                                 $wastage = floatval($savedItem->qty_wastage ?? 0);
                                                 $adjusted = floatval($savedItem->qty_adjusted ?? 0);
                                                 $remaining = ($issue + $adjusted) - $used - $wastage;
@@ -306,7 +332,8 @@
                                                         data-matrix-id="{{ $item->id }}" 
                                                         data-qty-adjusted="{{ $savedItem->qty_adjusted ?? '0.00' }}" 
                                                         data-qty-wastage="{{ $savedItem->qty_wastage ?? '0.00' }}" 
-                                                        data-qty-used="{{ $savedItem->qty_used ?? '0.00' }}" 
+                                                        data-qty-used="{{ number_format($used, 2, '.', '') }}" 
+                                                        data-calc-qty="{{ number_format($matrixNeed, 2, '.', '') }}"
                                                         data-bit="{{ $savedItem->bit ?? '0.00' }}" 
                                                         data-balance="{{ $savedItem->balance ?? '0.00' }}" 
                                                         data-average="{{ $savedItem->average ?? '0.00' }}" 
@@ -624,18 +651,31 @@ $(document).ready(function() {
 
         $('#modal_row_index').val(matrixId); 
         
+        const category = button.attr('data-category') || 'fabric';
+        if (category === 'accessory') {
+            $('#modal_wastage_wrapper').hide();
+            $('#modal_qty_wastage').val('0.00');
+        } else {
+            $('#modal_wastage_wrapper').show();
+        }
+
         if (calcQty > 0) {
             $('#modal_std_info_wrapper').show();
-            $('#modal_std_display').html(`FS: ${fsCons.toFixed(4)} | HS: ${hsCons.toFixed(4)} <br> Calc: ${calcQty.toFixed(2)}`);
+            if (category === 'fabric') {
+                $('#modal_std_display').html(`Matrix Need: ${calcQty.toFixed(2)} MTR`);
+            } else {
+                $('#modal_std_display').html(`FS: ${fsCons.toFixed(4)} | HS: ${hsCons.toFixed(4)} <br> Calc: ${calcQty.toFixed(2)}`);
+            }
         } else {
             $('#modal_std_info_wrapper').hide();
         }
         
         const qtyAdjusted = button.attr('data-qty-adjusted') || currentRow.find('.col-qty-adjusted').text() || '0.00';
         const qtyWastage = button.attr('data-qty-wastage') || currentRow.find('.col-qty-wastage').text() || '0.00';
-        const qtyUsed = button.attr('data-qty-used') || currentRow.find('.col-qty-used').text() || '0.00';
-        console.log(button.attr('data-produced-qty'));
-        console.log(currentRow.find('.col-qty-used').text());
+        let qtyUsed = button.attr('data-qty-used') || currentRow.find('.col-qty-used').text() || '0.00';
+        if ((!parseFloat(qtyUsed) || parseFloat(qtyUsed) === 0) && calcQty > 0) {
+            qtyUsed = calcQty;
+        }
         const producedQty = button.attr('data-produced-qty') || currentRow.find('.col-produced-qty').text() || '0.00';
 
         $('#modal_store').val(store);
@@ -651,14 +691,6 @@ $(document).ready(function() {
         
         const unitPrice = button.attr('data-unit-price') || currentRow.find('.col-unit-price').text() || '0.00';
         $('#modal_unit_price').val(unitPrice);
-        
-        const category = button.attr('data-category') || 'fabric';
-        if (category === 'accessory') {
-            $('#modal_wastage_wrapper').hide();
-            $('#modal_qty_wastage').val('0.00');
-        } else {
-            $('#modal_wastage_wrapper').show();
-        }
 
         calculateAll();
         $('#editItemModal').modal('show');
@@ -912,7 +944,7 @@ $(document).ready(function() {
                     
                     $('#modal-ajax-error').remove();
                     $('#modal_qty_used').addClass('is-invalid');
-                    $('#modal_qty_used').closest('.form-floating').after(`<div id="modal-ajax-error" class="text-danger mt-1 small fw-bold"><i class="ri-error-warning-line me-1"></i>${errorMessage}</div>`);
+                    $('#modal_qty_used').closest('.form-floating').after(`<div id="modal-ajax-error" class="text-danger mt-1 small fw-bold"><i class="ri ri-error-warning-line me-1"></i>${errorMessage}</div>`);
                 },
                 complete: function() {
                     btn.prop('disabled', false).html(originalText);
@@ -934,7 +966,7 @@ $(document).ready(function() {
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-danger p-3">
-                <h5 class="modal-title text-white"><i class="ri-error-warning-line me-1"></i> Attention: Missing Pricing</h5>
+                <h5 class="modal-title text-white"><i class="ri ri-error-warning-line me-1"></i> Attention: Missing Pricing</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">

@@ -91,6 +91,9 @@ class SalesInvoice extends Model
         'transport_mode',
         'transport_distance',
         'qr_details',
+        'is_gst_filed',
+        'gst_filed_at',
+        'gst_filed_by',
     ];
 
     protected $casts = [
@@ -103,7 +106,14 @@ class SalesInvoice extends Model
         'eway_bill_date' => 'datetime',
         'eway_bill_valid_till' => 'datetime',
         'dispatch_completed_at' => 'datetime',
+        'is_gst_filed' => 'boolean',
+        'gst_filed_at' => 'datetime',
     ];
+
+    public function gstFiledBy()
+    {
+        return $this->belongsTo(User::class, 'gst_filed_by');
+    }
 
     public function salesOrder()
     {
