@@ -327,6 +327,15 @@ class GoogleDriveBackupService
      */
     public function cleanupOldFilesInFolder(string $folderId, string $token): void
     {
+        $files = $this->getExistingFilesInFolder($folderId, $token);
+        $this->deleteSpecificFiles($files, $token);
+    }
+
+    /**
+     * Get list of file IDs and names currently in folder (excluding subfolders).
+     */
+    public function getExistingFilesInFolder(string $folderId, string $token): array
+    {
         $query = "'" . $folderId . "' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false";
         $url = 'https://www.googleapis.com/drive/v3/files?' . http_build_query([
             'q' => $query,
@@ -349,28 +358,72 @@ class GoogleDriveBackupService
 
         if ($httpCode === 200 && $res) {
             $data = json_decode($res, true);
-            if (!empty($data['files'])) {
-                foreach ($data['files'] as $file) {
-                    $delId = $file['id'];
-                    $delName = $file['name'];
-                    
-                    // Permanently delete / trash previous file
-                    $delCh = curl_init();
-                    curl_setopt_array($delCh, [
-                        CURLOPT_URL => "https://www.googleapis.com/drive/v3/files/{$delId}?supportsAllDrives=true",
-                        CURLOPT_CUSTOMREQUEST => 'DELETE',
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token],
-                        CURLOPT_TIMEOUT => 15,
-                        CURLOPT_SSL_VERIFYPEER => true,
-                    ]);
-                    curl_exec($delCh);
-                    curl_close($delCh);
+            return $data['files'] ?? [];
+        }
 
-                    Log::info("GoogleDriveBackupService: Removed previous backup file '{$delName}' (ID: {$delId}) from day folder.");
-                }
+        return [];
+    }
+
+    /**
+     * Safely delete specific files by ID, explicitly preserving any new file ID.
+     */
+    public function deleteSpecificFiles(array $filesToDelete, string $token, ?string $excludeFileId = null): void
+    {
+        foreach ($filesToDelete as $file) {
+            $delId = $file['id'] ?? null;
+            $delName = $file['name'] ?? 'Unknown';
+
+            if (!$delId || ($excludeFileId && $delId === $excludeFileId)) {
+                continue;
+            }
+
+            $delCh = curl_init();
+            curl_setopt_array($delCh, [
+                CURLOPT_URL => "https://www.googleapis.com/drive/v3/files/{$delId}?supportsAllDrives=true",
+                CURLOPT_CUSTOMREQUEST => 'DELETE',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token],
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_SSL_VERIFYPEER => true,
+            ]);
+            curl_exec($delCh);
+            curl_close($delCh);
+
+            Log::info("GoogleDriveBackupService: Safely removed previous backup '{$delName}' (ID: {$delId}).");
+        }
+    }
+
+    /**
+     * Compress an SQL dump to GZIP (.sql.gz) using low-memory streaming writes.
+     */
+    public function compressSqlToGz(string $sourceSqlPath, string $targetGzPath): bool
+    {
+        if (!file_exists($sourceSqlPath)) {
+            return false;
+        }
+
+        $in = fopen($sourceSqlPath, 'rb');
+        if (!$in) {
+            return false;
+        }
+
+        $out = gzopen($targetGzPath, 'wb6');
+        if (!$out) {
+            fclose($in);
+            return false;
+        }
+
+        while (!feof($in)) {
+            $buffer = fread($in, 1048576); // 1 MB chunk
+            if ($buffer !== false && strlen($buffer) > 0) {
+                gzwrite($out, $buffer);
             }
         }
+
+        fclose($in);
+        gzclose($out);
+
+        return file_exists($targetGzPath) && filesize($targetGzPath) > 0;
     }
 
     /**
@@ -401,9 +454,12 @@ class GoogleDriveBackupService
             $targetFolderId = $this->getOrCreateDayFolder($this->folderId, $currentDayName, $token);
         }
 
-        // If replacing existing files in this day's folder
+        // SAFE DEFERRED DELETION:
+        // Do NOT delete existing files before upload. Record their IDs now, and only delete
+        // them AFTER the new backup has uploaded completely and its success has been verified!
+        $existingFiles = [];
         if ($replaceExisting && $targetFolderId) {
-            $this->cleanupOldFilesInFolder($targetFolderId, $token);
+            $existingFiles = $this->getExistingFilesInFolder($targetFolderId, $token);
         }
 
         $actualFileName = $fileName ?: basename($filePath);
@@ -458,7 +514,7 @@ class GoogleDriveBackupService
             ];
         }
 
-        // Step 2: Stream file in 10 MB chunks directly from disk to Google Drive (Max 10MB RAM)
+        // Step 2: Stream file in 10 MB chunks directly from disk to Google Drive with Retry Handling
         $chunkSize = 10 * 1024 * 1024; // 10 MB chunk
         $handle = fopen($filePath, 'rb');
         if (!$handle) {
@@ -474,50 +530,106 @@ class GoogleDriveBackupService
             $chunkLen = strlen($chunkData);
             $rangeEnd = $offset + $chunkLen - 1;
 
-            $uploadCh = curl_init();
-            curl_setopt_array($uploadCh, [
-                CURLOPT_URL => $locationUrl,
-                CURLOPT_CUSTOMREQUEST => 'PUT',
-                CURLOPT_POSTFIELDS => $chunkData,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'Content-Length: ' . $chunkLen,
-                    "Content-Range: bytes {$offset}-{$rangeEnd}/{$fileSize}",
-                    'Content-Type: ' . $mimeType,
-                ],
-                CURLOPT_TIMEOUT => 300,
-                CURLOPT_SSL_VERIFYPEER => true,
-            ]);
+            $chunkAttempts = 0;
+            $maxChunkAttempts = 3;
+            $chunkUploaded = false;
 
-            $uploadResponse = curl_exec($uploadCh);
-            $uploadHttpCode = curl_getinfo($uploadCh, CURLINFO_HTTP_CODE);
-            $uploadErr = curl_error($uploadCh);
-            curl_close($uploadCh);
+            while ($chunkAttempts < $maxChunkAttempts && !$chunkUploaded) {
+                $chunkAttempts++;
+
+                $uploadCh = curl_init();
+                curl_setopt_array($uploadCh, [
+                    CURLOPT_URL => $locationUrl,
+                    CURLOPT_CUSTOMREQUEST => 'PUT',
+                    CURLOPT_POSTFIELDS => $chunkData,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER => [
+                        'Content-Length: ' . $chunkLen,
+                        "Content-Range: bytes {$offset}-{$rangeEnd}/{$fileSize}",
+                        'Content-Type: ' . $mimeType,
+                    ],
+                    CURLOPT_TIMEOUT => 300,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                ]);
+
+                $uploadResponse = curl_exec($uploadCh);
+                $uploadHttpCode = curl_getinfo($uploadCh, CURLINFO_HTTP_CODE);
+                $uploadErr = curl_error($uploadCh);
+                curl_close($uploadCh);
+
+                if ($uploadHttpCode === 200 || $uploadHttpCode === 201) {
+                    $finalData = json_decode($uploadResponse, true);
+                    $chunkUploaded = true;
+                    $offset = $fileSize;
+                    break 2;
+                } elseif ($uploadHttpCode === 308) {
+                    $offset += $chunkLen;
+                    $chunkUploaded = true;
+                } else {
+                    Log::warning("GoogleDriveBackupService: Chunk upload warning at byte {$offset}/{$fileSize} (HTTP {$uploadHttpCode}, attempt {$chunkAttempts}/{$maxChunkAttempts}). Err: {$uploadErr}");
+
+                    if ($chunkAttempts < $maxChunkAttempts) {
+                        sleep(2 * $chunkAttempts); // Exponential backoff: 2s, 4s
+
+                        // Query Google Drive status to find received bytes and resume
+                        $statusCh = curl_init();
+                        curl_setopt_array($statusCh, [
+                            CURLOPT_URL => $locationUrl,
+                            CURLOPT_CUSTOMREQUEST => 'PUT',
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_HEADER => true,
+                            CURLOPT_HTTPHEADER => [
+                                'Content-Range: bytes */' . $fileSize,
+                            ],
+                            CURLOPT_TIMEOUT => 30,
+                            CURLOPT_SSL_VERIFYPEER => true,
+                        ]);
+                        $statusResp = curl_exec($statusCh);
+                        $statusHttpCode = curl_getinfo($statusCh, CURLINFO_HTTP_CODE);
+                        curl_close($statusCh);
+
+                        if ($statusHttpCode === 308 && preg_match('/Range:\s*bytes=0-(\d+)/i', $statusResp, $rangeMatches)) {
+                            $nextByte = ((int)$rangeMatches[1]) + 1;
+                            $offset = $nextByte;
+                            fseek($handle, $offset);
+                            Log::info("GoogleDriveBackupService: Resumed stream from byte {$offset}");
+                            break;
+                        } elseif ($statusHttpCode === 200 || $statusHttpCode === 201) {
+                            $finalData = json_decode($statusResp, true);
+                            $chunkUploaded = true;
+                            $offset = $fileSize;
+                            break 2;
+                        }
+                    } else {
+                        fclose($handle);
+                        unset($chunkData);
+                        $errorMsg = "Google Drive chunk upload failed permanently after {$maxChunkAttempts} attempts at byte {$offset}/{$fileSize} (HTTP {$uploadHttpCode}). Err: {$uploadErr}. Resp: {$uploadResponse}";
+                        Log::error('GoogleDriveBackupService: ' . $errorMsg);
+                        return [
+                            'success' => false,
+                            'message' => $errorMsg,
+                        ];
+                    }
+                }
+            }
 
             unset($chunkData);
-
-            if ($uploadHttpCode === 200 || $uploadHttpCode === 201) {
-                $finalData = json_decode($uploadResponse, true);
-                break;
-            } elseif ($uploadHttpCode === 308) {
-                $offset += $chunkLen;
-            } else {
-                fclose($handle);
-                $errorMsg = "Google Drive chunk upload failed at byte {$offset}/{$fileSize} (HTTP {$uploadHttpCode}). Err: {$uploadErr}. Resp: {$uploadResponse}";
-                Log::error('GoogleDriveBackupService: ' . $errorMsg);
-                return [
-                    'success' => false,
-                    'message' => $errorMsg,
-                ];
-            }
         }
         fclose($handle);
 
         if ($finalData && !empty($finalData['id'])) {
-            Log::info("GoogleDriveBackupService: Successfully streamed {$actualFileName} (" . number_format($fileSize / 1048576, 2) . " MB) to {$currentDayName} folder (ID: {$finalData['id']})");
+            $newFileId = $finalData['id'];
+
+            // SAFE DEFERRED DELETION:
+            // Upload confirmed successfully! Now safely delete previous files recorded before the upload
+            if ($replaceExisting && !empty($existingFiles)) {
+                $this->deleteSpecificFiles($existingFiles, $token, $newFileId);
+            }
+
+            Log::info("GoogleDriveBackupService: Successfully streamed {$actualFileName} (" . number_format($fileSize / 1048576, 2) . " MB) to {$currentDayName} folder (ID: {$newFileId})");
             return [
                 'success' => true,
-                'file_id' => $finalData['id'],
+                'file_id' => $newFileId,
                 'file_name' => $finalData['name'] ?? $actualFileName,
                 'day_folder' => $currentDayName,
                 'web_view_link' => $finalData['webViewLink'] ?? null,

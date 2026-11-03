@@ -271,7 +271,8 @@ class BackupController extends Controller
 
             $day = strtolower(now('Asia/Kolkata')->format('l')); // e.g., monday, tuesday
             $period = ($currentHourIST < 16) ? '11AM' : '11PM';
-            $filename = "{$day}_{$period}_backup.sql";
+            $rawFilename = "{$day}_{$period}_backup.sql";
+            $gzFilename = "{$day}_{$period}_backup.sql.gz";
             $path = storage_path('app/');
 
             if (!file_exists($path)) {
@@ -279,7 +280,7 @@ class BackupController extends Controller
             }
 
             $driveService = new \App\Services\GoogleDriveBackupService();
-            $dumpRes = $driveService->dumpDatabase($path . $filename);
+            $dumpRes = $driveService->dumpDatabase($path . $rawFilename);
 
             if (!$dumpRes['success']) {
                 $errMsg = $dumpRes['message'] ?? 'Database export failed';
@@ -287,30 +288,35 @@ class BackupController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Backup generation failed: ' . $errMsg], 500);
             }
 
+            $driveService->compressSqlToGz($path . $rawFilename, $path . $gzFilename);
+            if (file_exists($path . $rawFilename)) {
+                @unlink($path . $rawFilename);
+            }
+
             $uploaded = false;
             $driveMsg = '';
             if ($driveService->isConfigured()) {
-                $driveRes = $driveService->uploadBackup($path . $filename, $filename, true, true);
+                $driveRes = $driveService->uploadBackup($path . $gzFilename, $gzFilename, true, true);
                 $uploaded = $driveRes['success'] ?? false;
                 $driveMsg = $driveRes['message'] ?? '';
             } else {
                 $driveMsg = 'Google Drive is not configured or disabled in .env';
             }
 
-            if (file_exists($path . $filename)) {
-                unlink($path . $filename);
+            if (file_exists($path . $gzFilename)) {
+                @unlink($path . $gzFilename);
             }
 
             if ($uploaded) {
-                Log::info("Auto Google Drive Backup Successful: {$filename} (via {$dumpRes['method']})");
+                Log::info("Auto Google Drive Backup Successful: {$gzFilename} (via {$dumpRes['method']})");
                 return response()->json([
                     'status' => 'success',
                     'day' => date('l'),
                     'method' => $dumpRes['method'] ?? 'mysqldump',
-                    'message' => "Backup {$filename} uploaded successfully to Google Drive (" . date('l') . " folder)."
+                    'message' => "Backup {$gzFilename} uploaded successfully to Google Drive (" . date('l') . " folder)."
                 ]);
             } else {
-                Log::error("Failed to upload auto backup to Google Drive: {$filename}. Error: {$driveMsg}");
+                Log::error("Failed to upload auto backup to Google Drive: {$gzFilename}. Error: {$driveMsg}");
                 return response()->json(['status' => 'error', 'message' => 'Failed to upload to Google Drive: ' . $driveMsg], 500);
             }
 

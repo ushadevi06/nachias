@@ -1406,13 +1406,60 @@ class SalesMarketingReportController extends Controller
                     $currentYear = (int)($request->comparison_year ?? date('Y'));
                     $prevYear = $currentYear - 1;
 
-                    $months = [
+                    $hasDateRange = (!empty($fromDate) || !empty($toDate));
+                    if ($hasDateRange) {
+                        $cFromStr = $fromDate ?: $toDate;
+                        $cToStr = $toDate ?: $fromDate;
+
+                        $cStart = \Carbon\Carbon::parse($cFromStr);
+                        $cEnd = \Carbon\Carbon::parse($cToStr);
+
+                        if (!$request->filled('comparison_year')) {
+                            $currentYear = (int)$cEnd->year;
+                            $prevYear = $currentYear - 1;
+                        }
+
+                        $pStart = $cStart->copy()->subYear();
+                        $pEnd = $cEnd->copy()->subYear();
+                    }
+
+                    $allMonthNames = [
                         1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
                         5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
                         9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
                     ];
 
-                    $query = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')->leftJoin('brands', DB::raw('COALESCE(stock_entry_items.brand_id, sales_invoices.brand_id)'), '=', 'brands.id')->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->where('sales_invoices.invoice_status', '!=', 'Cancelled')->whereIn(DB::raw('YEAR(sales_invoices.inv_date)'), [$prevYear, $currentYear]);
+                    $months = [];
+                    if ($hasDateRange) {
+                        $temp = $cStart->copy()->startOfMonth();
+                        $endMonth = $cEnd->copy()->startOfMonth();
+                        while ($temp->lte($endMonth)) {
+                            $mNum = (int)$temp->month;
+                            if (!isset($months[$mNum])) {
+                                $months[$mNum] = $allMonthNames[$mNum];
+                            }
+                            $temp->addMonth();
+                        }
+                    } else {
+                        $months = $allMonthNames;
+                    }
+
+                    $query = DB::table('sales_invoice_items')
+                        ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+                        ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+                        ->leftJoin('brands', DB::raw('COALESCE(stock_entry_items.brand_id, sales_invoices.brand_id)'), '=', 'brands.id')
+                        ->whereNull('sales_invoices.deleted_at')
+                        ->whereNull('sales_invoice_items.deleted_at')
+                        ->where('sales_invoices.invoice_status', '!=', 'Cancelled');
+
+                    if ($hasDateRange) {
+                        $query->where(function($q) use ($cStart, $cEnd, $pStart, $pEnd) {
+                            $q->whereBetween('sales_invoices.inv_date', [$cStart->format('Y-m-d'), $cEnd->format('Y-m-d')])
+                              ->orWhereBetween('sales_invoices.inv_date', [$pStart->format('Y-m-d'), $pEnd->format('Y-m-d')]);
+                        });
+                    } else {
+                        $query->whereIn(DB::raw('YEAR(sales_invoices.inv_date)'), [$prevYear, $currentYear]);
+                    }
 
                     if ($request->filled('customer_id')) {
                         $query->where('sales_invoices.customer_id', $request->customer_id);
@@ -1534,6 +1581,206 @@ class SalesMarketingReportController extends Controller
                     return response()->json([
                         'prev_year' => $prevYear,
                         'curr_year' => $currentYear,
+                        'date_range' => $hasDateRange ? ($cStart->format('d/m/Y') . ' - ' . $cEnd->format('d/m/Y')) : null,
+                        'prev_date_range' => $hasDateRange ? ($pStart->format('d/m/Y') . ' - ' . $pEnd->format('d/m/Y')) : null,
+                        'brands' => $brandsList,
+                        'months' => $monthRows,
+                        'brand_totals' => $brandAnnualTotals,
+                        'grand_total' => [
+                            'prev' => $grandAnnualPrev,
+                            'curr' => $grandAnnualCurr,
+                            'growth' => round($grandGrowth, 1)
+                        ]
+                    ]);
+
+                case 'credit-note-comparison-report':
+                case 'credit-note-comparison':
+                    $currentYear = (int)($request->comparison_year ?? date('Y'));
+                    $prevYear = $currentYear - 1;
+
+                    $hasDateRange = (!empty($fromDate) || !empty($toDate));
+                    if ($hasDateRange) {
+                        $cFromStr = $fromDate ?: $toDate;
+                        $cToStr = $toDate ?: $fromDate;
+
+                        $cStart = \Carbon\Carbon::parse($cFromStr);
+                        $cEnd = \Carbon\Carbon::parse($cToStr);
+
+                        if (!$request->filled('comparison_year')) {
+                            $currentYear = (int)$cEnd->year;
+                            $prevYear = $currentYear - 1;
+                        }
+
+                        $pStart = $cStart->copy()->subYear();
+                        $pEnd = $cEnd->copy()->subYear();
+                    }
+
+                    $allMonthNames = [
+                        1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                        5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                        9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
+                    ];
+
+                    $months = [];
+                    if ($hasDateRange) {
+                        $temp = $cStart->copy()->startOfMonth();
+                        $endMonth = $cEnd->copy()->startOfMonth();
+                        while ($temp->lte($endMonth)) {
+                            $mNum = (int)$temp->month;
+                            if (!isset($months[$mNum])) {
+                                $months[$mNum] = $allMonthNames[$mNum];
+                            }
+                            $temp->addMonth();
+                        }
+                    } else {
+                        $months = $allMonthNames;
+                    }
+
+                    $query = DB::table('credit_note_items as cni')
+                        ->join('credit_notes as cn', 'cni.credit_note_id', '=', 'cn.id')
+                        ->leftJoin('stock_entry_items as sei1', 'cni.stock_entry_item_id', '=', 'sei1.id')
+                        ->leftJoin('brands as b1', 'sei1.brand_id', '=', 'b1.id')
+                        ->leftJoin('sales_invoice_items as sii', 'cni.sales_invoice_item_id', '=', 'sii.id')
+                        ->leftJoin('stock_entry_items as sei2', 'sii.stock_entry_item_id', '=', 'sei2.id')
+                        ->leftJoin('brands as b2', 'sei2.brand_id', '=', 'b2.id')
+                        ->whereNull('cn.deleted_at')
+                        ->whereNull('cni.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('cn.status')
+                              ->orWhereNotIn(DB::raw('LOWER(cn.status)'), ['cancelled', 'cancel']);
+                        });
+
+                    if ($hasDateRange) {
+                        $query->where(function($q) use ($cStart, $cEnd, $pStart, $pEnd) {
+                            $q->whereBetween('cn.note_date', [$cStart->format('Y-m-d'), $cEnd->format('Y-m-d')])
+                              ->orWhereBetween('cn.note_date', [$pStart->format('Y-m-d'), $pEnd->format('Y-m-d')]);
+                        });
+                    } else {
+                        $query->whereIn(DB::raw('YEAR(cn.note_date)'), [$prevYear, $currentYear]);
+                    }
+
+                    if ($request->filled('customer_id')) {
+                        $query->where('cn.customer_id', $request->customer_id);
+                    }
+                    if ($request->filled('agent_id')) {
+                        $query->where('cn.agent_id', $request->agent_id);
+                    }
+                    if ($request->filled('brand_id')) {
+                        $query->where(DB::raw('COALESCE(b1.id, b2.id)'), $request->brand_id);
+                    }
+
+                    $rawReturns = $query->selectRaw("
+                        YEAR(cn.note_date) as yr,
+                        MONTH(cn.note_date) as mo,
+                        COALESCE(b1.id, b2.id, 0) as brand_id,
+                        COALESCE(b1.brand_name, b2.brand_name, 'Other') as brand_name,
+                        SUM(cni.quantity) as total_qty
+                    ")->groupBy('yr', 'mo', 'brand_id', 'brand_name')->get();
+
+                    $brandMap = [];
+                    foreach ($rawReturns as $row) {
+                        $bId = (int)$row->brand_id;
+                        if ($bId > 0 && !isset($brandMap[$bId])) {
+                            $brandMap[$bId] = $row->brand_name;
+                        }
+                    }
+
+                    if ($request->filled('brand_id')) {
+                        $selBrand = Brand::find($request->brand_id);
+                        if ($selBrand && !isset($brandMap[$selBrand->id])) {
+                            $brandMap[$selBrand->id] = $selBrand->brand_name;
+                        }
+                    }
+
+                    if (empty($brandMap)) {
+                        $allBrands = Brand::where('status', 'Active')->orderBy('brand_name')->limit(10)->get();
+                        foreach ($allBrands as $b) {
+                            $brandMap[$b->id] = $b->brand_name;
+                        }
+                    }
+
+                    asort($brandMap);
+
+                    $brandsList = [];
+                    foreach ($brandMap as $bId => $bName) {
+                        $brandsList[] = [
+                            'id' => $bId,
+                            'name' => $bName
+                        ];
+                    }
+
+                    $matrix = [];
+                    foreach ($rawReturns as $row) {
+                        $yr = (int)$row->yr;
+                        $mo = (int)$row->mo;
+                        $bId = (int)$row->brand_id;
+                        $qty = (float)$row->total_qty;
+
+                        if (!isset($matrix[$mo])) {
+                            $matrix[$mo] = [];
+                        }
+                        if (!isset($matrix[$mo][$bId])) {
+                            $matrix[$mo][$bId] = [];
+                        }
+                        $matrix[$mo][$bId][$yr] = ($matrix[$mo][$bId][$yr] ?? 0) + $qty;
+                    }
+
+                    $monthRows = [];
+                    $brandAnnualTotals = [];
+                    foreach ($brandsList as $b) {
+                        $brandAnnualTotals[$b['id']] = ['prev' => 0, 'curr' => 0];
+                    }
+                    $grandAnnualPrev = 0;
+                    $grandAnnualCurr = 0;
+
+                    foreach ($months as $mNum => $mName) {
+                        $rowBrandData = [];
+                        $monthTotalPrev = 0;
+                        $monthTotalCurr = 0;
+
+                        foreach ($brandsList as $b) {
+                            $bId = $b['id'];
+                            $pQty = (float)($matrix[$mNum][$bId][$prevYear] ?? 0);
+                            $cQty = (float)($matrix[$mNum][$bId][$currentYear] ?? 0);
+
+                            $rowBrandData[$bId] = [
+                                'prev_qty' => $pQty,
+                                'curr_qty' => $cQty,
+                            ];
+
+                            $monthTotalPrev += $pQty;
+                            $monthTotalCurr += $cQty;
+
+                            $brandAnnualTotals[$bId]['prev'] += $pQty;
+                            $brandAnnualTotals[$bId]['curr'] += $cQty;
+                        }
+
+                        $monthGrowth = $monthTotalPrev > 0
+                            ? (($monthTotalCurr - $monthTotalPrev) / $monthTotalPrev) * 100
+                            : ($monthTotalCurr > 0 ? 100 : 0);
+
+                        $grandAnnualPrev += $monthTotalPrev;
+                        $grandAnnualCurr += $monthTotalCurr;
+
+                        $monthRows[] = [
+                            'month_num' => $mNum,
+                            'month_name' => $mName,
+                            'brands' => $rowBrandData,
+                            'total_prev' => $monthTotalPrev,
+                            'total_curr' => $monthTotalCurr,
+                            'growth' => round($monthGrowth, 1)
+                        ];
+                    }
+
+                    $grandGrowth = $grandAnnualPrev > 0
+                        ? (($grandAnnualCurr - $grandAnnualPrev) / $grandAnnualPrev) * 100
+                        : ($grandAnnualCurr > 0 ? 100 : 0);
+
+                    return response()->json([
+                        'prev_year' => $prevYear,
+                        'curr_year' => $currentYear,
+                        'date_range' => $hasDateRange ? ($cStart->format('d/m/Y') . ' - ' . $cEnd->format('d/m/Y')) : null,
+                        'prev_date_range' => $hasDateRange ? ($pStart->format('d/m/Y') . ' - ' . $pEnd->format('d/m/Y')) : null,
                         'brands' => $brandsList,
                         'months' => $monthRows,
                         'brand_totals' => $brandAnnualTotals,
@@ -1863,6 +2110,52 @@ class SalesMarketingReportController extends Controller
                     }
                     $invoices = $invoicesQuery->get();
 
+                    $buildTile = function($iconClass, $state, $tooltip = '', $badgeText = '') {
+                        $exportSym = ($state === 'completed') ? '✔' : ($state === 'in-progress' ? '⏳' : '✘');
+                        $safeTooltip = htmlspecialchars($tooltip, ENT_QUOTES, 'UTF-8');
+                        $fullIcon = (strpos($iconClass, 'ri ') === 0) ? $iconClass : ('ri ' . $iconClass);
+
+                        if ($state === 'completed') {
+                            return '<div class="dispatch-tile completed" title="' . $safeTooltip . '" style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:8px; background:#e0f2fe; border:1.5px solid #7dd3fc; color:#0284c7; cursor:default; box-shadow:0 1px 2px rgba(2,132,199,0.08);">'
+                                 . '<i class="' . $fullIcon . '" style="font-size:20px; line-height:1;"></i>'
+                                 . '<span style="position:absolute; top:-3px; right:-3px; width:13px; height:13px; border-radius:3px; background:#0284c7; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,0.15);"><i class="ri ri-check-line" style="font-size:10px; color:#ffffff; font-weight:900; line-height:1;"></i></span>'
+                                 . '<span class="export-symbol" style="display:none;">' . $exportSym . '</span>'
+                                 . '</div>';
+                        } elseif ($state === 'in-progress') {
+                            $badgeContent = $badgeText ? htmlspecialchars($badgeText) : '<i class="ri ri-loader-4-line"></i>';
+                            return '<div class="dispatch-tile in-progress" title="' . $safeTooltip . '" style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:8px; background:#fef3c7; border:1.5px solid #fde047; color:#d97706; cursor:default; box-shadow:0 1px 2px rgba(217,119,6,0.08);">'
+                                 . '<i class="' . $fullIcon . '" style="font-size:19px; line-height:1;"></i>'
+                                 . '<span style="position:absolute; top:-5px; right:-6px; font-size:9px; font-weight:700; background:#f59e0b; color:#ffffff; padding:1px 4px; border-radius:6px; line-height:1.2; box-shadow:0 1px 2px rgba(0,0,0,0.15);">' . $badgeContent . '</span>'
+                                 . '<span class="export-symbol" style="display:none;">' . $exportSym . '</span>'
+                                 . '</div>';
+                        } else {
+                            return '<div class="dispatch-tile pending" title="' . $safeTooltip . '" style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:8px; background:#ffffff; border:1.5px solid #e2e8f0; color:#94a3b8; cursor:default; box-shadow:0 1px 2px rgba(0,0,0,0.02);">'
+                                 . '<i class="' . $fullIcon . '" style="font-size:20px; line-height:1; color:#94a3b8;"></i>'
+                                 . '<span style="position:absolute; top:2px; right:2px; width:11px; height:11px; border-radius:2.5px; border:1.5px solid #cbd5e1; background:#ffffff; box-sizing:border-box;"></span>'
+                                 . '<span class="export-symbol" style="display:none;">' . $exportSym . '</span>'
+                                 . '</div>';
+                        }
+                    };
+
+                    $buildStatusPill = function($label, $type) {
+                        switch ($type) {
+                            case 'completed':
+                                $bg = '#dcfce7'; $color = '#15803d'; $dot = '#22c55e'; break;
+                            case 'in-progress':
+                                $bg = '#e0f2fe'; $color = '#0369a1'; $dot = '#0284c7'; break;
+                            case 'awaiting':
+                                $bg = '#fef3c7'; $color = '#b45309'; $dot = '#f59e0b'; break;
+                            case 'cancelled':
+                                $bg = '#fee2e2'; $color = '#b91c1c'; $dot = '#ef4444'; break;
+                            default:
+                                $bg = '#f1f5f9'; $color = '#475569'; $dot = '#94a3b8'; break;
+                        }
+                        return '<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; background:' . $bg . '; color:' . $color . '; white-space:nowrap;">'
+                             . '<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:' . $dot . ';"></span>'
+                             . htmlspecialchars($label)
+                             . '</span>';
+                    };
+
                     $data = [];
                     foreach ($invoices as $invoice) {
                         $einvoice_generated = (!empty($invoice->einvoice_status) && strtolower((string)$invoice->einvoice_status) == 'generated') ? true : false;
@@ -1883,40 +2176,44 @@ class SalesMarketingReportController extends Controller
                         // 3. Kachathu calculation
                         $kachathuCompleted = ($invoice->kachathu_status === 'completed');
 
-                        $tickHtml = '<span class="text-success fw-bold fs-4" title="✔"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
-                        $crossHtml = '<span class="text-danger fw-bold fs-4" title="✘"><i class="ri ri-close-line"></i><span class="export-symbol" style="display:none;">✘</span></span>';
-                        
-                        // Picking HTML
+                        // Picking Tile (ri ri-shopping-cart-2-line)
                         if ($pickingCompleted) {
-                            $pickingHtml = '<span class="text-success fw-bold fs-4" title="Picking Completed (' . $totScanned . '/' . $totQty . ')"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                            $pickingHtml = $buildTile('ri ri-shopping-cart-2-line', 'completed', 'Picking: Completed (' . $totScanned . '/' . $totQty . ')');
                         } elseif ($pickingInProgress) {
-                            $pickingHtml = '<span class="badge bg-warning text-dark px-2 py-1" title="Scanned ' . $totScanned . ' of ' . $totQty . '"><i class="ri-loader-4-line me-1"></i>' . $totScanned . '/' . $totQty . '</span>';
+                            $pickingHtml = $buildTile('ri ri-shopping-cart-2-line', 'in-progress', 'Picking: Scanned ' . $totScanned . ' of ' . $totQty, $totScanned . '/' . $totQty);
                         } else {
-                            $pickingHtml = $crossHtml;
+                            $pickingHtml = $buildTile('ri ri-shopping-cart-2-line', 'pending', 'Picking: Pending');
                         }
 
-                        // Checking HTML (Read-only status)
+                        // Checking Tile (ri ri-clipboard-line)
                         if ($checkingCompleted) {
                             $checkerName = optional($invoice->checkedByUser)->name ?? 'User';
                             $checkTime = $invoice->checked_at ? date('d-m-Y H:i', strtotime((string)$invoice->checked_at)) : '';
-                            $checkingHtml = '<span class="text-success fw-bold fs-4" title="Checked by ' . htmlspecialchars($checkerName) . ' (' . $checkTime . ')"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                            $checkingHtml = $buildTile('ri ri-clipboard-line', 'completed', 'Checking: Checked by ' . $checkerName . ($checkTime ? ' (' . $checkTime . ')' : ''));
                         } else {
-                            $checkingHtml = $crossHtml;
+                            $checkingHtml = $buildTile('ri ri-clipboard-line', 'pending', 'Checking: Pending');
                         }
 
-                        // Kachathu HTML
-                        $kachathuHtml = $kachathuCompleted ? $tickHtml : $crossHtml;
+                        // E-Invoice Tile (ri ri-file-text-line)
+                        $einvoiceHtml = $buildTile('ri ri-file-text-line', $einvoice_generated ? 'completed' : 'pending', $einvoice_generated ? 'E-Invoice: Generated' : 'E-Invoice: Pending');
 
-                        // 4. Ready for Dispatch (Triggered ONLY when Transport Sticker or Courier Sticker is printed)
-                        $readyForDispatch = !empty($invoice->transport_sticker_printed);
+                        // E-Way Bill Tile (ri ri-truck-line)
+                        $ewayBillTooltip = $ewaybill_generated ? ('E-Way Bill: ' . ($invoice->eway_bill_no ?: 'Generated')) : 'E-Way Bill: Pending';
+                        $ewaybillHtml = $buildTile('ri ri-truck-line', $ewaybill_generated ? 'completed' : 'pending', $ewayBillTooltip);
 
+                        // Kachathu Tile (ri ri-file-copy-2-line)
+                        $kachathuHtml = $buildTile('ri ri-file-copy-2-line', $kachathuCompleted ? 'completed' : 'pending', $kachathuCompleted ? 'Kachathu: Completed' : 'Kachathu: Pending');
+
+                        // 4. Ready for Dispatch Tile (ri ri-box-3-line)
+                        $readyForDispatch = (!empty($invoice->transport_sticker_printed) || !empty($invoice->ready_for_dispatch_at));
                         if ($readyForDispatch) {
                             $readyTime = $invoice->transport_sticker_printed_at ? date('d-m-Y H:i', strtotime((string)$invoice->transport_sticker_printed_at)) : ($invoice->ready_for_dispatch_at ? date('d-m-Y H:i', strtotime((string)$invoice->ready_for_dispatch_at)) : '');
-                            $readyHtml = '<span class="text-success fw-bold fs-4" title="Transport Sticker Printed' . ($readyTime ? ' (' . $readyTime . ')' : '') . '"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
+                            $readyHtml = $buildTile('ri ri-box-3-line', 'completed', 'Ready for Dispatch: Sticker Printed' . ($readyTime ? ' (' . $readyTime . ')' : ''));
                         } else {
-                            $readyHtml = $crossHtml;
+                            $readyHtml = $buildTile('ri ri-box-3-line', 'pending', 'Ready for Dispatch: Pending');
                         }
 
+                        // LR Updated Tile (ri ri-file-list-3-line)
                         $hasInvoiceLr = !empty($invoice->lr_no) || !empty($invoice->tran_doc_no);
                         $hasBookingLr = false;
                         $bookingLrNo = null;
@@ -1928,11 +2225,7 @@ class SalesMarketingReportController extends Controller
 
                         $lrUpdated = ($hasInvoiceLr || $hasBookingLr);
                         $lrNumberVal = $invoice->lr_no ?: ($invoice->tran_doc_no ?: $bookingLrNo);
-                        if ($lrUpdated) {
-                            $lrHtml = '<span class="text-success fw-bold fs-4" title="LR No: ' . htmlspecialchars($lrNumberVal ?? '') . '"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>';
-                        } else {
-                            $lrHtml = $crossHtml;
-                        }
+                        $lrHtml = $buildTile('ri ri-file-list-3-line', $lrUpdated ? 'completed' : 'pending', $lrUpdated ? ('LR Updated: ' . ($lrNumberVal ?: 'Updated')) : 'LR: Pending');
 
                         $invNoStr = htmlspecialchars((string)($invoice->inv_no ?? '-'));
                         $invDateStr = $invoice->inv_date ? date('d-m-Y', strtotime((string)$invoice->inv_date)) : '-';
@@ -1945,11 +2238,12 @@ class SalesMarketingReportController extends Controller
                             $invNoHtml .= '<br><span class="badge bg-danger rounded-pill px-2 py-1 mt-1" style="font-size: 10px;"><i class="ri ri-close-circle-line me-1"></i>Cancelled</span>';
                         }
 
+                        // Sent to Accounts Tile (ri ri-money-rupee-circle-line)
                         $sentToAccounts = ($invoice->sent_to_accounts || in_array($invoice->invoice_status, ['Paid', 'Partially Paid']));
                         $sentTime = $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime((string)$invoice->sent_to_accounts_at)) : '';
                         $sentUser = optional($invoice->accountsSentByUser)->name ?? '';
-                        $sentTooltip = $sentToAccounts ? ('Sent to Accounts' . ($sentUser ? ' by ' . htmlspecialchars($sentUser) : '') . ($sentTime ? ' (' . $sentTime . ')' : '')) : 'Pending';
-                        $sentAccountsHtml = $sentToAccounts ? '<span class="text-success fw-bold fs-4" title="' . $sentTooltip . '"><i class="ri ri-check-line"></i><span class="export-symbol" style="display:none;">✔</span></span>' : $crossHtml;
+                        $sentTooltip = $sentToAccounts ? ('Sent to Accounts' . ($sentUser ? ' by ' . $sentUser : '') . ($sentTime ? ' (' . $sentTime . ')' : '')) : 'Sent to Accounts: Pending';
+                        $sentAccountsHtml = $buildTile('ri ri-money-rupee-circle-line', $sentToAccounts ? 'completed' : 'pending', $sentTooltip);
 
                         $hasGst = !empty(optional($invoice->customer)->gst_no);
                         $einvoiceSatisfied = $hasGst ? $einvoice_generated : true;
@@ -1964,20 +2258,22 @@ class SalesMarketingReportController extends Controller
                             && $lrUpdated 
                             && $sentToAccounts;
 
-                        if ($allStepsCompleted) {
-                            $statusBadge = '<span class="badge bg-success rounded-pill px-3 py-1">Completed</span>';
+                        if ($isCancelled) {
+                            $statusBadge = $buildStatusPill('Cancelled', 'cancelled');
+                        } elseif ($allStepsCompleted) {
+                            $statusBadge = $buildStatusPill('Completed', 'completed');
                         } elseif (!$einvoice_generated && ($pickingCompleted || $checkingCompleted)) {
-                            $statusBadge = '<span class="badge bg-warning text-dark rounded-pill px-3 py-1">Awaiting E-Invoice</span>';
+                            $statusBadge = $buildStatusPill('Awaiting E-Invoice', 'awaiting');
                         } elseif ($einvoice_generated && !$ewaybill_generated && ($pickingCompleted || $checkingCompleted)) {
-                            $statusBadge = '<span class="badge bg-warning text-dark rounded-pill px-3 py-1">Awaiting E-Way Bill</span>';
+                            $statusBadge = $buildStatusPill('Awaiting E-Way Bill', 'awaiting');
                         } elseif ($readyForDispatch && !$lrUpdated) {
-                            $statusBadge = '<span class="badge bg-warning text-dark rounded-pill px-3 py-1">Awaiting LR</span>';
+                            $statusBadge = $buildStatusPill('Awaiting LR', 'awaiting');
                         } elseif ($lrUpdated && !$sentToAccounts) {
-                            $statusBadge = '<span class="badge bg-info text-white rounded-pill px-3 py-1">Awaiting Accounts</span>';
+                            $statusBadge = $buildStatusPill('Awaiting Accounts', 'awaiting');
                         } elseif ($totScanned > 0 || $checkingCompleted || $kachathuCompleted) {
-                            $statusBadge = '<span class="badge bg-primary rounded-pill px-3 py-1">In Progress</span>';
+                            $statusBadge = $buildStatusPill('In Progress', 'in-progress');
                         } else {
-                            $statusBadge = '<span class="badge bg-secondary rounded-pill px-3 py-1">Not Started</span>';
+                            $statusBadge = $buildStatusPill('Not Started', 'neutral');
                         }
 
                         $data[] = [
@@ -1987,8 +2283,8 @@ class SalesMarketingReportController extends Controller
                             'qty' => number_format($totQty),
                             'picking' => $pickingHtml,
                             'checking' => $checkingHtml,
-                            'einvoice' => $einvoice_generated ? $tickHtml : $crossHtml,
-                            'ewaybill' => $ewaybill_generated ? $tickHtml : $crossHtml,
+                            'einvoice' => $einvoiceHtml,
+                            'ewaybill' => $ewaybillHtml,
                             'kachathu' => $kachathuHtml,
                             'ready_for_dispatch' => $readyHtml,
                             'lr_updated' => $lrHtml,
@@ -1997,11 +2293,32 @@ class SalesMarketingReportController extends Controller
                         ];
                     }
 
+                    // KPI calculations matching reference design
+                    $kpiTotal = $totalRecords;
+                    $kpiReady = (clone $countQuery)->where(function($q) {
+                        $q->where('transport_sticker_printed', 1)
+                          ->orWhereNotNull('ready_for_dispatch_at');
+                    })->count();
+                    $kpiPendingLr = (clone $countQuery)->where(function($q) {
+                        $q->where('transport_sticker_printed', 1)
+                          ->orWhereNotNull('ready_for_dispatch_at');
+                    })->where(function($q) {
+                        $q->whereNull('lr_no')->orWhere('lr_no', '')
+                          ->orWhereNull('sent_to_accounts')->orWhere('sent_to_accounts', 0);
+                    })->count();
+                    $kpiInProgress = max(0, $kpiTotal - $kpiReady);
+
                     return response()->json([
                         'draw' => $draw,
                         'recordsTotal' => $totalRecords,
                         'recordsFiltered' => $totalRecords,
-                        'data' => $data
+                        'data' => $data,
+                        'kpi' => [
+                            'total_invoices' => number_format($kpiTotal),
+                            'ready_for_dispatch' => number_format($kpiReady),
+                            'in_progress' => number_format($kpiInProgress),
+                            'pending_lr' => number_format($kpiPendingLr),
+                        ]
                     ]);
 
                 case 'incentive-report':
@@ -2761,6 +3078,7 @@ class SalesMarketingReportController extends Controller
                 case 'outstanding-report':
                     $query = Customer::where('status', 'Active');
                     if ($customerId) $query->where('id', $customerId);
+                    if ($request->filled('zone_id')) $query->where('zone_id', $request->zone_id);
                     if ($search) {
                         $query->where(function($q) use ($search) {
                             $q->where('name', 'like', "%{$search}%")
@@ -2775,7 +3093,8 @@ class SalesMarketingReportController extends Controller
                     $withRelations = [
                         'zone',
                         'salesInvoices' => function($invQ) use ($fromDate, $toDate) {
-                            $invQ->whereNull('deleted_at');
+                            $invQ->whereNull('deleted_at')
+                                 ->where('invoice_status', '!=', 'Cancelled');
                             if ($fromDate) $invQ->where('inv_date', '>=', $fromDate);
                             if ($toDate) $invQ->where('inv_date', '<=', $toDate);
                         }
@@ -2820,6 +3139,7 @@ class SalesMarketingReportController extends Controller
                             }
 
                             $outstandingReport[] = [
+                                'sno' => count($outstandingReport) + 1,
                                 'zone' => '<span class="badge bg-label-secondary">' . htmlspecialchars((string)($cust->zone->zone_name ?? '-')) . '</span>',
                                 'customer' => '<div class="fw-bold text-dark">' . htmlspecialchars((string)$cust->name) . '</div><small class="text-muted">' . htmlspecialchars((string)$cust->code) . '</small>',
                                 'bills_count' => '<span class="badge rounded-pill bg-label-info">' . $billsCount . '</span>',
@@ -2845,6 +3165,137 @@ class SalesMarketingReportController extends Controller
                             'total_sales' => '₹' . number_format($sumSales, 2),
                             'received' => '₹' . number_format($sumReceived, 2),
                             'outstanding' => '₹' . number_format($sumOutstanding, 2),
+                        ]
+                    ]);
+
+                case 'outstanding-aging-wise':
+                    $hasOpenTable = Schema::hasTable('customer_opening_balances') && class_exists(CustomerOpeningBalance::class);
+                    $zonesQuery = DB::table('zones')->orderBy('id', 'asc');
+                    if ($request->filled('zone_id')) {
+                        $zonesQuery->where('id', $request->zone_id);
+                    }
+                    $allZones = $zonesQuery->get();
+
+                    $now = \Carbon\Carbon::now();
+                    $referenceDate = $toDate ? \Carbon\Carbon::parse($toDate) : $now;
+
+                    $agingRows = [];
+                    $sumTotalOutst = 0;
+                    $sum0_30 = 0;
+                    $sum31_60 = 0;
+                    $sum61_90 = 0;
+                    $sumAbove90 = 0;
+
+                    foreach ($allZones as $z) {
+                        $custQuery = Customer::where('status', 'Active')->where('zone_id', $z->id);
+                        if ($customerId) {
+                            $custQuery->where('id', $customerId);
+                        }
+                        if ($search) {
+                            $custQuery->where(function($q) use ($search) {
+                                $q->where('name', 'like', "%{$search}%")
+                                  ->orWhere('code', 'like', "%{$search}%");
+                            });
+                        }
+                        $custs = $custQuery->get(['id']);
+                        $custIds = $custs->pluck('id')->toArray();
+                        if (empty($custIds)) continue;
+
+                        $openAmount = 0;
+                        if ($hasOpenTable) {
+                            $openAmount = (float)DB::table('customer_opening_balances')
+                                ->whereIn('customer_id', $custIds)
+                                ->whereNull('deleted_at')
+                                ->sum('open_amount');
+                        }
+
+                        $invoicesQuery = DB::table('sales_invoices')
+                            ->whereIn('customer_id', $custIds)
+                            ->whereNull('deleted_at')
+                            ->where('invoice_status', '!=', 'Cancelled');
+
+                        if ($fromDate) {
+                            $invoicesQuery->where('inv_date', '>=', $fromDate);
+                        }
+                        if ($toDate) {
+                            $invoicesQuery->where('inv_date', '<=', $toDate);
+                        }
+
+                        $invoices = $invoicesQuery->select('inv_date', 'grand_total', 'received_amount')->get();
+
+                        $b0_30 = 0;
+                        $b31_60 = 0;
+                        $b61_90 = 0;
+                        $bAbove90 = $openAmount; // Opening balance is considered > 90 days
+
+                        foreach ($invoices as $inv) {
+                            $bal = max(0, (float)$inv->grand_total - (float)$inv->received_amount);
+                            if ($bal <= 0) continue;
+
+                            $invDate = $inv->inv_date ? \Carbon\Carbon::parse($inv->inv_date) : null;
+                            $days = $invDate ? $referenceDate->diffInDays($invDate) : 999;
+
+                            if ($days <= 30) {
+                                $b0_30 += $bal;
+                            } elseif ($days <= 60) {
+                                $b31_60 += $bal;
+                            } elseif ($days <= 90) {
+                                $b61_90 += $bal;
+                            } else {
+                                $bAbove90 += $bal;
+                            }
+                        }
+
+                        $tot = $b0_30 + $b31_60 + $b61_90 + $bAbove90;
+                        if ($tot > 0 || !empty($search)) {
+                            $sumTotalOutst += $tot;
+                            $sum0_30 += $b0_30;
+                            $sum31_60 += $b31_60;
+                            $sum61_90 += $b61_90;
+                            $sumAbove90 += $bAbove90;
+
+                            $zoneName = htmlspecialchars((string)$z->zone_name);
+                            $zoneLink = '<a href="javascript:void(0)" class="fw-bold text-primary fs-6" onclick="drillDownZoneAging(' . $z->id . ', \'' . addslashes($zoneName) . '\')">' . $zoneName . ' <i class="ri ri-arrow-right-s-line small"></i></a>';
+
+                            $agingRows[] = [
+                                'zone' => $zoneLink,
+                                'zone_name' => $z->zone_name,
+                                'zone_id' => $z->id,
+                                'outstanding' => '₹' . number_format($tot, 2),
+                                'b0_30' => '<span class="text-success fw-bold">₹' . number_format($b0_30, 2) . '</span>',
+                                'b31_60' => '<span class="text-dark fw-bold">₹' . number_format($b31_60, 2) . '</span>',
+                                'b61_90' => '<span class="text-warning fw-bold">₹' . number_format($b61_90, 2) . '</span>',
+                                'above_90' => '<span class="text-danger fw-bold">₹' . number_format($bAbove90, 2) . '</span>',
+                                'outstanding_raw' => $tot,
+                                'b0_30_raw' => $b0_30,
+                                'b31_60_raw' => $b31_60,
+                                'b61_90_raw' => $b61_90,
+                                'above_90_raw' => $bAbove90,
+                            ];
+                        }
+                    }
+
+                    if (!empty($search)) {
+                        $searchLower = strtolower($search);
+                        $agingRows = array_values(array_filter($agingRows, function($r) use ($searchLower) {
+                            return str_contains(strtolower($r['zone_name']), $searchLower);
+                        }));
+                    }
+
+                    $totalAgingRecords = count($agingRows);
+                    $pagedAging = ($length > 0 && $length !== -1) ? array_slice($agingRows, $start, $length) : $agingRows;
+
+                    return response()->json([
+                        'draw' => $draw,
+                        'recordsTotal' => $totalAgingRecords,
+                        'recordsFiltered' => $totalAgingRecords,
+                        'data' => $pagedAging,
+                        'totals' => [
+                            'outstanding' => '₹' . number_format($sumTotalOutst, 2),
+                            'b0_30' => '₹' . number_format($sum0_30, 2),
+                            'b31_60' => '₹' . number_format($sum31_60, 2),
+                            'b61_90' => '₹' . number_format($sum61_90, 2),
+                            'above_90' => '₹' . number_format($sumAbove90, 2),
                         ]
                     ]);
 
@@ -2942,6 +3393,10 @@ class SalesMarketingReportController extends Controller
                         ->leftJoin('brand_categories', 'sales_order_items.brand_cat_id', '=', 'brand_categories.id')
                         ->whereNull('sales_orders.deleted_at')
                         ->whereNull('sales_order_items.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('sales_orders.status')
+                              ->orWhereNotIn(DB::raw('LOWER(sales_orders.status)'), ['cancelled', 'cancel', 'dispatched', 'despatched']);
+                        })
                         ->select(
                             'sales_order_items.sale_order_id',
                             'sales_order_items.art_no',
@@ -3101,7 +3556,7 @@ class SalesMarketingReportController extends Controller
                             $invQty = floatval($invMap[$item->sale_order_id][$normArt] ?? 0);
 
                             $itemPending = max(0, $ordQty - $invQty);
-                            if ($itemPending > 0) {
+                            if ($itemPending > 0 && $rate > 0) {
                                 $missedOrdersSet[$item->sale_order_id] = true;
                                 $totalLostValue += ($itemPending * $rate);
                             }
@@ -3207,7 +3662,11 @@ class SalesMarketingReportController extends Controller
                 'brand_categories.name as cat_brand_name'
             )
             ->whereNull('sales_orders.deleted_at')
-            ->whereNull('sales_order_items.deleted_at');
+            ->whereNull('sales_order_items.deleted_at')
+            ->where(function($q) {
+                $q->whereNull('sales_orders.status')
+                  ->orWhereNotIn(DB::raw('LOWER(sales_orders.status)'), ['cancelled', 'cancel', 'dispatched', 'despatched']);
+            });
 
         if ($fromDate) {
             $orderQuery->where('sales_orders.so_date', '>=', $fromDate);
@@ -3378,12 +3837,14 @@ class SalesMarketingReportController extends Controller
                 $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
                 $lostQty = max(0, $ordQ - $invQ);
 
-                if ($lostQty <= 0) {
+                $ordAmt = floatval($artAmounts[$normArt] ?? 0);
+                $rate = $ordQ > 0 ? ($ordAmt / $ordQ) : 0;
+
+                // Hide row if lost qty <= 0 OR selling price <= 0
+                if ($lostQty <= 0 || $rate <= 0) {
                     continue;
                 }
 
-                $ordAmt = floatval($artAmounts[$normArt] ?? 0);
-                $rate = $ordQ > 0 ? ($ordAmt / $ordQ) : 0;
                 $lostRev = $lostQty * $rate;
 
                 $displayArtNo = !empty($artDisplay[$normArt]) ? $artDisplay[$normArt] : $normArt;
@@ -3443,7 +3904,8 @@ class SalesMarketingReportController extends Controller
                     $normArt = $it['norm_art_no'];
                     $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
                     $remQ = max(0, $it['qty'] - $invQ);
-                    if ($remQ <= 0) continue;
+                    $rate = floatval($it['rate'] ?? 0);
+                    if ($remQ <= 0 || $rate <= 0) continue;
 
                     $artNo = $it['art_no'];
                     $cust = $data['customer'];
@@ -3537,7 +3999,8 @@ class SalesMarketingReportController extends Controller
                     $normArt = $it['norm_art_no'];
                     $invQ = floatval($invoicedArtNosMap[$soId][$normArt] ?? 0);
                     $remQ = max(0, $it['qty'] - $invQ);
-                    if ($remQ <= 0) continue;
+                    $rate = floatval($it['rate'] ?? 0);
+                    if ($remQ <= 0 || $rate <= 0) continue;
 
                     $artNo = $it['art_no'];
                     $desc = $it['description'];
@@ -3995,6 +4458,7 @@ class SalesMarketingReportController extends Controller
 
         $fgStockMap = [];
         $cuttingMap = [];
+        $fabricStockMap = [];
 
         if (!empty($allArtNos)) {
             $stockRows = DB::table('stock_entry_items')
@@ -4025,6 +4489,79 @@ class SalesMarketingReportController extends Controller
                 $fgStockMap[$artKey][$sizeKey][$slvKey] = ($fgStockMap[$artKey][$sizeKey][$slvKey] ?? 0) + $balVal;
                 $fgStockMap[$artKey][$sizeKey]['ALL'] = ($fgStockMap[$artKey][$sizeKey]['ALL'] ?? 0) + $balVal;
                 $fgStockMap[$artKey]['TOTAL'] = ($fgStockMap[$artKey]['TOTAL'] ?? 0) + $balVal;
+            }
+
+            // 1.1 Fabric Stock from stock_entry_items (raw_material & fabric category)
+            $searchArtNos = [];
+            foreach ($allArtNos as $a) {
+                $searchArtNos[] = $a;
+                $cleanA = strtoupper(preg_replace('/\s+/', '', $a));
+                $searchArtNos[] = $cleanA;
+                if (str_contains($a, '-')) {
+                    $parts = explode('-', $a);
+                    $searchArtNos[] = trim($parts[0]);
+                }
+            }
+            $searchArtNos = array_values(array_unique(array_filter($searchArtNos)));
+
+            $fabricRows = DB::table('stock_entry_items as sei')
+                ->join('raw_materials as rm', 'sei.raw_material_id', '=', 'rm.id')
+                ->leftJoin('uoms as u', 'sei.uom_id', '=', 'u.id')
+                ->where('sei.stock_type', 'raw_material')
+                ->where(function($q) {
+                    $q->where('sei.store_category_id', 1)
+                      ->orWhere('rm.store_category_id', 1);
+                })
+                ->whereNull('sei.deleted_at')
+                ->where(function($q) use ($searchArtNos) {
+                    $q->whereIn('sei.art_no', $searchArtNos);
+                    foreach ($searchArtNos as $sa) {
+                        $q->orWhere('sei.art_no', 'like', $sa . '%');
+                    }
+                })
+                ->select(
+                    'sei.art_no',
+                    'rm.name as fabric_name',
+                    DB::raw('COALESCE(u.uom_code, "Mtr") as uom_code'),
+                    DB::raw('SUM(sei.qty_in - sei.qty_out) as balance')
+                )
+                ->groupBy('sei.art_no', 'rm.name', 'u.uom_code')
+                ->havingRaw('balance > 0')
+                ->get();
+
+            foreach ($fabricRows as $fr) {
+                $rawArt = strtoupper(trim((string)$fr->art_no));
+                $norm = preg_replace('/\s+/', '', $rawArt);
+                $bal = floatval($fr->balance);
+                $uom = $fr->uom_code ?: 'Mtr';
+                $fabricName = trim($fr->fabric_name ?? '');
+
+                if (!isset($fabricStockMap[$norm])) {
+                    $fabricStockMap[$norm] = [
+                        'balance' => 0,
+                        'uom' => $uom,
+                        'fabrics' => []
+                    ];
+                }
+                $fabricStockMap[$norm]['balance'] += $bal;
+                $fabricStockMap[$norm]['fabrics'][] = [
+                    'name' => $fabricName,
+                    'art_no' => $fr->art_no,
+                    'balance' => $bal,
+                    'uom' => $uom
+                ];
+
+                if (str_contains($rawArt, '-')) {
+                    $base = preg_replace('/\s+/', '', explode('-', $rawArt)[0]);
+                    if (!isset($fabricStockMap[$base])) {
+                        $fabricStockMap[$base] = [
+                            'balance' => 0,
+                            'uom' => $uom,
+                            'fabrics' => []
+                        ];
+                    }
+                    $fabricStockMap[$base]['balance'] += $bal;
+                }
             }
 
             // 2. Active Cuttings from job_card_entries & job_card_fabric_details
@@ -4136,6 +4673,39 @@ class SalesMarketingReportController extends Controller
                 $li['fg_stock'] = 0;
             }
 
+            // Fabric stock lookup
+            $baseArt = $normArt;
+            foreach (['-HS', '-FS', '-H/S', '-F/S', '-HALF', '-FULL'] as $sfx) {
+                $cleanSfx = str_replace(['/', '-'], '', $sfx);
+                if (str_ends_with($normArt, $cleanSfx)) {
+                    $baseArt = substr($normArt, 0, -strlen($cleanSfx));
+                    break;
+                }
+            }
+            if ($baseArt === $normArt && str_contains($rawArt, '-')) {
+                $baseArt = strtoupper(preg_replace('/\s+/', '', explode('-', $rawArt)[0]));
+            }
+
+            $fabData = $fabricStockMap[$normArt] ?? ($fabricStockMap[$baseArt] ?? null);
+            $fabBal = $fabData ? floatval($fabData['balance']) : 0;
+            $fabUom = $fabData['uom'] ?? 'Mtr';
+
+            if ($fabBal > 0) {
+                $fabTitle = '';
+                if (!empty($fabData['fabrics'])) {
+                    $fabList = [];
+                    foreach ($fabData['fabrics'] as $f) {
+                        $fabList[] = ($f['name'] ?: $f['art_no']) . ': ' . number_format($f['balance'], 1) . ' ' . $f['uom'];
+                    }
+                    $fabTitle = ' data-bs-toggle="tooltip" data-bs-placement="top" title="' . htmlspecialchars(implode(', ', $fabList)) . '"';
+                }
+                $li['fabric_stock_html'] = '<span class="badge bg-label-info fw-bold"' . $fabTitle . '>' . number_format($fabBal, 1) . ' ' . $fabUom . '</span>';
+                $li['fabric_stock'] = $fabBal;
+            } else {
+                $li['fabric_stock_html'] = '<span class="text-muted fw-bold">0 Mtr</span>';
+                $li['fabric_stock'] = 0;
+            }
+
             $cuttings = $cuttingMap[$normArt] ?? [];
             if (!empty($cuttings)) {
                 $cutLines = [];
@@ -4232,6 +4802,39 @@ class SalesMarketingReportController extends Controller
         $length = ($rawLen > 0 || $rawLen === -1) ? $rawLen : 10;
         $pagedItems = $length != -1 ? array_slice($filteredItems, $start, $length) : $filteredItems;
 
+        // Build unique Art No wise Fabric Stock summary for Tab 2
+        $fabricSummary = [];
+        $artGroups = [];
+        foreach ($lostItems as $li) {
+            $art = trim($li['art_no_raw'] ?? '');
+            if (!isset($artGroups[$art])) {
+                $artGroups[$art] = [
+                    'art_no'            => $art,
+                    'item_name'         => $li['description'] ?? ($li['item_name'] ?? '-'),
+                    'total_pending_qty' => 0,
+                    'fabric_stock'      => $li['fabric_stock'] ?? 0,
+                    'fabric_stock_html' => $li['fabric_stock_html'] ?? '<span class="text-muted fw-bold">0 Mtr</span>',
+                ];
+            }
+            $artGroups[$art]['total_pending_qty'] += floatval($li['qty_raw'] ?? $li['qty']);
+        }
+
+        foreach ($artGroups as $ag) {
+            $hasStock = ($ag['fabric_stock'] > 0);
+            $statusHtml = $hasStock 
+                ? '<span class="badge bg-label-success fw-bold"><i class="ri-checkbox-circle-line me-1"></i>Available</span>' 
+                : '<span class="badge bg-label-secondary fw-semibold">No Fabric Stock</span>';
+
+            $fabricSummary[] = [
+                'art_no'            => $ag['art_no'],
+                'item_name'         => $ag['item_name'],
+                'total_pending_qty' => $ag['total_pending_qty'],
+                'fabric_stock'      => $ag['fabric_stock'],
+                'fabric_stock_html' => $ag['fabric_stock_html'],
+                'status_html'       => $statusHtml,
+            ];
+        }
+
         return response()->json([
             'draw'             => $draw,
             'recordsTotal'     => count($lostItems),
@@ -4250,6 +4853,7 @@ class SalesMarketingReportController extends Controller
             'reason'           => $reasonText,
             'status'           => true,
             'items'            => $lostItems,
+            'fabric_summary'   => $fabricSummary,
             'party_items'      => $partyRows,
         ]);
     }

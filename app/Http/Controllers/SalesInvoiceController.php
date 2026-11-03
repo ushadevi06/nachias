@@ -1866,8 +1866,13 @@ class SalesInvoiceController extends Controller
         $totalInWords = numberToWords($invoice->grand_total);
         $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
         $pdfType = request()->query('type', 'pdf1');
+        $viewName = (request()->query('template') === 'new' || request()->query('design') === 'new') ? 'sales_invoice.pdf_new' : 'sales_invoice.pdf';
 
-        $pdf = Pdf::loadView('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'pdfType'));
+        $fontDir = storage_path('fonts');
+        if (!file_exists($fontDir)) {
+            @mkdir($fontDir, 0777, true);
+        }
+        $pdf = Pdf::loadView($viewName, compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'pdfType'));
         $pdf->setPaper('A4', 'portrait');
         
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
@@ -1948,8 +1953,9 @@ class SalesInvoiceController extends Controller
         $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
         $pdfType = request()->query('type', 'pdf1');
         $is_print = true;
+        $viewName = (request()->query('template') === 'new' || request()->query('design') === 'new') ? 'sales_invoice.pdf_new' : 'sales_invoice.pdf';
 
-        return view('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print', 'pdfType'));
+        return view($viewName, compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print', 'pdfType'));
     }
     public function printSticker($id)
     {
@@ -1965,7 +1971,6 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::with(['customer.state', 'customer.city', 'customer.place'])->findOrFail($id);
 
-        // Auto mark Ready for Dispatch when Transport Sticker is printed
         $invoice->update([
             'ready_for_dispatch'           => 1,
             'ready_for_dispatch_at'        => now(),
@@ -2020,6 +2025,11 @@ class SalesInvoiceController extends Controller
         $mode = $request->query('mode', 'portrait');
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
 
+        $fontDir = storage_path('fonts');
+        if (!file_exists($fontDir)) {
+            @mkdir($fontDir, 0777, true);
+        }
+
         if ($mode === 'landscape' || $mode === 'new') {
             $pdf = Pdf::loadView('sales_invoice.delivery_order_landscape', compact('invoice', 'setting', 'totalPcs'));
             $pdf->setPaper('A4', 'landscape');
@@ -2051,6 +2061,11 @@ class SalesInvoiceController extends Controller
 
         $mode = $request->query('mode', 'portrait');
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
+
+        $fontDir = storage_path('fonts');
+        if (!file_exists($fontDir)) {
+            @mkdir($fontDir, 0777, true);
+        }
 
         if ($mode === 'landscape' || $mode === 'new') {
             $pdf = Pdf::loadView('sales_invoice.open_delivery_order_landscape', compact('invoice', 'setting', 'totalPcs'));

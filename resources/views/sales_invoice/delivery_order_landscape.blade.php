@@ -4,11 +4,19 @@
     <meta charset="utf-8">
     <title>Delivery Order - {{ $invoice->inv_no }}</title>
     @php
-        $arialRegularPath = str_replace('\\', '/', public_path('assets/fonts/Arial Regular.ttf'));
-        $arialBoldPath = str_replace('\\', '/', public_path('assets/fonts/Arial Bold.ttf'));
-        $robotoRegularPath = str_replace('\\', '/', public_path('assets/fonts/RobotoCondensed-Regular.ttf'));
-        $robotoBoldPath = str_replace('\\', '/', public_path('assets/fonts/RobotoCondensed-Bold.ttf'));
-        $robotoExtraBoldPath = str_replace('\\', '/', public_path('assets/fonts/RobotoCondensed-ExtraBold.ttf'));
+        $isDomPdf = false;
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $trace) {
+            if (isset($trace['class']) && (str_contains($trace['class'], 'Dompdf') || str_contains($trace['class'], 'Barryvdh\DomPDF'))) {
+                $isDomPdf = true;
+                break;
+            }
+        }
+
+        $arialRegularPath = $isDomPdf ? str_replace('\\', '/', public_path('assets/fonts/Arial Regular.ttf')) : asset('assets/fonts/Arial Regular.ttf');
+        $arialBoldPath = $isDomPdf ? str_replace('\\', '/', public_path('assets/fonts/Arial Bold.ttf')) : asset('assets/fonts/Arial Bold.ttf');
+        $robotoRegularPath = $isDomPdf ? str_replace('\\', '/', public_path('assets/fonts/RobotoCondensed-Regular.ttf')) : asset('assets/fonts/RobotoCondensed-Regular.ttf');
+        $robotoBoldPath = $isDomPdf ? str_replace('\\', '/', public_path('assets/fonts/RobotoCondensed-Bold.ttf')) : asset('assets/fonts/RobotoCondensed-Bold.ttf');
+        $robotoExtraBoldPath = $isDomPdf ? str_replace('\\', '/', public_path('assets/fonts/RobotoCondensed-ExtraBold.ttf')) : asset('assets/fonts/RobotoCondensed-ExtraBold.ttf');
     @endphp
     <style>
         /* 1. Actual TrueType Font Configurations for DomPDF */
@@ -91,7 +99,7 @@
             line-height: 1.25;
         }
         .complaints-badge-td {
-            background-color: #e0f2fe;
+            background-color: #dbf1f4;
             color: #0269a4;
             padding: 3.5px 22px;
             border-radius: 14px;
@@ -102,7 +110,7 @@
         }
         /* Roboto Condensed Bold for Delivery Order title */
         .doc-title-pill {
-            background-color: #0b589e;
+            background-color: #054cae;
             color: #ffffff;
             font-family: 'Roboto Condensed', Arial, sans-serif;
             font-size: 12.5px;
@@ -163,7 +171,7 @@
             font-family: 'Arial', sans-serif;
         }
         .items-table th, .items-table td {
-            border: 1px solid #7ea5c7;
+            border: 1px solid #cbddd1;
             padding: 3.5px 3px;
             font-size: 10px;
             vertical-align: middle;
@@ -208,10 +216,13 @@
             font-family: 'Arial', sans-serif;
             font-weight: bold;
             border-top: 1.5px solid #026bb4;
+            height: 25px;
         }
         .grand-total-row td {
-            padding: 3.5px 3px;
+            padding: 5px 3px;
             font-size: 11px;
+            vertical-align: middle;
+            height: 25px;
         }
 
         .text-center { text-align: center !important; }
@@ -243,53 +254,107 @@
             padding: 0;
         }
 
-        /* Banner */
-        .fresh-banner-box {
+        /* MRP-Wise Summary Abstract & Marketing Pillars */
+        .abstract-banner-box {
             width: 100%;
             margin-top: 3px;
-            border: 1px solid #cbd5e1;
+            border: 1.5px solid #01316f;
             border-radius: 4px;
-            padding: 3px 4px 2px 4px;
             background-color: #ffffff;
             page-break-inside: avoid;
             font-family: 'Arial', sans-serif;
+            overflow: hidden;
         }
-        .fresh-banner-table {
+        .abstract-main-table {
             width: 100%;
             border-collapse: collapse;
         }
-        .fresh-banner-table td {
+        .mrp-title-badge {
+            background-color: #01316f;
+            color: #ffffff;
+            text-align: center;
             vertical-align: middle;
-            padding: 0 4px;
+            padding: 5px 6px;
+            width: 100px;
         }
-        /* Roboto Condensed Extra Bold for promotional banner heading */
-        .banner-heading {
-            font-family: 'Roboto Condensed ExtraBold', 'Roboto Condensed', Arial, sans-serif;
-            font-size: 20px;
-            font-weight: bold;
-            color: #0b2c64;
-            letter-spacing: 0.3px;
-            line-height: 1.15;
-        }
-        .banner-subtitle {
+        .mrp-title-text {
             font-family: 'Arial', sans-serif;
-            font-size: 12px;
-            color: #334155;
-            margin-top: 1.5px;
+            font-size: 8.5px;
+            font-weight: bold;
+            color: #ffffff;
             line-height: 1.25;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .mrp-matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Arial', sans-serif;
+        }
+        .mrp-matrix-table th,
+        .mrp-matrix-table td {
+            border: 1px solid #7ea5c7;
+            padding: 3.5px 6px;
+            text-align: center;
+            font-size: 10px;
+            vertical-align: middle;
+        }
+        .mrp-matrix-label {
+            font-weight: bold;
+            color: #01316f;
+            background-color: #f0f7fd;
+            text-align: center;
+            width: 65px;
+        }
+        .mrp-matrix-val {
+            font-weight: bold;
+            color: #000000;
+        }
+        .mrp-matrix-total-hdr {
+            background-color: #01316f !important;
+            color: #ffffff !important;
+            font-weight: bold;
+            font-size: 10px;
+            border-color: #01316f !important;
+            width: 55px;
+        }
+        .mrp-matrix-total-val {
+            background-color: #01316f !important;
+            color: #ffffff !important;
+            font-weight: bold;
+            font-size: 11px;
+            border-color: #01316f !important;
+            width: 55px;
+        }
+        .pillars-container-td {
+            width: 46%;
+            border-left: 1.5px solid #01316f;
+            padding: 3px 6px !important;
+            vertical-align: middle;
+        }
+        .pillars-table {
+            width: 100%;
+            border-collapse: collapse;
         }
         .pillar-col {
             text-align: center;
-            border-left: 1.5px solid #cbd5e1;
-            padding: 3px 6px;
+            vertical-align: middle;
+            padding: 2px 4px;
+            width: 33.33%;
+        }
+        .pillar-col:not(:first-child) {
+            border-left: 1px dashed #cbd5e1;
+        }
+        .pillar-col img {
+            display: block;
+            margin: 0 auto 2px auto;
         }
         .pillar-col div {
             font-family: 'Arial', sans-serif;
-            font-size: 12.5px;
+            font-size: 9.5px;
             font-weight: normal;
             color: #0f172a;
             line-height: 1.2;
-            margin-top: 3px;
         }
         .checklist-item {
             font-family: 'Arial', sans-serif;
@@ -322,12 +387,14 @@
         };
 
         $casinoLogoBase64  = $toBase64('assets/images/delivery_order/casino_header_logo.png');
+        $nachiasLogoBase64 = $toBase64('assets/images/logo_2_blue.png');
         $bannerBoxBase64   = $toBase64('assets/images/delivery_order/banner_box.png');
         $bannerCurveBase64 = $toBase64('assets/images/delivery_order/banner_curve.png');
         $tagIconBase64     = $toBase64('assets/images/delivery_order/icon_tag.png');
         $hangerIconBase64  = $toBase64('assets/images/delivery_order/icon_hanger.png');
         $teamIconBase64    = $toBase64('assets/images/delivery_order/icon_team.png');
         $shirtIconBase64   = $toBase64('assets/images/delivery_order/icon_shirt.png');
+        $whiteTagSvg       = 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><circle cx="7" cy="7" r="1.5" fill="#ffffff"></circle></svg>');
         $qrCodeBase64      = $toBase64('assets/images/qr_code.png');
         $phoneIconBase64   = $toBase64('assets/images/delivery_order/icon_phone.png');
         $phonePillBase64   = $toBase64('assets/images/delivery_order/icon_phone_pill.png');
@@ -452,41 +519,52 @@
         }
         $grandTotalQty = $fTotalQty + $hTotalQty;
 
+        // Calculate MRP-wise Quantity Summary for Abstract
+        $mrpSummary = [];
+        $totalMrpQty = 0;
+        foreach ($invoice->items as $item) {
+            $m = (float)($item->mrp ?? 0);
+            $q = (float)($item->quantity ?? 0);
+            if ($q > 0) {
+                $mrpKey = (floor($m) == $m) ? (string)(int)$m : number_format($m, 2, '.', '');
+                $mrpSummary[$mrpKey] = ($mrpSummary[$mrpKey] ?? 0) + $q;
+                $totalMrpQty += $q;
+            }
+        }
+        uksort($mrpSummary, function($a, $b) {
+            return floatval($a) <=> floatval($b);
+        });
+
         // Build display list without section header bars (as requested)
         $displayItems = [];
         if (!empty($fullRows)) {
             foreach ($fullRows as $fr) {
                 $displayItems[] = ['type' => 'item', 'data' => $fr];
             }
-            $displayItems[] = ['type' => 'subtotal', 'sleeve' => 'F', 'label' => 'Total (F) :', 'sizes' => $fSizeTotals, 'total' => $fTotalQty];
         }
 
         if (!empty($halfRows)) {
             foreach ($halfRows as $hr) {
                 $displayItems[] = ['type' => 'item', 'data' => $hr];
             }
-            $displayItems[] = ['type' => 'subtotal', 'sleeve' => 'H', 'label' => 'Total (H) :', 'sizes' => $hSizeTotals, 'total' => $hTotalQty];
         }
 
-        // Single page limit with full promotional banner & footer: max 15 items and <= 17 display rows
+        // Single page limit with full promotional banner & footer: max 15 items
         $totalItemsCount = count($fullRows) + count($halfRows);
         $totalDisplayRows = count($displayItems);
         $chunks = [];
-        if ($totalDisplayRows <= 17) {
+        if ($totalDisplayRows <= 15) {
             $chunks = [$displayItems];
         } else {
             $offset = 0;
             while ($offset < $totalDisplayRows) {
                 $remaining = $totalDisplayRows - $offset;
-                if ($offset === 0) {
-                    $take = min(18, $remaining - 2);
-                    if ($take < 1) $take = 16;
+                if ($remaining <= 15) {
+                    $take = $remaining;
                 } else {
-                    if ($remaining <= 15) {
-                        $take = $remaining;
-                    } else {
-                        $take = min(18, $remaining - 2);
-                    }
+                    // Show 21 rows on intermediate pages (without banner) to reduce bottom space
+                    $take = min(21, $remaining - 2);
+                    if ($take < 1) $take = 15;
                 }
                 $chunks[] = array_slice($displayItems, $offset, $take);
                 $offset += $take;
@@ -516,7 +594,12 @@
                     </td>
                     <!-- Center: Company Name, Address, Contact details & Complaints badge -->
                     <td style="width: 54%; text-align: center;">
-                        <div class="company-name">{{ strtoupper($setting->company_name ?? 'NACHIAS FASHION PRIVATE LIMITED') }}</div>
+                        <div class="company-name">
+                            @if(!empty($nachiasLogoBase64))
+                                <img src="{{ $nachiasLogoBase64 }}" style="height: 25px; width: auto; max-width: 20px; vertical-align: middle; display: inline; margin-right: 6px; position: relative; top: -1px;" alt="Logo">
+                            @endif
+                            <span style="vertical-align: middle;">{{ strtoupper($setting->company_name ?? 'NACHIAS FASHION PRIVATE LIMITED') }}</span>
+                        </div>
                         <div class="company-address">
                             {{ preg_replace('/,\s*/', ', ', trim(preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $setting->address ?? '272/2, SOMU NAGAR, SIRINGERI NAGAR (SARATHAMBAL KOVIL BACKSIDE), BYEPASS ROAD, MADURAI - 625016')))) }}<br>
                             Phone: {{ !empty($setting->phone) ? $setting->phone : '8489938071, 8489938073' }} | Email: {{ !empty($setting->email) ? $setting->email : 'srinachias@yahoo.in, sales@nachias.com' }} | GSTIN: {{ !empty($setting->gst_no) ? $setting->gst_no : '33AADCN9342A1ZU' }}
@@ -567,16 +650,19 @@
             <table class="items-table">
                 <thead>
                     <tr>
-                        <th style="width: 3.5%;">Sl.No.</th>
-                        <th style="width: 13.5%;">Item No.</th>
-                        <th style="width: 22%;">Description</th>
-                        <th style="width: 3.5%;">Slv</th>
+                        <th rowspan="2" style="width: 3.5%; vertical-align: middle;">Sl.No.</th>
+                        <th rowspan="2" style="width: 13.5%; vertical-align: middle;">Art No.</th>
+                        <th rowspan="2" style="width: 21%; vertical-align: middle;">Description</th>
+                        <th rowspan="2" style="width: 4.5%; vertical-align: middle;">Sleeve</th>
+                        <th colspan="{{ count($allSizes) }}" style="text-align: center; vertical-align: middle; padding: 2px 2px;">Size</th>
+                        <th rowspan="2" style="width: 6%; vertical-align: middle;">Total</th>
+                        <th rowspan="2" style="width: 9.25%; vertical-align: middle;">WS Price</th>
+                        <th rowspan="2" style="width: 9.25%; vertical-align: middle;">MRP</th>
+                    </tr>
+                    <tr>
                         @foreach($allSizes as $size)
-                            <th style="width: {{ round(33 / count($allSizes), 2) }}%;">S{{ $size }}</th>
+                            <th style="width: {{ round(33 / count($allSizes), 2) }}%; vertical-align: middle; padding: 2px 1px;">{{ $size }}</th>
                         @endforeach
-                        <th style="width: 6%;">Total</th>
-                        <th style="width: 9.25%;">WSP</th>
-                        <th style="width: 9.25%;">MRP</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -603,8 +689,8 @@
                                     </td>
                                 @endforeach
                                 <td class="text-center bold">{{ (int)$r['total_qty'] }}</td>
-                                <td class="text-right" style="padding-right: 6px;">{{ number_format($r['rate'], 2) }}</td>
-                                <td class="text-right" style="padding-right: 6px;">{{ number_format($r['mrp'], 2) }}</td>
+                                <td class="text-right bold" style="padding-right: 6px;">{{ number_format($r['rate'], 2) }}</td>
+                                <td class="text-right bold" style="padding-right: 6px;">{{ number_format($r['mrp'], 2) }}</td>
                             </tr>
                         @elseif($item['type'] === 'subtotal')
                             <tr class="subtotal-row {{ ($item['sleeve'] ?? '') === 'F' ? 'subtotal-f-row' : '' }}">
@@ -622,7 +708,7 @@
 
                     @if($isLastChunk)
                         @php
-                            $emptyRowsNeeded = max(0, 16 - count($chunkItems));
+                            $emptyRowsNeeded = max(0, 15 - count($chunkItems));
                         @endphp
                         @for($e = 0; $e < $emptyRowsNeeded; $e++)
                             <tr class="item-row">
@@ -640,15 +726,15 @@
                         @endfor
 
                         <!-- Grand Total Row -->
-                        <tr class="grand-total-row">
-                            <td colspan="4" class="text-right bold" style="padding-right: 8px; font-size: 11px;">Grand Total :</td>
+                        <tr class="grand-total-row" style="height: 25px;">
+                            <td colspan="4" class="text-right bold" style="padding-right: 8px; font-size: 11px; vertical-align: middle; height: 25px;">Grand Total :</td>
                             @foreach($allSizes as $size)
-                                <td class="text-center bold" style="font-size: 10.5px;">
+                                <td class="text-center bold" style="font-size: 10.5px; vertical-align: middle; height: 25px;">
                                     {{ isset($grandSizeTotals[$size]) && $grandSizeTotals[$size] > 0 ? (int)$grandSizeTotals[$size] : ($grandTotalQty == 0 ? '-' : '') }}
                                 </td>
                             @endforeach
-                            <td class="text-center bold" style="background-color: #dbeafe; font-size: 11px;">{{ (int)$grandTotalQty }}</td>
-                            <td colspan="2"></td>
+                            <td class="text-center bold" style="background-color: #dbeafe; font-size: 11px; vertical-align: middle; height: 25px;">{{ (int)$grandTotalQty }}</td>
+                            <td colspan="2" style="vertical-align: middle; height: 25px;"></td>
                         </tr>
                     @endif
                 </tbody>
@@ -681,78 +767,73 @@
                     </tr>
                 </table>
 
-                <!-- Bottom Promotional Banner -->
-                <div class="fresh-banner-box">
-                    <table class="fresh-banner-table">
+                <!-- Bottom MRP-Wise Summary Abstract & Action Pillars -->
+                <div class="abstract-banner-box">
+                    <table class="abstract-main-table">
                         <tr>
-                            <!-- 1. Open Box -->
-                            <td style="width: 9%; text-align: center;">
-                                @if(!empty($bannerBoxBase64))
-                                    <img src="{{ $bannerBoxBase64 }}" style="width: 74px; height: auto;" alt="Fresh Stock">
-                                @else
-                                    <div style="font-size: 24px;">📦</div>
-                                @endif
-                            </td>
-                            <!-- 2. Promotional Headline & Subtitle -->
-                            <td style="width: 40%;">
-                                <div class="banner-heading">
-                                    FRESH STOCK. FRESH OPPORTUNITIES!
-                                </div>
-                                <div class="banner-subtitle">
-                                    Get your new arrivals on display and turn today's stock into tomorrow's sales.
-                                </div>
-                                @if(!empty($bannerCurveBase64))
-                                    <div style="margin-top: 2px;">
-                                        <img src="{{ $bannerCurveBase64 }}" style="width: 345px; height: 9px; display: block;" alt="">
-                                    </div>
-                                @endif
-                            </td>
-                            <!-- 3. Pillar 1: Price tag -->
-                            <td style="width: 17%;" class="pillar-col">
-                                @if(!empty($tagIconBase64))
-                                    <img src="{{ $tagIconBase64 }}" style="width: 35px; height: auto;" alt="">
-                                @endif
-                                <div>Price the<br>products quickly</div>
-                            </td>
-                            <!-- 4. Pillar 2: Hanger -->
-                            <td style="width: 17%;" class="pillar-col">
-                                @if(!empty($hangerIconBase64))
-                                    <img src="{{ $hangerIconBase64 }}" style="width: 35px; height: auto;" alt="">
-                                @endif
-                                <div>Display at<br>prominent counters</div>
-                            </td>
-                            <!-- 5. Pillar 3: Team -->
-                            <td style="width: 17%;" class="pillar-col">
-                                @if(!empty($teamIconBase64))
-                                    <img src="{{ $teamIconBase64 }}" style="width: 39px; height: auto;" alt="">
-                                @endif
-                                <div>Share new arrivals<br>with your team</div>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <!-- Refill Pill at Bottom with Flanking Lines -->
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 2px;">
-                        <tr>
-                            <td style="width: 20%; vertical-align: middle; padding: 0 4px;">
-                                <div style="border-top: 1.5px solid #026bb4; height: 1px;"></div>
-                            </td>
-                            <td style="width: 60%; text-align: center; vertical-align: middle; padding: 0;">
-                                <table align="center" style="background-color: #0b4d8c; border-radius: 14px; border-collapse: collapse; margin: 0 auto;">
+                            <!-- 1. Left Section: MRP Summary Table -->
+                            <td style="width: 54%; vertical-align: middle; padding: 0;">
+                                <table style="width: 100%; border-collapse: collapse;">
                                     <tr>
-                                        @if(!empty($phonePillBase64))
-                                            <td style="padding: 3px 6px 3px 16px; vertical-align: middle; line-height: 1;">
-                                                <img src="{{ $phonePillBase64 }}" style="width: 15px; height: 15px; display: block;" alt="">
-                                            </td>
-                                        @endif
-                                        <td style="padding: 3px 18px 3px {{ !empty($phonePillBase64) ? '0px' : '18px' }}; vertical-align: middle; font-family: 'Arial', sans-serif; font-size: 11.5px; font-weight: bold; color: #ffffff; white-space: nowrap; line-height: 1.2;">
-                                            Need a refill? Contact your Casino sales executive for your next order.
+                                        <!-- Navy Blue Title Block -->
+                                        <td class="mrp-title-badge">
+                                            @if(!empty($whiteTagSvg))
+                                                <img src="{{ $whiteTagSvg }}" style="width: 17px; height: 17px; display: block; margin: 0 auto 2px auto;" alt="">
+                                            @endif
+                                            <div class="mrp-title-text">
+                                                MRP-WISE<br>QUANTITY<br>SUMMARY
+                                            </div>
+                                        </td>
+                                        <!-- Matrix Grid: MRP Row & Qty Row -->
+                                        <td style="vertical-align: middle; padding: 0;">
+                                            <table class="mrp-matrix-table">
+                                                <tr>
+                                                    <th class="mrp-matrix-label">MRP</th>
+                                                    @foreach($mrpSummary as $mrpVal => $mrpQty)
+                                                        <th class="mrp-matrix-val">{{ $mrpVal }}</th>
+                                                    @endforeach
+                                                    <th class="mrp-matrix-total-hdr">TOTAL</th>
+                                                </tr>
+                                                <tr>
+                                                    <td class="mrp-matrix-label">Qty (Pcs)</td>
+                                                    @foreach($mrpSummary as $mrpVal => $mrpQty)
+                                                        <td class="mrp-matrix-val bold">{{ (int)$mrpQty }}</td>
+                                                    @endforeach
+                                                    <td class="mrp-matrix-total-val">{{ (int)$totalMrpQty }}</td>
+                                                </tr>
+                                            </table>
                                         </td>
                                     </tr>
                                 </table>
                             </td>
-                            <td style="width: 20%; vertical-align: middle; padding: 0 4px;">
-                                <div style="border-top: 1.5px solid #026bb4; height: 1px;"></div>
+
+                            <!-- 2. Right Section: 3 Action Pillars -->
+                            <td class="pillars-container-td">
+                                <table class="pillars-table">
+                                    <tr>
+                                        <!-- Pillar 1: Price tag -->
+                                        <td class="pillar-col">
+                                            @if(!empty($tagIconBase64))
+                                                <img src="{{ $tagIconBase64 }}" style="width: 26px; height: auto;" alt="">
+                                            @endif
+                                            <div>Price the<br>products quickly</div>
+                                        </td>
+                                        <!-- Pillar 2: Hanger / Display -->
+                                        <td class="pillar-col">
+                                            @if(!empty($hangerIconBase64))
+                                                <img src="{{ $hangerIconBase64 }}" style="width: 26px; height: auto;" alt="">
+                                            @endif
+                                            <div>Display at<br>prominent counters</div>
+                                        </td>
+                                        <!-- Pillar 3: Team -->
+                                        <td class="pillar-col">
+                                            @if(!empty($teamIconBase64))
+                                                <img src="{{ $teamIconBase64 }}" style="width: 30px; height: auto;" alt="">
+                                            @endif
+                                            <div>Share new arrivals<br>with your team</div>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
                         </tr>
                     </table>

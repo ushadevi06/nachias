@@ -25,7 +25,7 @@
         <div class="card-body py-4">
             <form id="salesMarketingReportForm" class="row g-3 align-items-end" onsubmit="return false;">
                 <div class="col-12 col-md-3 col-xl-2">
-                    <label class="form-label small fw-bold text-primary"><i class="ri-file-chart-line me-1"></i>Select Report Type</label>
+                    <label class="form-label small fw-bold text-primary"><i class="ri ri-file-chart-line me-1"></i>Select Report Type</label>
                     <select class="form-select select2" id="report_type_select" name="report_type">
                         <option value="order-report" {{ (!request('report_type') && !request('type')) || request('report_type') == 'order-report' || request('type') == 'order-report' ? 'selected' : '' }}>📦 Order Report</option>
                         <option value="dispatch-report" {{ request('report_type') == 'dispatch-report' || request('type') == 'dispatch-report' ? 'selected' : '' }}>🚚 Dispatch Report</option>
@@ -34,6 +34,7 @@
                         <option value="invoice-report" {{ request('report_type') == 'invoice-report' || request('type') == 'invoice-report' ? 'selected' : '' }}>🧾 Invoice Report</option>
                         <option value="incentive-report" {{ request('report_type') == 'incentive-report' || request('type') == 'incentive-report' ? 'selected' : '' }}>🗺️ Zone Wise Incentive</option>
                         <option value="comparison-report" {{ request('report_type') == 'comparison-report' || request('type') == 'comparison-report' ? 'selected' : '' }}>📊 Sales Comparison</option>
+                        <option value="credit-note-comparison-report" {{ request('report_type') == 'credit-note-comparison-report' || request('type') == 'credit-note-comparison-report' ? 'selected' : '' }}>📑 Credit Note Comparison</option>
                         <option value="credit-note-report" {{ request('report_type') == 'credit-note-report' || request('type') == 'credit-note-report' ? 'selected' : '' }}>📝 Credit Note Report</option>
                         <option value="despatch-report" {{ request('report_type') == 'despatch-report' || request('type') == 'despatch-report' ? 'selected' : '' }}>🚚 Despatch Tracking</option>
                         <option value="outstanding-report" {{ request('report_type') == 'outstanding-report' || request('type') == 'outstanding-report' ? 'selected' : '' }}>💰 Zone Wise Outstanding</option>
@@ -41,14 +42,8 @@
                         <option value="brandwise-lost-sales" {{ request('report_type') == 'brandwise-lost-sales' || request('type') == 'brandwise-lost-sales' ? 'selected' : '' }}>❌ Brandwise Lost Sales</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-4 col-xl-3" id="sales_marketing_date_range_col">
-                    <label class="form-label small fw-bold text-muted">Date Range</label>
-                    <input type="text" class="form-control report_date_range" id="sales_marketing_date_range" placeholder="DD-MM-YYYY to DD-MM-YYYY" value="{{ (request('from_date') && request('to_date')) ? (request('from_date') == request('to_date') ? request('from_date') : request('from_date') . ' to ' . request('to_date')) : (request('from_date') ?? '') }}">
-                    <input type="hidden" class="start_date" name="from_date" value="{{ request('from_date') }}">
-                    <input type="hidden" class="end_date" name="to_date" value="{{ request('to_date') }}">
-                </div>
-                <div class="col-12 col-md-4 col-xl-3" id="comparison_year_filter_col" style="display: none;">
-                    <label class="form-label small fw-bold text-muted"><i class="ri-calendar-event-line me-1"></i>Comparison Year</label>
+                <div class="col-12 col-md-3 col-xl-2" id="comparison_year_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted"><i class="ri ri-calendar-event-line me-1"></i>Comparison Year</label>
                     <select class="form-select select2" name="comparison_year" id="comparison_year_filter">
                         @php
                             $currY = (int)date('Y');
@@ -60,9 +55,15 @@
                         @endfor
                     </select>
                 </div>
+                <div class="col-12 col-md-3 col-xl-2" id="sales_marketing_date_range_col">
+                    <label class="form-label small fw-bold text-muted">Date Range</label>
+                    <input type="text" class="form-control report_date_range" id="sales_marketing_date_range" placeholder="DD-MM-YYYY to DD-MM-YYYY" value="{{ (request('from_date') && request('to_date')) ? (request('from_date') == request('to_date') ? request('from_date') : request('from_date') . ' to ' . request('to_date')) : (request('from_date') ?? '') }}">
+                    <input type="hidden" class="start_date" name="from_date" value="{{ request('from_date') }}">
+                    <input type="hidden" class="end_date" name="to_date" value="{{ request('to_date') }}">
+                </div>
 
                 <div class="col-12 col-md-3 col-xl-2" id="incentive_fy_filter_col" style="display: none;">
-                    <label class="form-label small fw-bold text-muted"><i class="ri-calendar-line me-1"></i>Financial Year</label>
+                    <label class="form-label small fw-bold text-muted"><i class="ri ri-calendar-line me-1"></i>Financial Year</label>
                     <select class="form-select select2" name="incentive_fy" id="incentive_fy_filter">
                         @php
                             $currM = (int)date('n');
@@ -80,7 +81,7 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-3 col-xl-2" id="incentive_quarter_filter_col" style="display: none;">
-                    <label class="form-label small fw-bold text-muted"><i class="ri-pie-chart-line me-1"></i>Quarter</label>
+                    <label class="form-label small fw-bold text-muted"><i class="ri ri-pie-chart-line me-1"></i>Quarter</label>
                     <select class="form-select select2" name="incentive_quarter" id="incentive_quarter_filter">
                         <option value="ALL" selected>Full Year (Apr - Mar)</option>
                         <option value="Q1">Q1 (Apr - Jun)</option>
@@ -206,6 +207,11 @@
                 <!-- 5. Sales Comparison -->
                 <div class="tab-pane fade" id="comparison-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._comparison_report')
+                </div>
+
+                <!-- Credit Note Comparison -->
+                <div class="tab-pane fade" id="credit-note-comparison-report" role="tabpanel">
+                    @include('reports.sales_marketing_reports._credit_note_comparison_report')
                 </div>
 
                 <!-- 6. Credit Note Report -->
@@ -808,7 +814,17 @@ $(document).ready(function() {
                 { data: 'lr_updated', name: 'lr_updated', className: 'text-center' },
                 { data: 'sent_to_accounts', name: 'sent_to_accounts', className: 'text-center' },
                 { data: 'status', name: 'status', className: 'text-center' }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.kpi) {
+                    $('#kpi_dispatch_total_invoices').text(json.kpi.total_invoices || '0');
+                    $('#kpi_dispatch_ready').text(json.kpi.ready_for_dispatch || '0');
+                    $('#kpi_dispatch_in_progress').text(json.kpi.in_progress || '0');
+                    $('#kpi_dispatch_pending_lr').text(json.kpi.pending_lr || '0');
+                }
+            }
         },
         'pending-report': {
             tableId: '#pendingProductWiseTable',
@@ -1164,6 +1180,35 @@ $(document).ready(function() {
                     $('#outstanding_report_outstanding').html(json.totals.outstanding);
                 }
             }
+        },
+        'outstanding-aging-wise': {
+            tableId: '#zoneAgingSummaryTable',
+            type: 'outstanding-aging-wise',
+            createdRow: function(row, data, dataIndex) {
+                $(row).css('cursor', 'pointer');
+                if (data && data.zone_id) {
+                    $(row).attr('data-zone-id', data.zone_id).attr('data-zone-name', data.zone_name || '');
+                }
+            },
+            columns: [
+                { data: 'zone', name: 'zone' },
+                { data: 'outstanding', name: 'outstanding', className: 'text-end fw-bold text-dark' },
+                { data: 'b0_30', name: 'b0_30', className: 'text-end fw-semibold text-success' },
+                { data: 'b31_60', name: 'b31_60', className: 'text-end fw-semibold text-dark' },
+                { data: 'b61_90', name: 'b61_90', className: 'text-end fw-semibold text-warning' },
+                { data: 'above_90', name: 'above_90', className: 'text-end fw-semibold text-danger' }
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                var api = this.api();
+                var json = api.ajax.json();
+                if (json && json.totals) {
+                    $('#aging_report_outstanding').html(json.totals.outstanding);
+                    $('#aging_report_b0_30').html(json.totals.b0_30);
+                    $('#aging_report_b31_60').html(json.totals.b31_60);
+                    $('#aging_report_b61_90').html(json.totals.b61_90);
+                    $('#aging_report_above_90').html(json.totals.above_90);
+                }
+            }
         }
     };
 
@@ -1198,6 +1243,12 @@ $(document).ready(function() {
         if (tabPaneId === 'comparison-report') {
             if (typeof window.initComparisonReportTable === 'function') {
                 window.initComparisonReportTable();
+                return;
+            }
+        }
+        if (tabPaneId === 'credit-note-comparison-report') {
+            if (typeof window.initCreditNoteComparisonReportTable === 'function') {
+                window.initCreditNoteComparisonReportTable();
                 return;
             }
         }
@@ -1255,7 +1306,7 @@ $(document).ready(function() {
             searchDelay: 600,
             destroy: true,
             language: {
-                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
+                emptyTable: '<div class="text-center py-4 text-muted"><i class="ri ri-inbox-line ri-2x mb-2 d-block text-secondary"></i>No records found</div>'
             },
             ajax: {
                 url: "{{ url('sales_marketing_reports/ajax') }}/" + config.type,
@@ -1332,9 +1383,9 @@ $(document).ready(function() {
             $('select[name="gst_filing_status"]').val('').trigger('change.select2');
             $('#brand_filter_col').hide();
             $('select[name="brand_id"]').val('').trigger('change.select2');
-        } else if (reportType === 'comparison-report') {
+        } else if (reportType === 'comparison-report' || reportType === 'credit-note-comparison-report') {
             $('#customer_filter_col').show();
-            $('#sales_marketing_date_range_col').hide();
+            $('#sales_marketing_date_range_col').show();
             $('#comparison_year_filter_col').show();
             $('#incentive_fy_filter_col').hide();
             $('#incentive_quarter_filter_col').hide();
@@ -1441,6 +1492,27 @@ $(document).ready(function() {
             renderIncentiveExecutiveLevel();
         }
 
+        if (selectedType === 'outstanding-report') {
+            if ($('#outstanding-aging-wise-tab').hasClass('active')) {
+                $('#outstanding-aging-wise-pane').addClass('show active');
+                $('#outstanding-party-wise-pane').removeClass('show active');
+                if (typeof backToZoneAgingSummary === 'function') {
+                    backToZoneAgingSummary();
+                }
+                updateFilterVisibility(selectedType);
+                loadActiveTabTable('outstanding-aging-wise', true);
+                return;
+            } else {
+                $('#outstanding-party-wise-tab').addClass('active').attr('aria-selected', 'true');
+                $('#outstanding-aging-wise-tab').removeClass('active').attr('aria-selected', 'false');
+                $('#outstanding-party-wise-pane').addClass('show active');
+                $('#outstanding-aging-wise-pane').removeClass('show active');
+                updateFilterVisibility(selectedType);
+                loadActiveTabTable('outstanding-report', true);
+                return;
+            }
+        }
+
         updateFilterVisibility(selectedType);
         if (selectedType !== 'order-report') {
             loadActiveTabTable(selectedType, true);
@@ -1487,6 +1559,12 @@ $(document).ready(function() {
         if (activeTabId === 'comparison-report') {
             if (typeof window.initComparisonReportTable === 'function') {
                 window.initComparisonReportTable();
+                return;
+            }
+        }
+        if (activeTabId === 'credit-note-comparison-report') {
+            if (typeof window.initCreditNoteComparisonReportTable === 'function') {
+                window.initCreditNoteComparisonReportTable();
                 return;
             }
         }
@@ -1544,6 +1622,29 @@ $(document).ready(function() {
                 $(targetTableId).DataTable().ajax.reload(function() { showReportLoading(false); }, true);
             } else {
                 loadActiveTabTable(targetType, true);
+            }
+            return;
+        }
+        if (activeTabId === 'outstanding-report') {
+            const isAging = $('#outstanding-aging-wise-tab').hasClass('active') || $('#outstanding-aging-wise-pane').hasClass('active');
+            if (isAging) {
+                if (window.currentAgingZoneId && typeof window.drillDownZoneAging === 'function') {
+                    window.drillDownZoneAging(window.currentAgingZoneId, $('#drilldownZoneBreadcrumb').text());
+                } else {
+                    if ($.fn.DataTable.isDataTable('#zoneAgingSummaryTable')) {
+                        showReportLoading(true);
+                        $('#zoneAgingSummaryTable').DataTable().ajax.reload(function() { showReportLoading(false); }, true);
+                    } else {
+                        loadActiveTabTable('outstanding-aging-wise', true);
+                    }
+                }
+            } else {
+                if ($.fn.DataTable.isDataTable('#outstandingReportTable')) {
+                    showReportLoading(true);
+                    $('#outstandingReportTable').DataTable().ajax.reload(function() { showReportLoading(false); }, true);
+                } else {
+                    loadActiveTabTable('outstanding-report', true);
+                }
             }
             return;
         }
@@ -1757,6 +1858,18 @@ $(document).ready(function() {
 
     $(document).on('shown.bs.tab', '#dispatch-party-wise-tab', function() {
         loadActiveTabTable('dispatch-party-wise', true);
+    });
+
+    // Outstanding Report Sub-tabs (Party Wise vs Aging Wise)
+    $(document).on('shown.bs.tab', '#outstanding-party-wise-tab', function() {
+        loadActiveTabTable('outstanding-report', true);
+    });
+
+    $(document).on('shown.bs.tab', '#outstanding-aging-wise-tab', function() {
+        if (typeof backToZoneAgingSummary === 'function') {
+            backToZoneAgingSummary();
+        }
+        loadActiveTabTable('outstanding-aging-wise', true);
     });
 
     // Reset Button Handler (matches Warehouse Report pattern)

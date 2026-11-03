@@ -12,27 +12,19 @@
                                 <i class="ri ri-file-pdf-line back-arrow"></i>PDF Options
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="pdfOptionsDropdown">
-                                <li><h6 class="dropdown-header text-uppercase fw-semibold py-1 mb-0" style="font-size: 11px; letter-spacing: 0.5px; color: #6c757d;">PDF 1 (Item-wise / Detailed)</h6></li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url('sales_invoices/download/' . $invoice->id) }}?type=pdf1" target="_blank">
-                                        <i class="ri ri-download-line me-2 text-primary"></i>Download PDF 1
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/download/' . $invoice->id) }}" target="_blank">
+                                        <i class="ri ri-download-line me-2 text-primary"></i>Download PDF
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url('sales_invoices/print/' . $invoice->id) }}?type=pdf1" target="_blank">
-                                        <i class="ri ri-printer-line me-2 text-primary"></i>Print PDF 1
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li><h6 class="dropdown-header text-uppercase fw-semibold py-1 mb-0" style="font-size: 11px; letter-spacing: 0.5px; color: #6c757d;">PDF 2 (Size Range Wise)</h6></li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ url('sales_invoices/download/' . $invoice->id) }}?type=pdf2" target="_blank">
-                                        <i class="ri ri-download-line me-2 text-success"></i>Download PDF 2
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/print/' . $invoice->id) }}" target="_blank">
+                                        <i class="ri ri-printer-line me-2 text-primary"></i>Print PDF
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url('sales_invoices/print/' . $invoice->id) }}?type=pdf2" target="_blank">
-                                        <i class="ri ri-printer-line me-2 text-success"></i>Print PDF 2
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/download/' . $invoice->id) }}?template=new" target="_blank">
+                                        <i class="ri ri-file-paper-2-line me-2 text-success"></i>Invoice new format
                                     </a>
                                 </li>
                             </ul>
@@ -43,15 +35,27 @@
                                 <i class="ri ri-truck-line back-arrow"></i>Delivery Order
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="deliveryOrderDropdown">
-                                <li><h6 class="dropdown-header text-uppercase fw-semibold py-1 mb-0" style="font-size: 11px; letter-spacing: 0.5px; color: #6c757d;">Delivery Order</h6></li>
-                                <li><a class="dropdown-item" href="{{ url('sales_invoices/delivery-order/' . $invoice->id) }}" target="_blank"><i class="ri ri-file-text-line me-2 text-primary"></i>Delivery Order (Portrait)</a></li>
-                                <li><a class="dropdown-item" href="{{ url('sales_invoices/delivery-order/' . $invoice->id) }}?mode=landscape" target="_blank"><i class="ri ri-layout-line me-2 text-success"></i>Delivery Order (Landscape)</a></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/delivery-order/' . $invoice->id) }}" target="_blank">
+                                        <i class="ri ri-file-text-line me-2 text-primary"></i>Delivery Order
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/delivery-order/' . $invoice->id) }}?mode=landscape" target="_blank">
+                                        <i class="ri ri-layout-line me-2 text-success"></i>Delivery Order (New)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/open-delivery-order/' . $invoice->id) }}" target="_blank">
+                                        <i class="ri ri-file-list-3-line me-2 text-info"></i>Open Delivery Order
+                                    </a>
+                                </li>
                                 <li><hr class="dropdown-divider my-1"></li>
-                                <li><h6 class="dropdown-header text-uppercase fw-semibold py-1 mb-0" style="font-size: 11px; letter-spacing: 0.5px; color: #6c757d;">Open Delivery Order</h6></li>
-                                <li><a class="dropdown-item" href="{{ url('sales_invoices/open-delivery-order/' . $invoice->id) }}" target="_blank"><i class="ri ri-file-text-line me-2 text-info"></i>Open Delivery Order (Portrait)</a></li>
-                                <li><a class="dropdown-item" href="{{ url('sales_invoices/open-delivery-order/' . $invoice->id) }}?mode=landscape" target="_blank"><i class="ri ri-layout-line me-2 text-warning"></i>Open Delivery Order (Landscape)</a></li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li><a class="dropdown-item" href="{{ url('sales_invoices/scan-items/' . $invoice->id) }}"><i class="ri ri-qr-scan-line me-2 text-secondary"></i>Scan Items</a></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/scan-items/' . $invoice->id) }}">
+                                        <i class="ri ri-qr-scan-line me-2 text-secondary"></i>Scan Items
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                         @endif

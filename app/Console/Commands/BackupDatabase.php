@@ -42,7 +42,8 @@ class BackupDatabase extends Command
             }
 
             $backupNo = 'BK-' . date('YmdHis');
-            $filename = $backupNo . '.sql';
+            $rawFilename = $backupNo . '.sql';
+            $gzFilename = $backupNo . '.sql.gz';
             $path = public_path('uploads/backup/');
 
             if (!file_exists($path)) {
@@ -51,7 +52,7 @@ class BackupDatabase extends Command
 
             $backup = Backup::create([
                 'backup_no' => $backupNo,
-                'filename' => $filename,
+                'filename' => $gzFilename,
                 'backup_type' => 'Database Only',
                 'status' => 'Running',
                 'location' => 'Local',
@@ -59,16 +60,33 @@ class BackupDatabase extends Command
             ]);
 
             $driveService = new \App\Services\GoogleDriveBackupService();
-            $dumpRes = $driveService->dumpDatabase($path . $filename);
+            $dumpRes = $driveService->dumpDatabase($path . $rawFilename);
 
             if ($dumpRes['success']) {
-                $size = filesize($path . $filename);
+                $finalUploadPath = $path . $rawFilename;
+                $finalUploadName = $rawFilename;
+
+                // GZIP Compression step: shrinks 700MB+ to ~45MB in seconds
+                $this->info('Compressing SQL backup with GZIP...');
+                $compressSuccess = $driveService->compressSqlToGz($path . $rawFilename, $path . $gzFilename);
+
+                if ($compressSuccess && file_exists($path . $gzFilename) && filesize($path . $gzFilename) > 0) {
+                    $finalUploadPath = $path . $gzFilename;
+                    $finalUploadName = $gzFilename;
+                    // Safely remove the large raw .sql to conserve disk space
+                    @unlink($path . $rawFilename);
+                    $this->info("Backup compressed successfully: {$gzFilename} (" . $this->formatSize(filesize($finalUploadPath)) . ")");
+                } else {
+                    $this->warn('GZIP compression failed or produced empty file; falling back to raw .sql');
+                }
+
+                $size = filesize($finalUploadPath);
                 $location = 'Local';
 
                 // Check and upload to Google Drive if configured
                 if ($driveService->isConfigured()) {
                     $this->info('Uploading backup to Google Drive...');
-                    $driveRes = $driveService->uploadBackup($path . $filename, $filename, true, true);
+                    $driveRes = $driveService->uploadBackup($finalUploadPath, $finalUploadName, true, true);
                     if ($driveRes['success']) {
                         $location = 'Local & Google Drive (' . ($driveRes['day_folder'] ?? date('l')) . ')';
                         $this->info('Successfully uploaded to Google Drive (' . ($driveRes['day_folder'] ?? date('l')) . ' folder)! File ID: ' . ($driveRes['file_id'] ?? 'N/A'));
@@ -79,10 +97,11 @@ class BackupDatabase extends Command
 
                 $backup->update([
                     'status' => 'Success',
+                    'filename' => $finalUploadName,
                     'file_size' => $this->formatSize($size),
                     'location' => $location,
                 ]);
-                $this->info('Backup generated successfully: ' . $filename . ' (via ' . ($dumpRes['method'] ?? 'dump') . ')');
+                $this->info('Backup generated successfully: ' . $finalUploadName . ' (via ' . ($dumpRes['method'] ?? 'dump') . ')');
             } else {
                 $errorMessage = $dumpRes['message'] ?? 'Database export failed';
                 Log::error("Automated Backup failed: " . $errorMessage);

@@ -94,37 +94,88 @@
         </div>
     </div>
 
-    <!-- Drilldown Table Container -->
-    <div class="card-datatable table-responsive position-relative" style="min-height: 220px;">
-        <div id="despatchDrilldownLoader" class="text-center py-5" style="display: none;">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted small mt-2">Loading pending items...</p>
+    <!-- Tabs: 1. Pending Items | 2. Fabric Stocks -->
+    <div class="row mb-3" id="despatchDrilldownTabsWrapper">
+        <div class="col-12">
+            <ul class="nav nav-pills p-1 bg-lighter rounded-3 d-inline-flex border" id="despatchDrilldownTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link active px-4 py-2 fw-semibold" id="tab-pending-items-btn" data-bs-toggle="pill" data-bs-target="#tab-pending-items-pane" role="tab" aria-controls="tab-pending-items-pane" aria-selected="true">
+                        <i class="ri ri-list-check-2 me-1"></i> Pending Items
+                        <span class="badge rounded-pill ms-2 drilldown-badge" id="badgePendingItemsCount">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link px-4 py-2 fw-semibold" id="tab-fabric-stock-btn" data-bs-toggle="pill" data-bs-target="#tab-fabric-stock-pane" role="tab" aria-controls="tab-fabric-stock-pane" aria-selected="false">
+                        <i class="ri ri-t-shirt-2-line me-1"></i> Fabric Stocks
+                        <span class="badge rounded-pill ms-2 drilldown-badge" id="badgeFabricStockCount">0</span>
+                    </button>
+                </li>
+            </ul>
         </div>
-        <table class="table table-bordered table-hover align-middle text-nowrap mb-0" id="despatchDrilldownTable" style="width: 100%;">
-            <thead class="bg-light">
-                <tr>
-                    <th class="text-center" style="width: 50px;">S.No</th>
-                    <th>Art No</th>
-                    <th>Item Name</th>
-                    <th class="text-center">Size</th>
-                    <th class="text-center">Sleeve</th>
-                    <th class="text-center text-danger fw-bold">Pending Qty</th>
-                    <th class="text-center text-success fw-bold">FG Stocks</th>
-                    <th>Cutting No</th>
-                    <th>Unit</th>
-                    <th>Stage Status</th>
-                </tr>
-            </thead>
-            <tbody id="despatchDrilldownTbody">
-            </tbody>
-            <tfoot class="bg-light fw-bold border-top">
-                <tr>
-                    <th colspan="5" class="text-end text-uppercase">Total Pending Qty:</th>
-                    <th class="text-center text-danger fs-6" id="despatchDrilldownTfootTotal">0</th>
-                    <th colspan="4"></th>
-                </tr>
-            </tfoot>
-        </table>
+    </div>
+
+    <div id="despatchDrilldownLoader" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted small mt-2">Loading data...</p>
+    </div>
+
+    <div class="tab-content" id="despatchDrilldownTabContent">
+        <!-- Tab 1: Pending Items -->
+        <div class="tab-pane fade show active" id="tab-pending-items-pane" role="tabpanel" aria-labelledby="tab-pending-items-btn">
+            <div class="card-datatable table-responsive position-relative" style="min-height: 220px;">
+                <table class="table table-bordered table-hover align-middle text-nowrap mb-0" id="despatchDrilldownTable" style="width: 100%;">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-center" style="width: 50px;">S.No</th>
+                            <th>Art No</th>
+                            <th>Item Name</th>
+                            <th class="text-center">Size</th>
+                            <th class="text-center">Sleeve</th>
+                            <th class="text-center text-danger fw-bold">Pending Qty</th>
+                            <th class="text-center text-success fw-bold">FG Stocks</th>
+                            <th>Cutting No</th>
+                            <th>Unit</th>
+                            <th>Stage Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="despatchDrilldownTbody">
+                    </tbody>
+                    <tfoot class="bg-light fw-bold border-top">
+                        <tr>
+                            <th colspan="5" class="text-end text-uppercase">Total Pending Qty:</th>
+                            <th class="text-center text-danger fs-6" id="despatchDrilldownTfootTotal">0</th>
+                            <th colspan="4"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 2: Fabric Stocks -->
+        <div class="tab-pane fade" id="tab-fabric-stock-pane" role="tabpanel" aria-labelledby="tab-fabric-stock-btn">
+            <div class="card-datatable table-responsive position-relative" style="min-height: 220px;">
+                <table class="table table-bordered table-hover align-middle text-nowrap mb-0" id="despatchFabricStockTable" style="width: 100%;">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-center" style="width: 50px;">S.No</th>
+                            <th>Art No</th>
+                            <th class="text-center text-danger fw-bold">Order Pending Qty</th>
+                            <th class="text-center text-info fw-bold">Fabric Stock</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="despatchFabricStockTbody">
+                    </tbody>
+                    <tfoot class="bg-light fw-bold border-top">
+                        <tr>
+                            <th colspan="2" class="text-end text-uppercase">Total Pending:</th>
+                            <th class="text-center text-danger fs-6" id="despatchFabricTfootPending">0</th>
+                            <th colspan="2"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -186,6 +237,25 @@
     #despatch-report .datatables-products td.sticky-col-axe {
         display: table-cell !important;
     }
+
+    /* Drilldown Segmented Capsule Tabs (matches Order Report Tab UI) */
+    #despatchDrilldownTabs .nav-link {
+        color: #566a7f;
+        transition: all 0.2s ease-in-out;
+    }
+    #despatchDrilldownTabs .nav-link.active {
+        background-color: #6a1b9a !important;
+        color: #fff !important;
+        box-shadow: 0 2px 4px 0 rgba(105, 108, 255, 0.4);
+    }
+    #despatchDrilldownTabs .nav-link.active .drilldown-badge {
+        background-color: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    #despatchDrilldownTabs .nav-link:not(.active) .drilldown-badge {
+        background-color: #e2e8f0 !important;
+        color: #4b5563 !important;
+    }
 </style>
 
 <script>
@@ -205,10 +275,16 @@ window.drillDownToDespatchPending = function(soId, soNo) {
             $('#despatchDrilldownTable').DataTable().destroy();
         } catch(e) {}
     }
+    if ($.fn.DataTable.isDataTable('#despatchFabricStockTable')) {
+        try {
+            $('#despatchFabricStockTable').DataTable().destroy();
+        } catch(e) {}
+    }
 
     $('#despatchDrilldownTbody').empty();
+    $('#despatchFabricStockTbody').empty();
     $('#despatchDrilldownLoader').show();
-    $('#despatchDrilldownTable').hide();
+    $('#despatchDrilldownTabsWrapper, #despatchDrilldownTabContent').hide();
 
     $.ajax({
         url: "{{ url('sales_marketing_reports/lost_items_detail') }}/" + soId,
@@ -216,7 +292,8 @@ window.drillDownToDespatchPending = function(soId, soNo) {
         dataType: 'json',
         success: function(res) {
             $('#despatchDrilldownLoader').hide();
-            $('#despatchDrilldownTable').show();
+            $('#despatchDrilldownTabsWrapper, #despatchDrilldownTabContent').show();
+            $('#tab-pending-items-btn').tab('show');
 
             $('#drilldownCustomer').text(res.customer || '-');
             $('#drilldownSoDate').text(res.so_date || '-');
@@ -229,40 +306,42 @@ window.drillDownToDespatchPending = function(soId, soNo) {
             $('#despatchDrilldownTotalBadge').text('Total Pending: ' + totalPending + ' pcs');
             $('#despatchDrilldownTfootTotal').text(totalPending);
 
+            // 1. Populate Tab 1: Pending Items Table
             var items = res.items || res.data || [];
             var tbody = $('#despatchDrilldownTbody');
             tbody.empty();
 
             if (!items.length) {
                 tbody.html('<tr><td colspan="10" class="text-center py-4 text-muted"><i class="ri-checkbox-circle-line ri-2x text-success d-block mb-1"></i>No pending items for this order. All items delivered!</td></tr>');
-                return;
+            } else {
+                items.forEach(function(item, idx) {
+                    var artNo = item.art_no_raw || item.art_no || '-';
+                    var name = item.description || item.item_name || item.sku || '-';
+                    var size = item.size || '-';
+                    var sleeve = item.sleeve || '-';
+                    var qty = item.qty_raw !== undefined ? item.qty_raw : (parseFloat(item.qty) || 0);
+                    var fgStock = item.fg_stock_html || (item.fg_stock > 0 ? ('<span class="badge bg-label-success fw-bold">' + item.fg_stock + ' pcs</span>') : '<span class="text-muted fw-bold">0</span>');
+                    var cuttingNo = item.cutting_no_html || '<span class="text-muted">-</span>';
+                    var unit = item.unit_html || '<span class="text-muted">-</span>';
+                    var stageStatus = item.stage_status_html || '<span class="badge bg-label-secondary">Not in Production</span>';
+
+                    var row = '<tr>' +
+                        '<td class="text-center fw-semibold text-muted">' + (idx + 1) + '</td>' +
+                        '<td class="fw-bold text-primary">' + artNo + '</td>' +
+                        '<td class="fw-medium text-dark">' + name + '</td>' +
+                        '<td class="text-center">' + size + '</td>' +
+                        '<td class="text-center">' + sleeve + '</td>' +
+                        '<td class="text-center text-danger fw-bold">' + Number(qty).toLocaleString('en-IN') + '</td>' +
+                        '<td class="text-center">' + fgStock + '</td>' +
+                        '<td>' + cuttingNo + '</td>' +
+                        '<td>' + unit + '</td>' +
+                        '<td>' + stageStatus + '</td>' +
+                    '</tr>';
+                    tbody.append(row);
+                });
             }
 
-            items.forEach(function(item, idx) {
-                var artNo = item.art_no_raw || item.art_no || '-';
-                var name = item.description || item.item_name || item.sku || '-';
-                var size = item.size || '-';
-                var sleeve = item.sleeve || '-';
-                var qty = item.qty_raw !== undefined ? item.qty_raw : (parseFloat(item.qty) || 0);
-                var fgStock = item.fg_stock_html || (item.fg_stock > 0 ? ('<span class="badge bg-label-success fw-bold">' + item.fg_stock + ' pcs</span>') : '<span class="text-muted fw-bold">0</span>');
-                var cuttingNo = item.cutting_no_html || '<span class="text-muted">-</span>';
-                var unit = item.unit_html || '<span class="text-muted">-</span>';
-                var stageStatus = item.stage_status_html || '<span class="badge bg-label-secondary">Not in Production</span>';
-
-                var row = '<tr>' +
-                    '<td class="text-center fw-semibold text-muted">' + (idx + 1) + '</td>' +
-                    '<td class="fw-bold text-primary">' + artNo + '</td>' +
-                    '<td class="fw-medium text-dark">' + name + '</td>' +
-                    '<td class="text-center">' + size + '</td>' +
-                    '<td class="text-center">' + sleeve + '</td>' +
-                    '<td class="text-center text-danger fw-bold">' + Number(qty).toLocaleString('en-IN') + '</td>' +
-                    '<td class="text-center">' + fgStock + '</td>' +
-                    '<td>' + cuttingNo + '</td>' +
-                    '<td>' + unit + '</td>' +
-                    '<td>' + stageStatus + '</td>' +
-                '</tr>';
-                tbody.append(row);
-            });
+            $('#badgePendingItemsCount').text(items.length);
 
             $('#despatchDrilldownTable').DataTable({
                 processing: true,
@@ -278,12 +357,65 @@ window.drillDownToDespatchPending = function(soId, soNo) {
                     search: "_INPUT_",
                     searchPlaceholder: "Search pending items...",
                     lengthMenu: "Show _MENU_ entries"
+                },
+                drawCallback: function() {
+                    $('[data-bs-toggle="tooltip"]').tooltip();
                 }
+            });
+
+            // 2. Populate Tab 2: Fabric Stocks Table (Art No wise)
+            var fabrics = res.fabric_summary || [];
+            var fabTbody = $('#despatchFabricStockTbody');
+            fabTbody.empty();
+            var totalFabPending = 0;
+
+            if (!fabrics.length) {
+                fabTbody.html('<tr><td colspan="5" class="text-center py-4 text-muted"><i class="ri-information-line ri-2x text-info d-block mb-1"></i>No fabric stock records found for this order.</td></tr>');
+            } else {
+                fabrics.forEach(function(fab, fIdx) {
+                    totalFabPending += parseFloat(fab.total_pending_qty) || 0;
+                    var fRow = '<tr>' +
+                        '<td class="text-center fw-semibold text-muted">' + (fIdx + 1) + '</td>' +
+                        '<td class="fw-bold text-primary">' + (fab.art_no || '-') + '</td>' +
+                        '<td class="text-center text-danger fw-bold">' + Number(fab.total_pending_qty).toLocaleString('en-IN') + ' pcs</td>' +
+                        '<td class="text-center">' + (fab.fabric_stock_html || '-') + '</td>' +
+                        '<td class="text-center">' + (fab.status_html || '-') + '</td>' +
+                    '</tr>';
+                    fabTbody.append(fRow);
+                });
+            }
+
+            $('#despatchFabricTfootPending').text(Number(totalFabPending).toLocaleString('en-IN') + ' pcs');
+            $('#badgeFabricStockCount').text(fabrics.length);
+
+            $('#despatchFabricStockTable').DataTable({
+                processing: true,
+                paging: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                searching: true,
+                ordering: true,
+                info: true,
+                autoWidth: false,
+                dom: '<"row mb-2 align-items-center"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row mt-2 align-items-center"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6 d-flex justify-content-md-end"p>>',
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search fabric stocks...",
+                    lengthMenu: "Show _MENU_ entries"
+                },
+                drawCallback: function() {
+                    $('[data-bs-toggle="tooltip"]').tooltip();
+                }
+            });
+
+            // Adjust columns on tab switch
+            $('#despatchDrilldownTabs button[data-bs-toggle="pill"]').off('shown.bs.tab').on('shown.bs.tab', function(e) {
+                $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
             });
         },
         error: function(err) {
             $('#despatchDrilldownLoader').hide();
-            $('#despatchDrilldownTable').show();
+            $('#despatchDrilldownTabsWrapper, #despatchDrilldownTabContent').show();
             $('#despatchDrilldownTbody').html('<tr><td colspan="10" class="text-center py-4 text-danger"><i class="ri-error-warning-line ri-2x d-block mb-1"></i>Failed to load pending items. Please try again.</td></tr>');
         }
     });

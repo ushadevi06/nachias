@@ -86,15 +86,15 @@
             display: inline-block;
             border: 2px solid transparent;
             width: 46px;
-            height: 32px;
-            line-height: 30px;
+            // height: 32px;
+            line-height: 36px;
             text-align: center;
             font-family: Arial, 'Segoe UI', sans-serif !important;
             font-size: 24px !important;
             font-weight: 900 !important;
             margin-left: -76px;
             position: relative;
-            top: 2px;
+            top: 6px;
             vertical-align: middle;
             border-radius: 4px;
             color: #000 !important;
@@ -116,7 +116,7 @@
             margin: 0;
             position: absolute;
             top: 17.5mm; 
-            left: 24mm;  
+            left: 17mm;  
             width: 140mm;
             display: block;
         }
@@ -133,16 +133,16 @@
             font-size: 18px;
             font-weight: 900;
             color: #000;
-            height: 8mm;
-            line-height: 7.5mm; 
+            // height: 8mm;
+            line-height: 8.5mm; 
             white-space: nowrap;
         }
         .address-line {
             font-size: 18px;
             font-weight: 900 !important;
             color: #000;
-            height: 8mm;
-            line-height: 7.5mm; 
+            // height: 8mm;
+            line-height: 10.5mm; 
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -151,8 +151,8 @@
             font-size: 18px;
             font-weight: 900 !important;
             color: #000;
-            height: 8mm;
-            line-height: 7.5mm; 
+            // height: 8mm;
+            line-height: 10.5mm; 
             white-space: nowrap;
         }
         .phone-line {
@@ -160,8 +160,8 @@
             font-weight: 900;
             letter-spacing: 1.5px;
             color: #000;
-            height: 8mm;
-            line-height: 7.5mm; 
+            // height: 8mm;
+            line-height: 10.5mm; 
             display: flex;
             align-items: center;
             gap: 6px;
@@ -205,8 +205,8 @@
 
         .transport-section {
             position: absolute;
-            top: 84.5mm;
-            left: 100mm;
+            top: 80.5mm;
+            left: 102mm;
             width: 60mm;
             display: block;
             margin: 0;
@@ -398,7 +398,7 @@
             <div class="transport-section">
                 <div class="transport-row">
                     <span class="transport-label">லாரி ஆபீஸ் :</span>
-                    <span class="transport-value">{{ $lorryOffice }}</span>
+                    <span class="transport-value" style="line-height: 9.5mm">{{ $lorryOffice }}</span>
                 </div>
                 <div class="transport-row">
                     <span class="transport-label">புக்கிங் ஆபீஸ் :</span>

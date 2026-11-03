@@ -37,6 +37,8 @@ window.initComparisonReportTable = function() {
     var customerId = $('select[name="customer_id"]').val();
     var agentId = $('select[name="agent_id"]').val();
     var brandId = $('select[name="brand_id"]').val();
+    var fromDate = $('input[name="from_date"]').val();
+    var toDate = $('input[name="to_date"]').val();
 
     $.ajax({
         url: "{{ url('sales_marketing_reports/ajax/comparison-report') }}",
@@ -44,6 +46,8 @@ window.initComparisonReportTable = function() {
         dataType: 'json',
         data: {
             comparison_year: selectedYear,
+            from_date: fromDate,
+            to_date: toDate,
             customer_id: customerId,
             agent_id: agentId,
             brand_id: brandId
@@ -120,6 +124,14 @@ function renderComparisonMatrix(data) {
     $('#badge_prev_year').text('Prev Year: ' + prevYear);
     $('#badge_curr_year').text('Selected Year: ' + currYear);
     $('#badge_total_brands').text('Brands: ' + brands.length);
+    if (data.date_range) {
+        if ($('#badge_date_range').length === 0) {
+            $('#comparison_badges_container').append('<span class="badge bg-label-warning px-3 py-2 fw-semibold" id="badge_date_range"></span>');
+        }
+        $('#badge_date_range').text('Range: ' + data.date_range).show();
+    } else {
+        $('#badge_date_range').remove();
+    }
 
     var thead = $('<thead></thead>');
     
@@ -406,4 +418,10 @@ function renderComparisonMatrix(data) {
         console.warn('DataTable init notice:', e);
     }
 }
+
+$(document).on('change', '#comparison_year_filter', function() {
+    if ($('#report_type_select').val() === 'comparison-report') {
+        window.initComparisonReportTable();
+    }
+});
 </script>

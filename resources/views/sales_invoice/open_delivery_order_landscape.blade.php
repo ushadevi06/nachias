@@ -134,6 +134,9 @@
             $logoBase64 = 'data:image/' . ($ext === 'svg' ? 'svg+xml' : $ext) . ';base64,' . base64_encode($logoData);
         }
 
+        $nachiasLogoPath = public_path('assets/images/logo_2_blue.png');
+        $nachiasLogoBase64 = file_exists($nachiasLogoPath) ? ('data:image/png;base64,' . base64_encode(file_get_contents($nachiasLogoPath))) : '';
+
         $getSleeveCode = function($sleeveType) {
             if (empty($sleeveType)) return '-';
             $s = strtoupper(trim($sleeveType));
@@ -243,12 +246,12 @@
             $offset = 0;
             while ($offset < $totalRows) {
                 $remaining = $totalRows - $offset;
-                if ($offset === 0) {
-                    $take = min(15, $remaining - 2);
-                } elseif ($remaining <= 14) {
+                if ($remaining <= 15) {
                     $take = $remaining;
                 } else {
-                    $take = min(18, $remaining - 2);
+                    // Show 21 rows on intermediate pages to reduce bottom space
+                    $take = min(21, $remaining - 2);
+                    if ($take < 1) $take = 15;
                 }
                 $chunks[] = array_slice($rowsList, $offset, $take);
                 $offset += $take;
@@ -271,7 +274,12 @@
                         @endif
                     </td>
                     <td style="width: 70%; vertical-align: middle; text-align: center; padding: 0;">
-                        <div class="company-name">{{ strtoupper($setting->company_name ?? 'NACHIAS FASHION PRIVATE LIMITED') }}</div>
+                        <div class="company-name">
+                            @if(!empty($nachiasLogoBase64))
+                                <img src="{{ $nachiasLogoBase64 }}" style="height: 22px; width: auto; max-width: 17px; vertical-align: middle; display: inline; margin-right: 5px; position: relative; top: -1px;" alt="Logo">
+                            @endif
+                            <span style="vertical-align: middle;">{{ strtoupper($setting->company_name ?? 'NACHIAS FASHION PRIVATE LIMITED') }}</span>
+                        </div>
                         <div class="company-address" style="font-size: 10px; line-height: 1.35; margin-top: 2px;">
                             {{ preg_replace('/,\s*/', ', ', trim(preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $setting->address ?? '272/2, SOMU NAGAR, SIRINGERI NAGAR (SARATHAMBAL KOVIL BACKSIDE), BYEPASS ROAD, MADURAI - 625016')))) }}<br>
                             Phone: {{ !empty($setting->phone) ? $setting->phone : '8489938071, 8489938073' }} | Email: {{ !empty($setting->email) ? $setting->email : 'srinachias@yahoo.in, sales@nachias.com' }} | GSTIN: {{ !empty($setting->gst_no) ? $setting->gst_no : '33AADCN9342A1ZU' }}
@@ -307,16 +315,19 @@
             <table class="items-table">
                 <thead>
                     <tr>
-                        <th style="width: 15%;">Item / Arts</th>
-                        <th style="width: 21%;">Description</th>
-                        <th style="width: 6%;">UOM</th>
-                        <th style="width: 4%;">Slv</th>
+                        <th rowspan="2" style="width: 15%; vertical-align: middle;">Item / Arts</th>
+                        <th rowspan="2" style="width: 21%; vertical-align: middle;">Description</th>
+                        <th rowspan="2" style="width: 6%; vertical-align: middle;">UOM</th>
+                        <th rowspan="2" style="width: 4.5%; vertical-align: middle;">Sleeve</th>
+                        <th colspan="{{ count($allSizes) }}" style="text-align: center; vertical-align: middle; padding: 2px 2px;">Size</th>
+                        <th rowspan="2" style="width: 6%; vertical-align: middle;">Total</th>
+                        <th rowspan="2" style="width: 8%; vertical-align: middle;">Rate</th>
+                        <th rowspan="2" style="width: 8%; vertical-align: middle;">MRP</th>
+                    </tr>
+                    <tr>
                         @foreach($allSizes as $size)
-                            <th style="width: {{ round(32 / count($allSizes), 2) }}%;">S{{ $size }}</th>
+                            <th style="width: {{ round(31.5 / count($allSizes), 2) }}%; vertical-align: middle; padding: 2px 1px;">{{ $size }}</th>
                         @endforeach
-                        <th style="width: 6%;">Total</th>
-                        <th style="width: 8%;">Rate</th>
-                        <th style="width: 8%;">MRP</th>
                     </tr>
                 </thead>
                 <tbody>

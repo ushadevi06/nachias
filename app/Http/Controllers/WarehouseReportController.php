@@ -2853,7 +2853,15 @@ class WarehouseReportController extends Controller
                         'brand_categories.name as cat_brand_name'
                     )
                     ->whereNull('sales_orders.deleted_at')
-                    ->whereNull('sales_order_items.deleted_at');
+                    ->whereNull('sales_order_items.deleted_at')
+                    ->where(function($q) {
+                        $q->whereNull('sales_orders.status')
+                          ->orWhereNotIn(DB::raw('LOWER(sales_orders.status)'), ['cancelled', 'cancel', 'dispatched', 'despatched']);
+                    })
+                    ->where(function($q) {
+                        $q->whereNull('sales_orders.status')
+                          ->orWhereNotIn(DB::raw('LOWER(sales_orders.status)'), ['cancelled', 'cancel', 'dispatched', 'despatched']);
+                    });
 
                 if ($fromDate) {
                     $orderQuery->where('sales_orders.so_date', '>=', $fromDate);
@@ -3351,6 +3359,10 @@ class WarehouseReportController extends Controller
                     ->leftJoin('brand_categories', 'sales_order_items.brand_cat_id', '=', 'brand_categories.id')
                     ->whereNull('sales_orders.deleted_at')
                     ->whereNull('sales_order_items.deleted_at')
+                    ->where(function($q) {
+                        $q->whereNull('sales_orders.status')
+                          ->orWhereNotIn(DB::raw('LOWER(sales_orders.status)'), ['cancelled', 'cancel', 'dispatched', 'despatched']);
+                    })
                     ->select(
                         'sales_order_items.sale_order_id',
                         'sales_order_items.art_no',
@@ -3521,6 +3533,10 @@ class WarehouseReportController extends Controller
                     ->leftJoin('brand_categories', 'sales_order_items.brand_cat_id', '=', 'brand_categories.id')
                     ->whereNull('sales_orders.deleted_at')
                     ->whereNull('sales_order_items.deleted_at')
+                    ->where(function($q) {
+                        $q->whereNull('sales_orders.status')
+                          ->orWhereNotIn(DB::raw('LOWER(sales_orders.status)'), ['cancelled', 'cancel', 'dispatched', 'despatched']);
+                    })
                     ->select(
                         'sales_order_items.sale_order_id',
                         'sales_order_items.art_no',
@@ -4223,7 +4239,11 @@ class WarehouseReportController extends Controller
                 'brand_categories.name as cat_brand_name'
             )
             ->whereNull('sales_orders.deleted_at')
-            ->whereNull('sales_order_items.deleted_at');
+            ->whereNull('sales_order_items.deleted_at')
+            ->where(function($q) {
+                $q->whereNull('sales_orders.status')
+                  ->orWhereNotIn(DB::raw('LOWER(sales_orders.status)'), ['cancelled', 'cancel', 'dispatched', 'despatched']);
+            });
 
         if ($fromDate) {
             $orderQuery->where('sales_orders.so_date', '>=', $fromDate);

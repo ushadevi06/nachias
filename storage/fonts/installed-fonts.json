@@ -1,16 +1,16 @@
 {
-    "dejavusans-regular": {
-        "normal": "dejavusans_regular_normal_8b14ad256372fad0209e9074d29cadbd"
-    },
-    "dejavusans-bold": {
-        "normal": "dejavusans_bold_normal_5e03509fd124bd244d99d36a9b426ae3"
-    },
-    "customarial": {
-        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/customarial_normal_d3a199417d1b61c68dbd91738e00849a",
-        "bold": "customarial_bold_f082e3ecd65cb0bb5eb8d90ed9bdcb41"
+    "roboto": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/roboto_normal_3f43a5d79e5a2c0980ab9da18b739be1",
+        "bold": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/roboto_bold_6af97c7c6704bb512828937058c13599",
+        "800": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/roboto_800_6af97c7c6704bb512828937058c13599",
+        "900": "roboto_900_6af97c7c6704bb512828937058c13599"
     },
     "arial": {
         "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/arial_normal_d3a199417d1b61c68dbd91738e00849a",
         "bold": "arial_bold_f082e3ecd65cb0bb5eb8d90ed9bdcb41"
+    },
+    "roboto condensed": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/roboto_condensed_normal_7d74ad20c79d03229357219c623da7b6",
+        "bold": "roboto_condensed_bold_82a9d85f664ba905ac11c5ca9abd1e65"
     }
 }
