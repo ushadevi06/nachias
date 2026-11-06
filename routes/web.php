@@ -769,16 +769,33 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('employee_attendance/kpi-counts', [EmployeeAttendanceController::class, 'getKpiCounts']);
 
     /*  Leave  */
-    Route::get('leave', [LeaveController::class, 'index']);
-    Route::get('add_leave', [LeaveController::class, 'add']);
-    Route::post('/leaves/add/{id?}', [LeaveController::class, 'add']);
-    Route::get('view_leave/{id}', [LeaveController::class, 'view']);
+    Route::get('leaves', [LeaveController::class, 'index']);
+    Route::match(['get', 'post'], '/leaves/add/{id?}', [LeaveController::class, 'add']);
+    Route::get('/leaves/disabled-dates/{emp_code}', [LeaveController::class, 'getDisabledDates']);
+    Route::get('/view_details/{id}', [LeaveController::class, 'view']);
+    Route::get('/leaves/view_details/{id}', [LeaveController::class, 'view']);
+
+    // Backward compatibility
+    Route::get('leave', function () {
+        if (request()->ajax()) {
+            return app(LeaveController::class)->index(request());
+        }
+        return redirect('leaves');
+    });
+    Route::get('add_leave', function () {
+        $id = request('id');
+        return $id ? redirect('leaves/add/' . $id) : redirect('leaves/add');
+    });
+    Route::get('view_leave/{id}', function ($id) {
+        return redirect('view_details/' . $id);
+    });
 
     /* Overtime */
     Route::get('overtime', [OvertimeController::class, 'index']);
     Route::get('edit_overtime/{date}', [OvertimeController::class, 'edit'])->name('edit_overtime');
     Route::get('view_overtime/{date}/{emp_code}', [OvertimeController::class, 'view'])->name('view_overtime');
     Route::post('update-overtime', [OvertimeController::class, 'update'])->name('update_overtime');
+    Route::post('update-overtime-status', [OvertimeController::class, 'updateStatus'])->name('update_overtime_status');
 
     /* Salary Calculation */
     Route::get('monthly_payroll', [SalaryController::class, 'index']);

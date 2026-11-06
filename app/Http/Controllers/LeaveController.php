@@ -23,12 +23,11 @@ class LeaveController extends Controller
             }
             if (!empty($request->date_range)) {
                 $dates = explode(' to ', $request->date_range);
-                if (count($dates) == 2) {
-                    $start = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
-                    $end = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
+                $start = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                $end = isset($dates[1]) ? Carbon::createFromFormat('d-m-Y', trim($dates[1]))->format('Y-m-d') : $start;
 
-                    $query->whereBetween('start_date', [$start, $end]);
-                }
+                $query->whereRaw('COALESCE(start_date, leave_date) <= ?', [$end])
+                      ->whereRaw('COALESCE(end_date, leave_date) >= ?', [$start]);
             }
             $totalRecords = $query->count();
             if ($request->has('search') && !empty($request->input('search')['value'])) {
@@ -78,7 +77,7 @@ class LeaveController extends Controller
                 $action = '<div class="d-inline-block text-nowrap">';
                 if(auth()->id()== 1 || auth()->user()->can('view_details manage-leaves')){
                 $action .= '
-                    <a href="' . url('view_leave/' . $leave->id) . '" class="btn btn-view">
+                    <a href="' . url('view_details/' . $leave->id) . '" class="btn btn-view">
                         <i class="icon-base ri ri-eye-line"></i>
                     </a>
                 ';
@@ -86,19 +85,33 @@ class LeaveController extends Controller
                 if(auth()->id()== 1 || auth()->user()->can('edit manage-leaves')){
                     if ($leave->status === 'Pending') {
                         $action .= '
-                            <a href="' . url('add_leave?id=' . $leave->id) . '" class="btn btn-edit">
+                            <a href="' . url('leaves/add/' . $leave->id) . '" class="btn btn-edit">
                                 <i class="icon-base ri ri-edit-box-line"></i>
                             </a>
                         ';
                     }
                 }
                 $action .= '</div>';
+                $startDate = $leave->start_date ?? $leave->leave_date;
+                $endDate = $leave->end_date ?? $leave->leave_date;
+
+                $startFormatted = $startDate ? Carbon::parse($startDate)->format('d-m-Y') : '-';
+                $endFormatted = $endDate ? Carbon::parse($endDate)->format('d-m-Y') : $startFormatted;
+
+                $dateDisplay = ($startFormatted === $endFormatted) 
+                    ? $startFormatted 
+                    : ($startFormatted . ' to ' . $endFormatted);
+
+                $daysCount = floatval($leave->no_of_days ?? 1);
+                $daysBadge = '<span class="badge bg-label-info fw-semibold">' . ($daysCount == 1 ? '1 Day' : (rtrim(rtrim(number_format($daysCount, 1), '0'), '.') . ' Days')) . '</span>';
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     // 'leave_id' => 'LV-' . $leave->id,
                     'employee' => $leave->employee ? $leave->employee->name.' ('.$leave->employee->emp_id.')' : '-',
                     'leave_type' => $leave->leave_type,
-                    'start_date' => Carbon::parse($leave->leave_date)->format('d-m-Y'),
+                    'start_date' => $dateDisplay,
+                    'days' => $daysBadge,
                     // 'end_date' => Carbon::parse($leave->end_date)->format('d-m-Y'),
                     'status' => $statusBadge,
                     'action' => $action,
@@ -118,6 +131,8 @@ class LeaveController extends Controller
     {
         $request = request();
         $id = $id ?? request()->get('id');
+        $user = auth()->user();
+        $isAdmin = $user && ($user->id == 1 || (method_exists($user, 'hasRole') && $user->hasRole(['Admin', 'Super Admin', 'ADMIN', 'SUPER ADMIN', 'HR & ADMIN'])));
         // dd($request->all());
         if ($id) {
             if (auth()->id() != 1 && !auth()->user()->can('edit manage-leaves')) {
@@ -135,72 +150,110 @@ class LeaveController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'emp_code' => 'required',
-                'leave_type' => 'required|string|in:Casual,Sick,Paid,Maternity',
+                'leave_type' => 'required|string',
                 'leave_days' => 'required|string',
                 'reason' => 'required|string|min:5|max:500',
                 'status' => 'required|in:Pending,Approved,Rejected',
+                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
             ];
             $messages = [
                 'emp_code.required' => 'This field is required.',
                 'leave_type.required' => 'This field is required.',
-                'leave_type.in' => 'Invalid leave type selected.',
                 'leave_days.required' => 'This field is required.',
                 'reason.required' => 'This field is required.',
                 'reason.min' => 'Reason must be at least :min characters.',
                 'reason.max' => 'Reason cannot exceed :max characters.',
                 'status.required' => 'This field is required.',
                 'status.in' => 'Invalid approval status selected.',
+                'attachment.mimes' => 'Attachment must be a file of type: pdf, jpg, jpeg, png, doc, docx.',
+                'attachment.max' => 'Attachment size must not exceed 5MB.',
             ];
             $validated = $request->validate($rules, $messages);
+            if (!$isAdmin && $request->status === 'Approved') {
+                return back()->withInput()->withErrors([
+                    'status' => 'Only Admin has permission to set Approved status.'
+                ]);
+            }
             DB::beginTransaction();
             try {
+                $attachmentName = null;
+                if ($request->hasFile('attachment')) {
+                    $file = $request->file('attachment');
+                    $attachmentName = 'leave_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                    $uploadPath = public_path('uploads/leaves');
+                    if (!file_exists($uploadPath)) {
+                        mkdir($uploadPath, 0755, true);
+                    }
+                    $file->move($uploadPath, $attachmentName);
+                }
+
                 if ($id) {
                     $leave = Leave::find($id);
                     $oldData = $leave ? $leave->toArray() : [];
-                    $newData = [
+                    $updateData = [
                         'status' => $request->status,
                         'updated_by' => auth()->id()
                     ];
-                    Leave::where('id', $id)->update([
-                        'status' => $request->status,
-                        'updated_by' => auth()->id()
-                    ]);
+                    if ($attachmentName && \Illuminate\Support\Facades\Schema::hasColumn('leaves', 'attachment')) {
+                        $updateData['attachment'] = $attachmentName;
+                    }
+                    Leave::where('id', $id)->update($updateData);
                     DB::commit();
-                    addLog('update', 'Leave', 'leaves', $id, $oldData, $newData);
-                    return redirect('leave')->with('success', 'Leave approved successfully');
+                    addLog('update', 'Leave', 'leaves', $id, $oldData, $updateData);
+                    return redirect('leaves')->with('success', 'Leave updated successfully');
                 }
                 $dates = explode(' to ', $request->leave_days);
-                $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]));
+                $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
                 $endDate = isset($dates[1]) 
-                    ? Carbon::createFromFormat('d-m-Y', trim($dates[1])) 
-                    : $startDate;
-                $period = CarbonPeriod::create($startDate, $endDate);
-                $newData = [];
-                foreach ($period as $date) {
-                    $exists = Leave::where('emp_code', $request->emp_code)
-                        ->where('leave_date', $date->format('Y-m-d'))
-                        ->whereIn('status', ['Pending', 'Approved'])
-                        ->exists();
+                    ? Carbon::createFromFormat('d-m-Y', trim($dates[1]))->startOfDay() 
+                    : $startDate->copy();
 
-                    if ($exists) {
-                        return back()->withInput()->withErrors([
-                            'leave_days' => 'Leave already exists for ' . $date->format('d-m-Y') . ' (Pending/Approved)'
-                        ]);
-                    }
-                    $leave = Leave::create([
-                        'emp_code'   => $request->emp_code,
-                        'leave_type' => $request->leave_type,
-                        'leave_date' => $date->format('Y-m-d'),
-                        'reason'     => $request->reason,
-                        'status'     => $request->status,
-                        'created_by' => auth()->id()
-                    ]);
-                    $newData[] = $leave->toArray();
+                if ($endDate->lt($startDate)) {
+                    $temp = $startDate;
+                    $startDate = $endDate;
+                    $endDate = $temp;
                 }
 
+                $diffDays = $startDate->diffInDays($endDate) + 1;
+                $startStr = $startDate->format('Y-m-d');
+                $endStr = $endDate->format('Y-m-d');
+
+                $exists = Leave::where('emp_code', $request->emp_code)
+                    ->whereIn('status', ['Pending', 'Approved'])
+                    ->where(function ($q) use ($startStr, $endStr) {
+                        $q->whereRaw('COALESCE(start_date, leave_date) <= ?', [$endStr])
+                          ->whereRaw('COALESCE(end_date, leave_date) >= ?', [$startStr]);
+                    })
+                    ->first();
+
+                if ($exists) {
+                    $existingFrom = $exists->start_date ? Carbon::parse($exists->start_date)->format('d-m-Y') : Carbon::parse($exists->leave_date)->format('d-m-Y');
+                    $existingTo = $exists->end_date ? Carbon::parse($exists->end_date)->format('d-m-Y') : $existingFrom;
+                    $rangeStr = ($existingFrom === $existingTo) ? $existingFrom : "{$existingFrom} to {$existingTo}";
+                    return back()->withInput()->withErrors([
+                        'leave_days' => "Leave already exists for this employee for {$rangeStr} ({$exists->status})"
+                    ]);
+                }
+
+                $leaveData = [
+                    'emp_code'   => $request->emp_code,
+                    'leave_type' => $request->leave_type,
+                    'start_date' => $startStr,
+                    'end_date'   => $endStr,
+                    'no_of_days' => $diffDays,
+                    'leave_date' => $startStr,
+                    'reason'     => $request->reason,
+                    'status'     => ($isAdmin && $request->status === 'Approved') ? 'Approved' : 'Pending',
+                    'created_by' => auth()->id()
+                ];
+                if ($attachmentName && \Illuminate\Support\Facades\Schema::hasColumn('leaves', 'attachment')) {
+                    $leaveData['attachment'] = $attachmentName;
+                }
+                $leave = Leave::create($leaveData);
+
                 DB::commit();
-                addLog('create', 'Leave', 'leaves', $request->id, null, $newData);
-                return redirect('leave')->with('success', 'Leave applied successfully');
+                addLog('create', 'Leave', 'leaves', $leave->id, null, $leave->toArray());
+                return redirect('leaves')->with('success', 'Leave applied successfully');
 
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -211,8 +264,59 @@ class LeaveController extends Controller
         }
         $leaveEntry = $leaveEntry ?? null;
         // dd($leaveEntry);
+        $leaveTypes = \App\Models\LeaveType::active()->get();
         $employees = User::where('id','!=',1)->where('status','Active')->get();
-        return view('leaves/add', compact('employees', 'leaveEntry'));
+
+        $initialEmpCode = old('emp_code', $leaveEntry->emp_code ?? ($user->id == 1 ? '' : $user->emp_id));
+        $existingLeaveRanges = [];
+        if (!empty($initialEmpCode)) {
+            $empLeaves = Leave::where('emp_code', $initialEmpCode)
+                ->whereIn('status', ['Pending', 'Approved'])
+                ->when($id, function($q) use ($id) {
+                    $q->where('id', '!=', $id);
+                })
+                ->get();
+            foreach ($empLeaves as $l) {
+                $s = $l->start_date ?? $l->leave_date;
+                $e = $l->end_date ?? $l->leave_date;
+                if ($s) {
+                    $existingLeaveRanges[] = [
+                        'from' => Carbon::parse($s)->format('Y-m-d'),
+                        'to'   => Carbon::parse($e ?? $s)->format('Y-m-d')
+                    ];
+                }
+            }
+        }
+
+        return view('leaves/add', compact('employees', 'leaveEntry', 'leaveTypes', 'isAdmin', 'existingLeaveRanges'));
+    } 
+
+    public function getDisabledDates($emp_code)
+    {
+        $id = request()->get('id');
+        $leaves = Leave::where('emp_code', $emp_code)
+            ->whereIn('status', ['Pending', 'Approved'])
+            ->when($id, function($q) use ($id) {
+                $q->where('id', '!=', $id);
+            })
+            ->get();
+
+        $disabledRanges = [];
+        foreach ($leaves as $leave) {
+            $s = $leave->start_date ?? $leave->leave_date;
+            $e = $leave->end_date ?? $leave->leave_date;
+            if ($s) {
+                $disabledRanges[] = [
+                    'from' => Carbon::parse($s)->format('Y-m-d'),
+                    'to'   => Carbon::parse($e ?? $s)->format('Y-m-d')
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'disabled_ranges' => $disabledRanges
+        ]);
     } 
     public function view($id)
     {

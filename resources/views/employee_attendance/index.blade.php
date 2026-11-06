@@ -1,6 +1,12 @@
 @extends('layouts.common')
 @section('title', 'Employee Attendance - ' . env('WEBSITE_NAME'))
 @section('content')
+<style>
+    .badge-status-present, .badge.bg-success { background-color: #28c76f !important; color: #fff !important; }
+    .badge-status-absent, .badge.bg-danger { background-color: #ea5455 !important; color: #fff !important; }
+    .badge-status-overtime, .badge.bg-info { background-color: #16b1ff !important; color: #fff !important; }
+    .badge-status-late, .badge.bg-warning { background-color: #ffb400 !important; color: #000 !important; }
+</style>
 <div class="container-xxl section-padding">
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div>

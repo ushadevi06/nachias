@@ -60,6 +60,7 @@ class StaffReportExport implements FromCollection, WithHeadings, WithMapping
     {
         return [
             'Date',
+            'Day',
             'Employee Name',
             'Employee Code',
             'In Time',
@@ -73,6 +74,7 @@ class StaffReportExport implements FromCollection, WithHeadings, WithMapping
     {
         return [
             $record->date ? Carbon::parse($record->date)->format('d-m-Y') : '-',
+            $record->date ? Carbon::parse($record->date)->format('l') : '-',
             $record->employee ?? '-',
             $record->code ?? '-',
             $record->in_time ?? '-',

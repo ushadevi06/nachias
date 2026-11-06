@@ -69,4 +69,11 @@ ALTER TABLE `attendances`
 ADD COLUMN `ot_status` VARCHAR(50) NOT NULL DEFAULT 'Pending' AFTER `status`;
 
 
+-- 10. Overtime Performance Indexes and Collation Align
+ALTER TABLE `attendances` ADD INDEX `idx_attendances_ot_status_date` (`ot_status`, `date`);
+ALTER TABLE `users` ADD INDEX `idx_users_emp_id` (`emp_id`);
+ALTER TABLE `attendances` MODIFY `emp_code` VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
+
+
+
 

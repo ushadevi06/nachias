@@ -4,7 +4,7 @@
 <div class="container-xxl section-padding">
     <div class="table-header-box">
         <h4>Manage Leaves</h4>
-        <a class="btn btn-primary" href="{{ url('add_leave') }}">
+        <a class="btn btn-primary" href="{{ url('leaves/add') }}">
             <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
         </a>
     </div>
@@ -22,6 +22,7 @@
                             <th>Employee</th>
                             <th>Leave Type</th>
                             <th>Date</th>
+                            <th>Days</th>
                             {{-- <th>End Date</th> --}}
                             <th>Approval Status</th>
                             <th>Actions</th>
@@ -41,7 +42,7 @@ $(function () {
         processing: true,
         serverSide: true,
         ajax: {
-            url: "{{ url('leave') }}",
+            url: "{{ url('leaves') }}",
             data: function (d) {
                 d.status = $('#status').val();
                 d.date_range = $('#date_range').val();
@@ -53,6 +54,7 @@ $(function () {
             { data: 'employee' },
             { data: 'leave_type' },
             { data: 'start_date' },
+            { data: 'days' },
             // { data: 'end_date' },
             { data: 'status', orderable: false, searchable: false },
             { data: 'action', orderable: false, searchable: false }

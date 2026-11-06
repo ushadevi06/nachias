@@ -1,6 +1,12 @@
 @extends('layouts.common')
 @section('title', 'View Attendance - ' . env('WEBSITE_NAME'))
 @section('content')
+<style>
+    .badge-status-present, .badge.bg-success { background-color: #28c76f !important; color: #fff !important; }
+    .badge-status-absent, .badge.bg-danger { background-color: #ea5455 !important; color: #fff !important; }
+    .badge-status-overtime, .badge.bg-info { background-color: #16b1ff !important; color: #fff !important; }
+    .badge-status-late, .badge.bg-warning { background-color: #ffb400 !important; color: #000 !important; }
+</style>
 <div class="container-xxl section-padding">
     <div class="row mb-4">
         <div class="col-lg-12 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
@@ -102,6 +108,14 @@
                                 </span></div>
                             </div>
                         </div> --}}
+                        @if(!empty($attendance->reason))
+                        <div class="col-12">
+                            <div class="border rounded p-3 bg-light" style="border-left: 4px solid #7367f0 !important;">
+                                <div class="text-muted small mb-1 fw-bold text-uppercase"><i class="ri ri-information-line text-primary me-1"></i>Modification Reason</div>
+                                <p class="mb-0 text-dark fw-medium">{{ $attendance->reason }}</p>
+                            </div>
+                        </div>
+                        @endif
                         <div class="col-12">
                             <div class="border rounded p-3 bg-white">
                                 <div class="text-muted small mb-1">Notes</div>

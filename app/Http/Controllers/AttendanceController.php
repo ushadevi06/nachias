@@ -372,18 +372,23 @@ class AttendanceController extends Controller
         $date = $request->date;
         $device = $request->device;
 
+        $columns = [
+            'id',
+            'emp_code as code',
+            'date',
+            'in_time',
+            'out_time',
+            'work_hours as hours',
+            'status'
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('attendances', 'reason')) {
+            $columns[] = 'reason';
+        }
+
         $attendances = DB::table('attendances')
-            ->select(
-                'id',
-                'emp_code as code',
-                'date',
-                'in_time',
-                'out_time',
-                'work_hours as hours',
-                'status'
-            )
+            ->select($columns)
             ->whereDate('date', $date)
-            ->when($device, function ($query) use ($device) {
+            ->when($device && $device !== 'all', function ($query) use ($device) {
                 $query->where('device_serial_number', $device);
             })
             ->get();
@@ -505,6 +510,8 @@ class AttendanceController extends Controller
 
             $attendances->transform(function ($item) use ($users) {
                 $item->employee = $users[$item->code] ?? 'Unknown';
+                $item->day = $item->date ? date('l', strtotime($item->date)) : '-';
+                $item->is_sunday = ($item->date && date('w', strtotime($item->date)) == 0) || $item->status === 'Week Off';
                 return $item;
             });
         }
@@ -578,7 +585,11 @@ class AttendanceController extends Controller
             'id' => 'required',
             'in_time' => 'required',
             'out_time' => 'nullable',
-            'status' => 'required'
+            'status' => 'required',
+            'reason' => 'required|string|min:3'
+        ], [
+            'reason.required' => 'Reason is mandatory for modifying attendance.',
+            'reason.min' => 'Reason must be at least 3 characters.'
         ]);
         $attendance = DB::table('attendances')->where('id', $request->id)->first();
         if (!$attendance) {
@@ -620,18 +631,24 @@ class AttendanceController extends Controller
                 }
             }
         }
+        $updateData = [
+            'in_time' => $in,
+            'out_time' => $out,
+            'work_hours' => $hours,
+            'status' => $status,
+            'is_manual' => 1,
+            'updated_by' => auth()->id(),
+            'manual_updated_at' => now(),
+            'updated_at' => now()
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('attendances', 'reason')) {
+            $updateData['reason'] = trim($request->reason);
+        }
+
         DB::table('attendances')
             ->where('id', $request->id)
-            ->update([
-                'in_time' => $in,
-                'out_time' => $out,
-                'work_hours' => $hours,
-                'status' => $status,
-                'is_manual' => 1,
-                'updated_by' => auth()->id(),
-                'manual_updated_at' => now(),
-                'updated_at' => now()
-            ]);
+            ->update($updateData);
+
         return response()->json([
             'success' => true,
             'message' => 'Attendance updated successfully',

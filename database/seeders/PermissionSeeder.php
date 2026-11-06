@@ -35,6 +35,7 @@ class PermissionSeeder extends Seeder
             'store-location' => ['create', 'edit', 'delete', 'view'],
             'warehouses' => ['create', 'edit', 'delete', 'view'],
             'departments' => ['create', 'edit', 'delete', 'view'],
+            'leave-types' => ['create', 'edit', 'delete', 'view'],
             'taxes' => ['create', 'edit', 'delete', 'view'],
             'styles' => ['create', 'edit', 'delete', 'view'],
             'stores' => ['create', 'edit', 'delete', 'view'],
@@ -96,6 +97,7 @@ class PermissionSeeder extends Seeder
             /* Sales */
             'sales-order' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'sales-invoice' => ['create', 'edit', 'delete', 'view', 'view_details'],
+            'transport-handover' => ['create', 'edit', 'view', 'clearance'],
             'credit-notes' => ['create', 'edit', 'delete', 'view', 'view_details'],
 
             /* Accounts */

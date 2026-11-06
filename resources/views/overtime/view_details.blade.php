@@ -24,6 +24,7 @@
                                     <th>In Time</th>
                                     <th>Out Time</th>
                                     <th>OT Hours</th>
+                                    <th>Status</th>
                                     {{-- <th>Remarks</th> --}}
                                 </tr>
                             </thead>
@@ -46,6 +47,18 @@
                                             : '-' }}
                                     </td>
                                     <td>{{ $otHours }}</td>
+                                    <td>
+                                        @php
+                                            $otSt = $record->ot_status ?: 'Pending';
+                                        @endphp
+                                        @if($otSt == 'Approved')
+                                            <span class="badge bg-success">Approved</span>
+                                        @elseif($otSt == 'Not Approved')
+                                            <span class="badge bg-danger">Not Approved</span>
+                                        @else
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        @endif
+                                    </td>
                                     {{-- <td>-</td> --}}
                                 </tr>
                             </tbody>
