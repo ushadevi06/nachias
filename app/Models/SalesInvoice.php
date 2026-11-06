@@ -365,5 +365,30 @@ class SalesInvoice extends Model
             return "CD/{$newNum}/{$fy}";
         }, $value);
     }
+
+    /**
+     * Check if transport booking exists and is marked as Booked or has LR Number.
+     */
+    public function getIsBookedAttribute()
+    {
+        if ($this->relationLoaded('transportBookings')) {
+            return $this->transportBookings->contains(function ($tb) {
+                return $tb->status === 'Booked' || !empty($tb->lr_no);
+            }) || !empty($this->lr_no);
+        }
+        return $this->transportBookings()->where(function ($q) {
+            $q->where('status', 'Booked')->orWhereNotNull('lr_no');
+        })->exists() || !empty($this->lr_no);
+    }
+
+    /**
+     * Check if invoice is locked for edits (E-Invoice Generated, Dispatched, or LR Booked).
+     */
+    public function getIsLockedForEditAttribute()
+    {
+        return $this->einvoice_status === 'generated'
+            || $this->delivery_status === 'Dispatched'
+            || $this->is_booked;
+    }
 }
 

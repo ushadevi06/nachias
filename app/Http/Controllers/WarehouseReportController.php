@@ -358,7 +358,8 @@ class WarehouseReportController extends Controller
             $stockQuery->where('styles.style_name', 'like', "%{$search}%");
         }
 
-        $stockQuery->groupBy(DB::raw('COALESCE(styles.id, 0)'), DB::raw("COALESCE(styles.style_name, '(No Style)')"));
+        $stockQuery->groupBy(DB::raw('COALESCE(styles.id, 0)'), DB::raw("COALESCE(styles.style_name, '(No Style)')"))
+                  ->havingRaw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0');
 
         $recordsTotal = DB::query()->fromSub($stockQuery, 'sub')->count();
         $recordsFiltered = $recordsTotal;
@@ -372,6 +373,24 @@ class WarehouseReportController extends Controller
             'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
         ];
 
+        if ($request->has('order')) {
+            $orderColIdx = intval($request->input('order.0.column'));
+            $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
+            $columnsMap = [
+                0 => 'styles.style_name',
+                1 => 'total_qty',
+                2 => 'avg_stock_days',
+                3 => 'stock_value',
+            ];
+            if (isset($columnsMap[$orderColIdx])) {
+                $stockQuery->orderBy($columnsMap[$orderColIdx], $orderDir);
+            } else {
+                $stockQuery->orderBy('styles.style_name', 'asc');
+            }
+        } else {
+            $stockQuery->orderBy('styles.style_name', 'asc');
+        }
+
         if ($length != -1) {
             $stockQuery->skip($start)->take($length);
         }
@@ -381,6 +400,7 @@ class WarehouseReportController extends Controller
         if ($draw) {
             $data = [];
             $brandName = $request->brand_name ?? '';
+
             foreach ($styles as $item) {
                 $sId = $item->style_id ?? 0;
                 $sName = addslashes($item->style_name);
@@ -401,10 +421,8 @@ class WarehouseReportController extends Controller
                         'onclick' => "drillDownToArtNo({$bId}, '" . htmlspecialchars($bNameEsc, ENT_QUOTES) . "', {$sId}, '" . htmlspecialchars($sName, ENT_QUOTES) . "')",
                         'style' => 'cursor: pointer;'
                     ],
-                    'brand' => '<strong class="text-uppercase">' . htmlspecialchars($item->style_name) . '</strong>',
-                    'total_qty' => number_format($item->total_qty ?? 0, 0),
-                    'low_stock' => '-',
-                    'excess_stock' => '-',
+                    'brand' => '<strong class="text-uppercase text-primary">' . htmlspecialchars($item->style_name) . '</strong>',
+                    'total_qty' => '<span class="badge bg-label-primary fs-6 fw-bold">' . number_format($item->total_qty ?? 0, 0) . '</span>',
                     'stock_days' => $daysBadge,
                     'stock_value' => '₹' . number_format($item->stock_value ?? 0, 2),
                 ];
@@ -738,21 +756,27 @@ class WarehouseReportController extends Controller
         $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
         $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
         
+        $sleeveNormalizedSql = "CASE 
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('FS', 'F/S', 'FULL', 'FULL SLEEVE') THEN 'Full'
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('HS', 'H/S', 'HALF', 'HALF SLEEVE') THEN 'Half'
+            ELSE COALESCE(NULLIF(stock_entry_items.sleeve_type, ''), '-')
+        END";
+
         $stockQuery = StockEntryItem::query()
             ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
-            ->leftJoin('fg_min_stocks', function($join) {
-                $join->on('stock_entry_items.id', '=', 'fg_min_stocks.stock_entry_item_id')
-                     ->where('fg_min_stocks.status', '=', 'Active')
-                     ->whereNull('fg_min_stocks.deleted_at');
-            })
             ->select(
                 'stock_entry_items.art_no',
-                'stock_entry_items.sleeve_type',
-                'stock_entry_items.size',
+                DB::raw("{$sleeveNormalizedSql} as sleeve_type"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '36' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q36"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '38' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q38"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '40' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q40"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '42' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q42"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '44' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q44"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '46' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q46"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '48' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q48"),
+                DB::raw("SUM(CASE WHEN stock_entry_items.size = '50' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q50"),
                 DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty'),
                 DB::raw('SUM((stock_entry_items.qty_in - stock_entry_items.qty_out) * stock_entry_items.price) as stock_value'),
-                DB::raw('SUM(IFNULL(fg_min_stocks.min_stock, 0)) as total_min_stock'),
-                DB::raw('SUM(IFNULL(fg_min_stocks.max_stock, 0)) as total_max_stock'),
                 DB::raw('MIN(CASE WHEN (stock_entry_items.qty_in - stock_entry_items.qty_out) > 0 THEN COALESCE(stock_entries.stock_date, stock_entry_items.created_at) ELSE NULL END) as oldest_stock_date')
             )
             ->where('stock_entry_items.stock_type', 'finished_goods')
@@ -816,32 +840,38 @@ class WarehouseReportController extends Controller
         }
 
         if ($search) {
-            $stockQuery->where(function($q) use ($search) {
+            $stockQuery->where(function($q) use ($search, $sleeveNormalizedSql) {
                 $q->where('stock_entry_items.art_no', 'like', "%{$search}%")
-                  ->orWhere('stock_entry_items.sleeve_type', 'like', "%{$search}%")
-                  ->orWhere('stock_entry_items.size', 'like', "%{$search}%")
-                  ->orWhere('stock_entry_items.price', 'like', "%{$search}%")
-                  ->orWhere('stock_entry_items.qty_in', 'like', "%{$search}%");
+                  ->orWhere(DB::raw($sleeveNormalizedSql), 'like', "%{$search}%");
             });
         }
-        $stockQuery->groupBy('stock_entry_items.art_no', 'stock_entry_items.sleeve_type', 'stock_entry_items.size')->havingRaw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0');
+        $stockQuery->groupBy('stock_entry_items.art_no', DB::raw('sleeve_type'))->havingRaw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0');
 
         if ($request->has('order')) {
             $orderColIdx = intval($request->input('order.0.column'));
             $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
             $columnsMap = [
                 0 => 'stock_entry_items.art_no',
-                1 => 'stock_entry_items.sleeve_type',
-                2 => 'stock_entry_items.size',
-                3 => 'total_qty',
-                6 => 'oldest_stock_date',
-                7 => 'stock_value',
+                1 => 'sleeve_type',
+                2 => 'q36',
+                3 => 'q38',
+                4 => 'q40',
+                5 => 'q42',
+                6 => 'q44',
+                7 => 'q46',
+                8 => 'q48',
+                9 => 'q50',
+                10 => 'total_qty',
+                11 => 'oldest_stock_date',
+                12 => 'stock_value',
             ];
             if (isset($columnsMap[$orderColIdx])) {
                 $stockQuery->orderBy($columnsMap[$orderColIdx], $orderDir);
+            } else {
+                $stockQuery->orderBy('stock_entry_items.art_no', 'asc')->orderBy('sleeve_type', 'asc');
             }
         } else {
-            $stockQuery->orderBy('stock_entry_items.art_no', 'asc')->orderBy('stock_entry_items.sleeve_type', 'asc')->orderBy('stock_entry_items.size', 'asc');
+            $stockQuery->orderBy('stock_entry_items.art_no', 'asc')->orderBy('sleeve_type', 'asc');
         }
 
         $recordsTotal = DB::query()->fromSub($stockQuery, 'sub')->count();
@@ -850,13 +880,25 @@ class WarehouseReportController extends Controller
         $totalsRow = DB::query()->fromSub($stockQuery, 'sub')->selectRaw('
             SUM(CASE WHEN total_qty > 0 THEN total_qty ELSE 0 END) as sum_qty, 
             SUM(CASE WHEN stock_value > 0 THEN stock_value ELSE 0 END) as sum_value,
-            SUM(CASE WHEN total_min_stock > 0 AND total_qty < total_min_stock THEN (total_min_stock - total_qty) ELSE 0 END) as sum_low_stock,
-            SUM(CASE WHEN total_max_stock > 0 AND total_qty > total_max_stock THEN (total_qty - total_max_stock) ELSE 0 END) as sum_excess_stock
+            SUM(q36) as sum_36,
+            SUM(q38) as sum_38,
+            SUM(q40) as sum_40,
+            SUM(q42) as sum_42,
+            SUM(q44) as sum_44,
+            SUM(q46) as sum_46,
+            SUM(q48) as sum_48,
+            SUM(q50) as sum_50
         ')->first();
         $totals = [
+            'sum_36' => number_format($totalsRow->sum_36 ?? 0, 0),
+            'sum_38' => number_format($totalsRow->sum_38 ?? 0, 0),
+            'sum_40' => number_format($totalsRow->sum_40 ?? 0, 0),
+            'sum_42' => number_format($totalsRow->sum_42 ?? 0, 0),
+            'sum_44' => number_format($totalsRow->sum_44 ?? 0, 0),
+            'sum_46' => number_format($totalsRow->sum_46 ?? 0, 0),
+            'sum_48' => number_format($totalsRow->sum_48 ?? 0, 0),
+            'sum_50' => number_format($totalsRow->sum_50 ?? 0, 0),
             'total_qty' => number_format($totalsRow->sum_qty ?? 0, 0),
-            'low_stock' => number_format($totalsRow->sum_low_stock ?? 0, 0),
-            'excess_stock' => number_format($totalsRow->sum_excess_stock ?? 0, 0),
             'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
         ];
 
@@ -868,13 +910,14 @@ class WarehouseReportController extends Controller
 
         if ($draw) {
             $data = [];
+            $fmtCell = function($val) {
+                return $val > 0 
+                    ? '<span class="fw-bold text-dark">' . number_format($val, 0) . '</span>' 
+                    : '<span class="text-muted" style="opacity: 0.4;">-</span>';
+            };
+
             foreach ($artNos as $artNo) {
                 $displayQty = max(0, floatval($artNo->total_qty ?? 0));
-                $totalMinStock = floatval($artNo->total_min_stock ?? 0);
-                $totalMaxStock = floatval($artNo->total_max_stock ?? 0);
-
-                $lowStock = ($totalMinStock > 0 && $displayQty < $totalMinStock) ? ($totalMinStock - $displayQty) : 0;
-                $excessStock = ($totalMaxStock > 0 && $displayQty > $totalMaxStock) ? ($displayQty - $totalMaxStock) : 0;
                 $stockValue = max(0, floatval($artNo->stock_value ?? 0));
 
                 $stockDays = '-';
@@ -884,28 +927,32 @@ class WarehouseReportController extends Controller
                     $stockDays = '<span class="badge ' . $badgeClass . ' fw-bold">' . $d . ' Days</span>';
                 }
 
-                $lowStockDisplay = $lowStock > 0 ? '<span class="text-danger fw-bold">' . number_format($lowStock, 0) . '</span>' : '-';
-                $excessStockDisplay = $excessStock > 0 ? '<span class="text-success fw-bold">' . number_format($excessStock, 0) . '</span>' : '-';
-
                 $rawSleeve = trim((string)($artNo->sleeve_type ?? ''));
                 $sleeveUpper = strtoupper($rawSleeve);
                 if (in_array($sleeveUpper, ['FS', 'F/S', 'FULL', 'FULL SLEEVE'])) {
                     $sleeveFormatted = 'Full';
+                    $sleeveBadgeClass = 'bg-label-success';
                 } elseif (in_array($sleeveUpper, ['HS', 'H/S', 'HALF', 'HALF SLEEVE'])) {
                     $sleeveFormatted = 'Half';
+                    $sleeveBadgeClass = 'bg-label-warning';
                 } else {
                     $sleeveFormatted = $rawSleeve !== '' ? htmlspecialchars($rawSleeve) : '-';
+                    $sleeveBadgeClass = 'bg-label-secondary';
                 }
 
-                $sizeFormatted = !empty($artNo->size) ? htmlspecialchars($artNo->size) : '-';
-
                 $data[] = [
-                    'brand' => '<strong class="text-uppercase">' . htmlspecialchars($artNo->art_no ?? '-') . '</strong>',
-                    'sleeve' => $sleeveFormatted,
-                    'size' => $sizeFormatted,
-                    'total_qty' => number_format($displayQty, 0),
-                    'low_stock' => $lowStockDisplay,
-                    'excess_stock' => $excessStockDisplay,
+                    'brand' => '<strong class="text-uppercase text-primary">' . htmlspecialchars($artNo->art_no ?? '-') . '</strong>',
+                    'art_no' => '<strong class="text-uppercase text-primary">' . htmlspecialchars($artNo->art_no ?? '-') . '</strong>',
+                    'sleeve' => '<span class="badge ' . $sleeveBadgeClass . ' fw-semibold">' . $sleeveFormatted . '</span>',
+                    'size_36' => $fmtCell($artNo->q36 ?? 0),
+                    'size_38' => $fmtCell($artNo->q38 ?? 0),
+                    'size_40' => $fmtCell($artNo->q40 ?? 0),
+                    'size_42' => $fmtCell($artNo->q42 ?? 0),
+                    'size_44' => $fmtCell($artNo->q44 ?? 0),
+                    'size_46' => $fmtCell($artNo->q46 ?? 0),
+                    'size_48' => $fmtCell($artNo->q48 ?? 0),
+                    'size_50' => $fmtCell($artNo->q50 ?? 0),
+                    'total_qty' => '<span class="badge bg-label-primary fs-6 fw-bold">' . number_format($displayQty, 0) . '</span>',
                     'stock_days' => $stockDays,
                     'stock_value' => '₹' . number_format($stockValue, 2),
                 ];
@@ -1098,10 +1145,13 @@ class WarehouseReportController extends Controller
             $sleeveUpper = strtoupper($rawSleeve);
             if (in_array($sleeveUpper, ['FS', 'F/S', 'FULL', 'FULL SLEEVE'])) {
                 $sleeveFormatted = 'Full';
+                $sleeveBadgeClass = 'bg-label-success';
             } elseif (in_array($sleeveUpper, ['HS', 'H/S', 'HALF', 'HALF SLEEVE'])) {
                 $sleeveFormatted = 'Half';
+                $sleeveBadgeClass = 'bg-label-warning';
             } else {
                 $sleeveFormatted = $rawSleeve !== '' ? htmlspecialchars($rawSleeve) : '-';
+                $sleeveBadgeClass = 'bg-label-secondary';
             }
 
             $sleeveEsc = addslashes($sleeveFormatted);
@@ -1112,7 +1162,7 @@ class WarehouseReportController extends Controller
                 ],
                 'style' => '<strong class="text-uppercase text-primary">' . htmlspecialchars($item->style_name) . '</strong>',
                 'art_count' => '<span class="badge bg-label-info">' . number_format($item->art_count ?? 0, 0) . ' Art Nos</span>',
-                'sleeve' => '<span class="badge bg-label-secondary fw-semibold">' . $sleeveFormatted . '</span>',
+                'sleeve' => '<span class="badge ' . $sleeveBadgeClass . ' fw-semibold">' . $sleeveFormatted . '</span>',
                 'size_36' => $fmtCell($item->q36 ?? 0),
                 'size_38' => $fmtCell($item->q38 ?? 0),
                 'size_40' => $fmtCell($item->q40 ?? 0),
@@ -1271,10 +1321,13 @@ class WarehouseReportController extends Controller
             $sleeveUpper = strtoupper($rawSleeve);
             if (in_array($sleeveUpper, ['FS', 'F/S', 'FULL', 'FULL SLEEVE'])) {
                 $sleeveFormatted = 'Full';
+                $sleeveBadgeClass = 'bg-label-success';
             } elseif (in_array($sleeveUpper, ['HS', 'H/S', 'HALF', 'HALF SLEEVE'])) {
                 $sleeveFormatted = 'Half';
+                $sleeveBadgeClass = 'bg-label-warning';
             } else {
                 $sleeveFormatted = $rawSleeve !== '' ? htmlspecialchars($rawSleeve) : '-';
+                $sleeveBadgeClass = 'bg-label-secondary';
             }
 
             $fmtCell = function($val) {
@@ -1285,7 +1338,7 @@ class WarehouseReportController extends Controller
 
             $data[] = [
                 'art_no' => '<strong class="text-dark">' . htmlspecialchars($row->art_no ?? '-') . '</strong>',
-                'sleeve' => '<span class="badge bg-label-secondary fw-semibold">' . $sleeveFormatted . '</span>',
+                'sleeve' => '<span class="badge ' . $sleeveBadgeClass . ' fw-semibold">' . $sleeveFormatted . '</span>',
                 'size_36' => $fmtCell($row->q36),
                 'size_38' => $fmtCell($row->q38),
                 'size_40' => $fmtCell($row->q40),
@@ -1806,17 +1859,11 @@ class WarehouseReportController extends Controller
                                 });
                         });
                     })
-                    ->leftJoin('fg_min_stocks', function($join) {
-                        $join->on('stock_entry_items.id', '=', 'fg_min_stocks.stock_entry_item_id')
-                            ->where('fg_min_stocks.status', '=', 'Active')
-                            ->whereNull('fg_min_stocks.deleted_at');
-                    })
                     ->select(
                         'brands.id as brand_id',
                         'brands.brand_name as brand',
                         DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty'),
                         DB::raw('SUM((stock_entry_items.qty_in - stock_entry_items.qty_out) * stock_entry_items.price) as stock_value'),
-                        DB::raw('SUM(IFNULL(fg_min_stocks.min_stock, 0)) as total_min_stock'),
                         DB::raw('ROUND(AVG(DATEDIFF(NOW(), COALESCE(stock_entries.stock_date, stock_entry_items.created_at)))) as avg_stock_days')
                     )
                     ->where('stock_entry_items.stock_type', 'finished_goods')
@@ -1872,6 +1919,24 @@ class WarehouseReportController extends Controller
                     'stock_value' => '₹' . number_format($totalsRow->sum_value ?? 0, 2),
                 ];
 
+                if ($request->has('order')) {
+                    $orderColIdx = intval($request->input('order.0.column'));
+                    $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
+                    $columnsMap = [
+                        0 => 'brands.brand_name',
+                        1 => 'total_qty',
+                        2 => 'avg_stock_days',
+                        3 => 'stock_value',
+                    ];
+                    if (isset($columnsMap[$orderColIdx])) {
+                        $query->orderBy($columnsMap[$orderColIdx], $orderDir);
+                    } else {
+                        $query->orderBy('brands.brand_name', 'asc');
+                    }
+                } else {
+                    $query->orderBy('brands.brand_name', 'asc');
+                }
+
                 if ($length != -1) {
                     $query->skip($start)->take($length);
                 }
@@ -1880,9 +1945,6 @@ class WarehouseReportController extends Controller
                 $data = [];
                 
                 foreach ($brandwiseStock as $stock) {
-                    $low_stock = max(0, ($stock->total_min_stock ?? 0) - ($stock->total_qty ?? 0));
-                    $excess_stock = max(0, ($stock->total_qty ?? 0) - (($stock->total_min_stock ?? 0) * 2));
-                    
                     $brandId = $stock->brand_id ?? 0;
                     $brandName = addslashes($stock->brand ?? '-');
 
@@ -1902,10 +1964,8 @@ class WarehouseReportController extends Controller
                             'data-brand-id' => $brandId,
                             'data-brand-name' => $stock->brand ?? '-'
                         ],
-                        'brand' => '<strong class="text-uppercase">' . ($stock->brand ?? '-') . '</strong>',
-                        'total_qty' => number_format($stock->total_qty ?? 0, 0),
-                        'low_stock' => '-',
-                        'excess_stock' => '-',
+                        'brand' => '<strong class="text-uppercase text-primary">' . ($stock->brand ?? '-') . '</strong>',
+                        'total_qty' => '<span class="badge bg-label-primary fs-6 fw-bold">' . number_format($stock->total_qty ?? 0, 0) . '</span>',
                         'stock_days' => $daysBadge,
                         'stock_value' => '₹' . number_format($stock->stock_value ?? 0, 2),
                     ];
@@ -3987,6 +4047,127 @@ class WarehouseReportController extends Controller
             ->whereNull('sales_order_items.deleted_at')
             ->get();
 
+        // Fetch active job card cuttings for art numbers in this SO
+        $allArtNos = [];
+        foreach ($items as $it) {
+            if (!empty($it->art_no)) {
+                $trimmedArt = trim($it->art_no);
+                $allArtNos[] = $trimmedArt;
+                $norm = strtoupper(preg_replace('/\s+/', '', $trimmedArt));
+                $allArtNos[] = $norm;
+                foreach (['-HS', '-FS', '-H/S', '-F/S', '-HALF', '-FULL'] as $sfx) {
+                    $cleanSfx = str_replace(['/', '-'], '', $sfx);
+                    if (str_ends_with($norm, $cleanSfx)) {
+                        $allArtNos[] = substr($norm, 0, -strlen($cleanSfx));
+                        break;
+                    }
+                }
+                if (str_contains($trimmedArt, '-')) {
+                    $parts = explode('-', $trimmedArt);
+                    $allArtNos[] = trim($parts[0]);
+                }
+            }
+        }
+        $allArtNos = array_values(array_unique(array_filter($allArtNos)));
+
+        $cuttingMap = [];
+        if (!empty($allArtNos)) {
+            $activeJcs = DB::table('job_card_entries as jce')
+                ->join('job_card_fabric_details as jcfd', 'jce.id', '=', 'jcfd.job_card_entry_id')
+                ->leftJoin('service_providers as sp', 'jce.service_provider_id', '=', 'sp.id')
+                ->where(function($q) use ($allArtNos) {
+                    $q->whereIn('jcfd.art_no', $allArtNos)
+                      ->orWhereIn('jcfd.fg_art_no', $allArtNos);
+                })
+                ->whereNull('jce.deleted_at')
+                ->whereNull('jcfd.deleted_at')
+                ->whereNotIn('jce.status', ['Completed', 'Cancel', 'Cancelled'])
+                ->select(
+                    'jce.id',
+                    'jce.job_card_no',
+                    'jce.status as jc_status',
+                    'jcfd.art_no',
+                    'jcfd.fg_art_no',
+                    'sp.name as unit_name',
+                    'sp.code as unit_code'
+                )
+                ->distinct()
+                ->get();
+
+            $jcIds = $activeJcs->pluck('id')->unique()->toArray();
+
+            $schedulesByJc = DB::table('process_schedules')
+                ->whereIn('job_card_entry_id', $jcIds)
+                ->whereNull('deleted_at')
+                ->orderBy('operation_stage_id', 'asc')
+                ->get()
+                ->groupBy('job_card_entry_id');
+
+            $tasksByJc = DB::table('tasks')
+                ->whereIn('job_card_entry_id', $jcIds)
+                ->whereNull('deleted_at')
+                ->get()
+                ->groupBy('job_card_entry_id');
+
+            foreach ($activeJcs as $jc) {
+                $matchedArts = array_filter([$jc->art_no, $jc->fg_art_no]);
+                $schedules = $schedulesByJc->get($jc->id, collect());
+                $currentStage = 'CUTTING';
+
+                if ($schedules->isNotEmpty()) {
+                    $tasks = $tasksByJc->get($jc->id, collect());
+                    $isAllDone = true;
+                    foreach ($schedules as $sched) {
+                        $schedTasks = $tasks->where('stage_id', $sched->id);
+                        $isDone = false;
+                        if (strtolower(trim($sched->status ?? '')) === 'completed') {
+                            $isDone = true;
+                        } elseif ($schedTasks->isNotEmpty() && $schedTasks->every(function($t) {
+                            return strtolower(trim($t->status ?? '')) === 'completed';
+                        })) {
+                            $isDone = true;
+                        }
+                        if (!$isDone) {
+                            $currentStage = strtoupper(trim($sched->stage ?? ''));
+                            $isAllDone = false;
+                            break;
+                        }
+                    }
+                    if ($isAllDone) {
+                        $currentStage = 'COMPLETED';
+                    }
+                }
+
+                if ($currentStage === 'COMPLETED' || in_array(strtolower(trim($jc->jc_status ?? '')), ['completed', 'production completed', 'cancel', 'cancelled'])) {
+                    continue;
+                }
+
+                $unitDisplay = !empty($jc->unit_name) ? $jc->unit_name : (!empty($jc->unit_code) ? $jc->unit_code : '-');
+
+                foreach ($matchedArts as $aNo) {
+                    $normArt = strtoupper(preg_replace('/\s+/', '', $aNo));
+                    if (!isset($cuttingMap[$normArt])) {
+                        $cuttingMap[$normArt] = [];
+                    }
+                    $exists = false;
+                    foreach ($cuttingMap[$normArt] as $existing) {
+                        if ($existing['id'] == $jc->id) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    if (!$exists) {
+                        $cuttingMap[$normArt][] = [
+                            'id'          => $jc->id,
+                            'job_card_no' => $jc->job_card_no,
+                            'unit'        => $unitDisplay,
+                            'stage'       => $currentStage,
+                        ];
+                    }
+                }
+            }
+        }
+
         $invoicedArtNos = DB::table('sales_invoice_items')
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
             ->where('sales_invoices.so_id', $soId)
@@ -4032,10 +4213,13 @@ class WarehouseReportController extends Controller
             $sleeveUpper = strtoupper(trim((string)$rawSleeve));
             if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL' || $sleeveUpper === 'FULL SLEEVE') {
                 $sleeveFormatted = 'Full';
+                $sleeveBadge = '<span class="badge bg-label-success fw-semibold">Full</span>';
             } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF' || $sleeveUpper === 'HALF SLEEVE') {
                 $sleeveFormatted = 'Half';
+                $sleeveBadge = '<span class="badge bg-label-warning fw-semibold">Half</span>';
             } else {
                 $sleeveFormatted = $rawSleeve ? htmlspecialchars($rawSleeve) : '-';
+                $sleeveBadge = '<span class="badge bg-label-secondary fw-semibold">' . $sleeveFormatted . '</span>';
             }
 
             $sizeVal = $item->size_id ?: ($item->stock_size ?: '-');
@@ -4055,16 +4239,106 @@ class WarehouseReportController extends Controller
 
             $itemNameDisplay = $formattedCategory ? htmlspecialchars($formattedCategory) : htmlspecialchars($item->item_name ?: ($item->sku ?: '-'));
 
+            // Match active cuttings for this art number
+            $itemArt = strtoupper(preg_replace('/\s+/', '', $artNo ?? ''));
+            $baseArt = $itemArt;
+            foreach (['-HS', '-FS', '-H/S', '-F/S', '-HALF', '-FULL'] as $sfx) {
+                $cleanSfx = str_replace(['/', '-'], '', $sfx);
+                if (str_ends_with($itemArt, $cleanSfx)) {
+                    $baseArt = substr($itemArt, 0, -strlen($cleanSfx));
+                    break;
+                }
+            }
+            if ($baseArt === $itemArt && str_contains($artNo ?? '', '-')) {
+                $baseArt = strtoupper(preg_replace('/\s+/', '', explode('-', $artNo)[0]));
+            }
+
+            $cuttings = $cuttingMap[$itemArt] ?? ($cuttingMap[$baseArt] ?? []);
+
+            if (!empty($cuttings)) {
+                $cutLines = [];
+                $unitLines = [];
+                $stageLines = [];
+
+                $maxShow = 3;
+                $sliceCuttings = array_slice($cuttings, 0, $maxShow);
+                $remainingCount = count($cuttings) - $maxShow;
+                $rowUniqueId = 'opt_cut_' . $soId . '_' . $sno . '_' . substr(md5($itemArt . ($sizeVal ?? '')), 0, 6);
+
+                foreach ($sliceCuttings as $c) {
+                    $cutLines[] = '<div class="text-nowrap fw-bold text-primary mb-1">' . htmlspecialchars($c['job_card_no']) . '</div>';
+                    $unitLines[] = '<div class="text-nowrap fw-semibold text-dark mb-1">' . htmlspecialchars($c['unit']) . '</div>';
+
+                    $stg = $c['stage'];
+                    $badgeClass = 'bg-label-primary';
+                    if (str_contains($stg, 'STITCHING')) {
+                        $badgeClass = 'bg-label-warning text-dark';
+                    } elseif (str_contains($stg, 'KAJA') || str_contains($stg, 'BUTTON')) {
+                        $badgeClass = 'bg-label-info';
+                    } elseif (str_contains($stg, 'TRIMMING') || str_contains($stg, 'CHECKING')) {
+                        $badgeClass = 'bg-label-dark';
+                    } elseif (str_contains($stg, 'IRONING') || str_contains($stg, 'PACKING') || str_contains($stg, 'COMPLETED')) {
+                        $badgeClass = 'bg-label-success';
+                    }
+
+                    $stageLines[] = '<div class="text-nowrap mb-1"><span class="badge ' . $badgeClass . '">' . htmlspecialchars($stg) . '</span></div>';
+                }
+
+                if ($remainingCount > 0) {
+                    $extraCutLines = [];
+                    $extraUnitLines = [];
+                    $extraStageLines = [];
+
+                    foreach (array_slice($cuttings, $maxShow) as $remC) {
+                        $extraCutLines[] = '<div class="text-nowrap fw-bold text-primary mb-1">' . htmlspecialchars($remC['job_card_no']) . '</div>';
+                        $extraUnitLines[] = '<div class="text-nowrap fw-semibold text-dark mb-1">' . htmlspecialchars($remC['unit']) . '</div>';
+
+                        $remStg = $remC['stage'];
+                        $remBadgeClass = 'bg-label-primary';
+                        if (str_contains($remStg, 'STITCHING')) {
+                            $remBadgeClass = 'bg-label-warning text-dark';
+                        } elseif (str_contains($remStg, 'KAJA') || str_contains($remStg, 'BUTTON')) {
+                            $remBadgeClass = 'bg-label-info';
+                        } elseif (str_contains($remStg, 'TRIMMING') || str_contains($remStg, 'CHECKING')) {
+                            $remBadgeClass = 'bg-label-dark';
+                        } elseif (str_contains($remStg, 'IRONING') || str_contains($remStg, 'PACKING') || str_contains($remStg, 'COMPLETED')) {
+                            $remBadgeClass = 'bg-label-success';
+                        }
+
+                        $extraStageLines[] = '<div class="text-nowrap mb-1"><span class="badge ' . $remBadgeClass . '">' . htmlspecialchars($remStg) . '</span></div>';
+                    }
+
+                    $cutLines[] = '<div class="extra-cuttings extra-cut-' . $rowUniqueId . '" style="display: none;">' . implode('', $extraCutLines) . '</div>';
+                    $unitLines[] = '<div class="extra-cuttings extra-cut-' . $rowUniqueId . '" style="display: none;">' . implode('', $extraUnitLines) . '</div>';
+                    $stageLines[] = '<div class="extra-cuttings extra-cut-' . $rowUniqueId . '" style="display: none;">' . implode('', $extraStageLines) . '</div>';
+
+                    $cutLines[] = '<a href="javascript:void(0)" class="toggle-cut-btn badge bg-label-info text-primary fw-bold text-decoration-none d-inline-block mt-1" onclick="toggleCuttingExpansion(\'' . $rowUniqueId . '\', this, ' . $remainingCount . ')">+ ' . $remainingCount . ' more <i class="ri-arrow-down-s-line"></i></a>';
+                    $unitLines[] = '<div class="toggle-cut-spacer-' . $rowUniqueId . '" style="height: 22px;">&nbsp;</div>';
+                    $stageLines[] = '<div class="toggle-cut-spacer-' . $rowUniqueId . '" style="height: 22px;">&nbsp;</div>';
+                }
+
+                $cuttingNoHtml = implode('', $cutLines);
+                $unitHtml = implode('', $unitLines);
+                $stageStatusHtml = implode('', $stageLines);
+            } else {
+                $cuttingNoHtml = '<span class="text-muted">-</span>';
+                $unitHtml = '<span class="text-muted">-</span>';
+                $stageStatusHtml = '<span class="badge bg-label-secondary">Not in Production</span>';
+            }
+
             $artNosData[] = [
                 'sno' => $sno++,
                 'art_no' => '<span class="fw-bold text-dark">' . htmlspecialchars($artNo ?: '-') . '</span>',
                 'item_name' => $itemNameDisplay,
-                'sleeve' => '<span class="badge bg-label-info">' . $sleeveFormatted . '</span>',
+                'sleeve' => $sleeveBadge,
                 'size' => '<span class="badge bg-label-secondary">' . htmlspecialchars($sizeVal) . '</span>',
                 'ordered_qty' => number_format($ordQty, 0),
                 'invoiced_qty' => number_format($alloc, 0),
                 'pending_qty' => number_format($pendingQty, 0),
-                'status' => $status
+                'status' => $status,
+                'cutting_no' => $cuttingNoHtml,
+                'unit' => $unitHtml,
+                'stage_status' => $stageStatusHtml,
             ];
         }
 
@@ -4081,7 +4355,10 @@ class WarehouseReportController extends Controller
                     str_contains(strtolower(strip_tags($row['art_no'])), $searchValueLower) ||
                     str_contains(strtolower(strip_tags($row['item_name'])), $searchValueLower) ||
                     str_contains(strtolower(strip_tags($row['sleeve'])), $searchValueLower) ||
-                    str_contains(strtolower(strip_tags($row['size'])), $searchValueLower)
+                    str_contains(strtolower(strip_tags($row['size'])), $searchValueLower) ||
+                    str_contains(strtolower(strip_tags($row['cutting_no'] ?? '')), $searchValueLower) ||
+                    str_contains(strtolower(strip_tags($row['unit'] ?? '')), $searchValueLower) ||
+                    str_contains(strtolower(strip_tags($row['stage_status'] ?? '')), $searchValueLower)
                 );
             }));
         }

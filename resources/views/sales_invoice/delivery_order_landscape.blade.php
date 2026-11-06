@@ -93,7 +93,7 @@
         /* Arial for address, contact info and general text */
         .company-address {
             font-family: 'Arial', sans-serif;
-            font-size: 9.5px;
+            font-size: 10.5px;
             margin-top: 1px;
             color: #222;
             line-height: 1.25;
@@ -101,10 +101,10 @@
         .complaints-badge-td {
             background-color: #dbf1f4;
             color: #0269a4;
-            padding: 3.5px 22px;
+            padding: 3.5px 25px;
             border-radius: 14px;
             font-family: 'Arial', sans-serif;
-            font-size: 10.5px;
+            font-size: 11.5px;
             font-weight: bold;
             letter-spacing: 0.2px;
         }
@@ -113,7 +113,7 @@
             background-color: #054cae;
             color: #ffffff;
             font-family: 'Roboto Condensed', Arial, sans-serif;
-            font-size: 12.5px;
+            font-size: 14.5px;
             font-weight: bold;
             padding: 4px 22px;
             letter-spacing: 0.8px;
@@ -136,12 +136,12 @@
         }
         .meta-left {
             width: 37%;
-            font-size: 9.5px;
+            font-size: 12.5px;
             line-height: 1.3;
         }
         .meta-left .cust-name {
             font-family: 'Arial', sans-serif;
-            font-size: 11.5px;
+            font-size: 14.5px;
             font-weight: bold;
             margin-bottom: 1.5px;
             color: #000;
@@ -155,7 +155,7 @@
             width: 37%;
             text-align: right;
             font-family: 'Arial', sans-serif;
-            font-size: 9.5px;
+            font-size: 12.5px;
             line-height: 1.3;
         }
         .meta-right div {
@@ -166,14 +166,14 @@
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            border: 1px solid #7ea5c7;
+            border: 1px solid #808080;
             margin-bottom: 0px;
             font-family: 'Arial', sans-serif;
         }
         .items-table th, .items-table td {
-            border: 1px solid #cbddd1;
+            border: 1px solid #808080;
             padding: 3.5px 3px;
-            font-size: 10px;
+            font-size: 12px;
             vertical-align: middle;
         }
         /* Arial Bold for table headers */
@@ -181,7 +181,7 @@
             background-color: #ffffff;
             font-family: 'Arial', sans-serif;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 12px;
             text-align: center;
             color: #000000;
             padding: 3.5px 3px;
@@ -269,35 +269,27 @@
             width: 100%;
             border-collapse: collapse;
         }
+        .abstract-main-table th,
+        .abstract-main-table td {
+            vertical-align: middle;
+        }
         .mrp-title-badge {
             background-color: #01316f;
             color: #ffffff;
             text-align: center;
             vertical-align: middle;
-            padding: 5px 6px;
-            width: 100px;
+            padding: 4px 6px;
+            width: 95px;
+            border-right: 1.5px solid #01316f;
         }
         .mrp-title-text {
             font-family: 'Arial', sans-serif;
-            font-size: 8.5px;
+            font-size: 10px;
             font-weight: bold;
             color: #ffffff;
             line-height: 1.25;
             letter-spacing: 0.5px;
             text-transform: uppercase;
-        }
-        .mrp-matrix-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: 'Arial', sans-serif;
-        }
-        .mrp-matrix-table th,
-        .mrp-matrix-table td {
-            border: 1px solid #7ea5c7;
-            padding: 3.5px 6px;
-            text-align: center;
-            font-size: 10px;
-            vertical-align: middle;
         }
         .mrp-matrix-label {
             font-weight: bold;
@@ -305,44 +297,48 @@
             background-color: #f0f7fd;
             text-align: center;
             width: 65px;
+            border: 1px solid #7ea5c7;
+            padding: 3.5px 5px;
+            font-size: 11.5px;
         }
         .mrp-matrix-val {
             font-weight: bold;
             color: #000000;
+            border: 1px solid #7ea5c7;
+            text-align: center;
+            padding: 3.5px 5px;
+            font-size: 11.5px;
         }
         .mrp-matrix-total-hdr {
             background-color: #01316f !important;
             color: #ffffff !important;
             font-weight: bold;
-            font-size: 10px;
-            border-color: #01316f !important;
+            font-size: 10.5px;
+            border: 1px solid #01316f !important;
             width: 55px;
+            text-align: center;
+            padding: 3.5px 5px;
         }
         .mrp-matrix-total-val {
             background-color: #01316f !important;
             color: #ffffff !important;
             font-weight: bold;
-            font-size: 11px;
-            border-color: #01316f !important;
+            font-size: 11.5px;
+            border: 1px solid #01316f !important;
             width: 55px;
-        }
-        .pillars-container-td {
-            width: 46%;
-            border-left: 1.5px solid #01316f;
-            padding: 3px 6px !important;
-            vertical-align: middle;
-        }
-        .pillars-table {
-            width: 100%;
-            border-collapse: collapse;
+            text-align: center;
+            padding: 3.5px 5px;
         }
         .pillar-col {
             text-align: center;
             vertical-align: middle;
             padding: 2px 4px;
-            width: 33.33%;
+            width: 15%;
         }
-        .pillar-col:not(:first-child) {
+        .pillar-border-left {
+            border-left: 1.5px solid #01316f !important;
+        }
+        .pillar-border-dashed {
             border-left: 1px dashed #cbd5e1;
         }
         .pillar-col img {
@@ -351,8 +347,8 @@
         }
         .pillar-col div {
             font-family: 'Arial', sans-serif;
-            font-size: 9.5px;
-            font-weight: normal;
+            font-size: 11px;
+            font-weight: bold;
             color: #0f172a;
             line-height: 1.2;
         }
@@ -549,29 +545,37 @@
             }
         }
 
-        // Single page limit with full promotional banner & footer: max 15 items
+        // Single page limit with full promotional banner & footer: max 12 items
+        // Intermediate pages without footer/banner: max 18 items
         $totalItemsCount = count($fullRows) + count($halfRows);
         $totalDisplayRows = count($displayItems);
         $chunks = [];
-        if ($totalDisplayRows <= 15) {
+        if ($totalDisplayRows <= 12) {
             $chunks = [$displayItems];
+        } elseif ($totalDisplayRows <= 30) {
+            // Fits cleanly across exactly 2 pages (Page 1 up to 18 items, Page 2 up to 12 items with banner)
+            $page1Take = ($totalDisplayRows <= 24) ? (int)ceil($totalDisplayRows / 2) : ($totalDisplayRows - 12);
+            $chunks = [
+                array_slice($displayItems, 0, $page1Take),
+                array_slice($displayItems, $page1Take)
+            ];
         } else {
             $offset = 0;
             while ($offset < $totalDisplayRows) {
                 $remaining = $totalDisplayRows - $offset;
-                if ($remaining <= 15) {
+                if ($remaining <= 12) {
                     $take = $remaining;
+                } elseif ($remaining <= 30) {
+                    $take = ($remaining <= 24) ? (int)ceil($remaining / 2) : ($remaining - 12);
                 } else {
-                    // Show 21 rows on intermediate pages (without banner) to reduce bottom space
-                    $take = min(21, $remaining - 2);
-                    if ($take < 1) $take = 15;
+                    $take = 18;
                 }
                 $chunks[] = array_slice($displayItems, $offset, $take);
                 $offset += $take;
             }
         }
         $rowCounter = 1;
-        $totalCols = 4 + count($allSizes) + 3;
+        $totalCols = 6 + count($allSizes) + 1;
     @endphp
 
     @foreach($chunks as $chunkIndex => $chunkItems)
@@ -635,7 +639,7 @@
                         <span class="doc-title-pill">DELIVERY ORDER</span>
                     </td>
                     <td class="meta-right">
-                        <div><strong class="bold">PL No :</strong> {{ $invoice->inv_no }}</div>
+                        <div><strong class="bold">Invoice No :</strong> <span style="font-weight: bold; font-size:17px">{{ $invoice->inv_no }}</span></div>
                         <div><strong class="bold">Packed On :</strong> {{ $invoice->inv_date ? $invoice->inv_date->format('d/m/Y') : date('d/m/Y') }}</div>
                         <div><strong class="bold">Order No :</strong> {{ $invoice->salesOrder->so_no ?? $invoice->salesOrder->order_no ?? '-' }}</div>
                         <div><strong class="bold">Total Qty :</strong> {{ (int)$grandTotalQty }} PCS</div>
@@ -651,18 +655,19 @@
                 <thead>
                     <tr>
                         <th rowspan="2" style="width: 3.5%; vertical-align: middle;">Sl.No.</th>
-                        <th rowspan="2" style="width: 13.5%; vertical-align: middle;">Art No.</th>
                         <th rowspan="2" style="width: 21%; vertical-align: middle;">Description</th>
+                        <th rowspan="2" style="width: 13.5%; vertical-align: middle;">Art No.</th>
+                        <th rowspan="2" style="width: 9.25%; vertical-align: middle;">MRP</th>
+                        <th rowspan="2" style="width: 9.25%; vertical-align: middle;">WSP</th>
                         <th rowspan="2" style="width: 4.5%; vertical-align: middle;">Sleeve</th>
                         <th colspan="{{ count($allSizes) }}" style="text-align: center; vertical-align: middle; padding: 2px 2px;">Size</th>
-                        <th rowspan="2" style="width: 6%; vertical-align: middle;">Total</th>
-                        <th rowspan="2" style="width: 9.25%; vertical-align: middle;">WS Price</th>
-                        <th rowspan="2" style="width: 9.25%; vertical-align: middle;">MRP</th>
+                        <th style="width: 6%; vertical-align: middle; border-bottom: none;">Total</th>
                     </tr>
                     <tr>
                         @foreach($allSizes as $size)
                             <th style="width: {{ round(33 / count($allSizes), 2) }}%; vertical-align: middle; padding: 2px 1px;">{{ $size }}</th>
                         @endforeach
+                        <th style="width: 6%; border-top: none;">&nbsp;</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -680,8 +685,10 @@
                             @php $r = $item['data']; @endphp
                             <tr>
                                 <td class="text-center">{{ $rowCounter++ }}</td>
-                                <td class="bold" style="padding-left: 6px;">{{ $r['art'] }}</td>
                                 <td style="padding-left: 6px;">{{ $r['desc'] }}</td>
+                                <td class="bold" style="padding-left: 6px;">{{ $r['art'] }}</td>
+                                <td class="text-right bold" style="padding-right: 6px;">{{ number_format($r['mrp'], 2) }}</td>
+                                <td class="text-right bold" style="padding-right: 6px;">{{ number_format($r['rate'], 2) }}</td>
                                 <td class="text-center bold">{{ $r['sleeve'] }}</td>
                                 @foreach($allSizes as $size)
                                     <td class="text-center">
@@ -689,30 +696,29 @@
                                     </td>
                                 @endforeach
                                 <td class="text-center bold">{{ (int)$r['total_qty'] }}</td>
-                                <td class="text-right bold" style="padding-right: 6px;">{{ number_format($r['rate'], 2) }}</td>
-                                <td class="text-right bold" style="padding-right: 6px;">{{ number_format($r['mrp'], 2) }}</td>
                             </tr>
                         @elseif($item['type'] === 'subtotal')
                             <tr class="subtotal-row {{ ($item['sleeve'] ?? '') === 'F' ? 'subtotal-f-row' : '' }}">
-                                <td colspan="4" class="text-right bold" style="padding-right: 8px;">{{ $item['label'] }}</td>
+                                <td colspan="6" class="text-right bold" style="padding-right: 8px;">{{ $item['label'] }}</td>
                                 @foreach($allSizes as $size)
                                     <td class="text-center bold">
                                         {{ isset($item['sizes'][$size]) && $item['sizes'][$size] > 0 ? (int)$item['sizes'][$size] : ($item['total'] == 0 ? '-' : '') }}
                                     </td>
                                 @endforeach
                                 <td class="text-center bold" style="background-color: #dbeafe;">{{ (int)$item['total'] }}</td>
-                                <td colspan="2" style="background-color: #f0f7fd;"></td>
                             </tr>
                         @endif
                     @endforeach
 
                     @if($isLastChunk)
                         @php
-                            $emptyRowsNeeded = max(0, 15 - count($chunkItems));
+                            $emptyRowsNeeded = max(0, 12 - count($chunkItems));
                         @endphp
                         @for($e = 0; $e < $emptyRowsNeeded; $e++)
                             <tr class="item-row">
                                 <td class="text-center">&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
                                 <td>&nbsp;</td>
                                 <td>&nbsp;</td>
                                 <td class="text-center">&nbsp;</td>
@@ -720,21 +726,18 @@
                                     <td>&nbsp;</td>
                                 @endforeach
                                 <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
                             </tr>
                         @endfor
 
                         <!-- Grand Total Row -->
                         <tr class="grand-total-row" style="height: 25px;">
-                            <td colspan="4" class="text-right bold" style="padding-right: 8px; font-size: 11px; vertical-align: middle; height: 25px;">Grand Total :</td>
+                            <td colspan="6" class="text-right bold" style="padding-right: 8px; font-size: 14px; vertical-align: middle; height: 30px;">Grand Total :</td>
                             @foreach($allSizes as $size)
-                                <td class="text-center bold" style="font-size: 10.5px; vertical-align: middle; height: 25px;">
+                                <td class="text-center bold" style="font-size: 13.5px; vertical-align: middle; height: 25px;">
                                     {{ isset($grandSizeTotals[$size]) && $grandSizeTotals[$size] > 0 ? (int)$grandSizeTotals[$size] : ($grandTotalQty == 0 ? '-' : '') }}
                                 </td>
                             @endforeach
-                            <td class="text-center bold" style="background-color: #dbeafe; font-size: 11px; vertical-align: middle; height: 25px;">{{ (int)$grandTotalQty }}</td>
-                            <td colspan="2" style="vertical-align: middle; height: 25px;"></td>
+                            <td class="text-center bold" style="background-color: #dbeafe; font-size: 14px; vertical-align: middle; height: 25px;">{{ (int)$grandTotalQty }}</td>
                         </tr>
                     @endif
                 </tbody>
@@ -745,22 +748,25 @@
                 <table class="footer-summary-table">
                     <tr>
                         <td class="footer-left">
-                            <div style="font-size: 9.5px; margin-bottom: 5px;">
+                            <div style="font-size: 11.5px; margin-bottom: 5px;">
                                 <strong class="bold">Remarks :</strong> {{ $invoice->remarks ?: '' }}
                             </div>
-                            <div style="font-size: 9.5px; margin-top: 5px;">
-                                <strong class="bold">Prepared By :</strong> {{ auth()->user()->name ?? 'Admin' }}
-                            </div>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 5px;">
+                                <tr>
+                                    <td style="width: 50%; padding: 0; vertical-align: top;">
+                                        <strong class="bold">Prepared By :</strong> {{ auth()->user()->name ?? 'Admin' }}
+                                    </td>
+                                    <td style="width: 50%; padding: 0; vertical-align: top;">
+                                        <strong class="bold">Checked by :</strong>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                         <td class="footer-right">
                             <table style="width: 100%; border-collapse: collapse; font-family: 'Arial', sans-serif;">
                                 <tr>
-                                    <td class="bold" style="font-size: 10.5px; padding: 3px 6px; border-bottom: 1px solid #7ea5c7;">Total :</td>
-                                    <td class="bold" style="font-size: 10.5px; text-align: right; padding: 3px 8px; border-bottom: 1px solid #7ea5c7;">{{ (int)$grandTotalQty }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="bold" style="font-size: 10px; padding: 3px 6px;">Total Box :</td>
-                                    <td class="bold" style="font-size: 10px; text-align: right; padding: 3px 8px;">{{ $invoice->no_of_box ?: '1' }}</td>
+                                    <td class="bold" style="font-size: 11.5px; padding: 3px 6px;">Total Box :</td>
+                                    <td class="bold" style="font-size: 11.5px; text-align: right; padding: 3px 8px;">{{ $invoice->no_of_box ?: '1' }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -771,70 +777,50 @@
                 <div class="abstract-banner-box">
                     <table class="abstract-main-table">
                         <tr>
-                            <!-- 1. Left Section: MRP Summary Table -->
-                            <td style="width: 54%; vertical-align: middle; padding: 0;">
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    <tr>
-                                        <!-- Navy Blue Title Block -->
-                                        <td class="mrp-title-badge">
-                                            @if(!empty($whiteTagSvg))
-                                                <img src="{{ $whiteTagSvg }}" style="width: 17px; height: 17px; display: block; margin: 0 auto 2px auto;" alt="">
-                                            @endif
-                                            <div class="mrp-title-text">
-                                                MRP-WISE<br>QUANTITY<br>SUMMARY
-                                            </div>
-                                        </td>
-                                        <!-- Matrix Grid: MRP Row & Qty Row -->
-                                        <td style="vertical-align: middle; padding: 0;">
-                                            <table class="mrp-matrix-table">
-                                                <tr>
-                                                    <th class="mrp-matrix-label">MRP</th>
-                                                    @foreach($mrpSummary as $mrpVal => $mrpQty)
-                                                        <th class="mrp-matrix-val">{{ $mrpVal }}</th>
-                                                    @endforeach
-                                                    <th class="mrp-matrix-total-hdr">TOTAL</th>
-                                                </tr>
-                                                <tr>
-                                                    <td class="mrp-matrix-label">Qty (Pcs)</td>
-                                                    @foreach($mrpSummary as $mrpVal => $mrpQty)
-                                                        <td class="mrp-matrix-val bold">{{ (int)$mrpQty }}</td>
-                                                    @endforeach
-                                                    <td class="mrp-matrix-total-val">{{ (int)$totalMrpQty }}</td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                </table>
+                            <!-- Navy Blue Title Block -->
+                            <td rowspan="2" class="mrp-title-badge">
+                                @if(!empty($whiteTagSvg))
+                                    <img src="{{ $whiteTagSvg }}" style="width: 17px; height: 17px; display: block; margin: 0 auto 2px auto;" alt="">
+                                @endif
+                                <div class="mrp-title-text">
+                                    MRP-WISE<br>QUANTITY<br>SUMMARY
+                                </div>
                             </td>
 
-                            <!-- 2. Right Section: 3 Action Pillars -->
-                            <td class="pillars-container-td">
-                                <table class="pillars-table">
-                                    <tr>
-                                        <!-- Pillar 1: Price tag -->
-                                        <td class="pillar-col">
-                                            @if(!empty($tagIconBase64))
-                                                <img src="{{ $tagIconBase64 }}" style="width: 26px; height: auto;" alt="">
-                                            @endif
-                                            <div>Price the<br>products quickly</div>
-                                        </td>
-                                        <!-- Pillar 2: Hanger / Display -->
-                                        <td class="pillar-col">
-                                            @if(!empty($hangerIconBase64))
-                                                <img src="{{ $hangerIconBase64 }}" style="width: 26px; height: auto;" alt="">
-                                            @endif
-                                            <div>Display at<br>prominent counters</div>
-                                        </td>
-                                        <!-- Pillar 3: Team -->
-                                        <td class="pillar-col">
-                                            @if(!empty($teamIconBase64))
-                                                <img src="{{ $teamIconBase64 }}" style="width: 30px; height: auto;" alt="">
-                                            @endif
-                                            <div>Share new arrivals<br>with your team</div>
-                                        </td>
-                                    </tr>
-                                </table>
+                            <!-- Matrix Grid Row 1: MRP Headers -->
+                            <th class="mrp-matrix-label">MRP</th>
+                            @foreach($mrpSummary as $mrpVal => $mrpQty)
+                                <th class="mrp-matrix-val">{{ $mrpVal }}</th>
+                            @endforeach
+                            <th class="mrp-matrix-total-hdr">TOTAL</th>
+
+                            <!-- 3 Action Pillars (Spanning both rows) -->
+                            <td rowspan="2" class="pillar-col pillar-border-left">
+                                @if(!empty($tagIconBase64))
+                                    <img src="{{ $tagIconBase64 }}" style="width: 25px; height: auto;" alt="">
+                                @endif
+                                <div>Price the<br>products quickly</div>
                             </td>
+                            <td rowspan="2" class="pillar-col pillar-border-dashed">
+                                @if(!empty($hangerIconBase64))
+                                    <img src="{{ $hangerIconBase64 }}" style="width: 25px; height: auto;" alt="">
+                                @endif
+                                <div>Display at<br>prominent counters</div>
+                            </td>
+                            <td rowspan="2" class="pillar-col pillar-border-dashed">
+                                @if(!empty($teamIconBase64))
+                                    <img src="{{ $teamIconBase64 }}" style="width: 29px; height: auto;" alt="">
+                                @endif
+                                <div>Share new arrivals<br>with your team</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <!-- Matrix Grid Row 2: Qty Values -->
+                            <td class="mrp-matrix-label">Qty (Pcs)</td>
+                            @foreach($mrpSummary as $mrpVal => $mrpQty)
+                                <td class="mrp-matrix-val bold">{{ (int)$mrpQty }}</td>
+                            @endforeach
+                            <td class="mrp-matrix-total-val">{{ (int)$totalMrpQty }}</td>
                         </tr>
                     </table>
                 </div>

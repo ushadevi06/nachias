@@ -22,11 +22,6 @@
                                         <i class="ri ri-printer-line me-2 text-primary"></i>Print PDF
                                     </a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ url('sales_invoices/download/' . $invoice->id) }}?template=new" target="_blank">
-                                        <i class="ri ri-file-paper-2-line me-2 text-success"></i>Invoice new format
-                                    </a>
-                                </li>
                             </ul>
                         </div>
                         @if(!$invoice->isRawMaterialOrScrap())
@@ -41,18 +36,13 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url('sales_invoices/delivery-order/' . $invoice->id) }}?mode=landscape" target="_blank">
-                                        <i class="ri ri-layout-line me-2 text-success"></i>Delivery Order (New)
-                                    </a>
-                                </li>
-                                <li>
                                     <a class="dropdown-item" href="{{ url('sales_invoices/open-delivery-order/' . $invoice->id) }}" target="_blank">
                                         <i class="ri ri-file-list-3-line me-2 text-info"></i>Open Delivery Order
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url('sales_invoices/scan-items/' . $invoice->id) }}">
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/scan-items/' . $invoice->id) }}" target="_blank">
                                         <i class="ri ri-qr-scan-line me-2 text-secondary"></i>Scan Items
                                     </a>
                                 </li>
@@ -192,18 +182,25 @@
                                 <h6>Order Details:</h6>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="detail-title text-muted">Invoice No:</label>
                                 <div class="fw-bold text-primary fs-5">{{ $invoice->inv_no }}</div>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="detail-title text-muted">Invoice Date:</label>
                                 <div class="text-dark fw-semibold">{{ $invoice->inv_date->format('d-M-Y') }}</div>
                             </div>
+
+                            <div class="col-md-3">
+                                <label class="detail-title text-muted">Dispatched Date:</label>
+                                <div class="text-dark fw-semibold">
+                                    {{ $invoice->tran_doc_date ? \Carbon\Carbon::parse($invoice->tran_doc_date)->format('d-M-Y') : '-' }}
+                                </div>
+                            </div>
                             
                             @if(!$isRawMaterial)
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="detail-title text-muted">Brand:</label>
                                 <div class="text-dark fw-semibold">
                                     {{ $invoice->brand ? $invoice->brand->brand_name : '-' }}
@@ -315,9 +312,9 @@
                                 <label class="detail-title">Ready for Dispatch:</label>
                                 <div class="text-muted">
                                     @if($invoice->transport_sticker_printed)
-                                        <span class="badge bg-success"><i class="ri-checkbox-circle-line me-1"></i>Yes ({{ $invoice->transport_sticker_printed_at ? date('d-m-Y H:i', strtotime($invoice->transport_sticker_printed_at)) : 'Sticker Printed' }})</span>
+                                        <span class="badge bg-success"><i class="ri ri-checkbox-circle-line me-1"></i>Yes ({{ $invoice->transport_sticker_printed_at ? date('d-m-Y H:i', strtotime($invoice->transport_sticker_printed_at)) : 'Sticker Printed' }})</span>
                                     @else
-                                        <span class="badge bg-light text-muted border"><i class="ri-time-line me-1"></i>Pending</span>
+                                        <span class="badge bg-light text-muted border"><i class="ri ri-time-line me-1"></i>Pending</span>
                                     @endif
                                 </div>
                             </div>
@@ -326,12 +323,12 @@
                                 <label class="detail-title">Sent to Accounts:</label>
                                 <div class="text-muted">
                                     @if($invoice->sent_to_accounts)
-                                        <span class="badge bg-success"><i class="ri-checkbox-circle-line me-1"></i>Yes ({{ $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime($invoice->sent_to_accounts_at)) : '' }})</span>
+                                        <span class="badge bg-success"><i class="ri ri-checkbox-circle-line me-1"></i>Yes ({{ $invoice->sent_to_accounts_at ? date('d-m-Y H:i', strtotime($invoice->sent_to_accounts_at)) : '' }})</span>
                                         @if(in_array($invoice->invoice_status, ['Paid', 'Partially Paid']))
-                                            <span class="badge bg-info text-white ms-1" title="Payment already processed"><i class="ri-lock-2-line me-1"></i>{{ $invoice->invoice_status }}</span>
+                                            <span class="badge bg-info text-white ms-1" title="Payment already processed"><i class="ri ri-lock-2-line me-1"></i>{{ $invoice->invoice_status }}</span>
                                         @endif
                                     @else
-                                        <span class="badge bg-light text-muted border"><i class="ri-time-line me-1"></i>Pending</span>
+                                        <span class="badge bg-light text-muted border"><i class="ri ri-time-line me-1"></i>Pending</span>
                                     @endif
                                 </div>
                             </div>
@@ -751,7 +748,7 @@
                                                 <div class="text-right"><span class="badge bg-primary">{{ $invoice->invoice_status }}</span></div>
                                             </div>
                                             <div class="payment-details-box p-3 bg-light border rounded mb-3">
-                                                <h6 class="mb-3 border-bottom pb-2 text-primary"><i class="ri-money-dollar-circle-line me-1"></i>Payment Information</h6>
+                                                <h6 class="mb-3 border-bottom pb-2 text-primary"><i class="ri ri-money-dollar-circle-line me-1"></i>Payment Information</h6>
                                                 <div class="d-flex justify-content-between mb-2">
                                                     <label class="detail-title text-muted">Payment Mode:</label>
                                                     <div class="fw-semibold text-dark">{{ $invoice->payment_mode ?? '-' }}</div>
@@ -898,7 +895,7 @@
                                 });
                             } else {
                                 Swal.fire('Error!', response.message, 'error');
-                                btn.prop('disabled', false).html('<i class="ri ri ri-receipt-line"></i> Generate E-Invoice');
+                                btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
                             }
                         },
                         error: function(xhr) {
@@ -926,7 +923,7 @@
                 title: 'Cancel E-Invoice',
                 html: `
                     <div class="alert alert-warning text-start p-2 mb-3" style="font-size: 13.5px; border: 1px solid #ffd8a8; background-color: #fff9db; color: #d9480f; border-radius: 4px; line-height: 1.4;">
-                        <div class="fw-semibold mb-1" style="font-size: 14.5px; color: #d9480f;"><i class="ri-information-line me-1"></i> GST e-Invoicing Guidelines:</div>
+                        <div class="fw-semibold mb-1" style="font-size: 14.5px; color: #d9480f;"><i class="ri ri-information-line me-1"></i> GST e-Invoicing Guidelines:</div>
                         <ul class="mb-0 ps-3">
                             <li><strong>24-Hour Window:</strong> IRN can only be cancelled within 24 hours of generation.</li>
                             <li><strong>E-Way Bill:</strong> If linked to an active E-Way Bill, the E-Way Bill will be automatically cancelled first.</li>
@@ -1038,7 +1035,7 @@
                 title: 'Cancel E-Way Bill',
                 html: `
                     <div class="alert alert-warning text-start p-2 mb-3" style="font-size: 13.5px; border: 1px solid #ffd8a8; background-color: #fff9db; color: #d9480f; border-radius: 4px; line-height: 1.4;">
-                        <div class="fw-semibold mb-1" style="font-size: 14.5px; color: #d9480f;"><i class="ri-information-line me-1"></i> GST E-Way Bill Cancellation Guidelines:</div>
+                        <div class="fw-semibold mb-1" style="font-size: 14.5px; color: #d9480f;"><i class="ri ri-information-line me-1"></i> GST E-Way Bill Cancellation Guidelines:</div>
                         <ul class="mb-0 ps-3">
                             <li><strong>24-Hour Window:</strong> E-Way Bill can only be cancelled within 24 hours of generation.</li>
                             <li><strong>Transit Check:</strong> Cannot cancel if the goods are already in transit or verified by a GST officer.</li>

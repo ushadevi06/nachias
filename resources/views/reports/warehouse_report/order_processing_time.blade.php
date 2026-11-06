@@ -168,7 +168,7 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
     $('#orderProcessingTimeTable').html(`
         <thead class="text-center">
             <tr>
-                <th style="width: 40px;">#</th>
+                <th style="width: 35px;">#</th>
                 <th>ART NO</th>
                 <th>ITEM NAME</th>
                 <th class="text-center">SLEEVE</th>
@@ -177,6 +177,9 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
                 <th class="text-center">INVOICED QTY</th>
                 <th class="text-center">PENDING QTY</th>
                 <th class="text-center">STATUS</th>
+                <th>CUTTING NO</th>
+                <th>UNIT</th>
+                <th>STAGE STATUS</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -186,6 +189,9 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
                 <th class="text-center fw-bold text-primary" id="optSubFootOrdered">0</th>
                 <th class="text-center fw-bold text-success" id="optSubFootInvoiced">0</th>
                 <th class="text-center fw-bold text-danger" id="optSubFootPending">0</th>
+                <th></th>
+                <th></th>
+                <th></th>
                 <th></th>
             </tr>
         </tfoot>
@@ -202,15 +208,18 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
             }
         },
         columns: [
-            { data: 'sno', name: 'sno', className: 'text-center font-monospace', width: '5%' },
-            { data: 'art_no', name: 'art_no', width: '15%' },
-            { data: 'item_name', name: 'item_name', width: '30%' },
-            { data: 'sleeve', name: 'sleeve', className: 'text-center', width: '10%' },
-            { data: 'size', name: 'size', className: 'text-center', width: '10%' },
-            { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center fw-bold', width: '10%' },
-            { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center', width: '10%' },
-            { data: 'pending_qty', name: 'pending_qty', className: 'text-center fw-bold text-danger', width: '10%' },
-            { data: 'status', name: 'status', className: 'text-center', width: '10%' }
+            { data: 'sno', name: 'sno', className: 'text-center font-monospace', width: '3%' },
+            { data: 'art_no', name: 'art_no', width: '12%' },
+            { data: 'item_name', name: 'item_name', width: '15%' },
+            { data: 'sleeve', name: 'sleeve', className: 'text-center', width: '6%' },
+            { data: 'size', name: 'size', className: 'text-center', width: '5%' },
+            { data: 'ordered_qty', name: 'ordered_qty', className: 'text-center fw-bold', width: '7%' },
+            { data: 'invoiced_qty', name: 'invoiced_qty', className: 'text-center', width: '7%' },
+            { data: 'pending_qty', name: 'pending_qty', className: 'text-center fw-bold text-danger', width: '7%' },
+            { data: 'status', name: 'status', className: 'text-center', width: '7%' },
+            { data: 'cutting_no', name: 'cutting_no', width: '12%' },
+            { data: 'unit', name: 'unit', width: '10%' },
+            { data: 'stage_status', name: 'stage_status', width: '9%' }
         ],
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
         lengthMenu: [10, 25, 50, 100],
@@ -236,9 +245,26 @@ function drillDownToOrderPendingArtNos(soId, soNo) {
                 $('#optSubFootInvoiced').html(fmt(api.column(6, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
                 $('#optSubFootPending').html(fmt(api.column(7, { page: 'current' }).data().reduce(function (a, b) { return intVal(a) + intVal(b); }, 0)));
             }
+            $('[data-bs-toggle="tooltip"]').tooltip();
         }
     });
 }
+
+window.toggleCuttingExpansion = function(uniqueId, btnElem, count) {
+    var $extras = $('.extra-cut-' + uniqueId);
+    var $btn = $(btnElem);
+    if ($extras.is(':visible')) {
+        $extras.slideUp(150);
+        $btn.html('+ ' + count + ' more <i class="ri-arrow-down-s-line"></i>')
+            .removeClass('bg-label-secondary text-secondary')
+            .addClass('bg-label-info text-primary');
+    } else {
+        $extras.slideDown(150);
+        $btn.html('Show less <i class="ri-arrow-up-s-line"></i>')
+            .removeClass('bg-label-info text-primary')
+            .addClass('bg-label-secondary text-secondary');
+    }
+};
 
 window.initOrderProcessingTimeTable = function() {
     renderOrderProcessingTimeMainLevel();

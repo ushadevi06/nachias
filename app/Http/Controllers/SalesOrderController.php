@@ -611,6 +611,8 @@ class SalesOrderController extends Controller
             ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
+            ->whereNotNull('stock_entry_items.sku')
+            ->where('stock_entry_items.sku', '!=', '')
             ->select(
                 'stock_entry_items.finished_item_code', 
                 'brands.brand_name', 
@@ -918,7 +920,9 @@ class SalesOrderController extends Controller
             ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
             ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
             ->where('stock_entry_items.stock_type', 'finished_goods')
-            ->whereNull('stock_entry_items.deleted_at');
+            ->whereNull('stock_entry_items.deleted_at')
+            ->whereNotNull('stock_entry_items.sku')
+            ->where('stock_entry_items.sku', '!=', '');
 
         if ($exactMatch) {
             $query->where('sku', $code);
@@ -1036,6 +1040,8 @@ class SalesOrderController extends Controller
             ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
+            ->whereNotNull('stock_entry_items.sku')
+            ->where('stock_entry_items.sku', '!=', '')
             ->where(function ($query) use ($term) {
                 $query->where('stock_entry_items.finished_item_code', 'LIKE', "%{$term}%")
                       ->orWhere('stock_entry_items.sku', 'LIKE', "%{$term}%")

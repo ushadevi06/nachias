@@ -23,7 +23,6 @@ class LogController extends Controller
                         $query->whereDate('created_at', $startDate);
                     }
                 } catch (\Exception $e) {
-                    // Ignore date parse errors gracefully
                 }
             }
 
@@ -60,10 +59,11 @@ class LogController extends Controller
 
             foreach ($logs as $log) {
                 $badgeClass = match ($log->action_type) {
-                    'create' => 'bg-success',
-                    'update' => 'bg-info',
+                    'create', 'create_lr' => 'bg-success',
+                    'update', 'update_lr' => 'bg-info',
                     'delete' => 'bg-danger',
-                    'update_status' => 'bg-warning text-dark',
+                    'update_status', 'payment_clearance' => 'bg-warning text-dark',
+                    'send_dispatch_email' => 'bg-primary',
                     default => 'bg-secondary',
                 };
                 $actionDisplay = '<span class="badge ' . $badgeClass . '">' . ucwords(str_replace('_', ' ', $log->action_type)) . '</span>';
@@ -104,7 +104,6 @@ class LogController extends Controller
                 return ['type' => 'empty', 'display' => '-'];
             }
 
-            // Decode nested JSON strings if present
             if (is_string($value) && (str_starts_with(trim($value), '[') || str_starts_with(trim($value), '{'))) {
                 $decoded = json_decode($value, true);
                 if (json_last_error() === JSON_ERROR_NONE) {
@@ -121,11 +120,9 @@ class LogController extends Controller
                     return ['type' => 'empty', 'display' => '-'];
                 }
 
-                // Check if sequential list of items/objects (e.g. [[...], [...]] or [{...}, {...}])
                 $isList = array_is_list($value);
                 if ($isList && isset($value[0]) && is_array($value[0])) {
                     $hiddenCols = ['id', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by'];
-                    // Collect all possible headers
                     $allHeaders = [];
                     foreach ($value as $itemRow) {
                         if (is_array($itemRow)) {
@@ -146,7 +143,6 @@ class LogController extends Controller
                     ];
                 }
 
-                // List of scalar tags/strings (e.g. ["tag1", "tag2"])
                 if ($isList) {
                     return [
                         'type' => 'tags',
@@ -155,7 +151,6 @@ class LogController extends Controller
                     ];
                 }
 
-                // Associative array / key-value dictionary
                 return [
                     'type' => 'key_value',
                     'data' => $value,
@@ -163,7 +158,6 @@ class LogController extends Controller
                 ];
             }
 
-            // Check if date
             if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
                 try {
                     $carbon = \Carbon\Carbon::parse($value)->setTimezone(config('app.timezone', 'Asia/Kolkata'));
@@ -220,7 +214,6 @@ class LogController extends Controller
             }
         }
 
-        // Parse user agent for simple human readable display
         $deviceInfo = 'Unknown Device';
         if (!empty($log->user_agent)) {
             $ua = $log->user_agent;
@@ -254,16 +247,13 @@ class LogController extends Controller
         $oldValues = $log->old_values ? json_decode($log->old_values, true) : [];
         $newValues = $log->new_values ? json_decode($log->new_values, true) : [];
         
-        // Fields to exclude from display
         $excludeFields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at'];
         $changedFields = [];
         
-        // Helper function to format values
         $formatValue = function($value) {
             if (is_null($value) || $value === '') {
                 return '-';
             }
-            // Handle arrays and objects
             if (is_array($value)) {
                 $count = count($value);
                 return $count > 0 ? $count . ' item(s)' : '-';
@@ -271,7 +261,6 @@ class LogController extends Controller
             if (is_object($value)) {
                 return '-';
             }
-            // Check if it's a date/datetime string
             if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
                 try {
                     $carbon = \Carbon\Carbon::parse($value)->setTimezone(config('app.timezone', 'Asia/Kolkata'));

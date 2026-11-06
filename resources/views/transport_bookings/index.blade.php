@@ -8,9 +8,11 @@
             <div class="table-header-box">
                 <h4>Transport Handover / LR Register</h4>
                 <div class="d-flex gap-2">
+                    @if(auth()->id() == 1 || auth()->user()->can('clearance transport-handover'))
                     <a class="btn btn-outline-success" href="{{ route('transport_bookings.payment_clearance') }}">
                         <i class="menu-icon icon-base ri ri-money-dollar-circle-line"></i> Driver Weekly Clearance
                     </a>
+                    @endif
                     <a class="btn btn-primary" target="_blank" href="{{ route('transport_bookings.print_sheet') }}" id="btnPrintSheet">
                         <i class="menu-icon icon-base ri ri-printer-line"></i> Print Handover Sheet (A4)
                     </a>
@@ -98,7 +100,7 @@
                                 <select id="filter_driver_id" class="form-select select2" data-placeholder="Select Driver">
                                     <option value="">All Drivers</option>
                                     @foreach($drivers as $d)
-                                        <option value="{{ $d->id }}">{{ $d->name }}</option>
+                                        <option value="{{ $d['name'] }}">{{ $d['name'] }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -110,7 +112,12 @@
                                 </select>
                             </div>
                             <div class="col-md-3 col-lg-2">
-                                <input type="text" id="filter_transport_name" class="form-control" placeholder="Transport Name">
+                                <select id="filter_transport_name" class="form-select select2" data-placeholder="Select Transporter">
+                                    <option value="">All Transporters</option>
+                                    @foreach($transporters as $t)
+                                        <option value="{{ $t }}">{{ $t }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="col-md-4 col-lg-3">
                                 <div class="d-flex gap-2">
@@ -124,10 +131,13 @@
 
                     <!-- DataTables Container -->
                     <div class="card-datatable table-responsive">
-                        <table id="transportTable" class="table nowrap w-100">
+                        <table id="transportTable" class="table table-hover table-sm w-100">
                             <thead>
                                 <tr>
-                                    <th>#</th>
+                                    <th style="width: 35px;" class="text-center no-sort">
+                                        <input type="checkbox" id="checkAllBookings" class="form-check-input" title="Select All Pending Handover Boxes">
+                                    </th>
+                                    <th style="width: 30px;">#</th>
                                     <th>Invoice No</th>
                                     <th>Invoice Date</th>
                                     <th>Customer / Place</th>
@@ -138,7 +148,7 @@
                                     <th>LR Number</th>
                                     <th>Freight (₹)</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -176,13 +186,16 @@
 
                 <div class="row g-3">
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Assigned Driver</label>
-                        <select id="modal_driver_id" class="form-select select2-modal">
-                            <option value="">Select Driver</option>
+                        <label class="form-label fw-semibold">Assigned Driver (Outside Driver)</label>
+                        <select id="modal_driver_id" class="form-select select2-modal-tags">
+                            <option value="">Select or Type Outside Driver Name</option>
                             @foreach($drivers as $d)
-                                <option value="{{ $d->id }}">{{ $d->name }}</option>
+                                <option value="{{ $d['name'] }}">{{ $d['name'] }}</option>
                             @endforeach
                         </select>
+                        <small class="text-muted d-block mt-1">
+                            <i class="ri-information-line me-1"></i>You can select an existing driver or type any outside driver name directly (e.g. Ramesh Auto, Mani Tempo).
+                        </small>
                     </div>
 
                     <div class="col-12">
@@ -193,7 +206,10 @@
                     <div class="col-md-7">
                         <label class="form-label fw-semibold text-danger">LR Number * (Mandatory)</label>
                         <input type="text" id="modal_lr_no" class="form-control font-monospace" placeholder="Enter Physical LR Receipt No">
-                        <small class="text-muted">NO LR NUMBER = NO PAYMENT CLEARANCE</small>
+                        <div class="invalid-feedback fw-semibold mt-1" id="lr_error_text" style="display: none;">
+                            LR Number is required. (NO LR NUMBER = NO PAYMENT CLEARANCE)
+                        </div>
+                        <small class="text-muted d-block mt-1" id="lr_policy_hint">NO LR NUMBER = NO PAYMENT CLEARANCE</small>
                     </div>
 
                     <div class="col-md-5">
@@ -201,9 +217,19 @@
                         <input type="number" step="any" min="0" id="modal_lr_price" class="form-control text-end" placeholder="0.00">
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Booking Date</label>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Dispatched Date</label>
                         <input type="text" id="modal_booking_date" class="form-control flatpickr-date" value="{{ date('d-m-Y') }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Box Number</label>
+                        <input type="text" id="modal_box_number" class="form-control font-monospace" placeholder="e.g. 1/3, 2/3">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" id="modal_customer_email" class="form-control" placeholder="Enter Email">
                     </div>
 
                     <div class="col-12" id="modal_error_msg"></div>
@@ -233,10 +259,22 @@ $(function() {
         });
 
         $('#updateLrModal').on('shown.bs.modal', function () {
-            $('.select2-modal').select2({
+            $('.select2-modal-tags').select2({
                 dropdownParent: $('#updateLrModal'),
                 allowClear: true,
-                placeholder: 'Select Driver'
+                tags: true,
+                placeholder: 'Select or Type Outside Driver Name',
+                createTag: function (params) {
+                    var term = $.trim(params.term);
+                    if (term === '') {
+                        return null;
+                    }
+                    return {
+                        id: term,
+                        text: term + ' (New Outside Driver)',
+                        newTag: true
+                    };
+                }
             });
         });
     }
@@ -272,19 +310,75 @@ $(function() {
             }
         },
         columns: [
-            { data: 'DT_RowIndex' },
-            { data: 'inv_no' },
-            { data: 'inv_date' },
+            { data: 'checkbox', orderable: false, searchable: false, className: 'text-center' },
+            { data: 'DT_RowIndex', className: 'text-center' },
+            { data: 'inv_no', className: 'text-nowrap' },
+            { data: 'inv_date', className: 'text-nowrap' },
             { data: 'customer' },
-            { data: 'box_number' },
-            { data: 'quantity' },
+            { data: 'box_number', className: 'text-nowrap' },
+            { data: 'quantity', className: 'text-center' },
             { data: 'transport_name' },
             { data: 'driver' },
-            { data: 'lr_no' },
-            { data: 'freight_price' },
-            { data: 'status' },
-            { data: 'action', orderable: false, searchable: false }
-        ]
+            { data: 'lr_no', className: 'text-nowrap' },
+            { data: 'freight_price', className: 'text-end text-nowrap' },
+            { data: 'status', className: 'text-nowrap' },
+            { data: 'action', orderable: false, searchable: false, className: 'text-center text-nowrap' }
+        ],
+        drawCallback: function() {
+            let rows = $('.row-booking-checkbox');
+            if (rows.length === 0) {
+                $('#checkAllBookings').prop('checked', false);
+                return;
+            }
+            let allChecked = true;
+            rows.each(function() {
+                let id = $(this).val();
+                if (selectedBookingIds.has(id)) {
+                    $(this).prop('checked', true);
+                } else {
+                    $(this).prop('checked', false);
+                    allChecked = false;
+                }
+            });
+            $('#checkAllBookings').prop('checked', allChecked);
+        }
+    });
+
+    // Checkbox selection tracking
+    let selectedBookingIds = new Set();
+
+    function updateSelectedCountAndPrintUrl() {
+        let count = selectedBookingIds.size;
+        let btnText = count > 0 
+            ? `<i class="menu-icon icon-base ri ri-printer-line"></i> Print Handover Sheet (${count} Selected)`
+            : `<i class="menu-icon icon-base ri ri-printer-line"></i> Print Handover Sheet (A4)`;
+        $('#btnPrintSheet').html(btnText);
+        updatePrintSheetUrl();
+    }
+
+    $(document).on('change', '.row-booking-checkbox', function() {
+        let id = $(this).val();
+        if ($(this).is(':checked')) {
+            selectedBookingIds.add(id);
+        } else {
+            selectedBookingIds.delete(id);
+            $('#checkAllBookings').prop('checked', false);
+        }
+        updateSelectedCountAndPrintUrl();
+    });
+
+    $('#checkAllBookings').on('change', function() {
+        let isChecked = $(this).is(':checked');
+        $('.row-booking-checkbox').each(function() {
+            let id = $(this).val();
+            $(this).prop('checked', isChecked);
+            if (isChecked) {
+                selectedBookingIds.add(id);
+            } else {
+                selectedBookingIds.delete(id);
+            }
+        });
+        updateSelectedCountAndPrintUrl();
     });
 
     // Filter & Reset buttons
@@ -297,21 +391,42 @@ $(function() {
         $('#filter_customer_id').val('').trigger('change');
         $('#filter_driver_id').val('').trigger('change');
         $('#filter_lr_status').val('').trigger('change');
-        $('#filter_transport_name').val('');
+        $('#filter_transport_name').val('').trigger('change');
         $('#filter_date').val('');
+        selectedBookingIds.clear();
+        $('#checkAllBookings').prop('checked', false);
+        updateSelectedCountAndPrintUrl();
         table.search('').draw();
-        updatePrintSheetUrl();
     });
 
     function updatePrintSheetUrl() {
-        let dateVal = $('#filter_date').val();
-        let baseUrl = "{{ route('transport_bookings.print_sheet') }}";
-        if (dateVal) {
-            $('#btnPrintSheet').attr('href', baseUrl + '?date=' + encodeURIComponent(dateVal));
+        let params = new URLSearchParams();
+
+        if (selectedBookingIds.size > 0) {
+            params.append('booking_ids', Array.from(selectedBookingIds).join(','));
         } else {
-            $('#btnPrintSheet').attr('href', baseUrl);
+            let dateVal = $('#filter_date').val();
+            let customerId = $('#filter_customer_id').val();
+            let driverId = $('#filter_driver_id').val();
+            let lrStatus = $('#filter_lr_status').val();
+            let transportName = $('#filter_transport_name').val();
+
+            if (dateVal) params.append('date', dateVal);
+            if (customerId) params.append('customer_id', customerId);
+            if (driverId) params.append('driver_id', driverId);
+            if (lrStatus) params.append('lr_status', lrStatus);
+            if (transportName) params.append('transport_name', transportName);
         }
+
+        let baseUrl = "{{ route('transport_bookings.print_sheet') }}";
+        let queryString = params.toString();
+        $('#btnPrintSheet').attr('href', queryString ? baseUrl + '?' + queryString : baseUrl);
     }
+
+    $('#filter_customer_id, #filter_driver_id, #filter_lr_status, #filter_transport_name').on('change', function() {
+        updatePrintSheetUrl();
+    });
+    $('#filter_date').on('input change', updatePrintSheetUrl);
 
     // Open LR Modal
     $(document).on('click', '.btn-open-lr-modal', function() {
@@ -324,22 +439,54 @@ $(function() {
         let rate = btn.data('rate');
         let lr = btn.data('lr');
         let driver = btn.data('driver');
+        let driverName = btn.data('driver-name');
 
         $('#modal_booking_id').val(id);
         $('#modal_display_invoice').text(invNo + ' (' + box + ')');
         $('#modal_display_customer').text(customer);
+        let custEmail = btn.data('customer-email') || '';
+        $('#modal_customer_email').val(custEmail);
         $('#modal_transport_name').val(transport || '');
         $('#modal_lr_price').val(rate || '');
-        $('#modal_lr_no').val(lr || '');
+        $('#modal_lr_no').val(lr || '').removeClass('is-invalid');
+        $('#modal_box_number').val(box || '');
+        $('#lr_error_text').hide();
+        $('#lr_policy_hint').show();
+        let bDate = btn.data('booking-date') || "{{ date('d-m-Y') }}";
+        $('#modal_booking_date').val(bDate);
         $('#modal_error_msg').html('');
 
-        if (driver) {
-            $('#modal_driver_id').val(driver).trigger('change');
+        let selectVal = driver || driverName || '';
+        if (selectVal) {
+            let exists = false;
+            $('#modal_driver_id option').each(function() {
+                if ($(this).val() == selectVal || $(this).text().trim() == driverName) {
+                    exists = true;
+                    selectVal = $(this).val();
+                    return false;
+                }
+            });
+
+            if (!exists && driverName) {
+                let newOption = new Option(driverName, driverName, true, true);
+                $('#modal_driver_id').append(newOption);
+                selectVal = driverName;
+            }
+
+            $('#modal_driver_id').val(selectVal).trigger('change');
         } else {
             $('#modal_driver_id').val('').trigger('change');
         }
 
         $('#updateLrModal').modal('show');
+    });
+
+    $(document).on('input', '#modal_lr_no', function() {
+        if ($(this).val().trim() !== '') {
+            $(this).removeClass('is-invalid');
+            $('#lr_error_text').hide();
+            $('#lr_policy_hint').show();
+        }
     });
 
     // Save LR Details
@@ -348,17 +495,16 @@ $(function() {
         let lrNo = $('#modal_lr_no').val().trim();
         let lrPrice = $('#modal_lr_price').val().trim();
         let transport = $('#modal_transport_name').val().trim();
-        let driverId = $('#modal_driver_id').val();
+        let rawDriver = $('#modal_driver_id').val();
+        let driverId = rawDriver ? rawDriver.replace(/\s*\(New Outside Driver\)$/i, '').trim() : '';
         let bookingDate = $('#modal_booking_date').val();
+        let boxNumber = $('#modal_box_number').val().trim();
+        let customerEmail = $('#modal_customer_email').val().trim();
 
         if (!lrNo) {
-            Swal.fire({
-                title: 'LR Number Required!',
-                text: 'MANDATORY POLICY: NO LR NUMBER = NO PAYMENT CLEARANCE. You must enter an LR Number to confirm booking.',
-                icon: 'warning',
-                confirmButtonColor: '#e02d2d'
-            });
-            $('#modal_lr_no').focus();
+            $('#modal_lr_no').addClass('is-invalid').focus();
+            $('#lr_error_text').text('LR Number is required. (NO LR NUMBER = NO PAYMENT CLEARANCE)').show();
+            $('#lr_policy_hint').hide();
             return;
         }
 
@@ -376,7 +522,9 @@ $(function() {
                 lr_price: lrPrice,
                 preferred_transport: transport,
                 delivery_agent_id: driverId,
-                booking_date: bookingDate
+                booking_date: bookingDate,
+                box_number: boxNumber,
+                customer_email: customerEmail
             },
             success: function(response) {
                 btn.prop('disabled', false).html(originalHtml);
@@ -386,7 +534,7 @@ $(function() {
                         icon: 'success',
                         title: 'LR Confirmed!',
                         text: response.message,
-                        timer: 1800,
+                        timer: 3500,
                         showConfirmButton: false
                     });
                     table.ajax.reload(null, false);
@@ -400,7 +548,13 @@ $(function() {
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errMsg = xhr.responseJSON.message;
                 }
-                $('#modal_error_msg').html('<div class="alert alert-danger py-1 mt-2">' + errMsg + '</div>');
+                if (xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors.lr_no) {
+                    $('#modal_lr_no').addClass('is-invalid').focus();
+                    $('#lr_error_text').text(xhr.responseJSON.errors.lr_no[0]).show();
+                    $('#lr_policy_hint').hide();
+                } else {
+                    $('#modal_error_msg').html('<div class="alert alert-danger py-1 mt-2">' + errMsg + '</div>');
+                }
             }
         });
     });

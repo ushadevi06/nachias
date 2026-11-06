@@ -183,14 +183,16 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             }
         }
 
-        if (!empty($sku)) {
-            $existing = \App\Models\StockEntryItem::where('sku', $sku)
-                ->where('stock_type', 'finished_goods')
-                ->first();
-            
-            if ($existing && $existing->size !== $size) {
-                throw new \Exception("Barcode {$sku} already exists with Size {$existing->size}. Duplicate barcodes are not allowed.");
-            }
+        if (empty($sku)) {
+            throw new \Exception("SKU(Barcode) is required for Art No '{$artNo}' and Size '{$size}'.");
+        }
+
+        $existing = \App\Models\StockEntryItem::where('sku', $sku)
+            ->where('stock_type', 'finished_goods')
+            ->first();
+        
+        if ($existing && $existing->size !== $size) {
+            throw new \Exception("Barcode {$sku} already exists with Size {$existing->size}. Duplicate barcodes are not allowed.");
         }
 
         $entryKey = implode('|', [
@@ -562,10 +564,7 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
 
     protected function generateStockEntryNo(): string
     {
-        $maxSequence = StockEntry::withTrashed()
-            ->where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
-            ->selectRaw('MAX(CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED)) as max_sequence')
-            ->value('max_sequence');
+        $maxSequence = StockEntry::withTrashed()->where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')->selectRaw('MAX(CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED)) as max_sequence')->value('max_sequence');
 
         $nextSequence = ((int) $maxSequence) + 1;
         $stockEntryNo = 'SE' . str_pad((string) $nextSequence, 5, '0', STR_PAD_LEFT);

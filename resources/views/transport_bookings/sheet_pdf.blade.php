@@ -108,52 +108,108 @@
         MANDATORY AUDIT RULE: NO LR NUMBER = NO PAYMENT CLEARANCE. Driver must submit physical/digital LR slips for all parcels to clear freight payout.
     </div>
 
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width: 3%;" class="text-center">#</th>
-                <th style="width: 10%;">Invoice No</th>
-                <th style="width: 22%;">Customer / Buyer Name</th>
-                <th style="width: 12%;">Destination Place</th>
-                <th style="width: 13%;">Preferred Transport</th>
-                <th style="width: 6%;" class="text-center">Box No</th>
-                <th style="width: 6%;" class="text-center">Qty (Pcs)</th>
-                <th style="width: 14%;">LR Slip No (Receipt)</th>
-                <th style="width: 14%;">Driver Sign / Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($bookings as $idx => $b)
+    @php
+        $distinctTransports = $bookings->pluck('preferred_transport')->filter()->unique();
+        $isSingleTransport = $distinctTransports->count() <= 1;
+        $grouped = $bookings->groupBy(fn($b) => $b->preferred_transport ?: 'Unassigned Transport');
+    @endphp
+
+    @if($isSingleTransport)
+        <table class="data-table">
+            <thead>
                 <tr>
-                    <td class="text-center">{{ $idx + 1 }}</td>
-                    <td class="fw-bold">
-                        {{ $b->salesInvoice->inv_no ?? '-' }}
-                        @if(!empty($b->salesInvoice?->inv_date))
-                            <div style="font-size: 8px; font-weight: normal; color: #555;">{{ \Carbon\Carbon::parse($b->salesInvoice->inv_date)->format('d-m-Y') }}</div>
-                        @endif
-                    </td>
-                    <td>
-                        <strong>{{ $b->customer->name ?? '-' }}</strong>
-                        @if(!empty($b->customer->code))
-                            <span style="font-size: 8.5px; color: #666;">({{ $b->customer->code }})</span>
-                        @endif
-                    </td>
-                    <td>{{ (!empty($b->booking_office) && $b->booking_office !== 'None') ? $b->booking_office : ($b->customer->city->city_name ?? ($b->customer->place->place_name ?? '-')) }}</td>
-                    <td class="fw-bold">{{ $b->preferred_transport ?: '-' }}</td>
-                    <td class="text-center fw-bold">{{ $b->box_number }}</td>
-                    <td class="text-center fw-bold">{{ (int)$b->quantity }}</td>
-                    <td>{{ $b->lr_no ?: '____________________' }}</td>
-                    <td>____________________</td>
+                    <th style="width: 3%;" class="text-center">#</th>
+                    <th style="width: 10%;">Invoice No</th>
+                    <th style="width: 24%;">Customer / Buyer Name</th>
+                    <th style="width: 14%;">Destination Place</th>
+                    <th style="width: 14%;">Preferred Transport</th>
+                    <th style="width: 6%;" class="text-center">Box No</th>
+                    <th style="width: 7%;" class="text-center">Qty (Pcs)</th>
+                    <th style="width: 11%;">LR Slip No (Receipt)</th>
+                    <th style="width: 11%;">Driver Sign / Date</th>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="9" class="text-center" style="padding: 15px; color: #888;">
-                        No transport bookings found for this selection.
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @forelse($bookings as $idx => $b)
+                    <tr>
+                        <td class="text-center">{{ $idx + 1 }}</td>
+                        <td class="fw-bold">
+                            {{ $b->salesInvoice->inv_no ?? '-' }}
+                            @if(!empty($b->salesInvoice?->inv_date))
+                                <div style="font-size: 8px; font-weight: normal; color: #555;">{{ \Carbon\Carbon::parse($b->salesInvoice->inv_date)->format('d-m-Y') }}</div>
+                            @endif
+                        </td>
+                        <td>
+                            <strong>{{ $b->customer->name ?? '-' }}</strong>
+                            @if(!empty($b->customer->code))
+                                <span style="font-size: 8.5px; color: #666;">({{ $b->customer->code }})</span>
+                            @endif
+                        </td>
+                        <td>{{ (!empty($b->booking_office) && $b->booking_office !== 'None') ? $b->booking_office : ($b->customer->city->city_name ?? ($b->customer->place->place_name ?? '-')) }}</td>
+                        <td class="fw-bold">{{ $b->preferred_transport ?: '-' }}</td>
+                        <td class="text-center fw-bold">{{ $b->box_number }}</td>
+                        <td class="text-center fw-bold">{{ (int)$b->quantity }}</td>
+                        <td>{{ $b->lr_no ?: '____________________' }}</td>
+                        <td>____________________</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="9" class="text-center" style="padding: 15px; color: #888;">
+                            No transport bookings found for this selection.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    @else
+        @foreach($grouped as $transportName => $transBookings)
+            <div style="font-size: 11px; font-weight: bold; background: #e9ecef; border: 1px solid #aaa; padding: 4px 8px; margin-top: 10px; margin-bottom: 3px;">
+                <span style="color: #0d6efd; text-transform: uppercase;">{{ $transportName }}</span>
+                <span style="float: right; font-size: 9.5px; color: #333;">Total Boxes: {{ $transBookings->count() }} | Total Qty: {{ (int)$transBookings->sum('quantity') }} Pcs</span>
+                <div style="clear: both;"></div>
+            </div>
+            <table class="data-table" style="margin-bottom: 10px;">
+                <thead>
+                    <tr>
+                        <th style="width: 3%;" class="text-center">#</th>
+                        <th style="width: 10%;">Invoice No</th>
+                        <th style="width: 24%;">Customer / Buyer Name</th>
+                        <th style="width: 14%;">Destination Place</th>
+                        <th style="width: 14%;">Preferred Transport</th>
+                        <th style="width: 6%;" class="text-center">Box No</th>
+                        <th style="width: 7%;" class="text-center">Qty (Pcs)</th>
+                        <th style="width: 11%;">LR Slip No (Receipt)</th>
+                        <th style="width: 11%;">Driver Sign / Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($transBookings as $idx => $b)
+                        <tr>
+                            <td class="text-center">{{ $idx + 1 }}</td>
+                            <td class="fw-bold">
+                                {{ $b->salesInvoice->inv_no ?? '-' }}
+                                @if(!empty($b->salesInvoice?->inv_date))
+                                    <div style="font-size: 8px; font-weight: normal; color: #555;">{{ \Carbon\Carbon::parse($b->salesInvoice->inv_date)->format('d-m-Y') }}</div>
+                                @endif
+                            </td>
+                            <td>
+                                <strong>{{ $b->customer->name ?? '-' }}</strong>
+                                @if(!empty($b->customer->code))
+                                    <span style="font-size: 8.5px; color: #666;">({{ $b->customer->code }})</span>
+                                @endif
+                            </td>
+                            <td>{{ (!empty($b->booking_office) && $b->booking_office !== 'None') ? $b->booking_office : ($b->customer->city->city_name ?? ($b->customer->place->place_name ?? '-')) }}</td>
+                            <td class="fw-bold">{{ $b->preferred_transport ?: '-' }}</td>
+                            <td class="text-center fw-bold">{{ $b->box_number }}</td>
+                            <td class="text-center fw-bold">{{ (int)$b->quantity }}</td>
+                            <td>{{ $b->lr_no ?: '____________________' }}</td>
+                            <td>____________________</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endforeach
+    @endif
 
     <table class="sign-table">
         <tr>

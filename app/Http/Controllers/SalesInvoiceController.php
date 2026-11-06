@@ -25,6 +25,7 @@ use App\Models\Brand;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\SalesInvoiceReportExport;
 use App\Exports\SalesInvoiceItemsExport;
+use App\Services\DocumentPdfMergerService;
 
 class SalesInvoiceController extends Controller
 {
@@ -1036,7 +1037,8 @@ class SalesInvoiceController extends Controller
             'items.stockEntryItem.style',
             'items.stockEntryItem.rawMaterial',
             'items.stockEntryItem.uom',
-            'salesOrder'
+            'salesOrder',
+            'transportBookings'
         ])->findOrFail($id) : null;
         if ($invoice && $invoice->einvoice_status === 'cancelled') {
             return redirect('sales_invoices')->with('error', 'Cancelled invoices cannot be edited.');
@@ -1866,7 +1868,7 @@ class SalesInvoiceController extends Controller
         $totalInWords = numberToWords($invoice->grand_total);
         $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
         $pdfType = request()->query('type', 'pdf1');
-        $viewName = (request()->query('template') === 'new' || request()->query('design') === 'new') ? 'sales_invoice.pdf_new' : 'sales_invoice.pdf';
+        $viewName = (request()->query('template') === 'old' || request()->query('design') === 'old') ? 'sales_invoice.pdf' : 'sales_invoice.pdf_new';
 
         $fontDir = storage_path('fonts');
         if (!file_exists($fontDir)) {
@@ -1953,7 +1955,7 @@ class SalesInvoiceController extends Controller
         $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
         $pdfType = request()->query('type', 'pdf1');
         $is_print = true;
-        $viewName = (request()->query('template') === 'new' || request()->query('design') === 'new') ? 'sales_invoice.pdf_new' : 'sales_invoice.pdf';
+        $viewName = (request()->query('template') === 'old' || request()->query('design') === 'old') ? 'sales_invoice.pdf' : 'sales_invoice.pdf_new';
 
         return view($viewName, compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print', 'pdfType'));
     }
@@ -2022,7 +2024,7 @@ class SalesInvoiceController extends Controller
         $setting = Setting::with(['state', 'city'])->first();
         $totalPcs = $invoice->items->sum('quantity');
 
-        $mode = $request->query('mode', 'portrait');
+        $mode = $request->query('mode', 'landscape');
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
 
         $fontDir = storage_path('fonts');
@@ -2037,7 +2039,7 @@ class SalesInvoiceController extends Controller
         }
 
         $pdf = Pdf::loadView('sales_invoice.delivery_order', compact('invoice', 'setting', 'totalPcs'));
-        $pdf->setPaper('A4', 'portrait');
+        $pdf->setPaper('A4', 'landscape');
         return $pdf->stream('Delivery_Order_' . $safeInvoiceNo . '.pdf');
     }
 
@@ -2059,7 +2061,7 @@ class SalesInvoiceController extends Controller
         $setting = Setting::with(['state', 'city'])->first();
         $totalPcs = $invoice->items->sum('quantity');
 
-        $mode = $request->query('mode', 'portrait');
+        $mode = $request->query('mode', 'landscape');
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
 
         $fontDir = storage_path('fonts');
@@ -2074,7 +2076,7 @@ class SalesInvoiceController extends Controller
         }
 
         $pdf = Pdf::loadView('sales_invoice.open_delivery_order', compact('invoice', 'setting', 'totalPcs'));
-        $pdf->setPaper('A4', 'portrait');
+        $pdf->setPaper('A4', 'landscape');
         return $pdf->stream('Open_Delivery_Order_' . $safeInvoiceNo . '.pdf');
     }
 
@@ -3024,7 +3026,17 @@ class SalesInvoiceController extends Controller
                     }
                 })
                 ->where(function ($q) use ($req) {
-                    $q->where('sku', $req['sku'])->orWhere('barcode', $req['sku']);
+                    $q->where('sku', $req['sku'])
+                      ->orWhere('barcode', $req['sku'])
+                      ->orWhere(function($sub) use ($req) {
+                          $sub->whereNull('sku');
+                          if (!empty($req['art_no'])) {
+                              $sub->where('art_no', $req['art_no']);
+                          }
+                          if (!empty($req['size'])) {
+                              $sub->where('size', $req['size']);
+                          }
+                      });
                 });
             if ($req['size']) {
                 $stockQuery->where('size', $req['size']);
@@ -3317,7 +3329,17 @@ class SalesInvoiceController extends Controller
             })
             ->where(function ($q) use ($item) {
                 if (!empty($item->sku)) {
-                    $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
+                    $q->where('sku', $item->sku)
+                      ->orWhere('barcode', $item->sku)
+                      ->orWhere(function($sub) use ($item) {
+                          $sub->whereNull('sku');
+                          if (!empty($item->art_no)) {
+                              $sub->where('art_no', $item->art_no);
+                          }
+                          if (!empty($item->size)) {
+                              $sub->where('size', $item->size);
+                          }
+                      });
                 } else {
                     $code = $item->item_name ?? $item->art_no;
                     $q->where('finished_item_code', $code)->orWhere('art_no', $code);
@@ -3763,5 +3785,152 @@ class SalesInvoiceController extends Controller
 
         $nextRunningNo = $maxRunningNo + 1;
         return "{$prefix}/{$nextRunningNo}/{$financialYear}";
+    }
+
+    /**
+     * Public Document Verification - Directly streams merged PDF (Tax Invoice + Delivery Order Challan)
+     */
+    public function publicDeliveryDocView($encryptedId, Request $request)
+    {
+        $invoiceId = DocumentPdfMergerService::decryptInvoiceId($encryptedId);
+        if (!$invoiceId) {
+            abort(404, 'Invalid document link or verification token expired.');
+        }
+
+        $invoice = SalesInvoice::find($invoiceId);
+        if (!$invoice) {
+            abort(404, 'Invoice record not found.');
+        }
+
+        $safeNo = str_replace(['/', '\\', ' '], '_', $invoice->inv_no);
+        $fileName = 'Casino_Invoice_Delivery_Order_' . $safeNo . '.pdf';
+
+        $doType = $request->query('do_type', 'landscape');
+        $mergedPdfBytes = DocumentPdfMergerService::generateMergedInvoiceAndDeliveryOrder($invoice, $doType);
+
+        return response($mergedPdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
+    }
+
+    /**
+     * Public Tax Invoice PDF Stream (Original Copy).
+     */
+    public function publicInvoicePdf($id)
+    {
+        $realId = DocumentPdfMergerService::decryptInvoiceId($id) ?: (is_numeric($id) ? (int)$id : null);
+        if (!$realId) {
+            abort(404, 'Invalid invoice identifier.');
+        }
+
+        $invoice = SalesInvoice::with([
+            'brand',
+            'store',
+            'customer.state', 
+            'customer.city', 
+            'salesOrder.salesAgent', 
+            'items' => function($q) {
+                $q->orderBy('art_no');
+            },
+            'items.brandCategory', 
+            'items.item.uom', 
+            'items.item.style',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.brand',
+            'items.stockEntryItem.uom',
+            'items.uom'
+        ])->findOrFail($id);
+
+        $setting = Setting::with(['state', 'city'])->first();
+        $discountRatio = $invoice->sub_total > 0 ? (($invoice->discount ?? 0) / $invoice->sub_total) : 0;
+        $taxSummary = [];
+        foreach ($invoice->items as $item) {
+            $hsn = $item->hsn_sac ?: '-';
+            if (!isset($taxSummary[$hsn])) {
+                $taxSummary[$hsn] = [
+                    'hsn' => $hsn,
+                    'taxable_value' => 0,
+                    'cgst_rate' => $invoice->cgst_percent,
+                    'cgst_amount' => 0,
+                    'sgst_rate' => $invoice->sgst_percent,
+                    'sgst_amount' => 0,
+                    'igst_rate' => $invoice->igst_percent,
+                    'igst_amount' => 0,
+                ];
+            }
+            $taxSummary[$hsn]['taxable_value'] += $item->amount - ($item->amount * $discountRatio);
+        }
+
+        foreach ($taxSummary as &$summary) {
+            $summary['cgst_amount'] = ($summary['taxable_value'] * $summary['cgst_rate']) / 100;
+            $summary['sgst_amount'] = ($summary['taxable_value'] * $summary['sgst_rate']) / 100;
+            $summary['igst_amount'] = ($summary['taxable_value'] * $summary['igst_rate']) / 100;
+        }
+
+        if (($invoice->other_charges ?? 0) > 0) {
+            $courierHsn = '9968';
+            $courierAmt = (float)$invoice->other_charges;
+            $isOtherState = (bool)($invoice->other_state ?? false);
+            $cgstRate = (float)($invoice->cgst_percent ?? 0);
+            $sgstRate = (float)($invoice->sgst_percent ?? 0);
+            $igstRate = (float)($invoice->igst_percent ?? 0);
+            
+            $taxSummary[$courierHsn] = [
+                'hsn' => $courierHsn,
+                'taxable_value' => $courierAmt,
+                'cgst_rate' => $isOtherState ? 0 : $cgstRate,
+                'cgst_amount' => $isOtherState ? 0 : ($courierAmt * $cgstRate) / 100,
+                'sgst_rate' => $isOtherState ? 0 : $sgstRate,
+                'sgst_amount' => $isOtherState ? 0 : ($courierAmt * $sgstRate) / 100,
+                'igst_rate' => $isOtherState ? $igstRate : 0,
+                'igst_amount' => $isOtherState ? ($courierAmt * $igstRate) / 100 : 0,
+            ];
+        }
+
+        $actualTaxTotal = !$invoice->other_state ? ((float)$invoice->cgst + (float)$invoice->sgst) : (float)$invoice->igst;
+        $totalInWords = numberToWords($invoice->grand_total);
+        $totalTaxInWords = numberToWords($actualTaxTotal > 0 ? $actualTaxTotal : $invoice->tax_amount);
+        $pdfType = 'pdf1';
+        $is_print = true;
+        request()->query->set('copy', 'ORIGINAL');
+
+        $pdf = Pdf::loadView('sales_invoice.pdf_new', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print', 'pdfType'));
+        $pdf->setPaper('A4', 'portrait');
+        $safeNo = str_replace(['/', '\\', ' '], '_', $invoice->inv_no);
+        return $pdf->stream('Tax_Invoice_Original_' . $safeNo . '.pdf');
+    }
+
+    /**
+     * Public Delivery Order PDF Stream.
+     */
+    public function publicDeliveryOrderPdf($id)
+    {
+        $realId = DocumentPdfMergerService::decryptInvoiceId($id) ?: (is_numeric($id) ? (int)$id : null);
+        if (!$realId) {
+            abort(404, 'Invalid invoice identifier.');
+        }
+
+        $invoice = SalesInvoice::with([
+            'customer.state', 
+            'customer.city', 
+            'salesOrder.salesAgent', 
+            'items.brandCategory', 
+            'items.item.uom', 
+            'items.item.style', 
+            'items.uom',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.rawMaterial',
+            'items.stockEntryItem.brand'
+        ])->findOrFail($id);
+
+        $setting = Setting::with(['state', 'city'])->first();
+        $totalPcs = $invoice->items->sum('quantity');
+        $safeInvoiceNo = str_replace(['/', '\\', ' '], '_', $invoice->inv_no);
+
+        $pdf = Pdf::loadView('sales_invoice.delivery_order_landscape', compact('invoice', 'setting', 'totalPcs'));
+        $pdf->setPaper('A4', 'landscape');
+        return $pdf->stream('Delivery_Order_' . $safeInvoiceNo . '.pdf');
     }
 }

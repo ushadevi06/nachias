@@ -110,9 +110,9 @@ $isSuper = $user->id == 1;
                                 </li>
 
                                 <!-- Master -->
-                                @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view colors') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view fabric-sizes') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view styles') || $user->can('view stores') || $user->can('view shipping-methods') || $user->can('view transport-mode') || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view shifts') || $user->can('view production-services') || $user->can('view warehouses') ||  $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent') || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items') || $user->can('view process-groups') || $user->can('view seasons') || $user->can('view retailers') || $user->can('view devices')))
+                                @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view leave-types') || $user->can('view colors') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view fabric-sizes') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view styles') || $user->can('view stores') || $user->can('view shipping-methods') || $user->can('view transport-mode') || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view shifts') || $user->can('view production-services') || $user->can('view warehouses') ||  $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent') || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items') || $user->can('view process-groups') || $user->can('view seasons') || $user->can('view retailers') || $user->can('view devices')))
                                     <li
-                                        class="menu-item master-dropdown {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('colors*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('fabric-sizes*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('stores*') || request()->is('styles*') || request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('shifts*') || request()->is('production_services*') || request()->is('warehouses*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*') || request()->is('item_prices*') || request()->is('fg-min-stocks*') || request()->is('standard_consumptions*') || request()->is('process_groups*') || request()->is('seasons*') || request()->is('shipping_methods*') || request()->is('transport_modes*') || request()->is('retailers*') || (request()->is('devices*'))) ? 'active' : '' }}">
+                                        class="menu-item master-dropdown {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('leave_types*') || request()->is('leave-types*') || request()->is('colors*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('fabric-sizes*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('stores*') || request()->is('styles*') || request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('shifts*') || request()->is('production_services*') || request()->is('warehouses*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*') || request()->is('item_prices*') || request()->is('fg-min-stocks*') || request()->is('standard_consumptions*') || request()->is('process_groups*') || request()->is('seasons*') || request()->is('shipping_methods*') || request()->is('transport_modes*') || request()->is('retailers*') || (request()->is('devices*'))) ? 'active' : '' }}">
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-layout-2-line"></i>
                                             <div>Master</div>
@@ -146,6 +146,14 @@ $isSuper = $user->id == 1;
                                                 <li class="menu-item {{ request()->is('uoms*') ? 'active' : '' }}">
                                                     <a href="{{ url('uoms') }}" class="menu-link">
                                                         <div>UOM</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+
+                                            @if($isSuper || $user->can('view leave-types'))
+                                                <li class="menu-item {{ (request()->is('leave_types*') || request()->is('leave-types*')) ? 'active' : '' }}">
+                                                    <a href="{{ url('leave_types') }}" class="menu-link">
+                                                        <div>Leave Types</div>
                                                     </a>
                                                 </li>
                                             @endif
@@ -686,9 +694,9 @@ $isSuper = $user->id == 1;
                                         </ul>
                                     </li>
                                 @endif
-                                @if($isSuper || $user->can('view sales-order') || $user->can('view sales-invoice') || $user->can('view credit-notes'))
+                                @if($isSuper || $user->can('view sales-order') || $user->can('view sales-invoice') || $user->can('view transport-handover') || $user->can('view credit-notes'))
                                     <li
-                                        class="menu-item {{ (request()->is('sales_orders*') || request()->is('sales_invoices*') || request()->is('credit_notes*')) ? 'active' : '' }}">
+                                        class="menu-item {{ (request()->is('sales_orders*') || request()->is('sales_invoices*') || request()->is('transport_bookings*') || request()->is('credit_notes*')) ? 'active' : '' }}">
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-order-play-line"></i>
                                             <div>Sales</div>
@@ -708,6 +716,9 @@ $isSuper = $user->id == 1;
                                                         <div>Sales Invoices</div>
                                                     </a>
                                                 </li>
+                                            @endif
+
+                                            @if($isSuper || $user->can('view transport-handover'))
                                                 <li class="menu-item {{ request()->is('transport_bookings*') ? 'active' : '' }}">
                                                     <a href="{{ url('transport_bookings') }}" class="menu-link">
                                                         <div>Transport Handover / LR Register</div>
@@ -747,7 +758,7 @@ $isSuper = $user->id == 1;
                                 @endphp
                                 @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime') || $user->can('view monthly-payroll') || $isEmployeeUser))
                                     <li
-                                        class="menu-item {{ (request()->is('attendances*') || request()->is('view_attendance/*') || request()->is('leave*') || request()->is('add_leave') || request()->is('view_leave/*') || request()->is('overtime*') || request()->is('view_overtime/*') || request()->is('monthly_payroll*') || request()->is('add_monthly_payroll') || request()->is('payslip*') || request()->is('employee_attendance*')) ? 'active' : '' }}">
+                                        class="menu-item {{ ((request()->is('attendances*') || request()->is('view_attendance/*') || request()->is('leave') || request()->is('leaves*') || request()->is('add_leave*') || request()->is('view_leave/*') || request()->is('overtime*') || request()->is('view_overtime/*') || request()->is('monthly_payroll*') || request()->is('add_monthly_payroll*') || request()->is('payslip*') || request()->is('employee_attendance*')) && !request()->is('leave_types*') && !request()->is('leave-types*')) ? 'active' : '' }}">
 
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-money-rupee-circle-line"></i>
@@ -771,7 +782,7 @@ $isSuper = $user->id == 1;
                                             @endif
 
                                             @if($isSuper || $user->can('view manage-leaves'))
-                                                <li class="menu-item {{ request()->is('leave*') || request()->is('add_leave') || request()->is('view_leave/*') ? 'active' : '' }}">
+                                                <li class="menu-item {{ ((request()->is('leave') || request()->is('leaves*') || request()->is('add_leave*') || request()->is('view_leave/*')) && !request()->is('leave_types*') && !request()->is('leave-types*')) ? 'active' : '' }}">
                                                     <a href="{{ url('leave') }}" class="menu-link">
                                                         <div>Manage Leaves</div>
                                                     </a>
@@ -808,16 +819,14 @@ $isSuper = $user->id == 1;
                                 @endif
                                 <!-- System Utility -->
                                 @if($user && ($isSuper || $user->can('view document-repository') || $user->can('view log') || $user->can('view backup-restore')))
-                                    <li
-                                        class="menu-item {{ request()->is('document_repository*') || request()->is('logs') || request()->is('backup_restore') ? 'active' : '' }}">
+                                    <li class="menu-item {{ request()->is('document_repository*') || request()->is('logs') || request()->is('backup_restore') ? 'active' : '' }}">
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-database-2-line"></i>
                                             <div>System Utility</div>
                                         </a>
                                         <ul class="menu-sub">
                                             @if($isSuper || $user->can('view document-repository'))
-                                                <li
-                                                    class="menu-item {{ request()->is('document_repository*') ? 'active' : '' }}">
+                                                <li class="menu-item {{ request()->is('document_repository*') ? 'active' : '' }}">
                                                     <a href="{{ url('document_repository') }}" class="menu-link">
                                                         <div>Document Repository</div>
                                                     </a>
@@ -844,8 +853,7 @@ $isSuper = $user->id == 1;
                                 @endif
                                 <!-- Reports -->
                                 @if($user && ($isSuper || $user->can('view sales-marketing-report') || $user->can('view warehouse-report') || $user->can('view production-report') || $user->can('view payroll-reports')))
-                                <li
-                                    class="menu-item {{  request()->is('sales_marketing_reports*') || request()->is('warehouse_reports*') || request()->is('production_reports*') || request()->is('purchase_reports*') || request()->is('payroll_reports*')? 'active' : '' }}">
+                                <li class="menu-item {{  request()->is('sales_marketing_reports*') || request()->is('warehouse_reports*') || request()->is('production_reports*') || request()->is('purchase_reports*') || request()->is('payroll_reports*')? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-file-chart-line"></i>
                                         <div>Reports</div>
@@ -868,8 +876,7 @@ $isSuper = $user->id == 1;
                                         </li>
                                         @endif
                                         @if($isSuper || $user->can('view production-report'))
-                                        <li
-                                            class="menu-item {{ request()->is('production_reports*') ? 'active' : '' }}">
+                                        <li class="menu-item {{ request()->is('production_reports*') ? 'active' : '' }}">
                                             <a href="{{ url('production_reports') }}" class="menu-link">
                                                 <div>Production Reports</div>
                                             </a>

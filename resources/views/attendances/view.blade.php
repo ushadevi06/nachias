@@ -1,6 +1,38 @@
 @extends('layouts.common')
 @section('title', 'Attendance Management - ' . env('WEBSITE_NAME'))
 @section('content')
+<style>
+    .badge-status-present, .badge.bg-success { background-color: #28c76f !important; color: #fff !important; }
+    .badge-status-absent, .badge.bg-danger { background-color: #ea5455 !important; color: #fff !important; }
+    .badge-status-overtime, .badge.bg-info { background-color: #16b1ff !important; color: #fff !important; }
+    .badge-status-late, .badge.bg-warning { background-color: #ffb400 !important; color: #000 !important; }
+
+    /* Staff Wise Report - Sunday / Week Off Row Highlight */
+    #staffReportTable tbody tr.row-sunday,
+    #staffReportTable tbody tr.row-sunday > td,
+    #staffReportTable tbody tr.row-sunday > th,
+    #staffReportTable.table-striped tbody tr.row-sunday:nth-of-type(odd) > *,
+    #staffReportTable.table-striped tbody tr.row-sunday:nth-of-type(even) > *,
+    #staffReportTable.table-striped tbody tr.row-sunday.odd > *,
+    #staffReportTable.table-striped tbody tr.row-sunday.even > * {
+        background-color: #fff3cd !important;
+        --bs-table-bg: #fff3cd !important;
+        --bs-table-accent-bg: #fff3cd !important;
+        --bs-table-striped-bg: #fff3cd !important;
+        box-shadow: inset 0 0 0 9999px #fff3cd !important;
+    }
+    #staffReportTable tbody tr.row-sunday:hover > td,
+    #staffReportTable.table-striped tbody tr.row-sunday:hover > * {
+        background-color: #ffe69c !important;
+        --bs-table-bg: #ffe69c !important;
+        --bs-table-accent-bg: #ffe69c !important;
+        box-shadow: inset 0 0 0 9999px #ffe69c !important;
+    }
+    #staffReportTable tbody tr.row-sunday > td:first-child {
+        border-left: 4px solid #ff9f43 !important;
+    }
+</style>
+
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-12 mb-4">
@@ -36,6 +68,7 @@
                                 </select> --}}
                                 <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
                                     <option value="">Choose device</option>
+                                    <option value="all" {{ (isset($device) && $device === 'all') ? 'selected' : '' }}>All</option>
                                     @foreach ($devices as $device)
                                         <option value="{{ $device->serial_number }}" {{ (isset($device) && $device->serial_number === $device) ? 'selected' : '' }}>{{ $device->device_name }}</option>
                                     @endforeach
@@ -69,7 +102,7 @@
                                         <h6 class="card-title text-white mb-1 opacity-75">Total Employees</h6>
                                         <h3 class="card-text text-white mb-0 fw-bold" id="summaryTotalCount">0</h3>
                                     </div>
-                                    <div class="fs-1 opacity-50"><i class="ri-group-line"></i></div>
+                                    <div class="fs-1 opacity-50"><i class="ri ri-group-line"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -80,7 +113,7 @@
                                         <h6 class="card-title text-white mb-1 opacity-75">Present</h6>
                                         <h3 class="card-text text-white mb-0 fw-bold" id="summaryPresentCount">0</h3>
                                     </div>
-                                    <div class="fs-1 opacity-50"><i class="ri-user-follow-line"></i></div>
+                                    <div class="fs-1 opacity-50"><i class="ri ri-user-follow-line"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -91,7 +124,7 @@
                                         <h6 class="card-title text-white mb-1 opacity-75">Absent</h6>
                                         <h3 class="card-text text-white mb-0 fw-bold" id="summaryAbsentCount">0</h3>
                                     </div>
-                                    <div class="fs-1 opacity-50"><i class="ri-user-unfollow-line"></i></div>
+                                    <div class="fs-1 opacity-50"><i class="ri ri-user-unfollow-line"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -102,7 +135,7 @@
                                         <h6 class="card-title text-dark mb-1 opacity-75">Late Comers</h6>
                                         <h3 class="card-text text-dark mb-0 fw-bold" id="summaryLateCount">0</h3>
                                     </div>
-                                    <div class="fs-1 opacity-50"><i class="ri-time-line"></i></div>
+                                    <div class="fs-1 opacity-50"><i class="ri ri-time-line"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -113,7 +146,7 @@
                                         <h6 class="card-title text-white mb-1 opacity-75">Overtime</h6>
                                         <h3 class="card-text text-white mb-0 fw-bold" id="summaryOvertimeCount">0</h3>
                                     </div>
-                                    <div class="fs-1 opacity-50"><i class="ri-history-line"></i></div>
+                                    <div class="fs-1 opacity-50"><i class="ri ri-history-line"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -181,19 +214,19 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label small fw-semibold text-muted">Status</label>
-                            <select id="edit_status" class="form-select form-select-lg">
-                                <option value="">Select Status</option>
-                                <option value="Present">Present</option>
-                                <option value="Late">Late</option>
-                                <option value="Absent">Absent</option>
-                                <option value="Missing Time Card">Missing Time Card</option>
-                                <option value="Overtime">Overtime</option>
-                                <option value="Holiday">Holiday</option>
-                                <option value="Week Off">Week Off</option>
-                            </select>
-                            <small class="text-danger error-text" id="status_error"></small>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted d-block">Status <small class="text-muted fw-normal">(Auto-calculated from Time)</small></label>
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                <span id="edit_status_badge" class="badge bg-success px-3 py-2 fs-6">Present</span>
+                                <input type="hidden" id="edit_status" value="Present">
+                                <input type="hidden" id="edit_attendance_date" value="">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted">Reason <span class="text-danger">*</span></label>
+                            <textarea id="edit_reason" class="form-control" rows="3" placeholder="Enter reason for modifying attendance (Mandatory)..."></textarea>
+                            <small class="text-danger error-text" id="reason_error"></small>
                         </div>
                     </div>
                     <div class="modal-footer border-top-0 pt-0 px-4 pb-4">
@@ -365,6 +398,7 @@
                                     <tr>
                                         <th scope="col">#</th>
                                         <th scope="col">Date</th>
+                                        <th scope="col">Day</th>
                                         <th scope="col">Employee</th>
                                         <th scope="col">Employee Code</th>
                                         {{-- <th scope="col">Device</th> --}}
@@ -481,12 +515,12 @@
         let staffReportRecords = [];
 
         function getBadgeClass(status) {
-            if (status === 'Present') return 'badge bg-success';
-            if (status === 'Late') return 'badge bg-warning text-dark';
-            if (status === 'Overtime') return 'badge bg-info';
-            if (status === 'Absent') return 'badge bg-danger';
-            if (status === 'Punch Out Missing') return 'badge bg-danger';
-            if (status === 'Missing Time Card') return 'badge bg-danger';
+            if (status === 'Present') return 'badge bg-success badge-status-present';
+            if (status === 'Absent') return 'badge bg-danger badge-status-absent';
+            if (status === 'Overtime') return 'badge bg-info text-white badge-status-overtime';
+            if (status === 'Late') return 'badge bg-warning text-dark badge-status-late';
+            if (status === 'Punch Out Missing') return 'badge bg-danger badge-status-absent';
+            if (status === 'Missing Time Card') return 'badge bg-danger badge-status-absent';
             if (status === 'Holiday') return 'badge bg-primary';
             if (status === 'Week Off') return 'badge bg-secondary';
             return 'badge bg-secondary';
@@ -831,20 +865,49 @@
             return records;
         }
 
+        function getDayInfo(dateString) {
+            if (!dateString) return { name: '-', isSunday: false };
+            const clean = dateString.split(' ')[0];
+            const parts = clean.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                const d = new Date(year, month, day);
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const dayIndex = d.getDay();
+                return {
+                    name: days[dayIndex] || '-',
+                    isSunday: dayIndex === 0
+                };
+            }
+            return { name: '-', isSunday: false };
+        }
+
         function renderStaffReportRows(records) {
-            return records.map((record, index) => `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${formatDate(record.date)}</td>
-                    <td>${record.employee}</td>
-                    <td>${record.code}</td>
-                    <td>${record.device}</td>
-                    <td>${record.inTime}</td>
-                    <td>${record.outTime}</td>
-                    <td>${record.hours}</td>
-                    <td><span class="${getBadgeClass(record.status)}">${record.status}</span></td>
+            return records.map((record, index) => {
+                const dayInfo = getDayInfo(record.date);
+                const dayName = record.day || dayInfo.name;
+                const isSunday = (typeof record.is_sunday !== 'undefined') ? record.is_sunday : (dayInfo.isSunday || record.status === 'Week Off');
+                const rowClass = isSunday ? 'row-sunday table-warning' : '';
+                const tdStyle = isSunday ? 'background-color: #fff3cd !important;' : '';
+                const dayHtml = `<span class="fw-semibold text-dark">${dayName}</span>`;
+
+                return `
+                <tr class="${rowClass}" style="${tdStyle}">
+                    <td style="${tdStyle}${isSunday ? 'border-left: 4px solid #ff9f43 !important;' : ''}">${index + 1}</td>
+                    <td class="fw-medium" style="${tdStyle}">${formatDate(record.date)}</td>
+                    <td style="${tdStyle}">${dayHtml}</td>
+                    <td style="${tdStyle}">${record.employee}</td>
+                    <td style="${tdStyle}">${record.code}</td>
+                    <td style="${tdStyle}">${record.device}</td>
+                    <td style="${tdStyle}">${record.inTime}</td>
+                    <td style="${tdStyle}">${record.outTime}</td>
+                    <td style="${tdStyle}">${record.hours}</td>
+                    <td style="${tdStyle}"><span class="${getBadgeClass(record.status)}">${record.status}</span></td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function updateStaffReportSummary(records, employeeCode, monthValue) {
@@ -884,7 +947,7 @@
             staffReportNoData.style.display = 'none';
             staffReportBody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="text-center py-5">
+                    <td colspan="9" class="text-center py-5">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
@@ -921,13 +984,22 @@
                     return;
                 }
                 staffReportNoData.style.display = 'none';
-                staffReportBody.innerHTML = data.map((record, index) => `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>${formatDate(record.date)}</td>
-                        <td>${record.employee}</td>
-                        <td>${record.code}</td>
-                        <td>
+                staffReportBody.innerHTML = data.map((record, index) => {
+                    const dayInfo = getDayInfo(record.date);
+                    const dayName = record.day || dayInfo.name;
+                    const isSunday = (typeof record.is_sunday !== 'undefined') ? record.is_sunday : (dayInfo.isSunday || record.status === 'Week Off');
+                    const rowClass = isSunday ? 'row-sunday table-warning' : '';
+                    const tdStyle = isSunday ? 'background-color: #fff3cd !important;' : '';
+                    const dayHtml = `<span class="fw-semibold text-dark">${dayName}</span>`;
+
+                    return `
+                    <tr class="${rowClass}" style="${tdStyle}">
+                        <td style="${tdStyle}${isSunday ? 'border-left: 4px solid #ff9f43 !important;' : ''}">${index + 1}</td>
+                        <td class="fw-medium" style="${tdStyle}">${formatDate(record.date)}</td>
+                        <td style="${tdStyle}">${dayHtml}</td>
+                        <td style="${tdStyle}">${record.employee}</td>
+                        <td style="${tdStyle}">${record.code}</td>
+                        <td style="${tdStyle}">
                             ${
                                 record.in_time
                                 ? new Date(record.in_time).toLocaleTimeString([], {
@@ -937,7 +1009,7 @@
                                 : '-'
                             }
                         </td>
-                        <td>
+                        <td style="${tdStyle}">
                             ${
                                 record.out_time
                                 ? new Date(record.out_time).toLocaleTimeString([], {
@@ -947,14 +1019,15 @@
                                 : '-'
                             }
                         </td>
-                        <td>${record.hours ?? '-'}</td>
-                        <td>
+                        <td style="${tdStyle}">${record.hours ?? '-'}</td>
+                        <td style="${tdStyle}">
                             <span class="${getBadgeClass(record.status)}">
                                 ${record.status}
                             </span>
                         </td>
                     </tr>
-                `).join('');
+                    `;
+                }).join('');
                 initStaffReportDataTable();
                 const present =
                     data.filter(x => x.status === 'Present' || x.status === 'Overtime').length;
@@ -1208,8 +1281,10 @@
                                     <button class="btn btn-edit editAttendanceBtn"
                                             data-id="${item.id}"
                                             data-status="${item.status}"
+                                            data-date="${item.date || attendanceDate.value}"
                                             data-in="${item.in_time ? item.in_time.split(' ')[1].substring(0,5) : '-'}"
-                                            data-out="${item.out_time ? item.out_time.split(' ')[1].substring(0,5) : '-'}">
+                                            data-out="${item.out_time ? item.out_time.split(' ')[1].substring(0,5) : '-'}"
+                                            data-reason="${(item.reason || '').replace(/"/g, '&quot;')}">
                                         <i class="icon-base ri ri-edit-box-line"></i>
                                     </button>
                                 ` : ''}
@@ -1231,15 +1306,76 @@
             let minutes = String(date.getMinutes()).padStart(2, '0');
             return `${hours}:${minutes}`;
         }
+
+        function computeLiveStatus() {
+            let inTime = ($('#edit_in_time').val() || '').trim();
+            let outTime = ($('#edit_out_time').val() || '').trim();
+            let recordDate = $('#edit_attendance_date').val() || attendanceDate.value;
+
+            let computedStatus = 'Present';
+
+            if (!inTime && !outTime) {
+                computedStatus = 'Absent';
+            } else if (inTime) {
+                let hours = 0;
+                if (inTime && outTime) {
+                    let [inH, inM] = inTime.split(':').map(Number);
+                    let [outH, outM] = outTime.split(':').map(Number);
+                    let diffM = (outH * 60 + outM) - (inH * 60 + inM);
+                    if (diffM > 0) {
+                        hours = diffM / 60;
+                    }
+                }
+
+                let isSunday = false;
+                if (recordDate) {
+                    let d = new Date(recordDate);
+                    if (!isNaN(d.getTime())) {
+                        isSunday = (d.getDay() === 0);
+                    }
+                }
+
+                if (isSunday) {
+                    computedStatus = 'Overtime';
+                } else if (hours > 9) {
+                    computedStatus = 'Overtime';
+                } else {
+                    let [inH, inM] = inTime.split(':').map(Number);
+                    let inMinutes = inH * 60 + inM;
+                    let lateMinutes = 9 * 60 + 5; // 09:05 AM
+
+                    if (inMinutes > lateMinutes) {
+                        computedStatus = 'Late';
+                    } else {
+                        computedStatus = 'Present';
+                    }
+                }
+            } else if (!inTime && outTime) {
+                computedStatus = 'Missing Time Card';
+            }
+
+            $('#edit_status').val(computedStatus);
+            $('#edit_status_badge').attr('class', getBadgeClass(computedStatus) + ' px-3 py-2 fs-6').text(computedStatus);
+        }
+
+        $('#edit_in_time, #edit_out_time').on('input change', function() {
+            computeLiveStatus();
+        });
+
         $(document).on('click', '.editAttendanceBtn', function () {
             $('.error-text').text('');
             $('#edit_in_time').removeClass('is-invalid');
             $('#edit_out_time').removeClass('is-invalid');
-            $('#edit_status').removeClass('is-invalid');
+            $('#edit_reason').removeClass('is-invalid');
             $('#attendance_id').val($(this).data('id'));
-            $('#edit_status').val($(this).data('status'));
+            $('#edit_attendance_date').val($(this).data('date') || attendanceDate.value);
+            let currentStatus = $(this).data('status') || 'Present';
+            $('#edit_status').val(currentStatus);
+            $('#edit_status_badge').attr('class', getBadgeClass(currentStatus) + ' px-3 py-2 fs-6').text(currentStatus);
             $('#edit_in_time').val(formatTime($(this).data('in')));
             $('#edit_out_time').val(formatTime($(this).data('out')));
+            $('#edit_reason').val($(this).data('reason') || '');
+            computeLiveStatus();
             $('#editAttendanceModal').modal('show');
         });
         $('#saveAttendanceBtn').on('click', function () {
@@ -1248,9 +1384,11 @@
             $('#edit_in_time').removeClass('is-invalid');
             $('#edit_out_time').removeClass('is-invalid');
             $('#edit_status').removeClass('is-invalid');
+            $('#edit_reason').removeClass('is-invalid');
             let inTime = $('#edit_in_time').val().trim();
             let outTime = $('#edit_out_time').val().trim();
             let status = ($('#edit_status').val() || '').trim();
+            let reason = ($('#edit_reason').val() || '').trim();
             let hasError = false;
             if (!inTime) {
                 $('#in_time_error').text('In time is required');
@@ -1268,6 +1406,15 @@
                 $('#edit_out_time').addClass('is-invalid');
                 hasError = true;
             }
+            if (!reason) {
+                $('#reason_error').text('Reason is mandatory for modifying attendance');
+                $('#edit_reason').addClass('is-invalid');
+                hasError = true;
+            } else if (reason.length < 3) {
+                $('#reason_error').text('Reason must be at least 3 characters');
+                $('#edit_reason').addClass('is-invalid');
+                hasError = true;
+            }
             if (hasError) {
                 return;
             }
@@ -1281,7 +1428,8 @@
                     id: $('#attendance_id').val(),
                     in_time: inTime,
                     out_time: outTime || null,
-                    status: status
+                    status: status,
+                    reason: reason
                 })
             })
             .then(res => res.json())
@@ -1293,7 +1441,17 @@
                     // syncButton.click();
                     loadAttendanceData();
                 } else {
-                    showStatus('danger', res.message);
+                    if (res.errors) {
+                        if (res.errors.reason) {
+                            $('#reason_error').text(res.errors.reason[0]);
+                            $('#edit_reason').addClass('is-invalid');
+                        }
+                        if (res.errors.in_time) {
+                            $('#in_time_error').text(res.errors.in_time[0]);
+                            $('#edit_in_time').addClass('is-invalid');
+                        }
+                    }
+                    showStatus('danger', res.message || 'Validation error occurred');
                 }
 
             })

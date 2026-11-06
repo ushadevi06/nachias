@@ -57,6 +57,29 @@
                 <div class="col-lg-12">
                     @include('flash_messages')
 
+                    @php
+                        $isInvoiceLocked = isset($invoice) && $invoice->is_locked_for_edit;
+                        $isBooked = isset($invoice) && $invoice->is_booked;
+                    @endphp
+
+                    @if ($isInvoiceLocked)
+                        <div class="alert alert-warning py-3 px-3 d-flex align-items-center mb-3 shadow-sm border-warning" role="alert" style="border-left: 5px solid #ff9f43 !important;">
+                            <i class="ri-lock-2-line fs-3 me-3 text-warning"></i>
+                            <div>
+                                @if ($invoice->einvoice_status === 'generated')
+                                    <h6 class="alert-heading mb-1 text-dark fw-bold">E-Invoice Generated</h6>
+                                    <div class="small text-muted">This invoice has an active E-Invoice (IRN). Customer details, items, quantities, and rates are strictly locked to maintain GST compliance. Authorized signature, attachments, and Transport &amp; E-Way Bill details are editable.</div>
+                                @elseif ($isBooked)
+                                    <h6 class="alert-heading mb-1 text-dark fw-bold">LR Booked / Out for Delivery (Locked in Readonly Mode)</h6>
+                                    <div class="small text-muted">Transport LR (<strong>{{ $invoice->lr_no ?: 'Booked' }}</strong>) has already been recorded and dispatch notification sent. Invoice items and customer details cannot be edited.</div>
+                                @else
+                                    <h6 class="alert-heading mb-1 text-dark fw-bold">Dispatched (Locked in Readonly Mode)</h6>
+                                    <div class="small text-muted">This invoice has already been dispatched and is locked in readonly mode.</div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
                     @if (session('stock_alert'))
                         <div class="alert alert-danger alert-dismissible py-2 px-3 d-flex align-items-center mb-3 shadow-sm border-danger"
                             role="alert">
@@ -78,7 +101,7 @@
                                 <h4>{{ $invoice ? 'Edit' : 'Add' }} Sales Invoice</h4>
                             </div>
                             <div class="row g-4">
-                                <div class="col-md-6 col-xl-4" id="store_container">
+                                <div class="col-md-6 col-xl-3" id="store_container">
                                     <div class="form-floating form-floating-outline">
                                         <select id="store_id" name="store_id" class="select2 form-select @error('store_id') is-invalid @enderror"
                                             data-placeholder="Select Store" {{ isset($invoice) ? 'disabled' : '' }}>
@@ -98,7 +121,7 @@
                                         @enderror
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-6 col-xl-3">
                                     <div class="form-floating form-floating-outline">
                                         <input type="text"
                                             class="form-control form-control @error('inv_date') is-invalid @enderror"
@@ -111,7 +134,19 @@
                                         @enderror
                                     </div>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-6 col-xl-3">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text"
+                                            class="form-control flatpickr-date @error('tran_doc_date') is-invalid @enderror"
+                                            id="tran_doc_date" name="tran_doc_date" placeholder="Enter Dispatched Date"
+                                            value="{{ old('tran_doc_date', isset($invoice) && $invoice->tran_doc_date ? \Carbon\Carbon::parse($invoice->tran_doc_date)->format('d-m-Y') : date('d-m-Y')) }}" />
+                                        <label for="tran_doc_date">Dispatched Date <span class="text-danger">*</span></label>
+                                        @error('tran_doc_date')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-xl-3">
                                     <div class="form-floating form-floating-outline">
                                         <input type="text" class="form-control @error('inv_no') is-invalid @enderror"
                                             id="inv_no" placeholder="Enter Invoice No" name="inv_no"
@@ -148,12 +183,12 @@
                                             value="{{ $initialCustomerName }}"
                                             autocomplete="off"
                                             style="padding-right: 38px;"
-                                            {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                            {{ $isInvoiceLocked ? 'readonly' : '' }}>
                                         
                                         <input type="hidden" name="customer_id" id="customer_id" value="{{ $initialCustomerId }}">
                                         <label for="customer_search">Customer <span class="text-danger">*</span></label>
                                         
-                                        @if (!isset($invoice) || !($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                        @if (!$isInvoiceLocked)
                                             <button type="button" id="clear_customer_btn" class="btn p-0 text-muted position-absolute d-flex align-items-center justify-content-center" style="right: 10px; top: 50%; transform: translateY(-50%); border: none; background: transparent; width: 26px; height: 26px; z-index: 5; cursor: pointer; {{ empty($initialCustomerId) ? 'display: none;' : '' }}" title="Clear Customer">
                                                 <i class="ri ri-close-circle-fill text-secondary fs-5" style="font-size: 20px; transition: color 0.2s;"></i>
                                             </button>
@@ -191,14 +226,14 @@
                                         <select id="so_ids" name="so_ids[]"
                                             class="select2 form-select @error('so_ids') is-invalid @enderror" multiple
                                             data-placeholder="Select Sales Orders"
-                                            {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'disabled' : '' }}>
+                                            {{ $isInvoiceLocked ? 'disabled' : '' }}>
                                             @foreach ($saleOrders as $so)
                                                 <option value="{{ $so->id }}"
                                                     {{ is_array(old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : [])) && in_array($so->id, old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : [])) ? 'selected' : '' }}>
                                                     {{ $so->so_no }}</option>
                                             @endforeach
                                         </select>
-                                        @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                        @if ($isInvoiceLocked)
                                             @foreach (old('so_ids', isset($invoice) && $invoice->so_ids ? (json_decode($invoice->so_ids, true) ?: []) : []) as $soId)
                                                 <input type="hidden" name="so_ids[]" value="{{ $soId }}">
                                             @endforeach
@@ -274,7 +309,7 @@
                                         <div class="text-danger small mb-2">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                @if (!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
+                                @if (!$isInvoiceLocked)
                                     <button type="button" class="btn btn-primary btn-sm" id="btn_toggle_open_order">
                                         <i class="ri ri-add-line"></i> Add Open Order Items
                                     </button>
@@ -301,7 +336,7 @@
                                 </div>
                             </div>
 
-                            @if (!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
+                            @if (!$isInvoiceLocked)
                                 <div class="row mb-4" id="barcode_scan_section">
                                     <div class="col-md-6 text-center">
                                         <div class="input-group mb-2 mx-auto">
@@ -691,7 +726,7 @@
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="text" class="form-control hsn-sac @error('items.' . $index . '.hsn_sac') is-invalid @enderror" name="items[{{ $index }}][hsn_sac]" value="{{ old('items.' . $index . '.hsn_sac', $row->hsn_sac ?? '') }}" placeholder="HSN Code" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <input type="text" class="form-control hsn-sac @error('items.' . $index . '.hsn_sac') is-invalid @enderror" name="items[{{ $index }}][hsn_sac]" value="{{ old('items.' . $index . '.hsn_sac', $row->hsn_sac ?? '') }}" placeholder="HSN Code" {{ $isInvoiceLocked ? 'readonly' : '' }}>
                                                                 <label>HSN Code *</label>
                                                             </div>
                                                             @error('items.' . $index . '.hsn_sac')
@@ -700,7 +735,7 @@
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0.01" step="any" class="form-control qty @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" value="{{ old('items.' . $index . '.quantity', $row->quantity ?? '') }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-stock="{{ $row->stock_qty ?? '' }}" placeholder="Qty" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <input type="number" min="0.01" step="any" class="form-control qty @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" value="{{ old('items.' . $index . '.quantity', $row->quantity ?? '') }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-stock="{{ $row->stock_qty ?? '' }}" placeholder="Qty" {{ $isInvoiceLocked ? 'readonly' : '' }}>
                                                                 <label>Qty *</label>
                                                             </div>
                                                             @error('items.' . $index . '.quantity')
@@ -713,7 +748,7 @@
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0.01" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <input type="number" min="0.01" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price" {{ $isInvoiceLocked ? 'readonly' : '' }}>
                                                                 <label>Price *</label>
                                                             </div>
                                                         </td>
@@ -724,7 +759,7 @@
                                                             </div>
                                                         </td>
                                                         <td>
-                                                            @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                                            @if ($isInvoiceLocked)
                                                                 <span class="text-muted">-</span>
                                                             @else
                                                                 <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
@@ -778,7 +813,7 @@
                                                         </td>
                                                         <td>
                                                             <div class="form-floating form-floating-outline">
-                                                                <input type="number" min="0" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}" placeholder="Qty" {{ isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched') ? 'readonly' : '' }}>
+                                                                <input type="number" min="0" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-original-qty="{{ $row->quantity ?? 0 }}" data-max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ isset($row->is_open_order) && $row->is_open_order == 1 ? '' : $row->max_qty ?? '' }}" placeholder="Qty" {{ $isInvoiceLocked ? 'readonly' : '' }}>
                                                                 <label>Qty *</label>
                                                             </div>
                                                             <div class="qty-error text-danger small" style="display:none;">
@@ -815,7 +850,7 @@
                                                             </div>
                                                         </td>
                                                         <td>
-                                                            @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                                            @if ($isInvoiceLocked)
                                                                 <span class="text-muted">-</span>
                                                             @else
                                                                 <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
@@ -841,7 +876,7 @@
                             <h5 class="mb-0 text-primary">Open Order Item Details</h5>
                         </div>
                         <div class="card-body">
-                            @if (!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
+                            @if (!$isInvoiceLocked)
                                 <div class="row mb-4">
                                     <div class="col-md-6 text-center">
                                         <div class="input-group mb-2 mx-auto">
@@ -985,7 +1020,7 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        @if (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                                        @if ($isInvoiceLocked)
                                                             <span class="text-muted">-</span>
                                                         @else
                                                             <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
@@ -1577,23 +1612,33 @@
                                     <div class="col-md-6 col-xl-3">
                                         <div class="form-floating form-floating-outline">
                                             <input type="text"
-                                                class="form-control @error('tran_doc_no') is-invalid @enderror"
+                                                class="form-control bg-light @error('tran_doc_no') is-invalid @enderror"
                                                 id="tran_doc_no" name="tran_doc_no"
-                                                placeholder="Transport Doc No / LR No"
-                                                value="{{ old('tran_doc_no', isset($invoice) ? $invoice->tran_doc_no : (isset($invoice) ? $invoice->lr_no : '')) }}">
+                                                placeholder="Auto-updated from Transport Booking"
+                                                value="{{ old('tran_doc_no', isset($invoice) ? ($invoice->tran_doc_no ?: $invoice->lr_no) : '') }}"
+                                                readonly
+                                                style="cursor: not-allowed; background-color: #f8f9fa;">
                                             <label for="tran_doc_no">Transport Doc No / LR No</label>
                                             @error('tran_doc_no')
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
                                         </div>
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="ri-information-line me-1"></i>Auto-updated from Transport Booking
+                                        </small>
                                     </div>
                                     <div class="col-md-6 col-xl-3">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control due_date" id="tran_doc_date"
-                                                name="tran_doc_date" placeholder="Transport Doc Date"
-                                                value="{{ old('tran_doc_date', isset($invoice) ? ($invoice->tran_doc_date ? \Carbon\Carbon::parse($invoice->tran_doc_date)->format('d-m-Y') : '') : '') }}">
-                                            <label for="tran_doc_date">Transport Doc Date</label>
+                                            <input type="text" class="form-control bg-light" id="bottom_tran_doc_date"
+                                                placeholder="Auto-filled from Dispatched Date"
+                                                value="{{ old('tran_doc_date', isset($invoice) && $invoice->tran_doc_date ? \Carbon\Carbon::parse($invoice->tran_doc_date)->format('d-m-Y') : date('d-m-Y')) }}"
+                                                readonly
+                                                style="cursor: not-allowed; background-color: #f8f9fa;">
+                                            <label for="bottom_tran_doc_date">Transport Doc Date</label>
                                         </div>
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="ri-check-line text-success me-1"></i>Auto-filled from Dispatched Date
+                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -1660,6 +1705,22 @@
         }
 
         $(document).ready(function() {
+            if ($.fn.flatpickr) {
+                $('#tran_doc_date').flatpickr({
+                    dateFormat: 'd-m-Y',
+                    allowInput: true,
+                    onChange: function(selectedDates, dateStr) {
+                        $('#bottom_tran_doc_date').val(dateStr);
+                    }
+                });
+            }
+            $('#tran_doc_date').on('change input', function() {
+                $('#bottom_tran_doc_date').val($(this).val());
+            });
+            if ($('#tran_doc_date').val()) {
+                $('#bottom_tran_doc_date').val($('#tran_doc_date').val());
+            }
+
             $('.item-row').each(function() {
                 updateColorFromArtNo($(this));
             });
@@ -1930,6 +1991,8 @@
             window.einvoiceStatus = "{{ isset($invoice) ? $invoice->einvoice_status : '' }}";
             window.isDispatched =
                 "{{ isset($invoice) && $invoice->delivery_status === 'Dispatched' ? 'true' : 'false' }}";
+            window.isBooked = "{{ $isBooked ? 'true' : 'false' }}";
+            window.isInvoiceLocked = {{ $isInvoiceLocked ? 'true' : 'false' }};
             window.availableSOItems = [];
 
             function getRowArtNo($row) {
@@ -2012,7 +2075,7 @@
             }
 
             function addInvoiceItem(matchedItem, qty = null, maxQty = null) {
-                if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
+                if (window.isInvoiceLocked || window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                     return;
                 }
                 if (maxQty === null && matchedItem.qty) {
@@ -2384,7 +2447,7 @@
 
             $(document).on('click', '.remove-item', function(e) {
                 e.preventDefault();
-                if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
+                if (window.isInvoiceLocked || window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                     return;
                 }
                 $(this).closest('tr.item-row, tr').remove();
@@ -3107,9 +3170,9 @@
 
             $(function() {
                 $('#btn_add_extra_item').click(function() {
-                    if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
+                    if (window.isInvoiceLocked || window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                         Swal.fire('Error',
-                            'Cannot modify items. Invoice is either dispatched or e-invoice generated.',
+                            'Cannot modify items. Invoice is locked (E-invoice generated, LR booked or dispatched).',
                             'error');
                         return;
                     }
@@ -4010,17 +4073,41 @@
         }
 
         $(function() {
-            if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
+            if (window.isInvoiceLocked || window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
+                var allowedFieldNames = [
+                    'signature_file',
+                    'attachment_file',
+                    'notes',
+                    'transport_mode',
+                    'transporter_name',
+                    'transporter_id',
+                    'vehicle_no',
+                    'veh_type',
+                    'transport_distance',
+                    'tran_doc_date',
+                    'show_fields[]',
+                    'delivery_show_fields[]'
+                ];
+                var allowedIds = [
+                    'signature_file',
+                    'attachment_file',
+                    'notes',
+                    'transport_mode',
+                    'transporter_name',
+                    'transporter_id',
+                    'vehicle_no',
+                    'veh_type',
+                    'transport_distance',
+                    'tran_doc_date'
+                ];
+
                 $('form.common-form input, form.common-form select, form.common-form textarea').each(function() {
                     var $el = $(this);
                     var nameAttr = $el.attr('name');
+                    var idAttr = $el.attr('id');
 
-                    if (nameAttr === 'show_fields[]' || nameAttr === 'delivery_show_fields[]') {
-                        return;
-                    }
-
-                    // Exception: Always allow entering/updating LR No and LR Date even after dispatch!
-                    if (nameAttr === 'tran_doc_no' || nameAttr === 'tran_doc_date') {
+                    // Keep Signature, Attachments, Notes, and Transport/E-Way bill details editable
+                    if (allowedFieldNames.indexOf(nameAttr) !== -1 || allowedIds.indexOf(idAttr) !== -1) {
                         return;
                     }
 
@@ -4054,7 +4141,7 @@
                 });
 
                 $('input').each(function() {
-                    if (this.name !== 'tran_doc_date' && this._flatpickr) {
+                    if (this.name !== 'tran_doc_date' && this.id !== 'bottom_tran_doc_date' && this._flatpickr) {
                         this._flatpickr.destroy();
                     }
                 });

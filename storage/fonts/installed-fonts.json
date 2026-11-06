@@ -12,5 +12,105 @@
     "roboto condensed": {
         "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/roboto_condensed_normal_7d74ad20c79d03229357219c623da7b6",
         "bold": "roboto_condensed_bold_82a9d85f664ba905ac11c5ca9abd1e65"
+    },
+    "montserrat": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/montserrat_normal_cfd2d9d68275e71ef7ea0a3cb86eeb6c",
+        "bold": "montserrat_bold_eb871046dfe8cd9629b4499fcabfcf3c"
+    },
+    "montserratblack": {
+        "normal": "montserratblack_normal_3d11ff2578dcdf4c78958dfaaa5f3536"
+    },
+    "montserratextrabold": {
+        "normal": "montserratextrabold_normal_5b904f81950082b8c7981e237de94b0d"
+    },
+    "customsans": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/customsans_normal_cfd2d9d68275e71ef7ea0a3cb86eeb6c",
+        "bold": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/customsans_bold_eb871046dfe8cd9629b4499fcabfcf3c",
+        "800": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/customsans_800_5b904f81950082b8c7981e237de94b0d",
+        "900": "customsans_900_3d11ff2578dcdf4c78958dfaaa5f3536"
+    },
+    "modernsans": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/modernsans_normal_cfd2d9d68275e71ef7ea0a3cb86eeb6c",
+        "bold": "modernsans_bold_eb871046dfe8cd9629b4499fcabfcf3c"
+    },
+    "modernsansmedium": {
+        "normal": "modernsansmedium_normal_f444dc935c312a461dcec0b493ec595e"
+    },
+    "modernsansextrabold": {
+        "normal": "modernsansextrabold_normal_5b904f81950082b8c7981e237de94b0d"
+    },
+    "modernsansblack": {
+        "normal": "modernsansblack_normal_3d11ff2578dcdf4c78958dfaaa5f3536"
+    },
+    "geometricsans": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsans_normal_c8377c84ef346b006dee4c582adf5d87",
+        "500": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsans_500_f444dc935c312a461dcec0b493ec595e",
+        "600": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsans_600_feaf8da6a22ef8e63f348d51c4cee368",
+        "bold": "geometricsans_bold_add90167c81a833fa63477637ad37377"
+    },
+    "geometricsansmedium": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsansmedium_normal_b7fecf8aadc0d053c51327c60d799226",
+        "bold": "geometricsansmedium_bold_b7fecf8aadc0d053c51327c60d799226"
+    },
+    "geometricsansbold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsansbold_normal_add90167c81a833fa63477637ad37377",
+        "bold": "geometricsansbold_bold_add90167c81a833fa63477637ad37377"
+    },
+    "geometricsansextrabold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsansextrabold_normal_048f405b2e7f62b07c847d570df3c54c",
+        "bold": "geometricsansextrabold_bold_048f405b2e7f62b07c847d570df3c54c"
+    },
+    "geometricsansblack": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsansblack_normal_abfd5f0b8c73481115573c8b5100ff41",
+        "bold": "geometricsansblack_bold_abfd5f0b8c73481115573c8b5100ff41"
+    },
+    "testfont": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/testfont_normal_eb871046dfe8cd9629b4499fcabfcf3c",
+        "bold": "testfont_bold_eb871046dfe8cd9629b4499fcabfcf3c"
+    },
+    "poppins": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/poppins_normal_c8377c84ef346b006dee4c582adf5d87",
+        "bold": "poppins_bold_add90167c81a833fa63477637ad37377"
+    },
+    "poppinsmedium": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/poppinsmedium_normal_b7fecf8aadc0d053c51327c60d799226",
+        "bold": "poppinsmedium_bold_b7fecf8aadc0d053c51327c60d799226"
+    },
+    "poppinssemibold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/poppinssemibold_normal_10e851692410a8c0944181241f0a9f5d",
+        "bold": "poppinssemibold_bold_10e851692410a8c0944181241f0a9f5d"
+    },
+    "poppinsbold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/poppinsbold_normal_add90167c81a833fa63477637ad37377",
+        "bold": "poppinsbold_bold_add90167c81a833fa63477637ad37377"
+    },
+    "poppinsextrabold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/poppinsextrabold_normal_048f405b2e7f62b07c847d570df3c54c",
+        "bold": "poppinsextrabold_bold_048f405b2e7f62b07c847d570df3c54c"
+    },
+    "poppinsblack": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/poppinsblack_normal_abfd5f0b8c73481115573c8b5100ff41",
+        "bold": "poppinsblack_bold_abfd5f0b8c73481115573c8b5100ff41"
+    },
+    "geometricsanssemibold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/geometricsanssemibold_normal_10e851692410a8c0944181241f0a9f5d",
+        "bold": "geometricsanssemibold_bold_10e851692410a8c0944181241f0a9f5d"
+    },
+    "mentorsansstdbold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/mentorsansstdbold_normal_fa621cb7270b56a35da8396dbe3af6e1",
+        "bold": "mentorsansstdbold_bold_fa621cb7270b56a35da8396dbe3af6e1"
+    },
+    "mentor sans std bold": {
+        "normal": "D:\\xampp\\htdocs\\nachias\\storage\\fonts\/mentor_sans_std_bold_normal_fa621cb7270b56a35da8396dbe3af6e1",
+        "bold": "mentor_sans_std_bold_bold_fa621cb7270b56a35da8396dbe3af6e1"
+    },
+    "opensansbold": {
+        "bold": "opensansbold_bold_a094b81eb1d2391f738e9c2315ac14ed"
+    },
+    "robotobold": {
+        "bold": "robotobold_bold_6af97c7c6704bb512828937058c13599"
+    },
+    "robotoregular": {
+        "normal": "robotoregular_normal_3f43a5d79e5a2c0980ab9da18b739be1"
     }
 }

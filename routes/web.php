@@ -50,6 +50,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeAttendanceController;
 use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\LeaveTypeController;
 use App\Http\Controllers\OvertimeController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\PayslipController;
@@ -100,6 +101,16 @@ Route::get('/', function () {
 
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');
 Route::get('auto-backup-drive', [App\Http\Controllers\BackupController::class, 'autoBackupToDrive']);
+
+/* Public Customer Document Verification (Accessible via QR Code scan on mobile) - Streams Merged PDF */
+Route::get('doc/view/{encryptedId}', [SalesInvoiceController::class, 'publicDeliveryDocView'])->name('sales_invoices.public_doc_view')->where('encryptedId', '.*');
+
+Route::get('doc/pdf/merged/{encryptedId}', [SalesInvoiceController::class, 'publicDeliveryDocView'])->name('sales_invoices.public_merged_pdf')->where('encryptedId', '.*');
+
+Route::get('doc/pdf/invoice/{id}', [SalesInvoiceController::class, 'publicInvoicePdf'])->name('sales_invoices.public_invoice_pdf')->where('id', '.*');
+
+Route::get('doc/pdf/delivery-order/{id}', [SalesInvoiceController::class, 'publicDeliveryOrderPdf'])->name('sales_invoices.public_do_pdf')->where('id', '.*');
+
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
     Route::get('/dashboard/service-wip', [HomeController::class, 'getServiceWipDetails']);
@@ -208,6 +219,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['get', 'post'], '/uoms/add/{id?}', [UomController::class, 'add']);
     Route::get('/uoms/delete/{id}', [UomController::class, 'destroy']);
     Route::post('/uoms/status/{id}', [UomController::class, 'updateStatus']);
+
+    /* Leave Types */
+    Route::get('/leave_types', [LeaveTypeController::class, 'index']);
+    Route::match(['get', 'post'], '/leave_types/add/{id?}', [LeaveTypeController::class, 'add']);
+    Route::get('/leave_types/delete/{id}', [LeaveTypeController::class, 'destroy']);
+    Route::post('/leave_types/status/{id}', [LeaveTypeController::class, 'updateStatus']);
+    Route::get('/leave-types', [LeaveTypeController::class, 'index']);
 
     /* Colors */
     Route::get('/colors', [ColorController::class, 'index']);
@@ -555,10 +573,15 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Transport Handover & LR Register */
     Route::get('transport_bookings', [TransportBookingController::class, 'index'])->name('transport_bookings.index');
+    Route::get('transport_bookings/sync_existing', [TransportBookingController::class, 'syncExistingInvoices'])->name('transport_bookings.sync_existing');
     Route::get('transport_bookings/print_sheet', [TransportBookingController::class, 'printSheet'])->name('transport_bookings.print_sheet');
     Route::post('transport_bookings/{id}/record_lr', [TransportBookingController::class, 'recordLr'])->name('transport_bookings.record_lr');
     Route::post('transport_bookings/{id}/mark_picked', [TransportBookingController::class, 'markPicked'])->name('transport_bookings.mark_picked');
     Route::match(['GET', 'POST'], 'transport_bookings/payment_clearance', [TransportBookingController::class, 'paymentClearance'])->name('transport_bookings.payment_clearance');
+    Route::get('transport_bookings/print_clearance_pdf', [TransportBookingController::class, 'printClearancePdf'])->name('transport_bookings.print_clearance_pdf');
+    Route::get('transport_bookings/{id}/dispatch_card', [TransportBookingController::class, 'dispatchCard'])->name('transport_bookings.dispatch_card');
+    Route::get('transport_bookings/{id}/dispatch_card_pdf', [TransportBookingController::class, 'dispatchCardPdf'])->name('transport_bookings.dispatch_card_pdf');
+    Route::post('transport_bookings/{id}/send_dispatch_email', [TransportBookingController::class, 'sendDispatchEmail'])->name('transport_bookings.send_dispatch_email');
 
     /* Old Sales Invoices (Archive) */
     Route::get('old_sales_invoices', [OldSalesInvoiceController::class, 'index']);
@@ -833,6 +856,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('taxpro-credentials', [TaxProCredentialController::class, 'index'])->name('taxpro.credentials');
     Route::get('taxpro-credentials/check-balance', [TaxProCredentialController::class, 'checkBalance'])->name('taxpro.check_balance');
 
+    Route::get('/clear-config', function () {
+        \Artisan::call('config:clear');
+        \Artisan::call('view:clear');
+        return "Config cleared safely! .env mail settings are now active. Application cache was not touched.";
+    });
+
     Route::get(
         '/clear-cache',
 
@@ -858,150 +887,3 @@ Route::get('/run-permission-seeder', function () {
         '--class' => 'Database\\Seeders\\PermissionSeeder'
     ]);
 });
-
-Route::get('/run-customer-tamil-translation', function (\Illuminate\Http\Request $request) {
-    if (!auth()->check() && $request->get('key') !== 'nachias2026') {
-        return response("Unauthorized. Please login to Nachias first, or append '?key=nachias2026' to the URL.", 403);
-    }
-
-    set_time_limit(0);
-    ini_set('max_execution_time', '0');
-
-    if (session_status() === PHP_SESSION_ACTIVE || session()->isStarted()) {
-        session()->save();
-    }
-    if (function_exists('session_write_close')) {
-        session_write_close();
-    }
-
-    return response()->stream(function () use ($request) {
-        while (ob_get_level() > 0) {
-            ob_end_flush();
-        }
-        ob_implicit_flush(true);
-
-        $preview = $request->has('preview');
-        $force = $request->has('force');
-        $limit = $request->get('limit', $preview ? 10 : null);
-
-        echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Customer Tamil Translation</title>";
-        echo "<style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 25px; color: #333; }
-            .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-            h2 { margin-top: 0; color: #502274; display: flex; align-items: center; gap: 10px; }
-            .badge { font-size: 14px; background: #e0d4f7; color: #502274; padding: 4px 10px; border-radius: 6px; font-weight: normal; }
-            .stats { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 15px; }
-            .item { padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13.5px; }
-            .item:nth-child(even) { background: #fafbfc; }
-            .name { font-weight: 600; color: #2d3748; }
-            .tamil { color: #2b6cb0; font-weight: 600; }
-            .success-box { margin-top: 25px; padding: 15px 20px; background: #d4edda; color: #155724; border-radius: 8px; font-weight: 600; font-size: 16px; border: 1px solid #c3e6cb; }
-            .btn { display: inline-block; padding: 10px 20px; background: #502274; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500; margin-top: 15px; }
-            .btn:hover { background: #3b1757; }
-        </style></head><body>";
-
-        echo "<div class='container'>";
-        echo "<h2>Nachias Customer Tamil Translation " . ($preview ? "<span class='badge'>PREVIEW MODE</span>" : "<span class='badge'>LIVE UPDATE</span>") . "</h2>";
-
-        $query = \App\Models\Customer::with(['place', 'city']);
-        if (!$force) {
-            $query->where(function ($q) {
-                $q->whereNull('tamil_name')->orWhere('tamil_name', '')
-                  ->orWhereNull('tamil_place')->orWhere('tamil_place', '')
-                  ->orWhereNull('tamil_address')->orWhere('tamil_address', '');
-            });
-        }
-
-        $total = $query->count();
-        echo "<div class='stats'>Total Customers pending: <strong>{$total}</strong></div>";
-        echo "<div class='list'>";
-
-        if ($limit) {
-            $customers = $query->take((int)$limit)->get();
-        } else {
-            $customers = $query->get();
-        }
-
-        $wordCache = [];
-        $transliterate = function ($text) use (&$wordCache) {
-            if (empty(trim($text))) return '';
-            $tokens = preg_split('/(\s+|[0-9]+|[^a-zA-Z0-9\s]+)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-            $res = [];
-            foreach ($tokens as $token) {
-                if (preg_match('/^[a-zA-Z]+$/', $token)) {
-                    $upper = strtoupper($token);
-                    if (isset($wordCache[$upper])) {
-                        $res[] = $wordCache[$upper];
-                        continue;
-                    }
-                    $url = "https://inputtools.google.com/request?text=" . urlencode($token) . "&itc=ta-t-i0-und&num=1";
-                    $ctx = stream_context_create(['http' => ['timeout' => 4]]);
-                    $raw = @file_get_contents($url, false, $ctx);
-                    $val = $token;
-                    if ($raw) {
-                        $json = json_decode($raw, true);
-                        if (isset($json[0]) && $json[0] === 'SUCCESS' && isset($json[1][0][1][0])) {
-                            $val = $json[1][0][1][0];
-                        }
-                    }
-                    $wordCache[$upper] = $val;
-                    $res[] = $val;
-                } else {
-                    $res[] = $token;
-                }
-            }
-            return implode('', $res);
-        };
-
-        $i = 0;
-        foreach ($customers as $c) {
-            $i++;
-            $tamName = $transliterate($c->name ?? '');
-            $placeText = $c->place->place_name ?? $c->city->city_name ?? '';
-            $tamPlace = $transliterate($placeText);
-
-            $addrParts = array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3]);
-            $tamAddress = $transliterate(implode(', ', $addrParts));
-
-            if (!$preview) {
-                $updates = [];
-                if ($force || empty($c->tamil_name)) $updates['tamil_name'] = $tamName;
-                if ($force || empty($c->tamil_place)) $updates['tamil_place'] = $tamPlace;
-                if ($force || empty($c->tamil_address)) $updates['tamil_address'] = $tamAddress;
-                if (!empty($updates)) {
-                    \App\Models\Customer::where('id', $c->id)->update($updates);
-                }
-            }
-
-            echo "<div class='item'>";
-            echo "<div><strong>#{$i} [ID: {$c->id}]</strong> <span class='name'>{$c->name}</span> &rarr; <span class='tamil'>{$tamName}</span></div>";
-            if ($tamPlace) echo "<div style='margin-left: 20px; font-size: 12px; color: #666;'>Place: {$placeText} &rarr; <span class='tamil'>{$tamPlace}</span></div>";
-            if ($tamAddress) echo "<div style='margin-left: 20px; font-size: 12px; color: #666;'>Address: <span class='tamil'>{$tamAddress}</span></div>";
-            echo "</div>";
-
-            if (ob_get_level() > 0) ob_flush();
-            flush();
-        }
-
-        echo "</div>";
-
-        if ($preview) {
-            echo "<div class='success-box' style='background:#fff3cd; color:#856404; border-color:#ffeeba;'>";
-            echo "Preview complete for {$i} customers. Ready to run live update?";
-            echo "</div>";
-            echo "<a class='btn' href='?key=nachias2026'>Start Full Live Translation Now</a>";
-        } else {
-            echo "<div class='success-box'>✓ Completed! {$i} customers successfully updated with Tamil translation.</div>";
-            echo "<a class='btn' href='" . url('customers') . "'>Go to Customers Master</a>";
-        }
-
-        echo "</div></body></html>";
-    }, 200, [
-        'Content-Type' => 'text/html; charset=utf-8',
-        'X-Accel-Buffering' => 'no',
-        'Cache-Control' => 'no-cache, no-store, must-revalidate'
-    ]);
-});
-
-
-
