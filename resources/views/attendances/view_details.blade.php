@@ -39,7 +39,12 @@
                             style="width:60px;height:60px;object-fit:cover;">
                     </div>
                     <h5 class="mb-1">{{ $attendance->name }}</h5>
-                    <p class="text-muted mb-3">Employee Code: <strong>{{ $attendance->emp_id }}</strong></p>
+                    <p class="text-muted mb-2">Employee Code: <strong>{{ $attendance->emp_id }}</strong></p>
+                    @if(!empty($attendance->unit))
+                        <div class="mb-3"><span class="badge bg-light text-primary border"><i class="ri ri-building-line me-1"></i>{{ $attendance->unit }}</span></div>
+                    @else
+                        <div class="mb-3"></div>
+                    @endif
                     <span class="badge 
                         @if($attendance->status === 'Present') bg-success
                         @elseif($attendance->status === 'Late') bg-warning text-dark

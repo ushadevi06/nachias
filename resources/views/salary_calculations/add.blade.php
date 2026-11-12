@@ -62,6 +62,11 @@ th.sticky-col-employee {
                                             <option value="monthly">Monthly</option>
                                             <option value="range">Date Range</option>
                                         </select>
+                                        <select id="filter_roll_type" class="form-select" style="width: auto;">
+                                            <option value="all">All Roll Types</option>
+                                            <option value="On Roll">On Roll</option>
+                                            <option value="Off Roll">Off Roll</option>
+                                        </select>
                                         <div id="month_picker_wrapper">
                                             <input type="month" id="salary_month" class="form-control" max="{{ now()->format('Y-m') }}" value="{{ isset($salary) ? $salary->salary_year . '-' . str_pad($salary->salary_month, 2, '0', STR_PAD_LEFT) : now()->format('Y-m') }}">
                                         </div>
@@ -139,9 +144,15 @@ th.sticky-col-employee {
                                                     </td>
                                                     {{-- Employee --}}
                                                     <td class="sticky-col-employee">
-                                                        {{ $salary->name }}
-                                                        <br>
-                                                        <span class="badge bg-primary mt-1">{{ $salary->emp_id }}</span>
+                                                        <div class="fw-semibold">{{ $salary->name }}</div>
+                                                        <div class="d-flex align-items-center gap-1 mt-1">
+                                                            <span class="badge bg-primary">{{ $salary->emp_id }}</span>
+                                                            @if(($salary->roll_type ?? 'On Roll') === 'Off Roll')
+                                                                <span class="badge bg-warning text-dark">Off Roll</span>
+                                                            @else
+                                                                <span class="badge bg-info text-white">On Roll</span>
+                                                            @endif
+                                                        </div>
                                                     </td>
                                                     {{-- Working Days --}}
                                                     <td>
@@ -193,63 +204,51 @@ th.sticky-col-employee {
                                                     </td>
                                                     {{-- Misc --}}
                                                     <td>
-                                                        <input type="number" class="form-control misc"
-                                                            value="{{ $salary->misc_amount ?? 0 }}">
+                                                        <input type="number" class="form-control misc" value="{{ $salary->misc_amount ?? 0 }}">
                                                     </td>
                                                     {{-- Bus Fare --}}
                                                     <td>
-                                                        <input type="number" readonly class="form-control bus_fare"
-                                                            value="{{ $salary->bus_fare ?? 0 }}">
+                                                        <input type="number" readonly class="form-control bus_fare" value="{{ $salary->bus_fare ?? 0 }}">
                                                     </td>
                                                     {{-- PF --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control pf"
-                                                            value="{{ $salary->pf ?? 0 }}">
+                                                        <input type="text" readonly class="form-control pf" value="{{ $salary->pf ?? 0 }}">
                                                     </td>
                                                     {{-- ESI --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control esi"
-                                                            value="{{ $salary->esi ?? 0 }}">
+                                                        <input type="text" readonly class="form-control esi" value="{{ $salary->esi ?? 0 }}">
                                                     </td>
                                                     {{-- LOP Amount --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control lop_amount"
-                                                            value="{{ $salary->lop_amount ?? 0 }}">
+                                                        <input type="text" readonly class="form-control lop_amount" value="{{ $salary->lop_amount ?? 0 }}">
                                                     </td>
                                                     {{-- Other Deduction --}}
                                                     <td>
-                                                        <input type="number" class="form-control other_deduction"
-                                                            value="{{ $salary->other_deduction ?? 0 }}">
+                                                        <input type="number" class="form-control other_deduction" value="{{ $salary->other_deduction ?? 0 }}">
                                                     </td>
                                                     {{-- Salary Advance --}}
                                                     <td>
-                                                        <input type="number" class="form-control salary_advance"
-                                                            value="{{ $salary->salary_advance ?? 0 }}">
+                                                        <input type="number" class="form-control salary_advance" value="{{ $salary->salary_advance ?? 0 }}">
                                                     </td>
                                                     {{-- Late Hours --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control late_hours"
-                                                            value="{{ $salary->late_hours ?? 0 }}">
+                                                        <input type="text" readonly class="form-control late_hours" value="{{ $salary->late_hours ?? 0 }}">
                                                     </td>
                                                     {{-- Late Fine --}}
                                                     <td>
-                                                        <input type="number" class="form-control late_fine"
-                                                            value="{{ $salary->late_fine ?? 0 }}" readonly>
+                                                        <input type="number" class="form-control late_fine" value="{{ $salary->late_fine ?? 0 }}" readonly>
                                                     </td>
                                                     {{-- Gross Pay --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control gross_salary"
-                                                            value="{{ $salary->gross_salary }}">
+                                                        <input type="text" readonly class="form-control gross_salary" value="{{ $salary->gross_salary }}">
                                                     </td>
                                                     {{-- Total Deduction --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control total_deduction"
-                                                            value="{{ $salary->total_deduction ?? 0 }}">
+                                                        <input type="text" readonly class="form-control total_deduction" value="{{ $salary->total_deduction ?? 0 }}">
                                                     </td>
                                                     {{-- Net Pay --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control net_salary"
-                                                            value="{{ $salary->net_salary }}">
+                                                        <input type="text" readonly class="form-control net_salary" value="{{ $salary->net_salary }}">
                                                     </td>
                                                 </tr>
                                                 @endif
@@ -258,9 +257,7 @@ th.sticky-col-employee {
                                     <div class="d-flex justify-content-center mt-3" id="paginationContainer"></div>
                                 </div>
                                 <div class="text-end mt-3">
-                                    <button type="button"
-                                            class="btn btn-success"
-                                            id="savePayroll">
+                                    <button type="button" class="btn btn-success" id="savePayroll">
                                         {{ isset($salary) ? 'Update Payroll' : 'Save Payroll' }}
                                     </button>
                                 </div>
@@ -280,6 +277,22 @@ th.sticky-col-employee {
         let allPayrollData = {!! isset($salary) ? '[' . json_encode($salary) . ']' : '[]' !!};
         let currentPage = 1;
         const perPage = 10;
+
+        function updateCheckAllState() {
+            if (!allPayrollData || allPayrollData.length === 0) {
+                $('#checkAllEmployees').prop('checked', false);
+                return;
+            }
+            let allChecked = allPayrollData.every(function (item) {
+                return item.is_selected === true;
+            });
+            $('#checkAllEmployees').prop('checked', allChecked);
+        }
+
+        if (allPayrollData.length > 0) {
+            allPayrollData[0].is_selected = true;
+            updateCheckAllState();
+        }
 
         $(document).on('change', '#payroll_type', function () {
             let val = $(this).val();
@@ -342,6 +355,7 @@ th.sticky-col-employee {
                 data: {
                     _token: "{{ csrf_token() }}",
                     type: type,
+                    roll_type: $('#filter_roll_type').val() || 'all',
                     month: month,
                     from_date: fromDate,
                     to_date: toDate
@@ -383,11 +397,20 @@ th.sticky-col-employee {
                     <td class="text-center sticky-col-checkbox">
                         <input type="hidden" class="employee_id" value="${item.employee_id}">
                         <input type="hidden" class="total_days" value="${item.total_days}">
-                        <input type="checkbox" class="employee_checkbox" ${item.is_selected ?? true ? 'checked' : ''}>
+                        <input type="checkbox" class="employee_checkbox" ${item.is_selected ? 'checked' : ''}>
                     </td>
 
                     <!-- Employee -->
-                    <td class="sticky-col-employee">${item.employee_name} <br><span class="badge bg-primary mt-1">${item.emp_code}</span></td>
+                    <td class="sticky-col-employee">
+                        <div class="fw-semibold">${item.employee_name}</div>
+                        <div class="d-flex align-items-center gap-1 mt-1">
+                            <span class="badge bg-primary">${item.emp_code}</span>
+                            ${(item.roll_type === 'Off Roll')
+                                ? '<span class="badge bg-warning text-dark">Off Roll</span>'
+                                : '<span class="badge bg-info text-white">On Roll</span>'
+                            }
+                        </div>
+                    </td>
 
                     <!-- Working Days -->
                     <td>
@@ -513,6 +536,7 @@ th.sticky-col-employee {
             });
             $('#salaryTableBody').html(rows);
             renderPagination();
+            updateCheckAllState();
         }
         function renderPagination() {
             let totalPages = Math.ceil(allPayrollData.length / perPage);
@@ -549,7 +573,7 @@ th.sticky-col-employee {
             $('.salary-row').each(function () {
                 let row = $(this);
                 let index = row.data('index');
-                if (typeof index === 'undefined') return;
+                if (typeof index === 'undefined' || typeof allPayrollData[index] === 'undefined') return;
                 
                 allPayrollData[index].salary_id = row.find('.salary_id').val();
                 allPayrollData[index].is_selected = row.find('.employee_checkbox').is(':checked');
@@ -568,18 +592,18 @@ th.sticky-col-employee {
         }
         $(document).on('change', '#checkAllEmployees', function () {
             let checked = $(this).is(':checked');
-            $('.employee_checkbox').prop('checked', checked);
-            $('.salary-row').each(function () {
-                let row = $(this);
-                let index = row.data('index');
-                allPayrollData[index].is_selected = checked;
+            allPayrollData.forEach(function (item) {
+                item.is_selected = checked;
             });
+            $('.employee_checkbox').prop('checked', checked);
         });
         $(document).on('change', '.employee_checkbox', function () {
             let row = $(this).closest('.salary-row');
             let index = row.data('index');
-            allPayrollData[index].is_selected =
-                $(this).is(':checked');
+            if (typeof index !== 'undefined' && typeof allPayrollData[index] !== 'undefined') {
+                allPayrollData[index].is_selected = $(this).is(':checked');
+            }
+            updateCheckAllState();
         });
         $('#savePayroll').click(function () {
             saveCurrentPageData();
@@ -772,6 +796,7 @@ th.sticky-col-employee {
                     data: {
                         search: search,
                         type: type,
+                        roll_type: $('#filter_roll_type').val() || 'all',
                         month: month,
                         from_date: fromDate,
                         to_date: toDate
@@ -783,6 +808,12 @@ th.sticky-col-employee {
                     }
                 });
             }, 300);
+        });
+
+        $('#filter_roll_type').on('change', function () {
+            if ($('#generateSalary').length) {
+                $('#generateSalary').click();
+            }
         });
     });
 </script>

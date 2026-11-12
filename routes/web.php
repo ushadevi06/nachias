@@ -111,6 +111,10 @@ Route::get('doc/pdf/invoice/{id}', [SalesInvoiceController::class, 'publicInvoic
 
 Route::get('doc/pdf/delivery-order/{id}', [SalesInvoiceController::class, 'publicDeliveryOrderPdf'])->name('sales_invoices.public_do_pdf')->where('id', '.*');
 
+/* View / Stream Monthly Payroll Summary Report PDF directly in browser */
+Route::get('view-payroll-report-pdf', [HomeController::class, 'viewPayrollSummaryPdf'])->name('payroll.view_report_pdf');
+Route::get('payroll-summary-pdf', [HomeController::class, 'viewPayrollSummaryPdf']);
+
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
     Route::get('/dashboard/service-wip', [HomeController::class, 'getServiceWipDetails']);
@@ -126,6 +130,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/dashboard/accessories-drilldown', [HomeController::class, 'accessoriesInventoryDrilldown']);
     Route::get('/dashboard/cutting-job-cards', [HomeController::class, 'getCuttingJobCardsAjax']);
     Route::get('/dashboard/production-cost', [HomeController::class, 'getProductionCostAjax']);
+    Route::get('/dashboard/payroll-unit-summary', [HomeController::class, 'getPayrollUnitSummaryAjax']);
+    Route::get('/dashboard/payroll-summary-pdf', [HomeController::class, 'downloadPayrollSummaryPdf'])->name('dashboard.payroll-summary-pdf');
     Route::get('/core-material-settings', [CoreMaterialPlannerSettingController::class, 'index']);
     Route::match(['get', 'post'], '/core-material-settings/add/{id?}', [CoreMaterialPlannerSettingController::class, 'add']);
     Route::get('/core-material-settings/delete/{id}', [CoreMaterialPlannerSettingController::class, 'delete']);
@@ -803,7 +809,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('/generate-payroll', [SalaryController::class, 'generatePayroll'])->name('generate.payroll');
     Route::post('/save-payroll', [SalaryController::class, 'savePayroll'])->name('save.payroll');
     Route::post('/update-payroll-status', [SalaryController::class, 'updatePayrollStatus'])->name('update.payroll.status');
-    Route::post('/generate-payslip-pdf', [SalaryController::class, 'generatePayslipPdf'])->name('generate.payslip.pdf');
+    Route::match(['get', 'post'], '/generate-payslip-pdf', [SalaryController::class, 'generatePayslipPdf'])->name('generate.payslip.pdf');
     Route::get('/view-payslip/{id}', [SalaryController::class, 'viewPayslip'])->name('view.payslip');
     Route::get('/print-payslip/{id}', [SalaryController::class, 'printPayslip'])->name('print.payslip');
     Route::get('/download-payslip/{id}', [SalaryController::class, 'downloadPayslip'])->name('download.payslip');

@@ -95,7 +95,7 @@ class OvertimeController extends Controller
                 $isSundayWorked = ($dayOfWeek === 0);
                 $isHolidayWorked = isset($holidayMap[$dateStr]);
 
-                if (!$isExtraHours && !$isSundayWorked && !$isHolidayWorked) {
+                if (!$isExtraHours && !$isSundayWorked && !$isHolidayWorked && empty($att->ot_hours)) {
                     continue;
                 }
 
@@ -116,19 +116,37 @@ class OvertimeController extends Controller
             foreach ($pageRows as $item) {
                 [$att, $inTs, $outTs, $totalMinutes, $dateStr] = $item;
 
-                $extraMinutes = $totalMinutes - (9 * 60);
-                if ($extraMinutes > 0) {
-                    $hours = (int)floor($extraMinutes / 60);
-                    $minutes = (int)($extraMinutes % 60);
+                if (!is_null($att->ot_hours) && $att->ot_hours !== '') {
+                    $totMins = round(floatval($att->ot_hours) * 60);
+                    $hours = (int)floor($totMins / 60);
+                    $minutes = (int)($totMins % 60);
                     if ($hours > 0 && $minutes > 0) {
                         $otHours = $hours . ' hr ' . $minutes . ' mins';
                     } elseif ($hours > 0) {
                         $otHours = $hours . ' hr';
-                    } else {
+                    } elseif ($minutes > 0) {
                         $otHours = $minutes . ' mins';
+                    } else {
+                        $otHours = '0 mins';
                     }
                 } else {
-                    $otHours = '0 mins';
+                    $dayOfWeek = (int)date('w', strtotime($dateStr));
+                    $isSunday = ($dayOfWeek === 0);
+                    $isHoliday = isset($holidayMap[$dateStr]);
+                    $extraMinutes = ($isSunday || $isHoliday) ? $totalMinutes : ($totalMinutes - (9 * 60));
+                    if ($extraMinutes > 0) {
+                        $hours = (int)floor($extraMinutes / 60);
+                        $minutes = (int)($extraMinutes % 60);
+                        if ($hours > 0 && $minutes > 0) {
+                            $otHours = $hours . ' hr ' . $minutes . ' mins';
+                        } elseif ($hours > 0) {
+                            $otHours = $hours . ' hr';
+                        } else {
+                            $otHours = $minutes . ' mins';
+                        }
+                    } else {
+                        $otHours = '0 mins';
+                    }
                 }
 
                 $action = '<div class="button-box d-flex gap-1">';
@@ -146,7 +164,7 @@ class OvertimeController extends Controller
                 }
                 if ($canEdit) {
                     $action .= '
-                        <button type="button" class="btn btn-edit editOtBtn" data-id="' . $att->id . '" data-emp="' . $att->emp_code . '" data-date="' . $dateStr . '" data-in="' . date('H:i', $inTs) . '" data-out="' . date('H:i', $outTs) . '" data-status="' . $att->status . '" data-ot-status="' . ($att->ot_status ?: 'Pending') . '" >
+                        <button type="button" class="btn btn-edit editOtBtn" data-id="' . $att->id . '" data-emp="' . $att->emp_code . '" data-date="' . $dateStr . '" data-in="' . date('H:i', $inTs) . '" data-out="' . date('H:i', $outTs) . '" data-status="' . $att->status . '" data-ot-status="' . ($att->ot_status ?: 'Pending') . '" data-ot-hours="' . (!is_null($att->ot_hours) && $att->ot_hours !== '' ? floatval($att->ot_hours) : '') . '" >
                             <i class="icon-base ri ri-pencil-line"></i>
                         </button>';
                 }
@@ -229,38 +247,53 @@ class OvertimeController extends Controller
             abort(404);
         }
         $hours = 0;
-        if ($record->in_time && $record->out_time) {
-            $in = \Carbon\Carbon::parse($record->in_time);
-            $out = \Carbon\Carbon::parse($record->out_time);
-            $hours = $out->diffInMinutes($in) / 60;
-        }
-        $isSunday = \Carbon\Carbon::parse($record->date)
-            ->isSunday();
-        $isHoliday = DB::table('declared_holidays')
-            ->whereDate('date', $record->date)
-            ->exists();
-        $totalMinutes = 0;
-        if ($record->in_time && $record->out_time) {
-            $totalMinutes = $out->diffInMinutes($in);
-        }
-        if ($isSunday || $isHoliday) {
-            $extraMinutes = $totalMinutes;
+        if (!is_null($record->ot_hours) && $record->ot_hours !== '') {
+            $totMins = round(floatval($record->ot_hours) * 60);
+            $hoursPart = (int)floor($totMins / 60);
+            $minutesPart = (int)($totMins % 60);
+            if ($hoursPart > 0 && $minutesPart > 0) {
+                $otHours = $hoursPart . ' hr ' . $minutesPart . ' mins';
+            } elseif ($hoursPart > 0) {
+                $otHours = $hoursPart . ' hr';
+            } elseif ($minutesPart > 0) {
+                $otHours = $minutesPart . ' mins';
+            } else {
+                $otHours = '0 mins';
+            }
         } else {
-            $extraMinutes = $totalMinutes - (9 * 60);
-        }
-        if ($extraMinutes < 0) {
-            $extraMinutes = 0;
-        }
-        $hoursPart = floor($extraMinutes / 60);
-        $minutesPart = $extraMinutes % 60;
-        if ($hoursPart > 0 && $minutesPart > 0) {
-            $otHours = $hoursPart . ' hr ' . $minutesPart . ' mins';
-        } elseif ($hoursPart > 0) {
-            $otHours = $hoursPart . ' hr';
-        } elseif ($minutesPart > 0) {
-            $otHours = $minutesPart . ' mins';
-        } else {
-            $otHours = '0 mins';
+            if ($record->in_time && $record->out_time) {
+                $in = \Carbon\Carbon::parse($record->in_time);
+                $out = \Carbon\Carbon::parse($record->out_time);
+                $hours = $out->diffInMinutes($in) / 60;
+            }
+            $isSunday = \Carbon\Carbon::parse($record->date)
+                ->isSunday();
+            $isHoliday = DB::table('declared_holidays')
+                ->whereDate('date', $record->date)
+                ->exists();
+            $totalMinutes = 0;
+            if ($record->in_time && $record->out_time) {
+                $totalMinutes = $out->diffInMinutes($in);
+            }
+            if ($isSunday || $isHoliday) {
+                $extraMinutes = $totalMinutes;
+            } else {
+                $extraMinutes = $totalMinutes - (9 * 60);
+            }
+            if ($extraMinutes < 0) {
+                $extraMinutes = 0;
+            }
+            $hoursPart = floor($extraMinutes / 60);
+            $minutesPart = $extraMinutes % 60;
+            if ($hoursPart > 0 && $minutesPart > 0) {
+                $otHours = $hoursPart . ' hr ' . $minutesPart . ' mins';
+            } elseif ($hoursPart > 0) {
+                $otHours = $hoursPart . ' hr';
+            } elseif ($minutesPart > 0) {
+                $otHours = $minutesPart . ' mins';
+            } else {
+                $otHours = '0 mins';
+            }
         }
         $lateHours = $record->status == 'Late'
             ? 1
@@ -280,7 +313,8 @@ class OvertimeController extends Controller
             'id' => 'required',
             'in_time' => 'required',
             'out_time' => 'nullable',
-            'ot_status' => 'nullable|in:Pending,Approved,Not Approved'
+            'ot_status' => 'nullable|in:Pending,Approved,Not Approved',
+            'ot_hours' => 'nullable|numeric|min:0|max:24'
         ]);
         $attendance = Attendance::find($request->id);
         if (!$attendance) {
@@ -319,6 +353,7 @@ class OvertimeController extends Controller
             'in_time',
             'out_time',
             'work_hours',
+            'ot_hours',
             'ot_status',
             'is_manual',
             'updated_by',
@@ -328,6 +363,7 @@ class OvertimeController extends Controller
             'in_time' => $in,
             'out_time' => $out,
             'work_hours' => $workHours,
+            'ot_hours' => ($request->filled('ot_hours') && $request->ot_hours !== '') ? floatval($request->ot_hours) : null,
             'ot_status' => $request->ot_status ?? $attendance->ot_status ?? 'Pending',
             'is_manual' => 1,
             'updated_by' => auth()->id(),

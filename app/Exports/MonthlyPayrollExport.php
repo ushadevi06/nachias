@@ -32,6 +32,7 @@ class MonthlyPayrollExport implements FromCollection, WithHeadings, WithMapping
                 );
             })
             ->leftJoin('departments', 'departments.id', '=', 'users.department_id')
+            ->leftJoin('service_providers', 'service_providers.id', '=', 'users.service_provider_id')
             ->leftJoin('devices', function ($join) {
                 $join->on(
                     DB::raw('devices.serial_number COLLATE utf8mb4_unicode_ci'),
@@ -42,6 +43,7 @@ class MonthlyPayrollExport implements FromCollection, WithHeadings, WithMapping
             ->where('salary_generations.salary_year', $year)
             ->where('salary_generations.salary_month', (int)$month)
             ->select(
+                'service_providers.name as unit_name',
                 'devices.device_name',
                 'users.emp_id',
                 'users.name',
@@ -98,7 +100,7 @@ class MonthlyPayrollExport implements FromCollection, WithHeadings, WithMapping
         $workingDays = $presentDays - $absentDays;
 
         return [
-            $row->device_name,
+            $row->unit_name ?: ($row->device_name ?: '—'),
             ++$this->sno,
             $row->emp_id,
             $row->name,

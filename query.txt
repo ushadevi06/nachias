@@ -1,27 +1,3 @@
--- 1. Credit Notes: Reference Number
-ALTER TABLE `credit_notes`
-ADD COLUMN `reference_no` VARCHAR(100) NULL AFTER `note_date`;
-
-
--- 2. Settings: Refinishing Amount
-ALTER TABLE `settings`
-ADD COLUMN `refinishing_amount` DECIMAL(12,2) NOT NULL DEFAULT 0
-AFTER `terms_and_conditions`;
-
-
--- 3. Sales Invoices: GST Filing Details
-ALTER TABLE `sales_invoices`
-ADD COLUMN `is_gst_filed` TINYINT(1) NOT NULL DEFAULT 0 AFTER `einvoice_status`,
-ADD COLUMN `gst_filed_at` TIMESTAMP NULL AFTER `is_gst_filed`,
-ADD COLUMN `gst_filed_by` BIGINT UNSIGNED NULL AFTER `gst_filed_at`;
-
-
--- 4. Fix SO-0360 (ID 379) header total_qty mismatch with items
-UPDATE `sales_orders`
-SET `total_qty` = 17.00, `sub_total_qty` = 17.00
-WHERE `id` = 379 AND `so_no` = 'SO-0360';
-
-
 -- 5. Attendances: Reason for Manual Edit
 ALTER TABLE `attendances`
 ADD COLUMN `reason` TEXT NULL AFTER `manual_updated_at`;
@@ -73,6 +49,18 @@ ADD COLUMN `ot_status` VARCHAR(50) NOT NULL DEFAULT 'Pending' AFTER `status`;
 ALTER TABLE `attendances` ADD INDEX `idx_attendances_ot_status_date` (`ot_status`, `date`);
 ALTER TABLE `users` ADD INDEX `idx_users_emp_id` (`emp_id`);
 ALTER TABLE `attendances` MODIFY `emp_code` VARCHAR(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
+
+
+-- 11. Attendances: Overtime Hours
+ALTER TABLE `attendances`
+ADD COLUMN `ot_hours` DECIMAL(5,2) NULL AFTER `work_hours`;
+
+
+-- 12. Users: Employee Roll Type (On Roll / Off Roll)
+ALTER TABLE `users`
+ADD COLUMN `type` VARCHAR(50) NOT NULL DEFAULT 'On Roll' AFTER `status`;
+
+
 
 
 

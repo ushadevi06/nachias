@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use App\Jobs\SyncAttendanceJob;
 use App\Models\Device;
+use App\Models\ServiceProvider;
 class AttendanceController extends Controller
 {
     public function getLogs($date, $device, $toDate = null)
@@ -371,6 +372,7 @@ class AttendanceController extends Controller
     {
         $date = $request->date;
         $device = $request->device;
+        $unit = $request->unit;
 
         $columns = [
             'id',
@@ -391,17 +393,38 @@ class AttendanceController extends Controller
             ->when($device && $device !== 'all', function ($query) use ($device) {
                 $query->where('device_serial_number', $device);
             })
+            ->when($unit && $unit !== 'all', function ($query) use ($unit) {
+                $empCodes = DB::table('users')
+                    ->where('service_provider_id', $unit)
+                    ->whereNull('deleted_at')
+                    ->pluck('emp_id')
+                    ->filter()
+                    ->toArray();
+                $query->whereIn('emp_code', $empCodes);
+            })
             ->get();
 
         if ($attendances->isNotEmpty()) {
             $empCodes = $attendances->pluck('code')->unique()->toArray();
 
-            $users = DB::table('users')->leftJoin('departments', 'users.department_id', '=', 'departments.id')->whereIn('users.emp_id', $empCodes)->select('users.emp_id', 'users.name', 'departments.department')->get()->keyBy('emp_id');
+            $users = DB::table('users')
+                ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
+                ->leftJoin('service_providers', 'users.service_provider_id', '=', 'service_providers.id')
+                ->whereIn('users.emp_id', $empCodes)
+                ->select(
+                    'users.emp_id',
+                    'users.name',
+                    'departments.department',
+                    'service_providers.name as unit'
+                )
+                ->get()
+                ->keyBy('emp_id');
 
             $attendances->transform(function ($item) use ($users) {
                 $user = $users[$item->code] ?? null;
                 $item->name = $user && $user->name ? $user->name : 'Unknown';
                 $item->department = $user && $user->department ? $user->department : '-';
+                $item->unit = $user && $user->unit ? $user->unit : '-';
                 return $item;
             });
 
@@ -443,7 +466,8 @@ class AttendanceController extends Controller
             $lastSynced = now()->format('d-m-Y H:i:s');
         }
         $devices = Device::get();
-        return view('attendances/view', compact('attendances', 'device', 'date', 'lastSynced', 'devices'));
+        $units = ServiceProvider::active()->orderBy('id', 'desc')->get();
+        return view('attendances/view', compact('attendances', 'device', 'date', 'lastSynced', 'devices', 'units'));
     }
     public function saveHolidays(Request $request)
     {
@@ -561,8 +585,9 @@ class AttendanceController extends Controller
         }
 
         $user = DB::table('users')
+            ->leftJoin('service_providers', 'users.service_provider_id', '=', 'service_providers.id')
             ->where('emp_id', $attendance->emp_code)
-            ->select('id as user_id', 'name', 'emp_id', 'profile_image')
+            ->select('users.id as user_id', 'users.name', 'users.emp_id', 'users.profile_image', 'service_providers.name as unit')
             ->first();
 
         if ($user) {
@@ -570,11 +595,13 @@ class AttendanceController extends Controller
             $attendance->name = $user->name;
             $attendance->emp_id = $user->emp_id;
             $attendance->profile_image = $user->profile_image;
+            $attendance->unit = $user->unit;
         } else {
             $attendance->user_id = null;
             $attendance->name = 'Unknown';
             $attendance->emp_id = $attendance->emp_code;
             $attendance->profile_image = null;
+            $attendance->unit = null;
         }
 
         return view('attendances.view_details', compact('attendance'));

@@ -33,14 +33,15 @@
 
         @php
             $canSalesOrders = auth()->id() == 1 || auth()->user()->can('view-sales-orders dashboard') || auth()->user()->can('view-sales-order dashboard');
-            $canFinanceHr = auth()->id() == 1 || auth()->user()->can('view-finance-hr dashboard') || auth()->user()->can('view-accounts-financial dashboard') || auth()->user()->can('view-attendance dashboard');
+            $canFinance = auth()->id() == 1 || auth()->user()->can('view-finance dashboard') || auth()->user()->can('view-finance-hr dashboard') || auth()->user()->can('view-accounts-financial dashboard');
+            $canHr = auth()->id() == 1 || auth()->user()->can('view-hr dashboard') || auth()->user()->can('view-finance-hr dashboard') || auth()->user()->can('view-attendance dashboard');
             $canProduction = auth()->id() == 1 || auth()->user()->can('view-production dashboard') || (auth()->user()->department_id == 3);
             $canStockMaterial = auth()->id() == 1 || auth()->user()->can('view-stock-material dashboard');
             $canSuppliersMaint = auth()->id() == 1 || auth()->user()->can('view-suppliers-maintenance dashboard') || auth()->user()->can('view-maintenance dashboard');
         @endphp
 
-        <!-- 5-TAB SEGMENTED NAVIGATION BAR (EXACTLY 5 TABS) -->
-        @if($canSalesOrders || $canFinanceHr || $canProduction || $canStockMaterial || $canSuppliersMaint)
+        <!-- 6-TAB SEGMENTED NAVIGATION BAR -->
+        @if($canSalesOrders || $canFinance || $canHr || $canProduction || $canStockMaterial || $canSuppliersMaint)
             <div class="mb-4">
                 <ul class="nav nav-pills dashboard-nav-pills p-2 bg-white rounded-3 shadow-sm border flex-nowrap overflow-auto"
                     id="dashboardTabs" role="tablist" style="scrollbar-width: thin; gap: 8px;">
@@ -55,35 +56,46 @@
                         </li>
                     @endif
 
-                    @if($canFinanceHr)
-                        <!-- Tab 2: Finance & HR -->
+                    @if($canFinance)
+                        <!-- Tab 2: Finance -->
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-finance-hr-tab" data-bs-toggle="tab"
-                                data-bs-target="#tab-finance-hr" type="button" role="tab" aria-controls="tab-finance-hr"
+                            <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-finance-tab" data-bs-toggle="tab"
+                                data-bs-target="#tab-finance" type="button" role="tab" aria-controls="tab-finance"
                                 aria-selected="false">
-                                <i class="ri ri-bank-card-line me-1 text-success"></i> 2. Finance & HR
+                                <i class="ri ri-bank-card-line me-1 text-success"></i> 2. Finance
+                            </button>
+                        </li>
+                    @endif
+
+                    @if($canHr)
+                        <!-- Tab 3: HR -->
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-hr-tab" data-bs-toggle="tab"
+                                data-bs-target="#tab-hr" type="button" role="tab" aria-controls="tab-hr"
+                                aria-selected="false">
+                                <i class="ri ri-team-line me-1 text-info"></i> 3. HR
                             </button>
                         </li>
                     @endif
 
                     @if($canProduction)
-                        <!-- Tab 3: Production -->
+                        <!-- Tab 4: Production -->
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-production-tab" data-bs-toggle="tab"
                                 data-bs-target="#tab-production" type="button" role="tab" aria-controls="tab-production"
                                 aria-selected="false">
-                                <i class="ri ri-loader-line me-1 text-warning"></i> 3. Production
+                                <i class="ri ri-loader-line me-1 text-warning"></i> 4. Production
                             </button>
                         </li>
                     @endif
 
                     @if($canStockMaterial)
-                        <!-- Tab 4: Stock & Material -->
+                        <!-- Tab 5: Stock & Material -->
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-stock-material-tab" data-bs-toggle="tab"
                                 data-bs-target="#tab-stock-material" type="button" role="tab" aria-controls="tab-stock-material"
                                 aria-selected="false">
-                                <i class="ri ri-stack-line me-1 text-info"></i> 4. Stock & Material
+                                <i class="ri ri-stack-line me-1 text-info"></i> 5. Stock & Material
                                 @if(isset($fabric_shortage_count) && $fabric_shortage_count > 0)
                                     <span class="badge bg-warning text-dark ms-1">{{ $fabric_shortage_count }} Low</span>
                                 @endif
@@ -92,12 +104,12 @@
                     @endif
 
                     @if($canSuppliersMaint)
-                        <!-- Tab 5: Suppliers & Maintenance -->
+                        <!-- Tab 6: Suppliers & Maintenance -->
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold px-3 py-2 text-nowrap" id="tab-suppliers-maintenance-tab"
                                 data-bs-toggle="tab" data-bs-target="#tab-suppliers-maintenance" type="button" role="tab"
                                 aria-controls="tab-suppliers-maintenance" aria-selected="false">
-                                <i class="ri ri-truck-line me-1 text-danger"></i> 5. Suppliers & Maintenance
+                                <i class="ri ri-truck-line me-1 text-danger"></i> 6. Suppliers & Maintenance
                             </button>
                         </li>
                     @endif
@@ -105,10 +117,10 @@
             </div>
         @endif
 
-        <!-- 5-TAB CONTENT CONTAINER -->
+        <!-- TAB CONTENT CONTAINER -->
         <div class="tab-content" id="erpDashboardTabsContent">
 
-            @if(!$canSalesOrders && !$canFinanceHr && !$canProduction && !$canStockMaterial && !$canSuppliersMaint)
+            @if(!$canSalesOrders && !$canFinance && !$canHr && !$canProduction && !$canStockMaterial && !$canSuppliersMaint)
                 <div class="card border-0 shadow-sm p-4 text-center my-4">
                     <div class="py-5">
                         <i class="ri ri-lock-2-line text-muted" style="font-size: 3rem;"></i>
@@ -234,7 +246,7 @@
                                             <div>
                                                 <p class="text-muted small fw-bold mb-1">Urgent Orders</p>
                                                 <h4 class="mb-0 fw-bold text-danger">{{ $urgent_orders }}</h4>
-                                                <span class="text-danger small fw-bold"><i class="ri-alert-line"></i> Action
+                                                <span class="text-danger small fw-bold"><i class="ri ri-alert-line"></i> Action
                                                     Required</span>
                                             </div>
                                             <div class="kpi-icon bg-light-danger">
@@ -309,11 +321,11 @@
                 </div> <!-- /#tab-sales-orders -->
             @endif
 
-            @if($canFinanceHr)
+            @if($canFinance)
                 <!-- ========================================================================================= -->
-                <!-- TAB 2: FINANCE & HR                                                                       -->
-                <div class="tab-pane fade" id="tab-finance-hr" role="tabpanel" aria-labelledby="tab-finance-hr-tab">
-                    <!-- PART A: ACCOUNTS & FINANCIAL DASHBOARD -->
+                <!-- TAB 2: FINANCE                                                                            -->
+                <div class="tab-pane fade" id="tab-finance" role="tabpanel" aria-labelledby="tab-finance-tab">
+                    <!-- ACCOUNTS & FINANCIAL DASHBOARD -->
                     <div class="mb-5">
                         <div class="d-flex align-items-center mb-3">
                             <div class="section-indicator bg-success me-2"></div>
@@ -533,11 +545,256 @@
                             </div>
                         </div>
                     </div>
+                </div> <!-- /#tab-finance -->
+            @endif
 
-                    <!-- PART B: EMPLOYEE'S ATTENDANCE DASHBOARD -->
+            @if($canHr)
+                <!-- ========================================================================================= -->
+                <!-- TAB 3: HR                                                                                 -->
+                <div class="tab-pane fade" id="tab-hr" role="tabpanel" aria-labelledby="tab-hr-tab">
+
+                    <!-- ========================================================================= -->
+                    <!-- SECTION 1: MONTHLY PAYROLL & UNIT-WISE SUMMARY                             -->
+                    <!-- ========================================================================= -->
+                    <div class="mb-5">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="section-indicator bg-primary me-2"></div>
+                            <h5 class="fw-bold mb-0">Payroll & Workforce Summary</h5>
+                        </div>
+                        
+                        <!-- Top Filters Bar & Progress -->
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div>
+                                    <label class="form-label small text-muted mb-1" style="font-size: 0.78rem;">Month</label>
+                                    <select id="payrollFilterMonth" class="form-select form-select-sm shadow-none border bg-white" style="min-width: 130px; font-weight: 500;">
+                                        @foreach(range(1, 12) as $m)
+                                            <option value="{{ $m }}" {{ ($payroll_unit_summary['month'] ?? date('n')) == $m ? 'selected' : '' }}>
+                                                {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label small text-muted mb-1" style="font-size: 0.78rem;">Year</label>
+                                    <select id="payrollFilterYear" class="form-select form-select-sm shadow-none border bg-white" style="min-width: 90px; font-weight: 500;">
+                                        @php
+                                            $currY = intval(date('Y'));
+                                        @endphp
+                                        @foreach(range($currY - 2, $currY + 1) as $y)
+                                            <option value="{{ $y }}" {{ ($payroll_unit_summary['year'] ?? $currY) == $y ? 'selected' : '' }}>
+                                                {{ $y }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label small text-muted mb-1" style="font-size: 0.78rem;">Frequency</label>
+                                    <select class="form-select form-select-sm shadow-none border bg-white text-muted" style="min-width: 95px;" disabled>
+                                        <option selected>Month</option>
+                                    </select>
+                                </div>
+                                <div class="pt-3">
+                                    <button type="button" id="btnDashboardShareWhatsApp" class="btn btn-sm btn-outline-success fw-semibold shadow-sm d-inline-flex align-items-center">
+                                        <i class="ri ri-whatsapp-line me-1 fs-6"></i> Send Report to WhatsApp
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Units Processed Progress -->
+                            <div class="text-end">
+                                <div class="d-flex align-items-center justify-content-end gap-2 mb-1">
+                                    <span id="payrollUnitsProgressText" class="small fw-semibold text-secondary" style="font-size: 0.85rem;">
+                                        {{ $payroll_unit_summary['processed_units'] ?? 0 }} of {{ $payroll_unit_summary['units_count'] ?? 6 }} units processed for {{ $payroll_unit_summary['period_label'] ?? '' }}
+                                    </span>
+                                </div>
+                                <div class="progress ms-auto" style="height: 4px; width: 240px; background-color: #e2e8f0; border-radius: 4px;">
+                                    <div id="payrollUnitsProgressBar" class="progress-bar" role="progressbar" style="width: {{ $payroll_unit_summary['progress_percent'] ?? 0 }}%; background-color: #0f172a; border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 6 Top KPI Cards -->
+                        <div class="row g-3 mb-4">
+                            <!-- 1. Total Employees -->
+                            <div class="col-xl-2 col-md-4 col-sm-6">
+                                <div class="card border-0 shadow-sm h-100 p-3 bg-white" style="border-top: 3.5px solid #0f172a !important; border-radius: 8px;">
+                                    <p class="text-muted text-uppercase mb-1 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Employees</p>
+                                    <h4 class="mb-0 fw-bold text-dark" id="kpiPayrollEmployees">{{ $payroll_unit_summary['total_employees'] ?? 0 }}</h4>
+                                    <small class="text-muted" style="font-size: 0.72rem;">across {{ $payroll_unit_summary['units_count'] ?? 6 }} units</small>
+                                </div>
+                            </div>
+
+                            <!-- 2. Total Gross Payroll -->
+                            <div class="col-xl-2 col-md-4 col-sm-6">
+                                <div class="card border-0 shadow-sm h-100 p-3 bg-white" style="border-top: 3.5px solid #dc2626 !important; border-radius: 8px;">
+                                    <p class="text-muted text-uppercase mb-1 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Gross Payroll</p>
+                                    <h4 class="mb-0 fw-bold text-dark" id="kpiPayrollGross">{{ $payroll_unit_summary['formatted_total_gross'] ?? '₹0.00' }}</h4>
+                                </div>
+                            </div>
+
+                            <!-- 3. Total PF -->
+                            <div class="col-xl-2 col-md-4 col-sm-6">
+                                <div class="card border-0 shadow-sm h-100 p-3 bg-white" style="border-top: 3.5px solid #0f172a !important; border-radius: 8px;">
+                                    <p class="text-muted text-uppercase mb-1 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total PF</p>
+                                    <h4 class="mb-0 fw-bold text-dark" id="kpiPayrollPf">{{ $payroll_unit_summary['formatted_total_pf'] ?? '₹0.00' }}</h4>
+                                </div>
+                            </div>
+
+                            <!-- 4. Total ESI -->
+                            <div class="col-xl-2 col-md-4 col-sm-6">
+                                <div class="card border-0 shadow-sm h-100 p-3 bg-white" style="border-top: 3.5px solid #0f172a !important; border-radius: 8px;">
+                                    <p class="text-muted text-uppercase mb-1 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total ESI</p>
+                                    <h4 class="mb-0 fw-bold text-dark" id="kpiPayrollEsi">{{ $payroll_unit_summary['formatted_total_esi'] ?? '₹0.00' }}</h4>
+                                </div>
+                            </div>
+
+                            <!-- 5. Total Deductions -->
+                            <div class="col-xl-2 col-md-4 col-sm-6">
+                                <div class="card border-0 shadow-sm h-100 p-3 bg-white" style="border-top: 3.5px solid #0f172a !important; border-radius: 8px;">
+                                    <p class="text-muted text-uppercase mb-1 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Deductions</p>
+                                    <h4 class="mb-0 fw-bold text-dark" id="kpiPayrollDeductions">{{ $payroll_unit_summary['formatted_total_deductions'] ?? '₹0.00' }}</h4>
+                                    <small class="text-muted" style="font-size: 0.70rem;">PF + ESI + Advance + Late</small>
+                                </div>
+                            </div>
+
+                            <!-- 6. Total Net Payroll -->
+                            <div class="col-xl-2 col-md-4 col-sm-6">
+                                <div class="card border-0 shadow-sm h-100 p-3 bg-white" style="border-top: 3.5px solid #dc2626 !important; border-radius: 8px;">
+                                    <p class="text-muted text-uppercase mb-1 fw-bold" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Net Payroll</p>
+                                    <h4 class="mb-0 fw-bold text-dark" id="kpiPayrollNet">{{ $payroll_unit_summary['formatted_total_net'] ?? '₹0.00' }}</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 1. Unit-wise Summary Table Card -->
+                        <div class="card border-0 shadow-sm bg-white overflow-hidden mb-4" style="border-radius: 8px;">
+                            <div class="py-3 px-3 border-bottom bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="fw-bold mb-0 text-dark">
+                                    Unit-wise Summary — <span id="payrollPeriodTableTitle">{{ $payroll_unit_summary['period_label'] ?? '' }}</span>
+                                </h5>
+                                <a href="{{ url('monthly_payroll') }}" class="btn btn-sm btn-outline-primary" target="_blank" style="font-size: 0.78rem;">
+                                    <i class="ri ri-external-link-line me-1"></i> Manage Payroll
+                                </a>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="payrollUnitTable" style="font-size: 0.88rem;">
+                                    <thead class="bg-light">
+                                        <tr style="border-bottom: 2px solid #e2e8f0;">
+                                            <th class="py-2 ps-3 small text-black text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">Unit</th>
+                                            <th class="py-2 text-center small text-black text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">Employees</th>
+                                            <th class="py-2 text-end small text-black text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">Gross Payroll</th>
+                                            <th class="py-2 text-end small text-black text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">PF</th>
+                                            <th class="py-2 text-end small text-black text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">ESI</th>
+                                            <th class="py-2 text-end small text-black text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">Deductions</th>
+                                            <th class="py-2 text-end small text-black text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">Net Payroll</th>
+                                            <th class="py-2 text-center small text-black text-uppercase fw-bold pe-3" style="font-size: 0.75rem; letter-spacing: 0.5px; color: #000000 !important;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="payrollUnitTableBody">
+                                        @if(isset($payroll_unit_summary['units']))
+                                            @foreach($payroll_unit_summary['units'] as $uRow)
+                                                <tr>
+                                                    <td class="ps-3 fw-bold text-dark">{{ $uRow['name'] }}</td>
+                                                    <td class="text-center">{{ $uRow['employees'] }}</td>
+                                                    <td class="text-end fw-semibold">{{ $uRow['formatted_gross'] }}</td>
+                                                    <td class="text-end">{{ $uRow['formatted_pf'] }}</td>
+                                                    <td class="text-end">{{ $uRow['formatted_esi'] }}</td>
+                                                    <td class="text-end text-muted">{{ $uRow['formatted_deductions'] }}</td>
+                                                    <td class="text-end fw-bold text-dark">{{ $uRow['formatted_net'] }}</td>
+                                                    <td class="text-center pe-3">
+                                                        @if($uRow['status'] === 'Processed')
+                                                            <span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 0.74rem;">Processed</span>
+                                                        @elseif($uRow['status'] === 'Draft')
+                                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning" style="font-size: 0.74rem;">Draft</span>
+                                                        @else
+                                                            <span class="badge bg-light text-secondary border" style="font-size: 0.74rem;">Not started</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        @endif
+                                    </tbody>
+                                    <tfoot style="font-weight: bold; background-color: #f8fafc; border-top: 2px solid #e2e8f0;">
+                                        <tr>
+                                            <td class="ps-3 text-dark">Total</td>
+                                            <td class="text-center text-dark" id="payrollFooterEmployees">{{ $payroll_unit_summary['total_employees'] ?? 0 }}</td>
+                                            <td class="text-end text-dark" id="payrollFooterGross">{{ $payroll_unit_summary['formatted_total_gross'] ?? '₹0.00' }}</td>
+                                            <td class="text-end text-dark" id="payrollFooterPf">{{ $payroll_unit_summary['formatted_total_pf'] ?? '₹0.00' }}</td>
+                                            <td class="text-end text-dark" id="payrollFooterEsi">{{ $payroll_unit_summary['formatted_total_esi'] ?? '₹0.00' }}</td>
+                                            <td class="text-end text-dark" id="payrollFooterDeductions">{{ $payroll_unit_summary['formatted_total_deductions'] ?? '₹0.00' }}</td>
+                                            <td class="text-end text-dark" id="payrollFooterNet">{{ $payroll_unit_summary['formatted_total_net'] ?? '₹0.00' }}</td>
+                                            <td class="text-center pe-3"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 2. Monthly Comparison — Last 3 Months Table Card -->
+                        <div class="card border-0 shadow-sm bg-white overflow-hidden mb-4" style="border-radius: 8px;">
+                            <div class="py-3 px-3 border-bottom bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="fw-bold mb-0 text-dark">
+                                    Monthly Comparison — Last 3 Months
+                                </h5>
+                                <span class="badge bg-light text-secondary border fw-medium" style="font-size: 0.76rem;">3 Months Rolling View</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="payrollComparisonTable" style="font-size: 0.88rem;">
+                                    <thead class="bg-light">
+                                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                                            <th rowspan="2" class="align-middle ps-3 text-uppercase fw-bold text-black" style="font-size: 0.76rem; letter-spacing: 0.5px; width: 180px; color: #000000 !important;">UNIT</th>
+                                            <th colspan="2" class="text-center text-uppercase fw-bold text-black py-2" style="font-size: 0.76rem; letter-spacing: 0.5px; border-left: 1px solid #e2e8f0; color: #000000 !important;" id="compMonth1Header">{{ $payroll_unit_summary['comparison']['months'][0]['label'] ?? 'SEPTEMBER 2026' }}</th>
+                                            <th colspan="2" class="text-center text-uppercase fw-bold text-black py-2" style="font-size: 0.76rem; letter-spacing: 0.5px; border-left: 1px solid #e2e8f0; color: #000000 !important;" id="compMonth2Header">{{ $payroll_unit_summary['comparison']['months'][1]['label'] ?? 'OCTOBER 2026' }}</th>
+                                            <th colspan="2" class="text-center text-uppercase fw-bold text-black py-2" style="font-size: 0.76rem; letter-spacing: 0.5px; border-left: 1px solid #e2e8f0; color: #000000 !important;" id="compMonth3Header">{{ $payroll_unit_summary['comparison']['months'][2]['label'] ?? 'NOVEMBER 2026' }}</th>
+                                        </tr>
+                                        <tr style="border-bottom: 2px solid #e2e8f0;">
+                                            <th class="text-center text-uppercase fw-bold py-1 text-black" style="font-size: 0.70rem; border-left: 1px solid #e2e8f0; color: #000000 !important;">EMPLOYEES</th>
+                                            <th class="text-end text-uppercase fw-bold py-1 pe-3 text-black" style="font-size: 0.70rem; color: #000000 !important;">NET PAYROLL</th>
+                                            <th class="text-center text-uppercase fw-bold py-1 text-black" style="font-size: 0.70rem; border-left: 1px solid #e2e8f0; color: #000000 !important;">EMPLOYEES</th>
+                                            <th class="text-end text-uppercase fw-bold py-1 pe-3 text-black" style="font-size: 0.70rem; color: #000000 !important;">NET PAYROLL</th>
+                                            <th class="text-center text-uppercase fw-bold py-1 text-black" style="font-size: 0.70rem; border-left: 1px solid #e2e8f0; color: #000000 !important;">EMPLOYEES</th>
+                                            <th class="text-end text-uppercase fw-bold py-1 pe-3 text-black" style="font-size: 0.70rem; color: #000000 !important;">NET PAYROLL</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="payrollComparisonTableBody">
+                                        @if(isset($payroll_unit_summary['comparison']['rows']))
+                                            @foreach($payroll_unit_summary['comparison']['rows'] as $cRow)
+                                                <tr>
+                                                    <td class="ps-3 fw-bold text-dark">{{ $cRow['name'] }}</td>
+                                                    <td class="text-center text-muted" style="border-left: 1px solid #f1f5f9;">{{ $cRow['m1_emp'] }}</td>
+                                                    <td class="text-end pe-3 fw-medium text-dark">{{ $cRow['m1_net'] }}</td>
+                                                    <td class="text-center text-muted" style="border-left: 1px solid #f1f5f9;">{{ $cRow['m2_emp'] }}</td>
+                                                    <td class="text-end pe-3 fw-medium text-dark">{{ $cRow['m2_net'] }}</td>
+                                                    <td class="text-center text-muted" style="border-left: 1px solid #f1f5f9;">{{ $cRow['m3_emp'] }}</td>
+                                                    <td class="text-end pe-3 fw-medium text-dark">{{ $cRow['m3_net'] }}</td>
+                                                </tr>
+                                            @endforeach
+                                        @endif
+                                    </tbody>
+                                    <tfoot style="font-weight: bold; background-color: #f8fafc; border-top: 2px solid #e2e8f0;">
+                                        <tr>
+                                            <td class="ps-3 text-dark">Total</td>
+                                            <td class="text-center text-dark" id="compFootM1Emp" style="border-left: 1px solid #e2e8f0;">{{ $payroll_unit_summary['comparison']['totals']['m1_emp'] ?? 0 }}</td>
+                                            <td class="text-end pe-3 text-dark" id="compFootM1Net">{{ $payroll_unit_summary['comparison']['totals']['m1_net'] ?? '₹0.00' }}</td>
+                                            <td class="text-center text-dark" id="compFootM2Emp" style="border-left: 1px solid #e2e8f0;">{{ $payroll_unit_summary['comparison']['totals']['m2_emp'] ?? 0 }}</td>
+                                            <td class="text-end pe-3 text-dark" id="compFootM2Net">{{ $payroll_unit_summary['comparison']['totals']['m2_net'] ?? '₹0.00' }}</td>
+                                            <td class="text-center text-dark" id="compFootM3Emp" style="border-left: 1px solid #e2e8f0;">{{ $payroll_unit_summary['comparison']['totals']['m3_emp'] ?? 0 }}</td>
+                                            <td class="text-end pe-3 text-dark" id="compFootM3Net">{{ $payroll_unit_summary['comparison']['totals']['m3_net'] ?? '₹0.00' }}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ========================================================================= -->
+                    <!-- SECTION 2: EMPLOYEE'S ATTENDANCE DASHBOARD                                 -->
+                    <!-- ========================================================================= -->
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-3">
-                            <div class="section-indicator bg-secondary me-2"></div>
+                            <div class="section-indicator bg-info me-2"></div>
                             <h5 class="fw-bold mb-0">Employee's Attendance & Workforce</h5>
                         </div>
 
@@ -622,11 +879,8 @@
                             <div class="col-xl-6 col-lg-8 col-md-12">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 fw-bold text-dark"><i
-                                                class="ri-pie-chart-2-fill text-danger me-2"></i>Attendance Summary & Device
-                                            Filter</h6>
-                                        <select id="attendanceDeviceFilter"
-                                            class="form-select form-select-sm w-auto shadow-none">
+                                        <h6 class="mb-0 fw-bold text-dark"><i class="ri ri-pie-chart-2-fill text-danger me-2"></i>Attendance Summary & Device Filter</h6>
+                                        <select id="attendanceDeviceFilter" class="form-select form-select-sm w-auto shadow-none">
                                             <option value="All">All Devices</option>
                                             @foreach($dbDevices as $device)
                                                 <option value="{{ $device->device_name ?: $device->serial_number }}">
@@ -644,12 +898,12 @@
                         </div>
                     </div>
 
-                </div> <!-- /#tab-finance-hr -->
+                </div> <!-- /#tab-hr -->
             @endif
 
             @if($canProduction)
                 <!-- ========================================================================================= -->
-                <!-- TAB 3: PRODUCTION                                                                         -->
+                <!-- TAB 4: PRODUCTION                                                                         -->
                 <div class="tab-pane fade" id="tab-production" role="tabpanel" aria-labelledby="tab-production-tab">
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-3">
@@ -671,17 +925,13 @@
                                         </span>
                                         <h5 class="mb-0 fw-bold text-dark">Cutting Dashboard</h5>
                                         <span class="badge bg-white text-dark border shadow-sm small">
-                                            <i class="ri ri-calendar-check-line text-warning me-1"></i> Today:
-                                            {{ date('d M, Y') }}
+                                            <i class="ri ri-calendar-check-line text-warning me-1"></i> Today: {{ date('d M, Y') }}
                                         </span>
                                     </div>
-                                    <p class="text-muted small mb-0 mt-1">This is the ERP home screen for the Cutting Department
-                                        — showing real-time cutting related data for today only.</p>
+                                    <p class="text-muted small mb-0 mt-1">This is the ERP home screen for the Cutting Department — showing real-time cutting related data for today only.</p>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <button type="button"
-                                        class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm fw-semibold"
-                                        data-bs-toggle="modal" data-bs-target="#cuttingJobCardsModal">
+                                    <button type="button" class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#cuttingJobCardsModal">
                                         <i class="ri ri-file-list-3-line"></i>
                                         <span>Active Job Cards ({{ $cutting_total_job_cards ?? 0 }})</span>
                                     </button>
@@ -709,9 +959,7 @@
                                                             <span class="fs-5 me-1">🧑</span> Employees Present
                                                         </p>
                                                         <h3 class="mb-1 fw-bold text-dark">
-                                                            {{ $cutting_emp_present ?? 0 }} <span
-                                                                class="fs-6 fw-normal text-muted">/
-                                                                {{ $cutting_emp_total ?? 0 }}</span>
+                                                            {{ $cutting_emp_present ?? 0 }} <span class="fs-6 fw-normal text-muted">/ {{ $cutting_emp_total ?? 0 }}</span>
                                                         </h3>
                                                         <span class="badge bg-soft-warning text-dark x-small fw-semibold">
                                                             {{ ($cutting_emp_total ?? 0) > 0 ? round((($cutting_emp_present ?? 0) / $cutting_emp_total) * 100) : 0 }}%
@@ -738,8 +986,7 @@
                                                             <span class="fs-5 me-1">✂️</span> Pieces Cut
                                                         </p>
                                                         <h3 class="mb-1 fw-bold text-primary">
-                                                            {{ number_format($cutting_pieces_cut ?? 0) }} <span
-                                                                class="fs-6 fw-normal text-muted">Pcs</span>
+                                                            {{ number_format($cutting_pieces_cut ?? 0) }} <span class="fs-6 fw-normal text-muted">Pcs</span>
                                                         </h3>
                                                         <span class="text-muted x-small">Total pieces cut today</span>
                                                     </div>
@@ -766,16 +1013,11 @@
                                                             <i class="ri ri-arrow-right-up-line text-muted ms-1 small"></i>
                                                         </p>
                                                         <h3 class="mb-1 fw-bold text-info">
-                                                            {{ $cutting_active_job_cards ?? 0 }} <span
-                                                                class="fs-6 fw-normal text-muted">Active</span>
+                                                            {{ $cutting_active_job_cards ?? 0 }} <span class="fs-6 fw-normal text-muted">Active</span>
                                                         </h3>
                                                         <div class="d-flex align-items-center gap-1">
-                                                            <span
-                                                                class="badge bg-soft-success text-success x-small fw-semibold">{{ $cutting_completed_job_cards ?? 0 }}
-                                                                Completed</span>
-                                                            <span
-                                                                class="text-muted x-small">({{ $cutting_total_job_cards ?? 0 }}
-                                                                Total)</span>
+                                                            <span class="badge bg-soft-success text-success x-small fw-semibold">{{ $cutting_completed_job_cards ?? 0 }} Completed</span>
+                                                            <span class="text-muted x-small">({{ $cutting_total_job_cards ?? 0 }} Total)</span>
                                                         </div>
                                                     </div>
                                                     <div class="rounded-circle p-2 d-flex align-items-center justify-content-center"
@@ -798,8 +1040,7 @@
                                                             <span class="fs-5 me-1">🎯</span> Target (Today)
                                                         </p>
                                                         <h3 class="mb-1 fw-bold text-danger">
-                                                            {{ number_format($cutting_target ?? 0) }} <span
-                                                                class="fs-6 fw-normal text-muted">Pcs</span>
+                                                            {{ number_format($cutting_target ?? 0) }} <span class="fs-6 fw-normal text-muted">Pcs</span>
                                                         </h3>
                                                         <span class="text-muted x-small">Today's cutting target</span>
                                                     </div>
@@ -823,8 +1064,7 @@
                                                             <span class="fs-5 me-1">✅</span> Completed (Today)
                                                         </p>
                                                         <h3 class="mb-1 fw-bold text-success">
-                                                            {{ number_format($cutting_completed ?? 0) }} <span
-                                                                class="fs-6 fw-normal text-muted">Pcs</span>
+                                                            {{ number_format($cutting_completed ?? 0) }} <span class="fs-6 fw-normal text-muted">Pcs</span>
                                                         </h3>
                                                         <span class="text-muted x-small">Today's cutting completed count</span>
                                                     </div>
@@ -848,13 +1088,11 @@
                                                             <span class="fs-5 me-1">⏳</span> Pending
                                                         </p>
                                                         <h3 class="mb-1 fw-bold text-warning">
-                                                            {{ number_format($cutting_pending ?? 0) }} <span
-                                                                class="fs-6 fw-normal text-muted">Pcs</span>
+                                                            {{ number_format($cutting_pending ?? 0) }} <span class="fs-6 fw-normal text-muted">Pcs</span>
                                                         </h3>
                                                         <span class="text-muted x-small">Target - Completed (Remaining)</span>
                                                     </div>
-                                                    <div class="rounded-circle p-2 d-flex align-items-center justify-content-center"
-                                                        style="background: #ffedd5; width: 44px; height: 44px;">
+                                                    <div class="rounded-circle p-2 d-flex align-items-center justify-content-center" style="background: #ffedd5; width: 44px; height: 44px;">
                                                         <i class="ri ri-hourglass-line text-warning fs-5"></i>
                                                     </div>
                                                 </div>
@@ -873,8 +1111,7 @@
                                         </span>
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="small text-muted">Department Efficiency:</span>
-                                            <span
-                                                class="badge {{ ($cutting_efficiency ?? 0) >= 80 ? 'bg-success' : (($cutting_efficiency ?? 0) >= 50 ? 'bg-warning text-dark' : 'bg-danger') }} fw-bold px-2 py-1">
+                                            <span class="badge {{ ($cutting_efficiency ?? 0) >= 80 ? 'bg-success' : (($cutting_efficiency ?? 0) >= 50 ? 'bg-warning text-dark' : 'bg-danger') }} fw-bold px-2 py-1">
                                                 {{ $cutting_efficiency ?? 0 }}%
                                             </span>
                                         </div>
@@ -883,10 +1120,8 @@
                                         <table class="table table-hover align-middle mb-0 bg-white">
                                             <thead class="bg-light">
                                                 <tr>
-                                                    <th class="py-2 px-3 text-dark fw-bold"
-                                                        style="width: 55%; font-size: 0.85rem;">KPI</th>
-                                                    <th class="py-2 px-3 text-dark fw-bold text-end"
-                                                        style="width: 45%; font-size: 0.85rem;">Today</th>
+                                                    <th class="py-2 px-3 text-dark fw-bold" style="width: 55%; font-size: 0.85rem;">KPI</th>
+                                                    <th class="py-2 px-3 text-dark fw-bold text-end" style="width: 45%; font-size: 0.85rem;">Today</th>
                                                 </tr>
                                             </thead>
                                             <tbody style="font-size: 0.9rem;">
@@ -909,17 +1144,13 @@
                                                 <tr>
                                                     <td class="py-2 px-3">
                                                         <span class="me-2">📄</span> <strong>Active Job Cards</strong>
-                                                        <a href="javascript:;" data-bs-toggle="modal"
-                                                            data-bs-target="#cuttingJobCardsModal"
-                                                            class="ms-2 small text-decoration-none text-info">
+                                                        <a href="javascript:;" data-bs-toggle="modal" data-bs-target="#cuttingJobCardsModal" class="ms-2 small text-decoration-none text-info">
                                                             (View All)
                                                         </a>
                                                     </td>
                                                     <td class="py-2 px-3 text-end fw-bold text-dark">
                                                         {{ $cutting_active_job_cards ?? 0 }}
-                                                        <span
-                                                            class="badge bg-soft-success text-success ms-1 small">{{ $cutting_completed_job_cards ?? 0 }}
-                                                            Completed</span>
+                                                        <span class="badge bg-soft-success text-success ms-1 small">{{ $cutting_completed_job_cards ?? 0 }} Completed</span>
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -952,8 +1183,7 @@
                                                         <span class="me-2">📈</span> <strong>Department Efficiency</strong>
                                                     </td>
                                                     <td class="py-2 px-3 text-end fw-bold">
-                                                        <span
-                                                            class="badge {{ ($cutting_efficiency ?? 0) >= 80 ? 'bg-success' : (($cutting_efficiency ?? 0) >= 50 ? 'bg-warning text-dark' : 'bg-danger') }} px-2 py-1">
+                                                        <span class="badge {{ ($cutting_efficiency ?? 0) >= 80 ? 'bg-success' : (($cutting_efficiency ?? 0) >= 50 ? 'bg-warning text-dark' : 'bg-danger') }} px-2 py-1">
                                                             {{ $cutting_efficiency ?? 0 }}%
                                                         </span>
                                                     </td>
@@ -971,10 +1201,8 @@
                             <div class="col-lg-4">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 fw-bold"><i class="ri ri-focus-3-line me-2 text-primary"></i>Production
-                                            Target Status</h6>
-                                        <span
-                                            class="badge {{ $production_efficiency >= 80 ? 'bg-success' : ($production_efficiency >= 50 ? 'bg-warning text-dark' : 'bg-danger') }}">
+                                        <h6 class="mb-0 fw-bold"><i class="ri ri-focus-3-line me-2 text-primary"></i>Production Target Status</h6>
+                                        <span class="badge {{ $production_efficiency >= 80 ? 'bg-success' : ($production_efficiency >= 50 ? 'bg-warning text-dark' : 'bg-danger') }}">
                                             {{ $production_efficiency }}% Efficiency
                                         </span>
                                     </div>
@@ -1009,10 +1237,8 @@
                             <div class="col-lg-4">
                                 <div class="card border-0 shadow-sm h-100 border-top border-danger border-3">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 fw-bold text-danger"><i class="ri ri-time-line me-2"></i>Delivery Days
-                                            Overdue</h6>
-                                        <span class="badge bg-soft-danger text-danger">{{ $delivery_overdue->count() }}
-                                            Overdue</span>
+                                        <h6 class="mb-0 fw-bold text-danger"><i class="ri ri-time-line me-2"></i>Delivery Days Overdue</h6>
+                                        <span class="badge bg-soft-danger text-danger">{{ $delivery_overdue->count() }} Overdue</span>
                                     </div>
                                     <div class="card-body p-0" style="max-height: 280px; overflow-y: auto;">
                                         <div class="list-group list-group-flush">
@@ -1021,8 +1247,7 @@
                                                     <div class="list-group-item py-3">
                                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                                             <span class="small fw-bold text-primary">{{ $od->job_card_no }}</span>
-                                                            <span class="badge bg-danger text-white">{{ $od->overdue_days }} Days
-                                                                Overdue</span>
+                                                            <span class="badge bg-danger text-white">{{ $od->overdue_days }} Days Overdue</span>
                                                         </div>
                                                         <p class="text-muted x-small mb-0">Target:
                                                             {{ date('d-M-y', strtotime($od->delivery_date)) }} | Qty:
@@ -1044,8 +1269,7 @@
                             <div class="col-lg-4">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-white py-3">
-                                        <h6 class="mb-0 fw-bold"><i class="ri ri-flow-chart me-2 text-info"></i>Process Wise
-                                            Status</h6>
+                                        <h6 class="mb-0 fw-bold"><i class="ri ri-flow-chart me-2 text-info"></i>Process Wise Status</h6>
                                     </div>
                                     <div class="card-body p-0">
                                         <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
@@ -1072,8 +1296,7 @@
                                                         @endforeach
                                                     @else
                                                         <tr>
-                                                            <td colspan="4" class="text-center text-muted py-3">No process data
-                                                                recorded</td>
+                                                            <td colspan="4" class="text-center text-muted py-3">No process data recorded</td>
                                                         </tr>
                                                     @endif
                                                 </tbody>
@@ -1090,11 +1313,9 @@
                             <div class="col-lg-7">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 fw-bold"><i class="ri ri-loader-line me-2 text-primary"></i>Production
-                                            WIP (Unit Wise)</h6>
+                                        <h6 class="mb-0 fw-bold"><i class="ri ri-loader-line me-2 text-primary"></i>Production WIP (Unit Wise)</h6>
                                         <div class="search-box">
-                                            <input type="text" id="wipSearchInput" class="form-control form-control-sm"
-                                                placeholder="Search Process, Inward, Outward, WIP...">
+                                            <input type="text" id="wipSearchInput" class="form-control form-control-sm" placeholder="Search Process, Inward, Outward, WIP...">
                                         </div>
                                     </div>
                                     <div class="card-body p-0">
@@ -1126,8 +1347,7 @@
                                                         @endforeach
                                                     @else
                                                         <tr>
-                                                            <td colspan="5" class="text-center text-muted py-4">No WIP data
-                                                                available</td>
+                                                            <td colspan="5" class="text-center text-muted py-4">No WIP data available</td>
                                                         </tr>
                                                     @endif
                                                 </tbody>
@@ -1147,12 +1367,9 @@
                             <div class="col-lg-5">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 fw-bold"><i
-                                                class="ri ri-money-rupee-circle-line me-2 text-success"></i>Production Cost
-                                            (Unit Wise)</h6>
+                                        <h6 class="mb-0 fw-bold"><i class="ri ri-money-rupee-circle-line me-2 text-success"></i>Production Cost (Unit Wise)</h6>
                                         <div class="search-box">
-                                            <input type="text" id="costSearchInput" class="form-control form-control-sm"
-                                                placeholder="Search Job Card...">
+                                            <input type="text" id="costSearchInput" class="form-control form-control-sm" placeholder="Search Job Card...">
                                         </div>
                                     </div>
                                     <div class="card-body p-3 d-flex flex-column">
@@ -1189,7 +1406,7 @@
 
             @if($canStockMaterial)
                 <!-- ========================================================================================= -->
-                <!-- TAB 4: STOCK & MATERIAL                                                                   -->
+                <!-- TAB 5: STOCK & MATERIAL                                                                   -->
                 <div class="tab-pane fade" id="tab-stock-material" role="tabpanel" aria-labelledby="tab-stock-material-tab">
                     <!-- Section 1: Fabric & Store Stock Dashboard -->
                     <div class="mb-5">
@@ -1558,8 +1775,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <p class="text-muted small fw-bold mb-1">Overall Utilisation</p>
-                                                    <h4
-                                                        class="mb-0 fw-bold {{ $total_util_pct >= 95 ? 'text-success' : ($total_util_pct >= 90 ? 'text-warning' : 'text-danger') }}">
+                                                    <h4 class="mb-0 fw-bold {{ $total_util_pct >= 95 ? 'text-success' : ($total_util_pct >= 90 ? 'text-warning' : 'text-danger') }}">
                                                         {{ $total_util_pct }}%</h4>
                                                     <span class="text-muted small">Fabric Cutting Efficiency</span>
                                                 </div>
@@ -1574,8 +1790,7 @@
 
                             <!-- Breadcrumb Navigation for Level 2 Drilldown -->
                             <div class="mb-3 d-flex align-items-center" id="utilBreadcrumbs" style="display: none !important;">
-                                <button class="btn btn-sm btn-outline-secondary me-2" onclick="showUtilBrandLevel()"
-                                    id="btnBackToUtilBrands">
+                                <button class="btn btn-sm btn-outline-secondary me-2" onclick="showUtilBrandLevel()" id="btnBackToUtilBrands">
                                     <i class="ri ri-arrow-left-line me-1"></i> Back to All Brands
                                 </button>
                                 <span class="text-muted me-1">All Brands &gt;</span>
@@ -1584,8 +1799,7 @@
 
                             <!-- Level 1: Brand Summary Container -->
                             <div id="utilBrandContainer" class="card border-0 shadow-sm">
-                                <div
-                                    class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <div>
                                         <h6 class="mb-0 fw-bold text-dark">
                                             <i class="ri ri-line-chart-line me-2 text-success"></i>Brand-wise Fabric Utilisation
@@ -1636,11 +1850,9 @@
                                 class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div>
                                     <h6 class="mb-0 fw-bold text-dark">
-                                        <i class="ri ri-file-list-3-line me-2 text-primary"></i><span
-                                            id="utilActiveBrandHeaderTitle">Job Cards</span>
+                                        <i class="ri ri-file-list-3-line me-2 text-primary"></i><span id="utilActiveBrandHeaderTitle">Job Cards</span>
                                     </h6>
-                                    <small class="text-muted">Showing plant service provider, style, issued meters, consumed,
-                                        wastage, and remarks</small>
+                                    <small class="text-muted">Showing plant service provider, style, issued meters, consumed, wastage, and remarks</small>
                                 </div>
                             </div>
                             <div class="card-datatable table-responsive px-3 pb-3">
@@ -1685,7 +1897,7 @@
 
             @if($canSuppliersMaint)
                 <!-- ========================================================================================= -->
-                <!-- TAB 5: SUPPLIERS & MAINTENANCE                                                            -->
+                <!-- TAB 6: SUPPLIERS & MAINTENANCE                                                            -->
                 <div class="tab-pane fade" id="tab-suppliers-maintenance" role="tabpanel"
                     aria-labelledby="tab-suppliers-maintenance-tab">
                     <!-- SECTION 1: SUPPLIER PERFORMANCE DASHBOARD -->
@@ -1913,9 +2125,7 @@
                             <div class="col-lg-7">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 fw-bold text-navy"><i
-                                                class="ri ri-shield-check-line me-2 text-primary"></i>Renewals & Statutory
-                                            Compliance</h6>
+                                        <h6 class="mb-0 fw-bold text-navy"><i class="ri ri-shield-check-line me-2 text-primary"></i>Renewals & Statutory Compliance</h6>
                                         <span class="badge bg-light text-muted border">Next 90 Days</span>
                                     </div>
                                     <div class="card-body p-0">
@@ -1940,12 +2150,9 @@
                                                                         $isExpired = \Carbon\Carbon::parse($doc->validity_date)->isPast();
                                                                     @endphp
                                                                     @if($isExpired)
-                                                                        <span class="badge bg-danger text-white border px-2 py-1"><i
-                                                                                class="ri ri-close-circle-line me-1"></i> Expired</span>
+                                                                        <span class="badge bg-danger text-white border px-2 py-1"><i class="ri ri-close-circle-line me-1"></i> Expired</span>
                                                                     @else
-                                                                        <span class="badge bg-warning text-dark border px-2 py-1"><i
-                                                                                class="ri ri-time-line me-1"></i> {{ $daysLeft }} Days
-                                                                            Left</span>
+                                                                        <span class="badge bg-warning text-dark border px-2 py-1"><i class="ri ri-time-line me-1"></i> {{ $daysLeft }} Days Left</span>
                                                                     @endif
                                                                 </td>
                                                             </tr>
@@ -1970,8 +2177,7 @@
                             <div class="col-lg-5">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-white py-3">
-                                        <h6 class="mb-0 fw-bold text-navy"><i
-                                                class="ri ri-tools-line me-2 text-danger"></i>Maintenance Ticket Status</h6>
+                                        <h6 class="mb-0 fw-bold text-navy"><i class="ri ri-tools-line me-2 text-danger"></i>Maintenance Ticket Status</h6>
                                     </div>
                                     <div class="card-body p-0">
                                         <div class="list-group list-group-flush list-group-sm">
@@ -1981,30 +2187,25 @@
                                                         <span class="small fw-bold text-dark d-block">Requirements Raised</span>
                                                         <small class="text-muted">Total maintenance tickets registered</small>
                                                     </div>
-                                                    <span
-                                                        class="badge bg-primary rounded-pill fs-6 px-3 py-2">{{ $maintenance_raised }}</span>
+                                                    <span class="badge bg-primary rounded-pill fs-6 px-3 py-2">{{ $maintenance_raised }}</span>
                                                 </div>
                                             </div>
                                             <div class="list-group-item border-0 py-3">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div>
-                                                        <span class="small fw-bold text-dark d-block">Requirements
-                                                            Attended</span>
+                                                        <span class="small fw-bold text-dark d-block">Requirements Attended</span>
                                                         <small class="text-muted">Repairs completed & resolved</small>
                                                     </div>
-                                                    <span
-                                                        class="badge bg-success rounded-pill fs-6 px-3 py-2">{{ $maintenance_attended }}</span>
+                                                    <span class="badge bg-success rounded-pill fs-6 px-3 py-2">{{ $maintenance_attended }}</span>
                                                 </div>
                                             </div>
                                             <div class="list-group-item border-0 py-3">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div>
-                                                        <span class="small fw-bold text-danger d-block">Requirements
-                                                            Pending</span>
+                                                        <span class="small fw-bold text-danger d-block">Requirements Pending</span>
                                                         <small class="text-danger">Action required by maintenance team</small>
                                                     </div>
-                                                    <span
-                                                        class="badge bg-danger rounded-pill fs-6 px-3 py-2">{{ $maintenance_pending }}</span>
+                                                    <span class="badge bg-danger rounded-pill fs-6 px-3 py-2">{{ $maintenance_pending }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -2019,6 +2220,65 @@
 
         </div> <!-- /#erpDashboardTabsContent -->
     </div> <!-- /.container-xxl -->
+    <!-- WhatsApp Share Modal (Option 2) -->
+    <div class="modal fade" id="modalWhatsAppShare" tabindex="-1" aria-labelledby="waModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white py-3">
+                    <h5 class="modal-title fw-bold text-white d-flex align-items-center mb-0" id="waModalTitle">
+                        <i class="ri ri-whatsapp-line fs-4 me-2"></i> Share via WhatsApp
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- PDF File Info Box -->
+                    <div class="d-flex align-items-center p-3 mb-3 bg-light rounded border">
+                        <i class="ri ri-file-pdf-2-line fs-2 text-danger me-3"></i>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <h6 class="mb-0 fw-bold text-truncate text-dark" id="waModalFileName">Nachias_Payroll_Report.pdf</h6>
+                            <small class="text-muted" id="waModalFileSize">PDF Document &bull; Ready to share</small>
+                        </div>
+                        <a href="#" id="waModalViewLink" target="_blank" class="btn btn-sm btn-outline-primary ms-2" title="View PDF in New Tab">
+                            <i class="ri ri-eye-line me-1"></i> View PDF
+                        </a>
+                        <a href="#" id="waModalDownloadLink" target="_blank" class="btn btn-sm btn-outline-secondary ms-1" title="Direct Download PDF">
+                            <i class="ri ri-download-2-line"></i>
+                        </a>
+                    </div>
+
+                    <!-- Recipient Mobile Number -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">
+                            WhatsApp Mobile Number <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white fw-bold text-secondary">+91</span>
+                            <input type="text" id="waModalPhone" class="form-control" placeholder="Enter 10-digit mobile number" maxlength="10">
+                        </div>
+                        <small class="text-muted">Enter 10-digit mobile number (e.g. 916382112269 or 9876543210)</small>
+                    </div>
+
+                    <!-- Message Preview -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-dark">Message Preview</label>
+                        <textarea id="waModalMessage" class="form-control" rows="3" style="font-size: 0.88rem;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3 d-flex flex-wrap justify-content-between gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="waBtnNativeShare" class="btn btn-primary d-inline-flex align-items-center">
+                            <i class="ri ri-share-forward-line me-1"></i> Native Share (Attach PDF)
+                        </button>
+                        <button type="button" id="waBtnOpenWeb" class="btn btn-success d-inline-flex align-items-center">
+                            <i class="ri ri-whatsapp-line me-1"></i> Open WhatsApp Web
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
         /* 5-Tab Segmented Navigation Styling */
         .dashboard-nav-pills {
@@ -2249,6 +2509,9 @@
 
             // Initialize active tab from URL hash, localStorage, or first available permitted tab
             var initialTab = window.location.hash || localStorage.getItem('activeErpTab') || '';
+            if (initialTab === '#tab-finance-hr') {
+                initialTab = '#tab-finance';
+            }
             @if(auth()->user()->department_id == 3 || (auth()->user()->department && stripos(auth()->user()->department->department, 'cutting') !== false))
                 if (!window.location.hash) {
                     initialTab = '#tab-production';
@@ -2294,7 +2557,7 @@
             Chart.defaults.font.family = "'Inter', sans-serif";
             Chart.defaults.color = '#64748b';
 
-            // 1. Stock Distribution Chart (Finance & HR Tab)
+            // 1. Stock Distribution Chart (Finance Tab)
             const ctxStock = document.getElementById('stockDistributionChart');
             if (ctxStock) {
                 new Chart(ctxStock, {
@@ -2431,7 +2694,229 @@
                 });
             }
 
-            // 4. Attendance Summary Chart (Finance & HR Tab)
+            // Payroll Unit Summary Dynamic AJAX Filtering (HR Tab)
+            function loadPayrollUnitSummary(month, year) {
+                $('#payrollUnitTableBody, #payrollComparisonTableBody').css('opacity', '0.5');
+                $.ajax({
+                    url: "{{ url('/dashboard/payroll-unit-summary') }}",
+                    type: "GET",
+                    data: { month: month, year: year },
+                    success: function (res) {
+                        $('#payrollUnitTableBody, #payrollComparisonTableBody').css('opacity', '1');
+                        if (!res) return;
+
+                        // 1. Update text and progress
+                        $('#payrollPeriodTableTitle').text(res.period_label);
+                        $('#payrollUnitsProgressText').text(`${res.processed_units} of ${res.units_count} units processed for ${res.period_label}`);
+                        $('#payrollUnitsProgressBar').css('width', `${res.progress_percent}%`);
+
+                        // 2. Update KPI cards
+                        $('#kpiPayrollEmployees').text(res.total_employees);
+                        $('#kpiPayrollGross').text(res.formatted_total_gross);
+                        $('#kpiPayrollPf').text(res.formatted_total_pf);
+                        $('#kpiPayrollEsi').text(res.formatted_total_esi);
+                        $('#kpiPayrollDeductions').text(res.formatted_total_deductions);
+                        $('#kpiPayrollNet').text(res.formatted_total_net);
+
+                        // 3. Update Unit-wise Summary table body
+                        let rows = '';
+                        if (res.units && res.units.length > 0) {
+                            res.units.forEach(function (u) {
+                                let badge = '';
+                                if (u.status === 'Processed') {
+                                    badge = '<span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 0.74rem;">Processed</span>';
+                                } else if (u.status === 'Draft') {
+                                    badge = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning" style="font-size: 0.74rem;">Draft</span>';
+                                } else {
+                                    badge = '<span class="badge bg-light text-secondary border" style="font-size: 0.74rem;">Not started</span>';
+                                }
+
+                                rows += `
+                                    <tr>
+                                        <td class="ps-3 fw-bold text-dark">${u.name}</td>
+                                        <td class="text-center">${u.employees}</td>
+                                        <td class="text-end fw-semibold">${u.formatted_gross}</td>
+                                        <td class="text-end">${u.formatted_pf}</td>
+                                        <td class="text-end">${u.formatted_esi}</td>
+                                        <td class="text-end text-muted">${u.formatted_deductions}</td>
+                                        <td class="text-end fw-bold text-dark">${u.formatted_net}</td>
+                                        <td class="text-center pe-3">${badge}</td>
+                                    </tr>
+                                `;
+                            });
+                        }
+                        $('#payrollUnitTableBody').html(rows);
+
+                        // 4. Update Unit-wise Summary table footer
+                        $('#payrollFooterEmployees').text(res.total_employees);
+                        $('#payrollFooterGross').text(res.formatted_total_gross);
+                        $('#payrollFooterPf').text(res.formatted_total_pf);
+                        $('#payrollFooterEsi').text(res.formatted_total_esi);
+                        $('#payrollFooterDeductions').text(res.formatted_total_deductions);
+                        $('#payrollFooterNet').text(res.formatted_total_net);
+
+                        // 5. Update Monthly Comparison Table
+                        if (res.comparison) {
+                            if (res.comparison.months) {
+                                if (res.comparison.months[0]) $('#compMonth1Header').text(res.comparison.months[0].label);
+                                if (res.comparison.months[1]) $('#compMonth2Header').text(res.comparison.months[1].label);
+                                if (res.comparison.months[2]) $('#compMonth3Header').text(res.comparison.months[2].label);
+                            }
+
+                            let compRows = '';
+                            if (res.comparison.rows && res.comparison.rows.length > 0) {
+                                res.comparison.rows.forEach(function (r) {
+                                    compRows += `
+                                        <tr>
+                                            <td class="ps-3 fw-bold text-dark">${r.name}</td>
+                                            <td class="text-center text-muted" style="border-left: 1px solid #f1f5f9;">${r.m1_emp}</td>
+                                            <td class="text-end pe-3 fw-medium text-dark">${r.m1_net}</td>
+                                            <td class="text-center text-muted" style="border-left: 1px solid #f1f5f9;">${r.m2_emp}</td>
+                                            <td class="text-end pe-3 fw-medium text-dark">${r.m2_net}</td>
+                                            <td class="text-center text-muted" style="border-left: 1px solid #f1f5f9;">${r.m3_emp}</td>
+                                            <td class="text-end pe-3 fw-medium text-dark">${r.m3_net}</td>
+                                        </tr>
+                                    `;
+                                });
+                            }
+                            $('#payrollComparisonTableBody').html(compRows);
+
+                            if (res.comparison.totals) {
+                                $('#compFootM1Emp').text(res.comparison.totals.m1_emp);
+                                $('#compFootM1Net').text(res.comparison.totals.m1_net);
+                                $('#compFootM2Emp').text(res.comparison.totals.m2_emp);
+                                $('#compFootM2Net').text(res.comparison.totals.m2_net);
+                                $('#compFootM3Emp').text(res.comparison.totals.m3_emp);
+                                $('#compFootM3Net').text(res.comparison.totals.m3_net);
+                            }
+                        }
+                    },
+                    error: function () {
+                        $('#payrollUnitTableBody, #payrollComparisonTableBody').css('opacity', '1');
+                    }
+                });
+            }
+
+            $('#payrollFilterMonth, #payrollFilterYear').on('change', function () {
+                let m = $('#payrollFilterMonth').val();
+                let y = $('#payrollFilterYear').val();
+                loadPayrollUnitSummary(m, y);
+            });
+
+            // WhatsApp Share Functionality (Option 2)
+            window.activeShareData = {
+                title: '',
+                filename: '',
+                pdfUrl: '',
+                phone: '',
+                message: '',
+                fileBlob: null
+            };
+
+            async function triggerShareFlow(data, btnTrigger) {
+                window.activeShareData = data;
+                let originalBtnHtml = '';
+                if (btnTrigger) {
+                    originalBtnHtml = $(btnTrigger).html();
+                    $(btnTrigger).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Preparing...');
+                }
+
+                try {
+                    const response = await fetch(data.pdfUrl);
+                    if (!response.ok) throw new Error('Could not fetch PDF');
+                    const blob = await response.blob();
+                    window.activeShareData.fileBlob = blob;
+                    const file = new File([blob], data.filename, { type: 'application/pdf' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        if (btnTrigger) $(btnTrigger).prop('disabled', false).html(originalBtnHtml);
+                        await navigator.share({
+                            files: [file],
+                            title: data.title,
+                            text: data.message
+                        });
+                        return;
+                    }
+                } catch (err) {
+                    console.log('Native share bypassed or canceled:', err);
+                    if (err.name === 'AbortError') {
+                        if (btnTrigger) $(btnTrigger).prop('disabled', false).html(originalBtnHtml);
+                        return;
+                    }
+                } finally {
+                    if (btnTrigger) $(btnTrigger).prop('disabled', false).html(originalBtnHtml);
+                }
+
+                // Fallback modal
+                $('#waModalTitle').text(data.title || 'Share via WhatsApp');
+                $('#waModalFileName').text(data.filename);
+                $('#waModalDownloadLink').attr('href', data.pdfUrl);
+                $('#waModalViewLink').attr('href', data.viewUrl || data.pdfUrl);
+                $('#waModalPhone').val(data.phone || '');
+                $('#waModalMessage').val(data.message || '');
+
+                let modalEl = document.getElementById('modalWhatsAppShare');
+                let modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+
+            $('#btnDashboardShareWhatsApp').on('click', function () {
+                let m = $('#payrollFilterMonth').val();
+                let y = $('#payrollFilterYear').val();
+                let padMonth = String(m).padStart(2, '0');
+                let filename = `Nachias_Payroll_Report_${y}-${padMonth}.pdf`;
+                let pdfUrl = `{{ url('dashboard/payroll-summary-pdf') }}?month=${m}&year=${y}`;
+                let viewUrl = `{{ url('view-payroll-report-pdf') }}?month=${m}&year=${y}`;
+                let message = `Nachias Fashion Payroll Summary Report for ${m}/${y}. View PDF: ${viewUrl}`;
+
+                triggerShareFlow({
+                    title: `Nachias Payroll Report (${padMonth}/${y})`,
+                    filename: filename,
+                    pdfUrl: pdfUrl,
+                    viewUrl: viewUrl,
+                    phone: '',
+                    message: message
+                }, this);
+            });
+
+            $('#waBtnNativeShare').on('click', async function () {
+                const d = window.activeShareData;
+                if (!d.fileBlob) {
+                    alert('PDF is preparing, please try again.');
+                    return;
+                }
+                const file = new File([d.fileBlob], d.filename, { type: 'application/pdf' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: d.title,
+                            text: $('#waModalMessage').val()
+                        });
+                    } catch (e) {
+                        console.log('Native share canceled:', e);
+                    }
+                } else {
+                    alert('Native file sharing is not supported on this browser version. Please use "Open WhatsApp Web" instead.');
+                }
+            });
+
+            $('#waBtnOpenWeb').on('click', function () {
+                let rawPhone = $('#waModalPhone').val().trim().replace(/[^0-9]/g, '');
+                if (rawPhone.length < 10) {
+                    alert('Please enter a valid 10-digit WhatsApp phone number.');
+                    $('#waModalPhone').focus();
+                    return;
+                }
+                if (rawPhone.length === 10) {
+                    rawPhone = '91' + rawPhone;
+                }
+                let message = encodeURIComponent($('#waModalMessage').val());
+                let waUrl = `https://api.whatsapp.com/send?phone=${rawPhone}&text=${message}`;
+                window.open(waUrl, '_blank');
+            });
+
+            // 4. Attendance Summary Chart (HR Tab)
             const attendanceData = {!! json_encode($attendance_chart_data ?? []) !!};
             const ctxAttendance = document.getElementById('attendanceSummaryChart');
             let attendanceChart = null;

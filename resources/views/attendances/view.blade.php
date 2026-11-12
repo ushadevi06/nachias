@@ -1,6 +1,7 @@
 @extends('layouts.common')
 @section('title', 'Attendance Management - ' . env('WEBSITE_NAME'))
 @section('content')
+@section('styles')
 <style>
     .badge-status-present, .badge.bg-success { background-color: #28c76f !important; color: #fff !important; }
     .badge-status-absent, .badge.bg-danger { background-color: #ea5455 !important; color: #fff !important; }
@@ -32,7 +33,7 @@
         border-left: 4px solid #ff9f43 !important;
     }
 </style>
-
+@endsection
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-12 mb-4">
@@ -59,19 +60,24 @@
                             </div>
                             <div class="col-sm-6 col-md-3">
                                 <label class="form-label small fw-semibold">Device</label>
-                                {{-- <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
-                                    <option value="">Choose device</option>
-                                    <option value="AEVL183660459" {{ (isset($device) && $device === 'AEVL183660459') ? 'selected' : '' }}>HO</option>
-                                    <option value="BJ2C180660790" {{ (isset($device) && $device === 'BJ2C180660790') ? 'selected' : '' }}>HO 1</option>
-                                    <option value="CEXJ210460057" {{ (isset($device) && $device === 'CEXJ210460057') ? 'selected' : '' }}>KALAVASAL</option>
-                                    <option value="CEXJ211160630" {{ (isset($device) && $device === 'CEXJ211160630') ? 'selected' : '' }}>SAMAYANALLUR</option>
-                                </select> --}}
                                 <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
                                     <option value="">Choose device</option>
                                     <option value="all" {{ (isset($device) && $device === 'all') ? 'selected' : '' }}>All</option>
-                                    @foreach ($devices as $device)
-                                        <option value="{{ $device->serial_number }}" {{ (isset($device) && $device->serial_number === $device) ? 'selected' : '' }}>{{ $device->device_name }}</option>
+                                    @foreach ($devices as $d)
+                                        <option value="{{ $d->serial_number }}" {{ (isset($device) && $d->serial_number === $device) ? 'selected' : '' }}>{{ $d->device_name }}</option>
                                     @endforeach
+                                </select>
+                            </div>
+                            <div class="col-sm-6 col-md-3">
+                                <label class="form-label small fw-semibold">Unit</label>
+                                <select class="select2 form-select" name="unit" id="unitSelect" data-placeholder="Choose unit">
+                                    <option value="">Choose unit</option>
+                                    <option value="all">All</option>
+                                    @if(isset($units))
+                                        @foreach ($units as $u)
+                                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                                        @endforeach
+                                    @endif
                                 </select>
                             </div>
                             <div class="col-sm-6 col-md-3">
@@ -80,15 +86,7 @@
                                         <span class="spinner-border spinner-border-sm me-1"></span>
                                         Reading Attendance...
                                     </div>
-                                    {{-- <button type="button" class="btn btn-primary flex-fill" id="syncButton" disabled>
-                                        <span id="syncButtonLabel">Sync Attendance</span>
-                                    </button> --}}
                                     <button type="button" class="btn btn-secondary flex-fill" id="resetButton">Reset</button>
-                                </div>
-                            </div>
-                            <div class="col-sm-6 col-md-3">
-                                <div class="alert alert-info py-2 mb-0">
-                                    Select a device and attendance date for <strong>Reading Attendance</strong> 
                                 </div>
                             </div>
                         </div>
@@ -250,6 +248,7 @@
                                     <th scope="col">Employee Name</th>
                                     <th scope="col">Employee Code</th>
                                     <th scope="col">Department</th>
+                                    <th scope="col">Unit</th>
                                     <th scope="col">Date</th>
                                     <th scope="col">In Time</th>
                                     <th scope="col">Out Time</th>
@@ -436,6 +435,7 @@
         // const syncButtonLabel = document.getElementById('syncButtonLabel');
         const attendanceDate = document.getElementById('attendanceDate');
         const deviceSelect = document.getElementById('deviceSelect');
+        const unitSelect = document.getElementById('unitSelect');
         const resetButton = document.getElementById('resetButton');
         const viewAllButton = document.getElementById('viewAllButton');
         const viewAbsentButton = document.getElementById('viewAbsentButton');
@@ -1264,6 +1264,7 @@
                             <td>${item.name}</td>
                             <td>${item.code}</td>
                             <td>${item.department}</td>
+                            <td>${item.unit || '-'}</td>
                             <td>${rowDate}</td>
                             <td>${formatAttendanceTime(inTime)}</td>
                             <td>${formatAttendanceTime(outTime)}</td>
@@ -1497,7 +1498,7 @@
                 autoWidth: false,
                 columnDefs: [{
                     orderable: false,
-                    targets: 8
+                    targets: -1
                 }]
             });
         }
@@ -1603,13 +1604,16 @@
         function resetAttendancePage() {
             attendanceRecords = [];
             // searchInput.value = '';
-            deviceSelect.value = '';
+            $('#deviceSelect').val('').trigger('change.select2');
+            $('#unitSelect').val('').trigger('change.select2');
             attendanceDate.value = new Date().toISOString().slice(0, 10);
             lastSyncedText.textContent = 'Not synced yet';
             // syncButton.disabled = false;
             // syncButtonLabel.textContent = 'Sync Attendance';
+            document.getElementById('dailySummaryCards').style.display = 'none';
             setActiveView('all');
             updateHolidayBanner();
+            renderTable();
             showStatus('info', 'Attendance view reset.');
         }
 
@@ -1672,7 +1676,7 @@
                     return;
                 }
 
-                let csvContent = "S.No,Employee Name,Employee Code,Department,Date,In Time,Out Time,Hours,Status\n";
+                let csvContent = "S.No,Employee Name,Employee Code,Department,Unit,Date,In Time,Out Time,Hours,Status\n";
 
                 recordsToExport.forEach((item, index) => {
                     const rowDate = formatDate(item.date) || formatDate(attendanceDate.value);
@@ -1684,6 +1688,7 @@
                         `"${item.name}"`,
                         `"${item.code}"`,
                         `"${item.department || ''}"`,
+                        `"${item.unit || ''}"`,
                         `"${rowDate}"`,
                         `"${formatAttendanceTime(inTime)}"`,
                         `"${formatAttendanceTime(outTime)}"`,
@@ -1922,11 +1927,12 @@
         function loadAttendanceData() {
             const device = deviceSelect.value;
             const date = attendanceDate.value;
+            const unit = unitSelect ? unitSelect.value : '';
             if (!device || !date) {
                 return;
             }
             syncLoader.classList.remove('d-none');
-            fetch(`${APP_URL}/attendance-records?date=${date}&device=${device}`)
+            fetch(`${APP_URL}/attendance-records?date=${date}&device=${device}&unit=${unit}`)
                 .then(res => res.json())
                 .then(res => {
                     attendanceRecords = res.data || [];
@@ -1963,6 +1969,7 @@
         attendanceDate.addEventListener('input', loadAttendanceData);
 
         $('#deviceSelect').on('change', loadAttendanceData);
+        $('#unitSelect').on('change', loadAttendanceData);
 
         populateStaffEmployeeOptions();
         staffReportMonth.value = attendanceDate.value.slice(0, 7);

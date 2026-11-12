@@ -85,6 +85,35 @@
                             <input type="time" class="form-control" id="ot_out_time">
                             <span class="text-danger small error-text" id="ot_out_time_error"></span>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="ot_hours_select">OT Hours</label>
+                            <select class="form-select select2" id="ot_hours_select" data-placeholder="Select OT Hours">
+                                <option value="">Auto (Calculate from Punch Time)</option>
+                                <option value="0.5">30 mins (0.5 hr)</option>
+                                <option value="1">1 hr</option>
+                                <option value="1.5">1 hr 30 mins (1.5 hr)</option>
+                                <option value="2">2 hr</option>
+                                <option value="2.5">2 hr 30 mins (2.5 hr)</option>
+                                <option value="3">3 hr</option>
+                                <option value="3.5">3 hr 30 mins (3.5 hr)</option>
+                                <option value="4">4 hr</option>
+                                <option value="4.5">4 hr 30 mins (4.5 hr)</option>
+                                <option value="5">5 hr</option>
+                                <option value="5.5">5 hr 30 mins (5.5 hr)</option>
+                                <option value="6">6 hr</option>
+                                <option value="6.5">6 hr 30 mins (6.5 hr)</option>
+                                <option value="7">7 hr</option>
+                                <option value="7.5">7 hr 30 mins (7.5 hr)</option>
+                                <option value="8">8 hr</option>
+                                <option value="8.5">8 hr 30 mins (8.5 hr)</option>
+                                <option value="9">9 hr</option>
+                                <option value="9.5">9 hr 30 mins (9.5 hr)</option>
+                                <option value="10">10 hr</option>
+                                <option value="11">11 hr</option>
+                                <option value="12">12 hr</option>
+                            </select>
+                            <span class="text-danger small error-text" id="ot_hours_error"></span>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -162,10 +191,18 @@ $(function () {
         dateFormat: 'd-m-Y',
         allowInput: true
     });
+    $('#ot_hours_select').select2({
+        dropdownParent: $('#editOtModal'),
+        width: '100%'
+    });
+
     $(document).on('click', '.editOtBtn', function () {
         $('#ot_attendance_id').val($(this).data('id'));
         $('#ot_in_time').val($(this).data('in'));
         $('#ot_out_time').val($(this).data('out'));
+        let otHoursVal = $(this).data('ot-hours');
+        let selectedVal = (otHoursVal !== undefined && otHoursVal !== null && otHoursVal !== '') ? String(otHoursVal) : '';
+        $('#ot_hours_select').val(selectedVal).trigger('change');
         $('#editOtModal').modal('show');
     });
     $('#saveOtBtn').on('click', function () {
@@ -174,6 +211,7 @@ $(function () {
         $('#ot_out_time').removeClass('is-invalid');
         let inTime = $('#ot_in_time').val().trim();
         let outTime = $('#ot_out_time').val().trim();
+        let otHours = $('#ot_hours_select').val();
         let hasError = false;
         if (!inTime) {
             $('#ot_in_time_error').text('In time is required');
@@ -201,7 +239,8 @@ $(function () {
             body: JSON.stringify({
                 id: $('#ot_attendance_id').val(),
                 in_time: inTime,
-                out_time: outTime
+                out_time: outTime,
+                ot_hours: otHours
             })
         })
         .then(res => res.json())

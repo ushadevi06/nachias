@@ -15,6 +15,7 @@ class Attendance extends Model
         'in_time',
         'out_time',
         'work_hours',
+        'ot_hours',
         'permission_hours',
         'status',
         'ot_status',

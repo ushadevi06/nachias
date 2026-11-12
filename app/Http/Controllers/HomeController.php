@@ -21,6 +21,8 @@ use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Models\Setting;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class HomeController extends Controller
 {
@@ -630,6 +632,8 @@ class HomeController extends Controller
         $cutting_efficiency = $cuttingData['efficiency'];
         $cutting_job_cards_list = $cuttingData['job_cards_list'];
 
+        $payroll_unit_summary = $this->getPayrollUnitSummaryData(intval(date('n')), intval(date('Y')));
+
         return view('dashboard', compact(
             'sales_today',
             'sales_month',
@@ -735,7 +739,8 @@ class HomeController extends Controller
             'cutting_completed',
             'cutting_pending',
             'cutting_efficiency',
-            'cutting_job_cards_list'
+            'cutting_job_cards_list',
+            'payroll_unit_summary'
         ));
     }
 
@@ -2880,5 +2885,334 @@ class HomeController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
         ]);
+    }
+
+    /**
+     * Compute Unit-wise Monthly Payroll Summary Data for Dashboard HR Tab.
+     */
+    public function getPayrollUnitSummaryData($month, $year)
+    {
+        $units = DB::table('service_providers')
+            ->whereIn('id', [1, 2, 3, 4, 5, 6])
+            ->orderByRaw("FIELD(id, 1, 3, 2, 6, 5, 4)")
+            ->get();
+
+        $empCounts = \App\Models\User::where('status', 'Active')
+            ->where('id', '!=', 1)
+            ->select('service_provider_id', DB::raw('count(*) as count'))
+            ->groupBy('service_provider_id')
+            ->pluck('count', 'service_provider_id');
+
+        $payrollRecords = DB::table('salary_generations')
+            ->join('users', function ($join) {
+                $join->on(
+                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
+                    '=',
+                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
+                );
+            })
+            ->where('salary_generations.salary_month', $month)
+            ->where('salary_generations.salary_year', $year)
+            ->select(
+                'users.service_provider_id',
+                DB::raw('count(DISTINCT users.id) as processed_count'),
+                DB::raw('SUM(salary_generations.gross_salary) as total_gross'),
+                DB::raw('SUM(salary_generations.pf) as total_pf'),
+                DB::raw('SUM(salary_generations.esi) as total_esi'),
+                DB::raw('SUM(salary_generations.total_deduction) as total_deductions'),
+                DB::raw('SUM(salary_generations.net_salary) as total_net'),
+                DB::raw('SUM(CASE WHEN salary_generations.status = "Draft" THEN 1 ELSE 0 END) as draft_count'),
+                DB::raw('SUM(CASE WHEN salary_generations.status = "Paid" THEN 1 ELSE 0 END) as paid_count')
+            )
+            ->groupBy('users.service_provider_id')
+            ->get()
+            ->keyBy('service_provider_id');
+
+        $unitData = [];
+        $totalEmployees = 0;
+        $totalGross = 0;
+        $totalPf = 0;
+        $totalEsi = 0;
+        $totalDeductions = 0;
+        $totalNet = 0;
+        $processedUnits = 0;
+
+        foreach ($units as $u) {
+            $empCount = intval($empCounts[$u->id] ?? 0);
+            $totalEmployees += $empCount;
+
+            $hasPayroll = isset($payrollRecords[$u->id]);
+            $rec = $hasPayroll ? $payrollRecords[$u->id] : null;
+
+            $gross = $rec ? floatval($rec->total_gross) : 0;
+            $pf = $rec ? floatval($rec->total_pf) : 0;
+            $esi = $rec ? floatval($rec->total_esi) : 0;
+            $deductions = $rec ? floatval($rec->total_deductions) : 0;
+            $net = $rec ? floatval($rec->total_net) : 0;
+
+            $totalGross += $gross;
+            $totalPf += $pf;
+            $totalEsi += $esi;
+            $totalDeductions += $deductions;
+            $totalNet += $net;
+
+            if ($hasPayroll && $rec->processed_count > 0) {
+                $processedUnits++;
+                $status = ($rec->draft_count > 0) ? 'Draft' : 'Processed';
+            } else {
+                $status = 'Not started';
+            }
+
+            // Short clean friendly name (e.g. "Head Office", "Kalavasal", "SIDCO", etc.)
+            $displayName = $u->name;
+            if ($u->id == 1) $displayName = 'Head Office';
+            elseif ($u->id == 2) $displayName = 'Samayanallur';
+            elseif ($u->id == 3) $displayName = 'Kalavasal';
+            elseif ($u->id == 4) $displayName = 'SIDCO';
+            elseif ($u->id == 5) $displayName = 'Sivagangai';
+            elseif ($u->id == 6) $displayName = 'Thirumangalam';
+
+            $unitData[] = [
+                'id' => $u->id,
+                'name' => $displayName,
+                'full_name' => $u->name,
+                'employees' => $empCount,
+                'gross' => $gross,
+                'formatted_gross' => '₹' . formatIndianCurrency($gross),
+                'pf' => $pf,
+                'formatted_pf' => '₹' . formatIndianCurrency($pf),
+                'esi' => $esi,
+                'formatted_esi' => '₹' . formatIndianCurrency($esi),
+                'deductions' => $deductions,
+                'formatted_deductions' => '₹' . formatIndianCurrency($deductions),
+                'net' => $net,
+                'formatted_net' => '₹' . formatIndianCurrency($net),
+                'status' => $status
+            ];
+        }
+
+        $unitsCount = count($units);
+        $progressPct = $unitsCount > 0 ? round(($processedUnits / $unitsCount) * 100) : 0;
+        $monthName = date('F', mktime(0, 0, 0, $month, 1));
+
+        // -------------------------------------------------------------
+        // MONTHLY COMPARISON — LAST 3 MONTHS
+        // -------------------------------------------------------------
+        $selectedDate = \Carbon\Carbon::createFromDate($year, $month, 1);
+        $m1Date = (clone $selectedDate)->subMonths(2);
+        $m2Date = (clone $selectedDate)->subMonth();
+        $m3Date = (clone $selectedDate);
+
+        $comparisonMonths = [
+            [
+                'month' => intval($m1Date->month),
+                'year' => intval($m1Date->year),
+                'label' => strtoupper($m1Date->format('F Y')),
+                'short_label' => $m1Date->format('M Y')
+            ],
+            [
+                'month' => intval($m2Date->month),
+                'year' => intval($m2Date->year),
+                'label' => strtoupper($m2Date->format('F Y')),
+                'short_label' => $m2Date->format('M Y')
+            ],
+            [
+                'month' => intval($m3Date->month),
+                'year' => intval($m3Date->year),
+                'label' => strtoupper($m3Date->format('F Y')),
+                'short_label' => $m3Date->format('M Y')
+            ]
+        ];
+
+        $comparisonRecords = DB::table('salary_generations')
+            ->join('users', function ($join) {
+                $join->on(
+                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
+                    '=',
+                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
+                );
+            })
+            ->where(function ($query) use ($m1Date, $m2Date, $m3Date) {
+                $query->where(function ($q) use ($m1Date) {
+                    $q->where('salary_generations.salary_month', $m1Date->month)
+                      ->where('salary_generations.salary_year', $m1Date->year);
+                })->orWhere(function ($q) use ($m2Date) {
+                    $q->where('salary_generations.salary_month', $m2Date->month)
+                      ->where('salary_generations.salary_year', $m2Date->year);
+                })->orWhere(function ($q) use ($m3Date) {
+                    $q->where('salary_generations.salary_month', $m3Date->month)
+                      ->where('salary_generations.salary_year', $m3Date->year);
+                });
+            })
+            ->select(
+                'users.service_provider_id',
+                'salary_generations.salary_month',
+                'salary_generations.salary_year',
+                DB::raw('count(DISTINCT users.id) as processed_count'),
+                DB::raw('SUM(salary_generations.net_salary) as total_net'),
+                DB::raw('SUM(CASE WHEN salary_generations.status = "Draft" THEN 1 ELSE 0 END) as draft_count'),
+                DB::raw('SUM(CASE WHEN salary_generations.status = "Paid" THEN 1 ELSE 0 END) as paid_count')
+            )
+            ->groupBy('users.service_provider_id', 'salary_generations.salary_month', 'salary_generations.salary_year')
+            ->get();
+
+        $compMap = [];
+        foreach ($comparisonRecords as $r) {
+            $k = $r->service_provider_id . '_' . intval($r->salary_year) . '_' . intval($r->salary_month);
+            $compMap[$k] = $r;
+        }
+
+        $comparisonRows = [];
+        $totM1Emp = 0; $totM1Net = 0;
+        $totM2Emp = 0; $totM2Net = 0;
+        $totM3Emp = 0; $totM3Net = 0;
+
+        foreach ($units as $u) {
+            $k1 = $u->id . '_' . $m1Date->year . '_' . $m1Date->month;
+            $r1 = $compMap[$k1] ?? null;
+            $m1Emp = ($r1 && $r1->processed_count > 0) ? $r1->processed_count : '—';
+            $m1Net = ($r1 && $r1->processed_count > 0) ? '₹' . formatIndianCurrency($r1->total_net) : '—';
+            if ($r1 && $r1->processed_count > 0) {
+                $totM1Emp += $r1->processed_count;
+                $totM1Net += floatval($r1->total_net);
+            }
+
+            $k2 = $u->id . '_' . $m2Date->year . '_' . $m2Date->month;
+            $r2 = $compMap[$k2] ?? null;
+            $m2Emp = ($r2 && $r2->processed_count > 0) ? $r2->processed_count : '—';
+            $m2Net = ($r2 && $r2->processed_count > 0) ? '₹' . formatIndianCurrency($r2->total_net) : '—';
+            if ($r2 && $r2->processed_count > 0) {
+                $totM2Emp += $r2->processed_count;
+                $totM2Net += floatval($r2->total_net);
+            }
+
+            $k3 = $u->id . '_' . $m3Date->year . '_' . $m3Date->month;
+            $r3 = $compMap[$k3] ?? null;
+            $m3Emp = ($r3 && $r3->processed_count > 0) ? $r3->processed_count : '—';
+            $m3Net = ($r3 && $r3->processed_count > 0) ? '₹' . formatIndianCurrency($r3->total_net) : '—';
+            if ($r3 && $r3->processed_count > 0) {
+                $totM3Emp += $r3->processed_count;
+                $totM3Net += floatval($r3->total_net);
+            }
+
+            if ($r3 && $r3->processed_count > 0) {
+                if ($r3->paid_count > 0) {
+                    $unitRemarks = 'Finalized / Paid';
+                } elseif ($r3->draft_count > 0) {
+                    $unitRemarks = 'Draft in progress';
+                } else {
+                    $unitRemarks = 'Finalized';
+                }
+            } else {
+                $unitRemarks = 'Not finalized yet.';
+            }
+
+            $displayName = $u->name;
+            if ($u->id == 1) $displayName = 'Head Office';
+            elseif ($u->id == 2) $displayName = 'Samayanallur';
+            elseif ($u->id == 3) $displayName = 'Kalavasal';
+            elseif ($u->id == 4) $displayName = 'SIDCO';
+            elseif ($u->id == 5) $displayName = 'Sivagangai';
+            elseif ($u->id == 6) $displayName = 'Thirumangalam';
+
+            $comparisonRows[] = [
+                'id' => $u->id,
+                'name' => $displayName,
+                'm1_emp' => $m1Emp,
+                'm1_net' => $m1Net,
+                'm2_emp' => $m2Emp,
+                'm2_net' => $m2Net,
+                'm3_emp' => $m3Emp,
+                'm3_net' => $m3Net,
+                'remarks' => $unitRemarks,
+            ];
+        }
+
+        $compRemarks = ($totM3Emp > 0) ? 'Processed' : 'Not finalized yet.';
+
+        $comparisonData = [
+            'months' => $comparisonMonths,
+            'rows' => $comparisonRows,
+            'totals' => [
+                'm1_emp' => $totM1Emp > 0 ? $totM1Emp : 0,
+                'm1_net' => '₹' . formatIndianCurrency($totM1Net),
+                'm2_emp' => $totM2Emp > 0 ? $totM2Emp : 0,
+                'm2_net' => '₹' . formatIndianCurrency($totM2Net),
+                'm3_emp' => $totM3Emp > 0 ? $totM3Emp : 0,
+                'm3_net' => '₹' . formatIndianCurrency($totM3Net),
+                'remarks' => $compRemarks,
+            ]
+        ];
+
+        return [
+            'month' => intval($month),
+            'year' => intval($year),
+            'month_name' => $monthName,
+            'period_label' => "{$monthName} {$year}",
+            'total_employees' => $totalEmployees,
+            'units_count' => $unitsCount,
+            'processed_units' => $processedUnits,
+            'progress_percent' => $progressPct,
+            'total_gross' => $totalGross,
+            'formatted_total_gross' => '₹' . formatIndianCurrency($totalGross),
+            'total_pf' => $totalPf,
+            'formatted_total_pf' => '₹' . formatIndianCurrency($totalPf),
+            'total_esi' => $totalEsi,
+            'formatted_total_esi' => '₹' . formatIndianCurrency($totalEsi),
+            'total_deductions' => $totalDeductions,
+            'formatted_total_deductions' => '₹' . formatIndianCurrency($totalDeductions),
+            'total_net' => $totalNet,
+            'formatted_total_net' => '₹' . formatIndianCurrency($totalNet),
+            'units' => $unitData,
+            'comparison' => $comparisonData,
+        ];
+    }
+
+    /**
+     * AJAX Endpoint for Dashboard Payroll Unit Summary.
+     */
+    public function getPayrollUnitSummaryAjax(Request $request)
+    {
+        $month = intval($request->input('month', date('n')));
+        $year = intval($request->input('year', date('Y')));
+        $data = $this->getPayrollUnitSummaryData($month, $year);
+        return response()->json($data);
+    }
+
+    /**
+     * Download or stream the Monthly Payroll Summary Report as a PDF.
+     */
+    public function downloadPayrollSummaryPdf(Request $request)
+    {
+        $month = intval($request->input('month', date('n')));
+        $year = intval($request->input('year', date('Y')));
+        $data = $this->getPayrollUnitSummaryData($month, $year);
+        $setting = Setting::with(['state', 'city'])->first();
+        $filename = 'Nachias_Payroll_Report_' . sprintf('%04d-%02d', $year, $month) . '.pdf';
+
+        $pdf = Pdf::loadView('reports.payroll_summary_pdf', compact('data', 'setting', 'month', 'year', 'filename'));
+        $pdf->setPaper('a4', 'landscape');
+
+        if ($request->has('stream')) {
+            return $pdf->stream($filename);
+        }
+        return $pdf->download($filename);
+    }
+
+    /**
+     * View/Stream the Monthly Payroll Summary Report PDF directly in the browser.
+     */
+    public function viewPayrollSummaryPdf(Request $request)
+    {
+        $month = intval($request->input('month', date('n')));
+        $year = intval($request->input('year', date('Y')));
+        $data = $this->getPayrollUnitSummaryData($month, $year);
+        $setting = Setting::with(['state', 'city'])->first();
+        $filename = 'Nachias_Payroll_Report_' . sprintf('%04d-%02d', $year, $month) . '.pdf';
+
+        $pdf = Pdf::loadView('reports.payroll_summary_pdf', compact('data', 'setting', 'month', 'year', 'filename'));
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream($filename, ['Attachment' => false]);
     }
 }

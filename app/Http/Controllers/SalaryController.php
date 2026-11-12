@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\MonthlyPayrollExport;
+use App\Models\ServiceProvider;
 
 class SalaryController extends Controller
 {
@@ -19,11 +20,14 @@ class SalaryController extends Controller
         if ($request->ajax()) {
             $query = DB::table('salary_generations')
                 ->join('users', DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'), '=', DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'))
+                ->leftJoin('service_providers', 'users.service_provider_id', '=', 'service_providers.id')
                 ->whereNull('users.deleted_at')
                 ->select(
                     'salary_generations.*',
                     'users.name',
-                    'users.emp_id'
+                    'users.emp_id',
+                    'users.type as roll_type',
+                    'service_providers.name as unit_name'
                 )
                 ->orderBy('salary_generations.id', 'desc');
             if (
@@ -34,6 +38,8 @@ class SalaryController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('users.name', 'like', "%{$search}%")
                     ->orWhere('users.emp_id', 'like', "%{$search}%")
+                    ->orWhere('users.type', 'like', "%{$search}%")
+                    ->orWhere('service_providers.name', 'like', "%{$search}%")
                     ->orWhere(function ($q) use ($search) {
                         $q->where(
                             DB::raw("
@@ -56,6 +62,21 @@ class SalaryController extends Controller
                     $request->status
                 );
             }
+            if (!empty($request->unit)) {
+                $query->where(
+                    'users.service_provider_id',
+                    $request->unit
+                );
+            }
+            if (!empty($request->roll_type) && $request->roll_type !== 'all') {
+                if ($request->roll_type === 'On Roll') {
+                    $query->where(function ($q) {
+                        $q->where('users.type', 'On Roll')->orWhereNull('users.type')->orWhere('users.type', '');
+                    });
+                } else {
+                    $query->where('users.type', $request->roll_type);
+                }
+            }
             if (!empty($request->month)) {
                 $date = Carbon::parse($request->month);
                 $query->where('salary_generations.salary_month', $date->month)->where('salary_generations.salary_year', $date->year);
@@ -71,10 +92,7 @@ class SalaryController extends Controller
             $data = [];
             $count = 1;
             foreach ($salaries as $salary) {
-                $checkbox = '';
-                if($salary->status == 'Draft') {
-                    $checkbox = '<input type="checkbox" class="salary-checkbox" value="'.$salary->id.'">';
-                }
+                $checkbox = '<input type="checkbox" class="salary-checkbox" value="'.$salary->id.'">';
                 if($salary->status == 'Paid') {
                     $statusBadge = '
                         <span class="badge bg-success">
@@ -122,6 +140,7 @@ class SalaryController extends Controller
                     'month_year'    => \Carbon\Carbon::create()->month($salary->salary_month)->format('F') . ' ' . $salary->salary_year,
                     'employee_name' => $salary->name,
                     'emp_code'      => $salary->emp_id,
+                    'unit'          => $salary->unit_name ?? '-',
                     'gross'         => '₹' . number_format($salary->gross_salary, 2),
                     'net_salary'    => '₹' . number_format($salary->net_salary, 2),
                     'status'        => $statusBadge,
@@ -135,7 +154,8 @@ class SalaryController extends Controller
                 'data' => $data
             ]);
         }
-        return view('salary_calculations.view');
+        $units = ServiceProvider::active()->orderBy('id', 'desc')->get();
+        return view('salary_calculations.view', compact('units'));
     }
     public function add($id = null)
     {
@@ -147,7 +167,8 @@ class SalaryController extends Controller
                 ->select(
                     'salary_generations.*',
                     'users.name',
-                    'users.emp_id'
+                    'users.emp_id',
+                    'users.type as roll_type'
                 )
                 ->where('salary_generations.id', $id)
                 ->first();
@@ -214,7 +235,18 @@ class SalaryController extends Controller
 
         $existingEmpIds = DB::table('salary_generations')->where('salary_month', $monthNumber)->where('salary_year', $year)->pluck('employee_id')->toArray();
 
-        $employees = User::where('id', '!=', 1)->where('status', 'Active')->whereNotIn('emp_id', $existingEmpIds)->get();
+        $rollType = $request->roll_type;
+        $empQuery = User::where('id', '!=', 1)->where('status', 'Active')->whereNotIn('emp_id', $existingEmpIds);
+        if ($rollType && $rollType !== 'all') {
+            if ($rollType === 'On Roll') {
+                $empQuery->where(function ($q) {
+                    $q->where('type', 'On Roll')->orWhereNull('type')->orWhere('type', '');
+                });
+            } else {
+                $empQuery->where('type', $rollType);
+            }
+        }
+        $employees = $empQuery->get();
         $payroll = [];
         foreach ($employees as $employee) {
             $attendance = DB::table('attendances')->where('emp_code', $employee->emp_id)->whereBetween('date', [$startDate, $endDate])->get();
@@ -243,6 +275,7 @@ class SalaryController extends Controller
                     'employee_id'      => $employee->emp_id,
                     'employee_name'    => $employee->name,
                     'emp_code'         => $employee->emp_id,
+                    'roll_type'        => $employee->type ?? 'On Roll',
                     'total_days'     => $totalDays,
                     'present_days'     => 0,
                     'absent_days'      => $absentDays,
@@ -276,19 +309,24 @@ class SalaryController extends Controller
             $otHours = 0;
             $otDays = 0;
             foreach ($attendance as $att) {
-                if ($att->in_time && $att->out_time) {
-                    $inTime = Carbon::parse($att->in_time);
-                    $outTime = Carbon::parse($att->out_time);
-                    $workedHours = floor(
-                        $inTime->diffInMinutes($outTime) / 60
-                    );
-                    $isSunday = Carbon::parse($att->date)->isSunday();
-                    $isHoliday = in_array($att->date, $holidayDates);
-                    if ($isSunday || $isHoliday) {
-                        $otHours += $workedHours;
+                // Only count Overtime if ot_status is Approved
+                if ($att->ot_status === 'Approved' && $att->in_time && $att->out_time) {
+                    if (!is_null($att->ot_hours) && $att->ot_hours !== '') {
+                        $otHours += floatval($att->ot_hours);
                     } else {
-                        if ($workedHours > 9) {
-                            $otHours += ($workedHours - 9);
+                        $inTime = Carbon::parse($att->in_time);
+                        $outTime = Carbon::parse($att->out_time);
+                        $workedHours = floor(
+                            $inTime->diffInMinutes($outTime) / 60
+                        );
+                        $isSunday = Carbon::parse($att->date)->isSunday();
+                        $isHoliday = in_array($att->date, $holidayDates);
+                        if ($isSunday || $isHoliday) {
+                            $otHours += $workedHours;
+                        } else {
+                            if ($workedHours > 9) {
+                                $otHours += ($workedHours - 9);
+                            }
                         }
                     }
                 }
@@ -344,6 +382,7 @@ class SalaryController extends Controller
                 'employee_id'      => $employee->emp_id,
                 'employee_name'    => $employee->name,
                 'emp_code'         => $employee->emp_id,
+                'roll_type'        => $employee->type ?? 'On Roll',
                 'total_days'       => $totalDays,
                 'present_days'     => $presentDays,
                 'absent_days'      => $absentDays,
@@ -515,54 +554,114 @@ class SalaryController extends Controller
     public function generatePayslipPdf(Request $request)
     {
         $ids = $request->ids;
-        foreach($ids as $id) {
-            $salary = DB::table('salary_generations')
-                ->join('users', function ($join) {
+
+        // If accessed directly without params, fallback to latest payroll month
+        if (empty($ids) && !$request->filled('month')) {
+            $latest = DB::table('salary_generations')->orderBy('id', 'desc')->first();
+            if ($latest) {
+                $request->merge(['month' => sprintf('%04d-%02d', $latest->salary_year, $latest->salary_month)]);
+            }
+        }
+
+        if (empty($ids) && $request->filled('month')) {
+            $date = Carbon::parse($request->month);
+            $query = DB::table('salary_generations')
+                ->where('salary_generations.salary_month', $date->month)
+                ->where('salary_generations.salary_year', $date->year);
+
+            if ($request->filled('unit') || ($request->filled('roll_type') && $request->roll_type !== 'all')) {
+                $query->join('users', function ($join) {
                     $join->on(
                         DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
                         '=',
                         DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
                     );
-                })
-                ->leftJoin(
-                    'departments',
-                    'users.department_id',
+                });
+                if ($request->filled('unit')) {
+                    $query->where('users.service_provider_id', $request->unit);
+                }
+                if ($request->filled('roll_type') && $request->roll_type !== 'all') {
+                    if ($request->roll_type === 'On Roll') {
+                        $query->where(function ($q) {
+                            $q->where('users.type', 'On Roll')->orWhereNull('users.type')->orWhere('users.type', '');
+                        });
+                    } else {
+                        $query->where('users.type', $request->roll_type);
+                    }
+                }
+            }
+            $ids = $query->pluck('salary_generations.id')->toArray();
+        }
+
+        if (empty($ids)) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Please select at least one employee or a month with payroll records.'], 422);
+            }
+            return redirect('monthly_payroll')->with('error', 'Please select at least one employee or a month with payroll records.');
+        }
+
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+
+        $salaries = DB::table('salary_generations')
+            ->join('users', function ($join) {
+                $join->on(
+                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
                     '=',
-                    'departments.id'
-                )
-                ->leftJoin(
-                    'roles',
-                    'users.role_id',
-                    '=',
-                    'roles.id'
-                )
-                ->select(
-                    'salary_generations.*',
-                    'users.name',
-                    'users.emp_id',
-                    'users.esi_no',
-                    'users.pf_no',
-                    'departments.department as department_name',
-                    'roles.name as role_name'
-                )
-                ->where('salary_generations.id', $id)
-                ->first();
+                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
+                );
+            })
+            ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
+            ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+            ->leftJoin('service_providers', 'users.service_provider_id', '=', 'service_providers.id')
+            ->select(
+                'salary_generations.*',
+                'users.name',
+                'users.emp_id',
+                'users.esi_no',
+                'users.pf_no',
+                'users.type as roll_type',
+                'users.account_number',
+                'users.bank_name',
+                'users.ifsc_code',
+                'departments.department as department_name',
+                'roles.name as role_name',
+                'service_providers.name as unit_name'
+            )
+            ->whereIn('salary_generations.id', $ids)
+            ->orderBy('salary_generations.id', 'asc')
+            ->get();
+
+        if ($salaries->isEmpty()) {
+            return back()->with('error', 'No salary records found.');
+        }
+
+        // Mark any Draft records as Paid
+        DB::table('salary_generations')
+            ->whereIn('id', $ids)
+            ->where('status', 'Draft')
+            ->update([
+                'status' => 'Paid',
+                'paid_at' => now(),
+                'updated_at' => now()
+            ]);
+
+        $setting = Setting::with(['state', 'city'])->first();
+
+        foreach ($salaries as $salary) {
             $month = $salary->salary_month;
             $year  = $salary->salary_year;
-            $totalDays = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
-            $onTimeDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Present')->count();
-            $lateDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Late')->count();
-            $setting = Setting::with(['state', 'city'])->first();
-            DB::table('salary_generations')
-                ->where('id', $id)
-                ->update([
-                    'status' => 'Paid',
-                    'updated_at' => now()
-                ]);
+            $salary->monthDays = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
+            $salary->onTimeDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Present')->count();
+            $salary->lateDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Late')->count();
         }
-        return response()->json([
-            'success' => true
-        ]);
+
+        $pdf = Pdf::loadView('salary_calculations.bulk_payslip_pdf', compact('salaries', 'setting'))
+            ->setPaper('a4', 'portrait');
+
+        $filename = 'Bulk_Payslips_' . now()->format('Ymd_His') . '.pdf';
+        return $pdf->stream($filename);
     }
     public function viewPayslip($id)
     {
@@ -710,14 +809,24 @@ class SalaryController extends Controller
             ->pluck('employee_id')
             ->toArray();
 
-        $employees = User::where('id', '!=', 1)
+        $rollType = $request->roll_type;
+        $empQuery = User::where('id', '!=', 1)
             ->where('status', 'Active')
             ->whereNotIn('emp_id', $existingEmpIds)
             ->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                 ->orWhere('emp_id', 'like', "%{$search}%");
-            })
-            ->get();
+            });
+        if ($rollType && $rollType !== 'all') {
+            if ($rollType === 'On Roll') {
+                $empQuery->where(function ($q) {
+                    $q->where('type', 'On Roll')->orWhereNull('type')->orWhere('type', '');
+                });
+            } else {
+                $empQuery->where('type', $rollType);
+            }
+        }
+        $employees = $empQuery->get();
         $payroll = [];
         foreach ($employees as $employee) {
             $attendance = DB::table('attendances')->where('emp_code', $employee->emp_id)->whereBetween('date', [$startDate, $endDate])->get();
@@ -745,6 +854,7 @@ class SalaryController extends Controller
                     'employee_id'      => $employee->emp_id,
                     'employee_name'    => $employee->name,
                     'emp_code'         => $employee->emp_id,
+                    'roll_type'        => $employee->type ?? 'On Roll',
                     'total_days'     => $totalDays,
                     'present_days'     => 0,
                     'absent_days'      => $absentDays,
@@ -777,17 +887,22 @@ class SalaryController extends Controller
             $otHours = 0;
             $otDays = 0;
             foreach ($attendance as $att) {
-                if ($att->in_time && $att->out_time) {
-                    $inTime = Carbon::parse($att->in_time);
-                    $outTime = Carbon::parse($att->out_time);
-                    $workedHours = floor($inTime->diffInMinutes($outTime) / 60);
-                    $isSunday = Carbon::parse($att->date)->isSunday();
-                    $isHoliday = DB::table('declared_holidays')->whereDate('date', $att->date)->exists();
-                    if ($isSunday || $isHoliday) {
-                        $otHours += $workedHours;
+                // Only count Overtime if ot_status is Approved
+                if ($att->ot_status === 'Approved' && $att->in_time && $att->out_time) {
+                    if (!is_null($att->ot_hours) && $att->ot_hours !== '') {
+                        $otHours += floatval($att->ot_hours);
                     } else {
-                        if ($workedHours > 9) {
-                            $otHours += ($workedHours - 9);
+                        $inTime = Carbon::parse($att->in_time);
+                        $outTime = Carbon::parse($att->out_time);
+                        $workedHours = floor($inTime->diffInMinutes($outTime) / 60);
+                        $isSunday = Carbon::parse($att->date)->isSunday();
+                        $isHoliday = DB::table('declared_holidays')->whereDate('date', $att->date)->exists();
+                        if ($isSunday || $isHoliday) {
+                            $otHours += $workedHours;
+                        } else {
+                            if ($workedHours > 9) {
+                                $otHours += ($workedHours - 9);
+                            }
                         }
                     }
                 }
@@ -841,6 +956,7 @@ class SalaryController extends Controller
                 'employee_id'      => $employee->emp_id,
                 'employee_name'    => $employee->name,
                 'emp_code'         => $employee->emp_id,
+                'roll_type'        => $employee->type ?? 'On Roll',
                 'total_days'     => $totalDays,
                 'present_days'     => $presentDays,
                 'absent_days'      => $absentDays,
