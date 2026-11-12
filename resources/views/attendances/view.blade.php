@@ -758,6 +758,9 @@
                     );
                 });
                 staffReportEmployee.innerHTML = options.join('');
+                if (window.jQuery && $.fn.select2) {
+                    $('#staffReportEmployee').trigger('change.select2');
+                }
             })
             .catch(err => {
                 console.error(err);
@@ -1477,12 +1480,15 @@
                 destroy: true,
                 paging: true,
                 searching: true,
-                info: false,
-                lengthChange: false,
+                info: true,
+                lengthChange: true,
                 pageLength: 10,
                 responsive: true,
                 autoWidth: false,
-                dom: 'rtip'
+                language: {
+                    search: "Search:",
+                    searchPlaceholder: "Name, code, date, status..."
+                }
             });
         }
         function initDataTable() {
@@ -1909,7 +1915,7 @@
             }
         });
 
-        staffReportEmployee.addEventListener('change', function() {
+        $('#staffReportEmployee').on('change', function() {
             if (currentView === 'staff') {
                 loadStaffReport();
             }

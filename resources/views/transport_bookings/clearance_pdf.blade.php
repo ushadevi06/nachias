@@ -125,7 +125,7 @@
             <td style="width: 58%;">
                 <div class="company-title">{{ $setting->company_name ?? 'NACHIAS FASHION PRIVATE LIMITED' }}</div>
                 <div class="meta-text">{{ $setting->address ?? '' }}</div>
-                <div class="sheet-title">DRIVER FREIGHT &amp; PAYMENT CLEARANCE PAYOUT VOUCHER (CLEARED INVOICES)</div>
+                <div class="sheet-title">DRIVER LOADING / UNLOADING &amp; PAYMENT CLEARANCE PAYOUT VOUCHER (CLEARED INVOICES)</div>
             </td>
             <td style="width: 42%; text-align: right; vertical-align: top;">
                 <div class="meta-text"><strong>Driver / Agent:</strong> <span style="font-size: 11px; color: #0d6efd; font-weight: bold;">{{ $driverLabel }}</span></div>
@@ -160,23 +160,23 @@
     </table>
 
     <div class="policy-banner">
-        AUDIT VERIFIED: Showing exclusively CLEARED &amp; APPROVED freight payouts with authentic transport LR numbers.
+        AUDIT VERIFIED: Showing exclusively CLEARED &amp; APPROVED driver loading / unloading payouts with authentic transport LR numbers.
     </div>
 
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 3%;" class="text-center">#</th>
-                <th style="width: 10%;">Invoice No</th>
-                <th style="width: 22%;">Customer / Buyer Name</th>
-                <th style="width: 12%;">Destination Town</th>
-                <th style="width: 12%;">Transporter</th>
-                <th style="width: 10%;">Driver</th>
-                <th style="width: 11%;" class="text-center">Verified LR No</th>
-                <th style="width: 6%;" class="text-center">Box</th>
+                <th style="width: 9%;">Invoice No</th>
+                <th style="width: 19%;">Customer / Buyer Name</th>
+                <th style="width: 11%;">Destination Town</th>
+                <th style="width: 11%;">Transporter</th>
+                <th style="width: 9%;">Driver</th>
+                <th style="width: 10%;" class="text-center">Verified LR No</th>
+                <th style="width: 5%;" class="text-center">Box</th>
                 <th style="width: 4%;" class="text-center">Qty</th>
-                <th style="width: 10%;" class="text-center">Cleared Date</th>
-                <th style="width: 8%;" class="text-right">Freight (&#8377;)</th>
+                <th style="width: 9%;" class="text-right">Transport Chg (&#8377;)</th>
+                <th style="width: 10%;" class="text-right">Loading / Unloading (&#8377;)</th>
             </tr>
         </thead>
         <tbody>
@@ -189,10 +189,12 @@
                     $destPlace = (!empty($b->booking_office) && $b->booking_office !== '-')
                         ? $b->booking_office
                         : ($b->customer && $b->customer->city ? $b->customer->city->city_name : ($b->customer && $b->customer->place ? $b->customer->place->place_name : '-'));
-                    $driverName = $b->deliveryAgent ? $b->deliveryAgent->name : ($b->delivery_agent_name ?: '-');
+                    $driverName = $b->driver ? $b->driver->driver_name : ($b->deliveryAgent ? $b->deliveryAgent->name : ($b->delivery_agent_name ?: '-'));
                     $clearedDate = $b->payment_cleared_date 
                         ? \Carbon\Carbon::parse($b->payment_cleared_date)->format('d-m-Y') 
                         : ($b->updated_at ? \Carbon\Carbon::parse($b->updated_at)->format('d-m-Y') : '-');
+                    $loadingUnloadingAmt = (float) ($b->lr_price ?: 0);
+                    $transportChargeAmt = (float) ($b->transport_charge ?: 0);
                 @endphp
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
@@ -213,16 +215,12 @@
                     <td>{{ $driverName }}</td>
                     <td class="text-center">
                         <span class="badge-lr">{{ $b->lr_no ?: '-' }}</span>
-                        @if($b->booking_date)
-                            <div style="font-size: 8px; color: #666; margin-top: 1px;">{{ \Carbon\Carbon::parse($b->booking_date)->format('d-m-Y') }}</div>
-                        @endif
+                        <div style="font-size: 8px; color: #0f5132; margin-top: 1px;">Clr: {{ $clearedDate }}</div>
                     </td>
                     <td class="text-center fw-bold">{{ $b->box_number ?: '1/1' }}</td>
                     <td class="text-center">{{ (int)$b->quantity }}</td>
-                    <td class="text-center">
-                        <span class="badge-cleared">{{ $clearedDate }}</span>
-                    </td>
-                    <td class="text-right fw-bold" style="color: #198754;">&#8377;{{ number_format($b->lr_price, 2) }}</td>
+                    <td class="text-right">&#8377;{{ number_format($transportChargeAmt, 2) }}</td>
+                    <td class="text-right fw-bold" style="color: #198754;">&#8377;{{ number_format($loadingUnloadingAmt, 2) }}</td>
                 </tr>
             @empty
                 <tr>
@@ -235,7 +233,7 @@
                 <td colspan="7" class="text-right">TOTAL SUMMARY:</td>
                 <td class="text-center">{{ $totalBoxes }} Boxes</td>
                 <td class="text-center">{{ $totalQty }} Pcs</td>
-                <td></td>
+                <td class="text-right">&#8377;{{ number_format($totalTransportCharge ?? 0, 2) }}</td>
                 <td class="text-right" style="font-size: 11.5px; color: #198754;">&#8377;{{ number_format($totalAmount, 2) }}</td>
             </tr>
         </tfoot>

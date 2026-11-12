@@ -21,6 +21,9 @@ class PurchaseReportController extends Controller
         if ($request->has('export') && $request->export === 'casino-po-drilldown-excel') {
             return $this->exportCasinoPoDrilldownExcel($request);
         }
+        if ($request->has('export') && $request->export === 'fabric-stock-excel') {
+            return $this->exportFabricStockExcel($request);
+        }
 
         if ($request->ajax() && ($request->has('draw') || ($request->has('report_type') && !$request->has('fetch_report')))) {
             if ($request->report_type === 'stock-report-drilldown') {
@@ -3116,6 +3119,134 @@ class PurchaseReportController extends Controller
     public function exportCasinoPoDrilldownExcel(Request $request)
     {
         return $this->exportCasinoPoMergedExcel($request);
+    }
+
+    /**
+     * Export Fabric Store Closing Stock in a Tally-style 3-level hierarchy
+     * (Brand -> Width + Brand + Style -> Art No + Supplier) with Closing Balance (Qty, Rate, Value).
+     */
+    public function exportFabricStockExcel(Request $request)
+    {
+        $brandId = $request->brand_id;
+        $supplierId = $request->supplier_id;
+        $search = trim((string) ($request->search ?? ''));
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+        $toDate = $request->to_date ? date('Y-m-d 23:59:59', strtotime(str_replace('/', '-', $request->to_date))) : null;
+
+        $supplierNameExpr = 'COALESCE(sup.name, se_sup.name)';
+        $widthExpr = "COALESCE(NULLIF(TRIM(fw.width), ''), NULLIF(TRIM(sei.size), ''), '')";
+        $styleExpr = "COALESCE(NULLIF(TRIM(st.style_name), ''), 'OTHER')";
+
+        $query = DB::table('stock_entry_items as sei')
+            ->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
+            ->leftJoin('fabric_sizes as fw', 'sei.fabric_width_id', '=', 'fw.id')
+            ->leftJoin('styles as st', 'sei.style_id', '=', 'st.id')
+            ->leftJoin('grn_entry_items as gei', 'sei.grn_entry_item_id', '=', 'gei.id')
+            ->leftJoin('grn_entries as ge', 'gei.grn_entry_id', '=', 'ge.id')
+            ->leftJoin('suppliers as sup', 'ge.supplier_id', '=', 'sup.id')
+            ->leftJoin('stock_entries as se', 'sei.stock_entry_id', '=', 'se.id')
+            ->leftJoin('grn_entries as se_ge', 'se.grn_entry_id', '=', 'se_ge.id')
+            ->leftJoin('suppliers as se_sup', 'se_ge.supplier_id', '=', 'se_sup.id')
+            ->where('sei.store_category_id', 1)
+            ->whereNull('sei.deleted_at')
+            ->select(
+                DB::raw("COALESCE(b.brand_name, 'N/A') as brand_name"),
+                DB::raw("{$widthExpr} as width_label"),
+                DB::raw("{$styleExpr} as style_name"),
+                DB::raw("COALESCE(NULLIF(TRIM(sei.art_no), ''), '-') as art_no"),
+                DB::raw("{$supplierNameExpr} as supplier_name"),
+                DB::raw('SUM(sei.qty_in - sei.qty_out) as net_qty'),
+                DB::raw('SUM((sei.qty_in - sei.qty_out) * COALESCE(NULLIF(gei.rate, 0), sei.price, 0)) as net_val')
+            );
+
+        if ($toDate) {
+            $query->where('sei.created_at', '<=', $toDate);
+        }
+        if ($brandId) {
+            $query->where('sei.brand_id', $brandId);
+        }
+        if ($supplierId) {
+            $query->where(function ($q) use ($supplierId) {
+                $q->where('ge.supplier_id', $supplierId)
+                  ->orWhere('se_ge.supplier_id', $supplierId);
+            });
+        }
+        if ($search !== '') {
+            $query->where(function ($q) use ($search, $supplierNameExpr, $widthExpr, $styleExpr) {
+                $q->where('b.brand_name', 'like', "%{$search}%")
+                  ->orWhere('sei.art_no', 'like', "%{$search}%")
+                  ->orWhereRaw("{$widthExpr} LIKE ?", ["%{$search}%"])
+                  ->orWhereRaw("{$styleExpr} LIKE ?", ["%{$search}%"])
+                  ->orWhereRaw("{$supplierNameExpr} LIKE ?", ["%{$search}%"]);
+            });
+        }
+
+        $rows = $query
+            ->groupBy(
+                'b.brand_name',
+                'fw.width',
+                'sei.size',
+                'st.style_name',
+                'sei.art_no',
+                'sup.name',
+                'se_sup.name'
+            )
+            ->havingRaw('SUM(sei.qty_in - sei.qty_out) > 0')
+            ->orderBy('brand_name', 'asc')
+            ->orderBy('width_label', 'asc')
+            ->orderBy('style_name', 'asc')
+            ->orderBy('art_no', 'asc')
+            ->orderBy('supplier_name', 'asc')
+            ->get();
+
+        $groupedItems = [];
+        foreach ($rows as $row) {
+            $brandLabel = strtoupper(trim((string) $row->brand_name));
+            $widthVal = trim((string) $row->width_label);
+            $styleVal = strtoupper(trim((string) $row->style_name));
+            $subGroupLabel = $widthVal !== '' ? "{$widthVal} WIDTH {$brandLabel} {$styleVal}" : "{$brandLabel} {$styleVal}";
+
+            $supName = trim((string) ($row->supplier_name ?? ''));
+            $artNo = trim((string) $row->art_no);
+            $particulars = $supName !== '' ? "{$artNo} {$supName}" : $artNo;
+
+            if (!isset($groupedItems[$brandLabel][$subGroupLabel][$particulars])) {
+                $groupedItems[$brandLabel][$subGroupLabel][$particulars] = [
+                    'particulars' => $particulars,
+                    'qty' => 0.0,
+                    'value' => 0.0,
+                ];
+            }
+            $groupedItems[$brandLabel][$subGroupLabel][$particulars]['qty'] += floatval($row->net_qty ?? 0);
+            $groupedItems[$brandLabel][$subGroupLabel][$particulars]['value'] += floatval($row->net_val ?? 0);
+        }
+
+        $tree = [];
+        foreach ($groupedItems as $brandLabel => $subGroups) {
+            foreach ($subGroups as $subGroupLabel => $itemsByKey) {
+                $tree[$brandLabel][$subGroupLabel] = array_values($itemsByKey);
+            }
+        }
+
+        $companyName = DB::table('settings')->value('company_name') ?: 'NACHIAS FASHION PRIVATE LIMITED';
+        $periodLabel = ($fromDate && $toDate)
+            ? date('d-m-Y', strtotime($fromDate)) . ' to ' . date('d-m-Y', strtotime($toDate))
+            : ($fromDate ? 'From ' . date('d-m-Y', strtotime($fromDate)) : ($toDate ? 'Up to ' . date('d-m-Y', strtotime($toDate)) : 'All Dates'));
+        $brandFilterLabel = $brandId ? (\App\Models\Brand::find($brandId)?->brand_name ?? 'Selected Brand') : 'All Brands';
+        $supplierFilterLabel = $supplierId ? (Supplier::find($supplierId)?->name ?? 'Selected Supplier') : 'All Suppliers';
+
+        $meta = [
+            'report_title' => 'RAW FABRIC',
+            'company_name' => $companyName,
+            'filter_summary' => "Period: {$periodLabel}  |  Brand: {$brandFilterLabel}  |  Supplier: {$supplierFilterLabel}",
+        ];
+
+        $fileName = 'Raw_Fabric_Stock_' . date('Ymd_His') . '.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\FabricRawStockExport($tree, $meta),
+            $fileName
+        );
     }
 }
 

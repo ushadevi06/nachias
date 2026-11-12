@@ -244,33 +244,18 @@ if (file_exists($nachiasLogoPath)) {
     $nachiasLogoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($nachiasLogoPath));
 }
 
-// Fallback QR Code
-$qrBase64 = '';
-if (!empty($setting->qr_code)) {
-    $uploadedQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
-    if (file_exists($uploadedQrPath)) {
-        $qrData = file_get_contents($uploadedQrPath);
-        $qrBase64 = 'data:image/' . pathinfo($uploadedQrPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($qrData);
-    }
-}
-if (!$qrBase64) {
-    $qrPath = public_path('assets/images/qr_code.png');
-    if (file_exists($qrPath)) {
-        $qrData = file_get_contents($qrPath);
-        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
-    }
-}
-
-// E-Invoice QR Code
+// E-Invoice QR Code (only when E-Invoice is generated and not cancelled)
 $einvoiceQr = '';
-if (!empty($invoice->signed_qr_code)) {
-    try {
-        $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->signed_qr_code));
-    } catch (\Exception $e) {}
-} elseif (!empty($invoice->irn)) {
-    try {
-        $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->irn));
-    } catch (\Exception $e) {}
+if (($invoice->einvoice_status ?? '') !== 'cancelled') {
+    if (!empty($invoice->signed_qr_code)) {
+        try {
+            $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->signed_qr_code));
+        } catch (\Exception $e) {}
+    } elseif (!empty($invoice->irn)) {
+        try {
+            $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->irn));
+        } catch (\Exception $e) {}
+    }
 }
 
 // UPI Payment QR Code
@@ -653,9 +638,17 @@ foreach ($invoice->items as $it) {
     // Size
     $sizeDisplay = $it->sizeRatio ? $it->sizeRatio->size : ($it->size ?? '-');
 
+    // HSN Code
+    $hsnCode = !empty($it->hsn_sac)
+        ? $it->hsn_sac
+        : (($seItem && !empty($seItem->hsn_sac))
+            ? $seItem->hsn_sac
+            : (!empty($invoice->hsn_sac) ? $invoice->hsn_sac : '-'));
+
     $processedItems[] = [
         'art_no' => $artNo ?: '-',
         'desc' => strtoupper($itemName),
+        'hsn' => $hsnCode,
         'slv' => $slvDisplay,
         'size' => $sizeDisplay,
         'qty' => (float)$it->quantity,
@@ -665,7 +658,7 @@ foreach ($invoice->items as $it) {
     ];
 }
 
-// Option B: Group by Size Range condition (Art No + Description + Sleeve + MRP + Price)
+// Option B: Group by Size Range condition (Art No + Description + HSN + Sleeve + MRP + Price)
 $isDetailedFormat = request()->query('format') === 'detailed' || request()->query('type') === 'pdf1_detailed';
 
 if ($isDetailedFormat) {
@@ -675,12 +668,13 @@ if ($isDetailedFormat) {
     foreach ($processedItems as $item) {
         $mrpKey = number_format($item['mrp'], 2, '.', '');
         $rateKey = number_format($item['rate'], 2, '.', '');
-        $groupKey = $item['art_no'] . '___' . $item['desc'] . '___' . $item['slv'] . '___' . $mrpKey . '___' . $rateKey;
+        $groupKey = $item['art_no'] . '___' . $item['desc'] . '___' . $item['hsn'] . '___' . $item['slv'] . '___' . $mrpKey . '___' . $rateKey;
 
         if (!isset($grouped[$groupKey])) {
             $grouped[$groupKey] = [
                 'art_no' => $item['art_no'],
                 'desc' => $item['desc'],
+                'hsn' => $item['hsn'],
                 'slv' => $item['slv'],
                 'sizes' => [],
                 'qty' => 0,
@@ -741,6 +735,7 @@ if ($isDetailedFormat) {
         $finalItems[] = [
             'art_no' => $g['art_no'],
             'desc' => $g['desc'],
+            'hsn' => $g['hsn'],
             'slv' => $g['slv'],
             'size' => $sizeStr,
             'qty' => $g['qty'],
@@ -844,16 +839,13 @@ $igstPercent = (float)($invoice->igst_percent ?? 5.0);
                     </div>
                 </td>
 
-                <!-- Right: Copy Label & QR Code directly underneath -->
+                <!-- Right: Copy Label & E-Invoice QR Code directly underneath (only when E-Invoice generated) -->
                 <td style="width: 22%; text-align: right; vertical-align: top; padding: 0 0 0 4px;">
                     <div style="font-size: 13px; font-weight: bold; color: #01316f; letter-spacing: 1px; text-transform: uppercase;">
                         {{ $copyLabel }}
                     </div>
-                    @php
-                        $headerQr = !empty($einvoiceQr) ? $einvoiceQr : $qrBase64;
-                    @endphp
-                    @if($headerQr)
-                        <img src="{{ $headerQr }}" class="qr-code" style="max-width: 100px; margin-top: 3px;" alt="QR Code">
+                    @if(!empty($einvoiceQr))
+                        <img src="{{ $einvoiceQr }}" class="qr-code" style="max-width: 100px; margin-top: 3px;" alt="E-Invoice QR Code">
                     @endif
                 </td>
             </tr>
@@ -938,13 +930,14 @@ $igstPercent = (float)($invoice->igst_percent ?? 5.0);
                 <tr>
                     <th style="width: 4.5%;" class="text-center">S.No.</th>
                     <th style="width: 13%;" class="text-center">Art No.</th>
-                    <th style="width: 27%;" class="text-left" style="padding-left: 6px;">Description</th>
+                    <th style="width: 25%; padding-left: 6px;" class="text-left">Description</th>
+                    <th style="width: 9.5%; white-space: nowrap;" class="text-center">HSN Code</th>
                     <th style="width: 5.5%;" class="text-center">Sleeve</th>
-                    <th style="width: 8.5%;" class="text-center">Size</th>
-                    <th style="width: 7%;" class="text-center">Qty</th>
-                    <th style="width: 10.5%;" class="text-right" style="padding-right: 6px;">MRP</th>
-                    <th style="width: 10.5%;" class="text-right" style="padding-right: 6px;">WS Price</th>
-                    <th style="width: 13.5%;" class="text-right" style="padding-right: 6px;">Amount</th>
+                    <th style="width: 8%;" class="text-center">Size</th>
+                    <th style="width: 6.5%;" class="text-center">Qty</th>
+                    <th style="width: 7%; padding-right: 5px;" class="text-right">MRP</th>
+                    <th style="width: 8%; padding-right: 5px; white-space: nowrap;" class="text-right">WS Price</th>
+                    <th style="width: 13%; padding-right: 6px;" class="text-right">Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -954,11 +947,12 @@ $igstPercent = (float)($invoice->igst_percent ?? 5.0);
                         <td class="text-center">{{ $rowCounter }}</td>
                         <td class="text-center">{{ $item['art_no'] }}</td>
                         <td class="text-left" style="padding-left: 6px; font-weight: 400;">{{ $item['desc'] }}</td>
+                        <td class="text-center">{{ $item['hsn'] }}</td>
                         <td class="text-center">{{ $item['slv'] }}</td>
                         <td class="text-center">{{ $item['size'] }}</td>
                         <td class="text-center">{{ number_format($item['qty'], 2) }}</td>
-                        <td class="text-right" style="padding-right: 6px;">{{ number_format($item['mrp'], 2) }}</td>
-                        <td class="text-right" style="padding-right: 6px;">{{ number_format($item['rate'], 2) }}</td>
+                        <td class="text-right" style="padding-right: 5px;">{{ number_format($item['mrp'], 2) }}</td>
+                        <td class="text-right" style="padding-right: 5px;">{{ number_format($item['rate'], 2) }}</td>
                         <td class="text-right bold" style="padding-right: 6px;">{{ number_format($item['amount'], 2) }}</td>
                     </tr>
                 @endforeach
@@ -981,6 +975,7 @@ $igstPercent = (float)($invoice->igst_percent ?? 5.0);
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
                             <td>&nbsp;</td>
+                            <td>&nbsp;</td>
                         </tr>
                     @endfor
                 @endif
@@ -991,13 +986,13 @@ $igstPercent = (float)($invoice->igst_percent ?? 5.0);
             <tfoot>
                 <tr class="total-row" style="background-color: #FFFFFF;">
                     <td colspan="3" style="border-right: none; border-left: 1.5px solid #01316f; border-bottom: 1.5px solid #01316f; border-top: 1.5px solid #01316f;"></td>
-                    <td colspan="2" class="text-right bold" style="border-left: none; border-right: none; border-bottom: 1.5px solid #01316f; border-top: 1.5px solid #01316f; color: #01316f; font-size: 10.5px; white-space: nowrap; padding-right: 6px;">
+                    <td colspan="3" class="text-right bold" style="border-left: none; border-right: none; border-bottom: 1.5px solid #01316f; border-top: 1.5px solid #01316f; color: #01316f; font-size: 10.5px; white-space: nowrap; padding-right: 6px;">
                         Total Quantity :
                     </td>
                     <td class="text-center bold" style="border-left: none; border-right: 1px solid #01316f; border-bottom: 1.5px solid #01316f; border-top: 1.5px solid #01316f; font-size: 10.5px;">
                         {{ number_format($totalQty, 2) }}
                     </td>
-                    <td colspan="2" class="text-right bold" style="border-left: none; border-right: none; border-bottom: 1.5px solid #01316f; border-top: 1.5px solid #01316f; color: #01316f; font-size: 10.5px; padding-right: 6px;">
+                    <td colspan="2" class="text-right bold" style="border-left: none; border-right: none; border-bottom: 1.5px solid #01316f; border-top: 1.5px solid #01316f; color: #01316f; font-size: 10.5px; white-space: nowrap; padding-right: 5px;">
                         Gross Amount
                     </td>
                     <td class="text-right bold" style="border-left: none; border-right: 1.5px solid #01316f; border-bottom: 1.5px solid #01316f; border-top: 1.5px solid #01316f; font-size: 10.5px; padding-right: 6px;">

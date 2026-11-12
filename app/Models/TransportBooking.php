@@ -23,10 +23,14 @@ class TransportBooking extends Model
         'booking_rate',
         'delivery_agent_id',
         'delivery_agent_name',
+        'driver_id',
         'picked_by_agent',
         'picked_at',
         'lr_no',
+        'lr_image',
         'lr_price',
+        'transport_charge',
+        'loading_unloading_amount',
         'booking_date',
         'booking_time',
         'status',
@@ -48,6 +52,8 @@ class TransportBooking extends Model
         'notified_at' => 'datetime',
         'booking_rate' => 'decimal:2',
         'lr_price' => 'decimal:2',
+        'transport_charge' => 'decimal:2',
+        'loading_unloading_amount' => 'decimal:2',
     ];
 
     public function salesInvoice()
@@ -63,5 +69,10 @@ class TransportBooking extends Model
     public function deliveryAgent()
     {
         return $this->belongsTo(User::class, 'delivery_agent_id');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'driver_id');
     }
 }

@@ -34,13 +34,13 @@ class BarcodeExport implements FromCollection, WithHeadings, WithMapping, WithTi
                 if (!empty($filters['from_date'])) {
                     try {
                         $fromDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['from_date'])->format('Y-m-d');
-                        $q->where('stock_date', '>=', $fromDate);
+                        $q->whereDate('stock_date', '>=', $fromDate);
                     } catch (\Exception $e) {}
                 }
                 if (!empty($filters['to_date'])) {
                     try {
                         $toDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['to_date'])->format('Y-m-d');
-                        $q->where('stock_date', '<=', $toDate);
+                        $q->whereDate('stock_date', '<=', $toDate);
                     } catch (\Exception $e) {}
                 }
             })->orderBy('id', 'desc')->get();

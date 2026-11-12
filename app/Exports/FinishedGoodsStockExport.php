@@ -2,8 +2,10 @@
 
 namespace App\Exports;
 
-use App\Models\StockEntry;
+use App\Models\Brand;
+use App\Models\ItemPrice;
 use App\Models\StockEntryItem;
+use App\Models\Style;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -18,6 +20,10 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
 {
     protected $count = 0;
     protected $filters;
+    protected array $priceMap = [];
+    protected array $brandCodeMap = [];
+    protected array $styleCodeMap = [];
+    protected bool $lookupsLoaded = false;
 
     public function __construct(array $filters = [])
     {
@@ -28,13 +34,10 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
     {
         $filters = $this->filters;
 
-        return StockEntryItem::with([
-            'stockEntry.productionReceipt.jobCard.fabricType',
-            'stockEntry.productionReceipt.jobCard.purchaseOrder',
+        $items = StockEntryItem::with([
             'stockEntry.productionReceipt.jobCard.fit',
-            'fabricType',
             'color',
-            'brand'
+            'brand',
         ])->whereHas('stockEntry', function($q) use ($filters) {
             $q->where('entry_type', 'Finished Goods');
 
@@ -47,16 +50,71 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
             if (!empty($filters['from_date'])) {
                 try {
                     $fromDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['from_date'])->format('Y-m-d');
-                    $q->where('stock_date', '>=', $fromDate);
+                    $q->whereDate('stock_date', '>=', $fromDate);
                 } catch (\Exception $e) {}
             }
             if (!empty($filters['to_date'])) {
                 try {
                     $toDate = \Carbon\Carbon::createFromFormat('d-m-Y', $filters['to_date'])->format('Y-m-d');
-                    $q->where('stock_date', '<=', $toDate);
+                    $q->whereDate('stock_date', '<=', $toDate);
                 } catch (\Exception $e) {}
             }
         })->orderBy('id', 'desc')->get();
+
+        $this->preloadLookups($items);
+
+        return $items;
+    }
+
+    /**
+     * Bulk-preload active ItemPrices, Brands, and Styles to eliminate per-row N+1 queries during map().
+     */
+    protected function preloadLookups($items): void
+    {
+        $this->priceMap = [];
+        $this->brandCodeMap = [];
+        $this->styleCodeMap = [];
+
+        $artNos = $items->pluck('art_no')
+            ->filter(fn($val) => trim((string) $val) !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        $today = date('Y-m-d');
+        foreach (array_chunk($artNos, 1000) as $chunk) {
+            $prices = ItemPrice::whereIn('art_no', $chunk)
+                ->where('status', 'Active')
+                ->where('effective_from', '<=', $today)
+                ->orderBy('effective_from', 'desc')
+                ->get(['art_no', 'selling_price', 'unit_price']);
+
+            foreach ($prices as $price) {
+                $key = strtolower(trim((string) $price->art_no));
+                if ($key !== '' && !isset($this->priceMap[$key])) {
+                    $this->priceMap[$key] = [
+                        'selling_price' => $price->selling_price,
+                        'unit_price' => $price->unit_price,
+                    ];
+                }
+            }
+        }
+
+        foreach (Brand::get(['code', 'brand_name']) as $brand) {
+            $key = strtolower(trim((string) $brand->code));
+            if ($key !== '' && !isset($this->brandCodeMap[$key])) {
+                $this->brandCodeMap[$key] = $brand->brand_name;
+            }
+        }
+
+        foreach (Style::get(['code', 'style_name']) as $style) {
+            $key = strtolower(trim((string) $style->code));
+            if ($key !== '' && !isset($this->styleCodeMap[$key])) {
+                $this->styleCodeMap[$key] = $style->style_name;
+            }
+        }
+
+        $this->lookupsLoaded = true;
     }
 
     public function headings(): array
@@ -157,9 +215,16 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
         $sleeveShort = $item->sleeve_type === 'Full' ? 'F/S' : ($item->sleeve_type === 'Half' ? 'H/S' : $item->sleeve_type);
         $fit = $sleeveShort;
 
-        $price = \App\Models\ItemPrice::where('art_no', $item->art_no)->where('status', 'Active')->where('effective_from', '<=', date('Y-m-d'))->orderBy('effective_from', 'desc')->first();
-        $mrp = $price ? $price->selling_price : 0;
-        $wsp = $price ? $price->unit_price : 0;
+        $artKey = strtolower(trim((string) ($item->art_no ?? '')));
+        if ($this->lookupsLoaded) {
+            $price = $this->priceMap[$artKey] ?? null;
+            $mrp = $price ? $price['selling_price'] : 0;
+            $wsp = $price ? $price['unit_price'] : 0;
+        } else {
+            $price = ItemPrice::where('art_no', $item->art_no)->where('status', 'Active')->where('effective_from', '<=', date('Y-m-d'))->orderBy('effective_from', 'desc')->first();
+            $mrp = $price ? $price->selling_price : 0;
+            $wsp = $price ? $price->unit_price : 0;
+        }
 
         $parts = explode('-', $item->finished_item_code);
         $brandName = '';
@@ -170,13 +235,23 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
         if ($item->brand_id && $item->brand) {
             $brandName = $item->brand->brand_name;
         } elseif ($brandCode) {
-            $brand = \App\Models\Brand::where('code', $brandCode)->first();
-            $brandName = $brand ? $brand->brand_name : $brandCode;
+            $brandKey = strtolower(trim((string) $brandCode));
+            if ($this->lookupsLoaded) {
+                $brandName = $this->brandCodeMap[$brandKey] ?? $brandCode;
+            } else {
+                $brand = Brand::where('code', $brandCode)->first();
+                $brandName = $brand ? $brand->brand_name : $brandCode;
+            }
         }
 
         if ($styleCode) {
-            $style = \App\Models\Style::where('code', $styleCode)->first();
-            $styleName = $style ? $style->style_name : $styleCode;
+            $styleKey = strtolower(trim((string) $styleCode));
+            if ($this->lookupsLoaded) {
+                $styleName = $this->styleCodeMap[$styleKey] ?? $styleCode;
+            } else {
+                $style = Style::where('code', $styleCode)->first();
+                $styleName = $style ? $style->style_name : $styleCode;
+            }
         }
 
         $categoryTree = "{$brandName} > {$brandCode} - {$styleName} {$sleeveShort}";

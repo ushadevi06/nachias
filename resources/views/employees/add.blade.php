@@ -359,7 +359,7 @@
                                 </div>
                                 <div class="col-md-4 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('pf_no') is-invalid @enderror" id="pf_no" placeholder="Enter PF No" name="pf_no" value="{{ old('pf_no', $employee->pf_no ?? '') }}">
+                                        <input type="text" class="form-control @error('pf_no') is-invalid @enderro90-r" id="pf_no" placeholder="Enter PF No" name="pf_no" value="{{ old('pf_no', $employee->pf_no ?? '') }}">
                                         <label for="pf_no">PF No</label>
                                     </div>
                                     @error('pf_no')

@@ -160,10 +160,10 @@
         }
         .truck-container {
             text-align: center;
-            margin: 0 0 2px 0;
+            margin: 20px 0 8px 0;
         }
         .truck-container img {
-            width: 83%;
+            width: 90%;
             height: auto;
             display: inline-block;
         }
@@ -182,7 +182,7 @@
             font-family: 'OpenSansBold', sans-serif;
             font-size: 18.5px;
             color: #1e293b;
-            margin: 2px 0 11px 0;
+            margin: 4px 0 15px 0;
             text-align: center;
             line-height: 1.1;
             font-weight: bold;
@@ -195,7 +195,7 @@
             border: 2px solid #bcd8fa;
             border-radius: 12px;
             background-color: #edf5ff;
-            margin-bottom: 11px;
+            margin-bottom: 16px;
         }
         .shipment-cell {
             padding: 17px 11px;
@@ -244,7 +244,7 @@
             background-color: #edf5ff;
             border: 2px solid #bcd8fa;
             border-radius: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 16px;
         }
         .qr-left-td {
             width: 215px;
@@ -307,17 +307,17 @@
             background-color: #f0f7ff;
             border: 1.5px solid #bcd8fa;
             border-radius: 12px;
-            margin-bottom: 7px;
+            margin-bottom: 0px;
         }
         .footer-icon-td {
             width: 76px;
-            padding: 12px 12px;
+            padding: 15px 12px;
             border-right: 1.5px solid #e2e8f0;
             text-align: center;
             vertical-align: middle;
         }
         .footer-content-td {
-            padding: 10px 15px;
+            padding: 14px 15px;
             vertical-align: middle;
         }
         .footer-table {
@@ -344,10 +344,15 @@
             color: #15529a;
         }
         .bottom-wave-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             width: 100%;
             text-align: center;
             line-height: 0;
-            margin-top: 0px;
+            margin: 0;
+            padding: 0;
         }
         .bottom-wave-container img {
             width: 100%;
@@ -357,11 +362,6 @@
     </style>
 </head>
 <body>
-    <!-- 1. Header (Top Right Casino) -->
-    <div class="header-table">
-        <img src="{{ $casino_logo }}" alt="">
-    </div>
-
     <!-- Delivery Truck Hero Image (Enlarged 80% to Fill Upper Page & Remove Footer Gap) -->
     @if($truckBase64)
         <div class="truck-container">

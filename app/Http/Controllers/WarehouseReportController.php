@@ -16,8 +16,10 @@ use App\Models\StockEntryItem;
 use App\Models\StoreLocation;
 use App\Models\Warehouse;
 use App\Models\WarehouseBrandCapacity;
+use App\Exports\BrandwiseFgStockExport;
 use App\Models\Style;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WarehouseReportController extends Controller
 {
@@ -5789,5 +5791,160 @@ class WarehouseReportController extends Controller
                 'amount' => '₹' . number_format($totAmount, 2),
             ]
         ]);
+    }
+
+    /**
+     * Export Brandwise Finished Goods stock in a Tally-style abstract Excel hierarchy
+     * (Brand -> Style -> Art No with Sleeve and size-wise Closing Balance).
+     */
+    public function exportBrandwiseFgStock(Request $request)
+    {
+        $warehouseId = ($request->warehouse_id && $request->warehouse_id !== 'all') ? $request->warehouse_id : null;
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date))) : null;
+        $toDate = $request->to_date ? date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date))) : null;
+        $agingFilter = $request->aging_filter;
+        $brandId = $request->brand_id;
+        $storeId = $request->store_id;
+
+        $sleeveNormalizedSql = "CASE
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('FS', 'F/S', 'FULL', 'FULL SLEEVE') THEN 'Full'
+            WHEN UPPER(TRIM(COALESCE(stock_entry_items.sleeve_type, ''))) IN ('HS', 'H/S', 'HALF', 'HALF SLEEVE') THEN 'Half'
+            ELSE COALESCE(NULLIF(TRIM(stock_entry_items.sleeve_type), ''), '-')
+        END";
+
+        $sizeCols = ['36', '38', '40', '42', '44', '46', '48', '50'];
+        $sizeSelects = [];
+        foreach ($sizeCols as $sz) {
+            $sizeSelects[] = DB::raw("SUM(CASE WHEN TRIM(COALESCE(stock_entry_items.size, '')) = '{$sz}' THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q{$sz}");
+        }
+        $sizeListSql = "'" . implode("','", $sizeCols) . "'";
+        $sizeSelects[] = DB::raw("SUM(CASE WHEN TRIM(COALESCE(stock_entry_items.size, '')) NOT IN ({$sizeListSql}) THEN stock_entry_items.qty_in - stock_entry_items.qty_out ELSE 0 END) as q_other");
+
+        $query = StockEntryItem::query()
+            ->leftJoin('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
+            ->leftJoin('brands', function ($join) {
+                $join->on(function ($q) {
+                    $q->on('stock_entry_items.brand_id', '=', 'brands.id')
+                        ->orOn(function ($sub) {
+                            $sub->whereNull('stock_entry_items.brand_id')
+                                ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                ->whereRaw("NOT EXISTS (
+                                    SELECT 1 FROM brands b2
+                                    WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%')
+                                    AND LENGTH(b2.code) > LENGTH(brands.code)
+                                )");
+                        });
+                });
+            })
+            ->leftJoin('styles', 'stock_entry_items.style_id', '=', 'styles.id')
+            ->select(array_merge([
+                'brands.id as brand_id',
+                DB::raw("COALESCE(brands.brand_name, '-') as brand_name"),
+                DB::raw('COALESCE(styles.id, 0) as style_id'),
+                DB::raw("COALESCE(styles.style_name, '(No Style)') as style_name"),
+                'stock_entry_items.art_no',
+                DB::raw("{$sleeveNormalizedSql} as sleeve"),
+                DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty'),
+                DB::raw('SUM((stock_entry_items.qty_in - stock_entry_items.qty_out) * stock_entry_items.price) as stock_value'),
+            ], $sizeSelects))
+            ->where('stock_entry_items.stock_type', 'finished_goods')
+            ->whereNull('stock_entry_items.deleted_at')
+            ->whereNotNull('brands.id');
+
+        $stockDateExpr = 'DATE(COALESCE(stock_entries.stock_date, stock_entry_items.created_at))';
+        if ($fromDate && $toDate) {
+            $query->whereBetween(DB::raw($stockDateExpr), [$fromDate, $toDate]);
+        } elseif ($fromDate) {
+            $query->where(DB::raw($stockDateExpr), '>=', $fromDate);
+        } elseif ($toDate) {
+            $query->where(DB::raw($stockDateExpr), '<=', $toDate);
+        }
+
+        $ageDaysExpr = 'DATEDIFF(NOW(), COALESCE(stock_entries.stock_date, stock_entry_items.created_at))';
+        $agingConditions = [
+            '0-30' => "{$ageDaysExpr} <= 30",
+            '31-60' => "{$ageDaysExpr} BETWEEN 31 AND 60",
+            '61-90' => "{$ageDaysExpr} BETWEEN 61 AND 90",
+            '91+' => "{$ageDaysExpr} > 90",
+        ];
+        if (isset($agingConditions[$agingFilter])) {
+            $query->whereRaw($agingConditions[$agingFilter]);
+        }
+
+        if ($warehouseId) {
+            $query->where('stock_entry_items.warehouse_id', $warehouseId);
+        }
+        if ($brandId) {
+            $query->where('brands.id', $brandId);
+        }
+        if ($storeId) {
+            $query->where('stock_entry_items.store_location_id', $storeId);
+        }
+
+        $rows = $query
+            ->groupBy(
+                'brands.id',
+                'brands.brand_name',
+                DB::raw('COALESCE(styles.id, 0)'),
+                DB::raw("COALESCE(styles.style_name, '(No Style)')"),
+                'stock_entry_items.art_no',
+                DB::raw('sleeve')
+            )
+            ->havingRaw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0')
+            ->orderBy('brands.brand_name', 'asc')
+            ->orderBy('style_name', 'asc')
+            ->orderBy('stock_entry_items.art_no', 'asc')
+            ->orderBy('sleeve', 'asc')
+            ->get();
+
+        $tree = [];
+        $hasOtherSize = false;
+
+        foreach ($rows as $row) {
+            $brandLabel = trim((string) ($row->brand_name ?: '-'));
+            $styleLabel = trim((string) ($row->style_name ?: '(No Style)'));
+            $otherQty = floatval($row->q_other ?? 0);
+            if (abs($otherQty) > 0.0001) {
+                $hasOtherSize = true;
+            }
+
+            $sizes = [];
+            foreach ($sizeCols as $sz) {
+                $sizes[$sz] = floatval($row->{"q{$sz}"} ?? 0);
+            }
+            $sizes['other'] = $otherQty;
+
+            $tree[$brandLabel][$styleLabel][] = [
+                'art_no' => trim((string) ($row->art_no ?: '-')),
+                'sleeve' => $row->sleeve ?: '-',
+                'sizes' => $sizes,
+                'total_qty' => floatval($row->total_qty ?? 0),
+                'stock_value' => floatval($row->stock_value ?? 0),
+            ];
+        }
+
+        $companyName = DB::table('settings')->value('company_name') ?: 'NACHIAS FASHION PRIVATE LIMITED';
+        $periodLabel = ($fromDate && $toDate)
+            ? date('d-m-Y', strtotime($fromDate)) . ' to ' . date('d-m-Y', strtotime($toDate))
+            : ($fromDate ? 'From ' . date('d-m-Y', strtotime($fromDate)) : ($toDate ? 'Up to ' . date('d-m-Y', strtotime($toDate)) : 'All Dates'));
+        $warehouseLabel = $warehouseId ? (Warehouse::find($warehouseId)?->warehouse_name ?? 'Selected Warehouse') : 'All Warehouses';
+        $brandLabelFilter = $brandId ? (Brand::find($brandId)?->brand_name ?? 'Selected Brand') : 'All Brands';
+        $agingLabels = [
+            '0-30' => '0 - 30 Days (Fresh)',
+            '31-60' => '31 - 60 Days',
+            '61-90' => '61 - 90 Days',
+            '91+' => '91+ Days (Old / Aged)',
+        ];
+        $agingLabel = $agingLabels[$agingFilter] ?? 'All Stock';
+
+        $meta = [
+            'report_title' => 'BRANDWISE FG STOCKS',
+            'company_name' => $companyName,
+            'filter_summary' => "Period: {$periodLabel}  |  Brand: {$brandLabelFilter}  |  Warehouse: {$warehouseLabel}  |  Aging: {$agingLabel}",
+        ];
+
+        $fileName = 'Brandwise_FG_Stocks_' . date('Ymd_His') . '.xlsx';
+
+        return Excel::download(new BrandwiseFgStockExport($tree, $meta, $hasOtherSize), $fileName);
     }
 }

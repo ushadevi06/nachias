@@ -38,7 +38,7 @@
                         @endif
                         @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods') || auth()->user()->can('view stock-entry-raw-materials'))
                             <div id="stock-export-filter-box" class="d-flex align-items-center gap-2">
-                                <input type="text" id="stock_export_date" class="form-control form-control-sm" style="width: 140px;" placeholder="Select Date" title="Select Date">
+                                <input type="text" id="stock_export_date" class="form-control form-control-sm" style="width: 220px;" placeholder="DD-MM-YYYY to DD-MM-YYYY" title="Select Date Range (From Date to To Date)">
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="stock_export_reset_btn" title="Reset Date Filter"><i class="ri ri-refresh-line"></i></button>
                             </div>
                         @endif
@@ -48,6 +48,9 @@
                             </a>
                             <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary disabled" id="export-barcode-btn" style="display: none; pointer-events: none; opacity: 0.5;" tabindex="-1" aria-disabled="true">
                                 <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export Barcode
+                            </a>
+                            <a href="{{ url('fg_stock_taking') }}" class="btn btn-primary" id="stock-taking-btn" style="display: none;">
+                                <i class="menu-icon icon-base ri ri-qr-scan-2-line"></i> Stock Taking
                             </a>
                         @endif
                         @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-raw-materials'))
@@ -316,6 +319,21 @@
             $('#import-sample-link').attr('href', config.sample);
         }
 
+        function parseStockDateRange() {
+            const raw = ($('#stock_export_date').val() || '').trim();
+            if (!raw) {
+                return { from_date: '', to_date: '' };
+            }
+            if (raw.indexOf(' to ') !== -1) {
+                const parts = raw.split(' to ');
+                return {
+                    from_date: (parts[0] || '').trim(),
+                    to_date: (parts[1] || parts[0] || '').trim()
+                };
+            }
+            return { from_date: raw, to_date: raw };
+        }
+
         $(function () {
             table = $('.stock-entry-table').DataTable({
                 responsive: true,
@@ -333,7 +351,9 @@
                         d.art_no = new URLSearchParams(window.location.search).get('art_no');
                         d.grn_no = new URLSearchParams(window.location.search).get('grn_no');
                         d.entry_type = $('#stockEntryTabs .nav-link.active').data('entry-type');
-                        d.date = $('#stock_export_date').val();
+                        const range = parseStockDateRange();
+                        d.from_date = range.from_date;
+                        d.to_date = range.to_date;
                         if (d.entry_type === 'Finished Goods') {
                             d.warehouse_id = $('#fg_warehouse_id').val();
                             d.store_type_id = $('#fg_store_type_id').val();
@@ -420,9 +440,9 @@
             });
 
             function updateExportButtonsState() {
-                let date = $('#stock_export_date').val();
+                const range = parseStockDateRange();
                 let exportBtns = $('#export-finished-goods-btn, #export-barcode-btn, #export-raw-materials-btn');
-                if (date && date.trim() !== '') {
+                if (range.from_date !== '' || range.to_date !== '') {
                     exportBtns.removeClass('disabled').removeAttr('tabindex').removeAttr('aria-disabled').css({ 'pointer-events': 'auto', 'opacity': '1' });
                 } else {
                     exportBtns.addClass('disabled').attr('tabindex', '-1').attr('aria-disabled', 'true').css({ 'pointer-events': 'none', 'opacity': '0.5' });
@@ -432,14 +452,20 @@
             let stockDatePicker;
             if (typeof $.fn.flatpickr !== 'undefined') {
                 stockDatePicker = $('#stock_export_date').flatpickr({
+                    mode: 'range',
                     dateFormat: 'd-m-Y',
                     allowInput: true,
-                    onChange: function () {
+                    onChange: function (selectedDates) {
                         updateExportButtonsState();
-                        table.ajax.reload();
+                        if (selectedDates.length === 0 || selectedDates.length === 2) {
+                            table.ajax.reload();
+                        }
                     },
-                    onClose: function () {
+                    onClose: function (selectedDates) {
                         updateExportButtonsState();
+                        if (selectedDates.length === 1) {
+                            table.ajax.reload();
+                        }
                     }
                 });
             } else {
@@ -491,6 +517,7 @@
                     @endif
                     $('#export-finished-goods-btn').show();
                     $('#export-barcode-btn').show();
+                    $('#stock-taking-btn').show();
                     $('#export-raw-materials-btn').hide();
                     table.column(1).visible(false); // Stock Entry No
                     table.column(2).visible(true);  // Stock Date
@@ -523,6 +550,7 @@
                     updateImportModal('Raw Material');
                     $('#export-finished-goods-btn').hide();
                     $('#export-barcode-btn').hide();
+                    $('#stock-taking-btn').hide();
                     $('#export-raw-materials-btn').show();
                     table.column(1).visible(true);  // Stock Entry No
                     table.column(2).visible(true);  // Stock Date
@@ -570,9 +598,10 @@
 
             function getStockExportParams() {
                 let params = new URLSearchParams();
-                let date = $('#stock_export_date').val();
+                const range = parseStockDateRange();
 
-                if (date) params.append('date', date);
+                if (range.from_date) params.append('from_date', range.from_date);
+                if (range.to_date) params.append('to_date', range.to_date);
 
                 return params.toString();
             }

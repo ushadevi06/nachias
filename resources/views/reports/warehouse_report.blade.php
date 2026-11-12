@@ -55,7 +55,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2">
+                <div class="col-6 col-md-4 col-xl-2" id="customer_filter_col" style="{{ in_array(request('report_type'), ['brand-stock', 'brandwise-stock']) ? 'display: none;' : '' }}">
                     <label class="form-label small fw-bold text-muted">Customer</label>
                     <select class="form-select select2" name="customer_id" id="customer_id_select" data-placeholder="Select Customer">
                         <option value=""></option>
@@ -456,8 +456,10 @@ $(document).ready(function() {
 
         if (targetTabId === 'brand-stock' || targetTabId === 'brandwise-stock') {
             $('#aging_filter_col').show();
+            $('#customer_filter_col').hide();
         } else {
             $('#aging_filter_col').hide();
+            $('#customer_filter_col').show();
         }
 
         if (targetTabId === 'order-processing-time' || targetTabId === 'order-dispatch' || targetTabId === 'order-vs-dispatch') {
@@ -628,6 +630,26 @@ $(document).ready(function() {
     }
 
     $('#btn-excel').on('click', function() {
+        var activeTabId = $('.tab-pane.active').attr('id') || $('#report_type_select').val();
+        if (activeTabId === 'brand-stock' || activeTabId === 'brandwise-stock') {
+            var fromDate = $('.start_date').val() || '';
+            var toDate = $('.end_date').val() || '';
+            var brandId = $('select[name="brand_id"]').val() || '';
+            var storeId = $('select[name="store_id"]').val() || '';
+            var warehouseId = $('#filter_warehouse_id').val() || $('#top_warehouse_select').val() || 'all';
+            var agingFilter = $('#aging_filter').val() || '';
+
+            var exportUrl = "{{ url('warehouse_reports/export/brandwise-fg-stock') }}"
+                + "?from_date=" + encodeURIComponent(fromDate)
+                + "&to_date=" + encodeURIComponent(toDate)
+                + "&brand_id=" + encodeURIComponent(brandId)
+                + "&store_id=" + encodeURIComponent(storeId)
+                + "&warehouse_id=" + encodeURIComponent(warehouseId)
+                + "&aging_filter=" + encodeURIComponent(agingFilter);
+
+            window.location.href = exportUrl;
+            return;
+        }
         triggerWarehouseExport('.buttons-excel');
     });
     $('#btn-pdf').on('click', function() {

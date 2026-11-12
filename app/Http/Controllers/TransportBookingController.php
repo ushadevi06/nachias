@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Driver;
 use App\Models\SalesInvoice;
 use App\Models\TransportBooking;
 use App\Models\User;
@@ -28,22 +29,69 @@ class TransportBookingController extends Controller
 
     protected function getUnifiedDrivers()
     {
+        $masterDrivers = Driver::where('status', 'Active')
+            ->orderBy('driver_name')
+            ->get();
+
+        $masterMap = [];
+        $list = collect();
+        foreach ($masterDrivers as $d) {
+            $key = strtolower(trim((string) $d->driver_name));
+            $masterMap[$key] = true;
+            $list->push([
+                'id' => $d->driver_name,
+                'master_id' => $d->id,
+                'name' => $d->driver_name,
+                'loading_unloading_amount' => round((float) $d->loading_unloading_amount, 2),
+                'type' => 'Master Driver',
+            ]);
+        }
+
         $externalNames = TransportBooking::whereNotNull('delivery_agent_name')
             ->where('delivery_agent_name', '!=', '')
             ->distinct()
             ->orderBy('delivery_agent_name')
             ->pluck('delivery_agent_name')
-            ->filter(function ($name) {
-                return !empty(trim($name));
-            })
+            ->filter(fn($name) => !empty(trim((string) $name)))
             ->values();
 
-        return $externalNames->map(function ($name) {
-            return [
-                'id' => $name,
-                'name' => $name,
-                'type' => 'Outside Driver'
-            ];
+        foreach ($externalNames as $name) {
+            $trimmed = trim((string) $name);
+            if (!isset($masterMap[strtolower($trimmed)])) {
+                $masterMap[strtolower($trimmed)] = true;
+                $list->push([
+                    'id' => $trimmed,
+                    'master_id' => null,
+                    'name' => $trimmed,
+                    'loading_unloading_amount' => 0.0,
+                    'type' => 'Outside Driver',
+                ]);
+            }
+        }
+
+        return $list->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
+    }
+
+    protected function applyDriverFilter($query, $driverVal): void
+    {
+        if (empty($driverVal)) {
+            return;
+        }
+        if (is_numeric($driverVal)) {
+            $query->where(function ($q) use ($driverVal) {
+                $q->where('driver_id', $driverVal)
+                  ->orWhere('delivery_agent_id', $driverVal)
+                  ->orWhere('delivery_agent_name', $driverVal);
+            });
+            return;
+        }
+        $cleanDriver = trim(preg_replace('/\s*\((Outside Driver|Staff Driver|Master Driver|Outside)\)$/i', '', (string) $driverVal));
+        $matchedDriverId = Driver::whereRaw('LOWER(driver_name) = ?', [strtolower($cleanDriver)])->value('id');
+        $query->where(function ($q) use ($cleanDriver, $matchedDriverId) {
+            $q->where('delivery_agent_name', $cleanDriver);
+            if ($matchedDriverId) {
+                $q->orWhere('driver_id', $matchedDriverId);
+            }
         });
     }
 
@@ -65,7 +113,7 @@ class TransportBookingController extends Controller
         $excludedCustomerIds = self::getExcludedCustomerIds();
 
         if ($request->ajax()) {
-            $query = TransportBooking::with(['salesInvoice', 'customer.city', 'customer.place', 'deliveryAgent'])->orderBy('sales_invoice_id', 'desc')->orderBy('id', 'asc');
+            $query = TransportBooking::with(['salesInvoice', 'customer.city', 'customer.place', 'deliveryAgent', 'driver'])->orderBy('sales_invoice_id', 'desc')->orderBy('id', 'asc');
 
             if (!empty($excludedCustomerIds)) {
                 $query->whereNotIn('customer_id', $excludedCustomerIds);
@@ -90,16 +138,7 @@ class TransportBookingController extends Controller
             }
 
             if ($request->filled('driver_id') || $request->filled('driver')) {
-                $driverVal = $request->driver_id ?: $request->driver;
-                if (is_numeric($driverVal)) {
-                    $query->where(function ($q) use ($driverVal) {
-                        $q->where('delivery_agent_id', $driverVal)
-                          ->orWhere('delivery_agent_name', $driverVal);
-                    });
-                } else {
-                    $cleanDriver = preg_replace('/\s*\((Outside Driver|Staff Driver)\)$/i', '', $driverVal);
-                    $query->where('delivery_agent_name', trim($cleanDriver));
-                }
+                $this->applyDriverFilter($query, $request->driver_id ?: $request->driver);
             }
 
             if ($request->filled('transport_name')) {
@@ -143,6 +182,7 @@ class TransportBookingController extends Controller
                     if (is_numeric($numericSearch)) {
                         $q->orWhere('quantity', $numericSearch)
                             ->orWhere('lr_price', 'like', "%{$numericSearch}%")
+                            ->orWhere('transport_charge', 'like', "%{$numericSearch}%")
                             ->orWhere('booking_rate', 'like', "%{$numericSearch}%");
                     }
 
@@ -230,8 +270,11 @@ class TransportBookingController extends Controller
 
                 $boxHtml = "<span class='badge bg-label-dark fw-bold'>Box {$b->box_number}</span>";
 
-                $driverName = $b->deliveryAgent ? $b->deliveryAgent->name : ($b->delivery_agent_name ?: '');
-                if ($b->deliveryAgent) {
+                $driverName = $b->driver ? $b->driver->driver_name : ($b->deliveryAgent ? $b->deliveryAgent->name : ($b->delivery_agent_name ?: ''));
+                $loadingAmount = (float) ($b->loading_unloading_amount ?: ($b->driver ? $b->driver->loading_unloading_amount : 0));
+                if ($b->driver) {
+                    $driverHtml = "<span class='badge bg-label-primary'><i class='ri ri-user-line me-1'></i>" . e($b->driver->driver_name) . "</span>";
+                } elseif ($b->deliveryAgent) {
                     $driverHtml = "<span class='badge bg-label-primary'><i class='ri ri-user-line me-1'></i>{$b->deliveryAgent->name}</span>";
                 } elseif (!empty($b->delivery_agent_name)) {
                     $driverHtml = "<span class='badge bg-label-info' title='Outside Delivery Agent'><i class='ri-user-received-line me-1'></i>" . e($b->delivery_agent_name) . " <span class='badge bg-white text-info ms-1' style='font-size: 0.65rem;'>Outside</span></span>";
@@ -253,21 +296,28 @@ class TransportBookingController extends Controller
                 }
 
                 $escapedDriverName = htmlspecialchars($driverName, ENT_QUOTES, 'UTF-8');
-                $driverVal = $b->delivery_agent_id ?: ($b->delivery_agent_name ?: '');
+                $driverVal = $driverName ?: ($b->delivery_agent_id ?: '');
+                $savedTransportCharge = number_format((float) $b->transport_charge, 2, '.', '');
+                $loadingUnloadingRate = $b->lr_price ?: $b->booking_rate;
                 $bDate = $b->booking_date ? Carbon::parse($b->booking_date)->format('d-m-Y') : date('d-m-Y');
+                $lrImageUrl = !empty($b->lr_image) ? asset('uploads/transport_bookings/lr_images/' . $b->lr_image) : '';
+                $escapedLrImageUrl = htmlspecialchars($lrImageUrl, ENT_QUOTES, 'UTF-8');
 
                 $lrHtml = '';
                 if (!empty($b->lr_no)) {
                     $lrHtml = "<span class='badge bg-label-success fw-bold font-monospace fs-7'>{$b->lr_no}</span>";
+                    if (!empty($lrImageUrl)) {
+                        $lrHtml .= " <a href='{$escapedLrImageUrl}' target='_blank' class='ms-1 text-primary' title='View Attached LR Image'><i class='ri ri-image-line'></i></a>";
+                    }
                 } elseif ($canEdit) {
-                    $lrHtml = "<button type='button' class='btn btn-xs btn-outline-danger btn-open-lr-modal' data-id='{$b->id}' data-invoice='{$invNo}' data-box='{$b->box_number}' data-customer='{$custName}' data-customer-email='{$escapedCustEmail}' data-transport='{$b->preferred_transport}' data-rate='{$b->booking_rate}' data-lr='' data-driver='{$driverVal}' data-driver-name='{$escapedDriverName}' data-booking-date='{$bDate}'>+ Enter LR</button>";
+                    $lrHtml = "<button type='button' class='btn btn-xs btn-outline-danger btn-open-lr-modal' data-id='{$b->id}' data-invoice='{$invNo}' data-box='{$b->box_number}' data-customer='{$custName}' data-customer-email='{$escapedCustEmail}' data-transport='{$b->preferred_transport}' data-rate='{$loadingUnloadingRate}' data-transport-charge='{$savedTransportCharge}' data-lr='' data-lr-image-url='{$escapedLrImageUrl}' data-driver='{$driverVal}' data-driver-name='{$escapedDriverName}' data-booking-date='{$bDate}'>+ Enter LR</button>";
                 } else {
                     $lrHtml = "<span class='badge bg-label-secondary'>Pending LR</span>";
                 }
 
                 $editBtn = '';
                 if ($canEdit) {
-                    $editBtn = "<button type='button' class='btn btn-icon btn-text-primary rounded-pill btn-open-lr-modal me-1' data-id='{$b->id}' data-invoice='{$invNo}' data-box='{$b->box_number}' data-customer='{$custName}' data-customer-email='{$escapedCustEmail}' data-transport='{$b->preferred_transport}' data-rate='{$b->booking_rate}' data-lr='{$b->lr_no}' data-driver='{$driverVal}' data-driver-name='{$escapedDriverName}' data-booking-date='{$bDate}' title='Update LR Details' style='width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri ri-pencil-line' style='font-size: 22px;'></i></button>";
+                    $editBtn = "<button type='button' class='btn btn-icon btn-text-primary rounded-pill btn-open-lr-modal me-1' data-id='{$b->id}' data-invoice='{$invNo}' data-box='{$b->box_number}' data-customer='{$custName}' data-customer-email='{$escapedCustEmail}' data-transport='{$b->preferred_transport}' data-rate='{$loadingUnloadingRate}' data-transport-charge='{$savedTransportCharge}' data-lr='{$b->lr_no}' data-lr-image-url='{$escapedLrImageUrl}' data-driver='{$driverVal}' data-driver-name='{$escapedDriverName}' data-booking-date='{$bDate}' title='Update LR Details' style='width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri ri-pencil-line' style='font-size: 22px;'></i></button>";
                 }
                 $dispatchPdfBtn = "<a href='" . route('transport_bookings.dispatch_card_pdf', $b->id) . "' target='_blank' class='btn btn-icon btn-text-danger rounded-pill' title='View / Download Dispatch Slip PDF' style='width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri ri-file-pdf-line' style='font-size: 22px;'></i></a>";
 
@@ -292,7 +342,8 @@ class TransportBookingController extends Controller
                     'transport_name' => $b->preferred_transport ?: '-',
                     'driver' => $driverHtml,
                     'lr_no' => $lrHtml,
-                    'freight_price' => '₹' . number_format($b->lr_price ?: $b->booking_rate, 2),
+                    'loading_unloading_price' => '₹' . number_format((float)$loadingUnloadingRate, 2),
+                    'transport_charge' => '₹' . number_format((float)$b->transport_charge, 2),
                     'status' => $statusHtml,
                     'action' => $actionHtml,
                 ];
@@ -357,7 +408,10 @@ class TransportBookingController extends Controller
 
         $validated = $request->validate([
             'lr_no' => 'required|string',
+            'lr_image' => 'nullable|image|mimes:jpeg,jpg,png,gif,webp|max:5120',
             'lr_price' => 'nullable|numeric|min:0',
+            'transport_charge' => 'required|numeric|min:0',
+            'loading_unloading_amount' => 'nullable|numeric|min:0',
             'preferred_transport' => 'nullable|string',
             'delivery_agent_id' => 'nullable|string',
             'delivery_agent_name' => 'nullable|string',
@@ -365,28 +419,64 @@ class TransportBookingController extends Controller
             'remarks' => 'nullable|string',
             'customer_email' => 'nullable|email',
             'box_number' => 'nullable|string',
+        ], [
+            'lr_image.image' => 'Only image files are allowed for LR attachment.',
+            'lr_image.mimes' => 'Only JPG, JPEG, PNG, GIF, and WEBP image files are allowed.',
+            'lr_image.max' => 'LR image size must not exceed 5 MB.',
+            'transport_charge.required' => 'Transport Charge is required.',
+            'transport_charge.numeric' => 'Transport Charge must be a valid amount.',
+            'transport_charge.min' => 'Transport Charge cannot be negative.',
         ]);
 
         try {
-            $existingBooking = TransportBooking::with(['salesInvoice', 'customer'])->find($id);
+            $existingBooking = TransportBooking::with(['salesInvoice', 'customer', 'driver'])->find($id);
             $oldData = $existingBooking ? [
                 'lr_no' => $existingBooking->lr_no,
+                'lr_image' => $existingBooking->lr_image,
                 'lr_price' => $existingBooking->lr_price,
+                'transport_charge' => $existingBooking->transport_charge,
                 'status' => $existingBooking->status,
                 'preferred_transport' => $existingBooking->preferred_transport,
                 'delivery_agent' => $existingBooking->delivery_agent_name ?: ($existingBooking->deliveryAgent->name ?? ''),
                 'booking_date' => $existingBooking->booking_date ? Carbon::parse($existingBooking->booking_date)->format('d-m-Y') : null,
             ] : null;
 
+            if ($request->hasFile('lr_image')) {
+                $uploadDir = public_path('uploads/transport_bookings/lr_images');
+                if (!file_exists($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                if ($existingBooking && !empty($existingBooking->lr_image)) {
+                    $oldPath = $uploadDir . DIRECTORY_SEPARATOR . $existingBooking->lr_image;
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+                $imageFile = $request->file('lr_image');
+                $safeOrigName = preg_replace('/[^A-Za-z0-9._-]/', '_', $imageFile->getClientOriginalName());
+                $lrImageName = time() . '_lr_' . $id . '_' . $safeOrigName;
+                $imageFile->move($uploadDir, $lrImageName);
+                $validated['lr_image'] = $lrImageName;
+            } else {
+                unset($validated['lr_image']);
+            }
+
             $agentInput = trim((string)($request->input('delivery_agent_id') ?: $request->input('delivery_agent_name')));
             $driverId = null;
             $driverName = null;
+            $masterDriver = null;
 
             if (!empty($agentInput)) {
-                $agentInput = preg_replace('/\s*\((New Outside Driver|Outside Driver|Staff Driver|Outside)\)$/i', '', $agentInput);
+                $agentInput = preg_replace('/\s*\((New Outside Driver|Outside Driver|Staff Driver|Master Driver|Outside)\)$/i', '', $agentInput);
                 $agentInput = trim($agentInput);
 
-                if (is_numeric($agentInput)) {
+                $masterDriver = Driver::where('status', 'Active')
+                    ->whereRaw('LOWER(driver_name) = ?', [strtolower($agentInput)])
+                    ->first();
+
+                if ($masterDriver) {
+                    $driverName = $masterDriver->driver_name;
+                } elseif (is_numeric($agentInput)) {
                     $user = User::find($agentInput);
                     if ($user) {
                         $driverId = $user->id;
@@ -399,8 +489,13 @@ class TransportBookingController extends Controller
                 }
             }
 
+            $validated['driver_id'] = $masterDriver?->id;
             $validated['delivery_agent_id'] = $driverId;
             $validated['delivery_agent_name'] = $driverName;
+            if (!$request->filled('lr_price') && $masterDriver) {
+                $validated['lr_price'] = (float) $masterDriver->loading_unloading_amount;
+            }
+            $validated['transport_charge'] = round((float) $validated['transport_charge'], 2);
             $validated['status'] = 'Booked';
 
             $booking = $this->bookingService->recordLrBooking($id, $validated);
@@ -412,7 +507,9 @@ class TransportBookingController extends Controller
                 $actionType = empty($oldData['lr_no']) ? 'create_lr' : 'update_lr';
                 $newData = [
                     'lr_no' => $booking->lr_no,
+                    'lr_image' => $booking->lr_image,
                     'lr_price' => $booking->lr_price,
+                    'transport_charge' => $booking->transport_charge,
                     'status' => $booking->status,
                     'preferred_transport' => $booking->preferred_transport,
                     'delivery_agent' => $driverText,
@@ -446,12 +543,14 @@ class TransportBookingController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'LR ' . $booking->lr_no . ' saved successfully! Status updated to Booked' . $mailMsg,
+                'lr_image_url' => !empty($booking->lr_image) ? asset('uploads/transport_bookings/lr_images/' . $booking->lr_image) : null,
                 'booking' => $booking
             ]);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->validator->errors()->first()
+                'message' => $e->validator->errors()->first(),
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
@@ -565,16 +664,7 @@ class TransportBookingController extends Controller
         }
 
         if ($request->filled('driver_id') || $request->filled('driver')) {
-            $driverVal = $request->driver_id ?: $request->driver;
-            if (is_numeric($driverVal)) {
-                $query->where(function ($q) use ($driverVal) {
-                    $q->where('delivery_agent_id', $driverVal)
-                      ->orWhere('delivery_agent_name', $driverVal);
-                });
-            } else {
-                $cleanDriver = preg_replace('/\s*\((Outside Driver|Staff Driver|Outside)\)$/i', '', $driverVal);
-                $query->where('delivery_agent_name', trim($cleanDriver));
-            }
+            $this->applyDriverFilter($query, $request->driver_id ?: $request->driver);
         }
 
         if ($request->filled('transport_name') && !empty($request->transport_name)) {
@@ -621,23 +711,14 @@ class TransportBookingController extends Controller
         $endDate = $request->filled('end_date') ? Carbon::createFromFormat('d-m-Y', $request->end_date)->endOfDay() : Carbon::now()->endOfDay();
         $selectedDriverId = $request->driver_id;
 
-        $baseQuery = TransportBooking::with(['salesInvoice', 'customer', 'deliveryAgent'])->whereBetween('created_at', [$startDate, $endDate]);
+        $baseQuery = TransportBooking::with(['salesInvoice', 'customer', 'deliveryAgent', 'driver'])->whereBetween('created_at', [$startDate, $endDate]);
 
         if (!empty($excludedCustomerIds)) {
             $baseQuery->whereNotIn('customer_id', $excludedCustomerIds);
         }
 
         if (!empty($selectedDriverId)) {
-            if (is_numeric($selectedDriverId)) {
-                $baseQuery->where(function ($q) use ($selectedDriverId) {
-                    $q->where('delivery_agent_id', $selectedDriverId)
-                      ->orWhere('delivery_agent_name', $selectedDriverId);
-                });
-            } else {
-                $cleanDriver = preg_replace('/\s*\((Outside Driver|Staff Driver|Outside)\)$/i', '', $selectedDriverId);
-                $cleanDriver = trim($cleanDriver);
-                $baseQuery->where('delivery_agent_name', $cleanDriver);
-            }
+            $this->applyDriverFilter($baseQuery, $selectedDriverId);
         }
 
         if ($request->ajax() && $request->filled('table_type')) {
@@ -716,8 +797,9 @@ class TransportBookingController extends Controller
                     e(optional($b->salesInvoice)->inv_no ?? '-') . '</a>';
 
                 $boxHtml = '<span class="badge bg-dark fw-bold">' . e($b->box_number) . '</span>';
-                $driverName = optional($b->deliveryAgent)->name ?? ($b->delivery_agent_name ?: '-');
-                $isOutside = empty($b->delivery_agent_id) && !empty($b->delivery_agent_name);
+                $driverName = optional($b->driver)->driver_name ?? (optional($b->deliveryAgent)->name ?? ($b->delivery_agent_name ?: '-'));
+                $isMasterDriver = !empty($b->driver);
+                $isOutside = !$isMasterDriver && empty($b->delivery_agent_id) && !empty($b->delivery_agent_name);
 
                 $driverBadge = $isOutside
                     ? '<span class="badge bg-label-info"><i class="ri ri-user-received-line me-1"></i>' . e($driverName) . ' <span class="badge bg-white text-info ms-1" style="font-size:0.65rem;">Outside</span></span>'
@@ -725,7 +807,11 @@ class TransportBookingController extends Controller
                         ? '<span class="badge bg-label-primary"><i class="ri ri-user-line me-1"></i>' . e($driverName) . '</span>'
                         : '<span class="badge bg-label-secondary">Unassigned</span>');
 
+                $loadingUnloadingAmt = (float) ($b->lr_price ?: 0);
+                $transportChargeAmt = (float) ($b->transport_charge ?: 0);
+
                 if ($tableType === 'eligible') {
+                    $payoutAmt = round($loadingUnloadingAmt, 2);
                     $isCleared = $b->payment_status === 'Cleared';
                     $statusHtml = $isCleared
                         ? '<span class="badge bg-success">Cleared on ' . ($b->payment_cleared_date ? $b->payment_cleared_date->format('d-m-Y') : '') . '</span>'
@@ -733,7 +819,11 @@ class TransportBookingController extends Controller
 
                     $checkboxHtml = $isCleared
                         ? '<input type="checkbox" class="form-check-input" disabled title="Already Cleared">'
-                        : '<input type="checkbox" class="form-check-input row-checkbox-eligible" value="' . $b->id . '" data-price="' . (float)$b->lr_price . '" checked>';
+                        : '<input type="checkbox" class="form-check-input row-checkbox-eligible" value="' . $b->id . '" data-price="' . $payoutAmt . '" checked>';
+
+                    $payoutSubHtml = $transportChargeAmt > 0
+                        ? '<small class="text-muted d-block text-end">Transport Chg: ₹' . number_format($transportChargeAmt, 2) . '</small>'
+                        : '';
 
                     $data[] = [
                         'checkbox' => $checkboxHtml,
@@ -746,7 +836,7 @@ class TransportBookingController extends Controller
                         'driver' => $driverBadge,
                         'lr_number' => '<span class="badge bg-label-success fw-bold">' . e($b->lr_no) . '</span>',
                         'booking_date' => $b->booking_date ? $b->booking_date->format('d-m-Y') : '-',
-                        'approved_price' => '<span class="text-end fw-bold text-success d-block">₹' . number_format($b->lr_price, 2) . '</span>',
+                        'approved_price' => '<span class="text-end fw-bold text-success d-block">₹' . number_format($payoutAmt, 2) . '</span>' . $payoutSubHtml,
                         'payment_status' => $statusHtml
                     ];
                 } else {
@@ -766,7 +856,7 @@ class TransportBookingController extends Controller
             }
 
             $eligibleCount = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->count();
-            $eligibleSum = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->sum('lr_price');
+            $eligibleSum = (float) (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->sum('lr_price');
             $blockedCount = (clone $baseQuery)->where(function ($q) {
                 $q->whereNull('lr_no')->orWhere('lr_no', '');
             })->count();
@@ -805,7 +895,7 @@ class TransportBookingController extends Controller
                 ]);
 
                 if (function_exists('addLog')) {
-                    $totalClearedAmt = TransportBooking::whereIn('id', $eligibleIds)->sum('lr_price');
+                    $totalClearedAmt = (float) TransportBooking::whereIn('id', $eligibleIds)->sum('lr_price');
                     $driverNameText = $selectedDriverId ?: 'Multiple Drivers';
                     addLog(
                         'payment_clearance',
@@ -831,7 +921,7 @@ class TransportBookingController extends Controller
             })->limit(10)->get();
 
         $eligibleCount = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->count();
-        $eligibleAmount = (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->sum('lr_price');
+        $eligibleAmount = (float) (clone $baseQuery)->where('status', 'Booked')->whereNotNull('lr_no')->where('lr_no', '!=', '')->sum('lr_price');
         $blockedCount = (clone $baseQuery)->where(function ($q) {
             $q->whereNull('lr_no')->orWhere('lr_no', '');
         })->count();
@@ -862,7 +952,7 @@ class TransportBookingController extends Controller
         $endDate = $request->filled('end_date') ? Carbon::createFromFormat('d-m-Y', $request->end_date)->endOfDay() : Carbon::now()->endOfDay();
         $selectedDriverId = $request->driver_id;
 
-        $query = TransportBooking::with(['salesInvoice', 'customer.city', 'customer.place', 'deliveryAgent'])
+        $query = TransportBooking::with(['salesInvoice', 'customer.city', 'customer.place', 'deliveryAgent', 'driver'])
             ->where('status', 'Booked')
             ->where('payment_status', 'Cleared')
             ->whereNotNull('lr_no')
@@ -878,24 +968,16 @@ class TransportBookingController extends Controller
         }
 
         if (!empty($selectedDriverId)) {
-            if (is_numeric($selectedDriverId)) {
-                $query->where(function ($q) use ($selectedDriverId) {
-                    $q->where('delivery_agent_id', $selectedDriverId)
-                      ->orWhere('delivery_agent_name', $selectedDriverId);
-                });
-            } else {
-                $cleanDriver = preg_replace('/\s*\((Outside Driver|Staff Driver|Outside)\)$/i', '', $selectedDriverId);
-                $cleanDriver = trim($cleanDriver);
-                $query->where('delivery_agent_name', $cleanDriver);
-            }
+            $this->applyDriverFilter($query, $selectedDriverId);
         }
 
         $bookings = $query->orderBy('payment_cleared_date', 'desc')->orderBy('id', 'desc')->get();
 
-        $totalAmount = $bookings->sum('lr_price');
+        $totalAmount = (float) $bookings->sum('lr_price');
+        $totalTransportCharge = (float) $bookings->sum('transport_charge');
         $driverLabel = $selectedDriverId ?: 'All Drivers';
         $periodLabel = $startDate->format('d-m-Y') . ' to ' . $endDate->format('d-m-Y');
-        $title = "Driver Freight Payout Clearance Sheet - " . $driverLabel;
+        $title = "Driver Loading / Unloading Payout Clearance Sheet - " . $driverLabel;
 
         $pdf = Pdf::loadView('transport_bookings.clearance_pdf', [
             'bookings' => $bookings,
@@ -904,6 +986,7 @@ class TransportBookingController extends Controller
             'driverLabel' => $driverLabel,
             'periodLabel' => $periodLabel,
             'totalAmount' => $totalAmount,
+            'totalTransportCharge' => $totalTransportCharge,
             'totalBoxes' => $bookings->count()
         ])->setPaper('a4', 'landscape');
 

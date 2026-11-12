@@ -191,14 +191,32 @@ class TransportBookingService
             ]);
         }
 
+        if ((!array_key_exists('transport_charge', $data) || $data['transport_charge'] === null || $data['transport_charge'] === '' || !is_numeric($data['transport_charge']) || (float)$data['transport_charge'] < 0) && ($data['status'] ?? 'Booked') === 'Booked') {
+            throw ValidationException::withMessages([
+                'transport_charge' => ['Transport Charge is required.']
+            ]);
+        }
+
         $booking->lr_no = $lrNo;
-        $booking->lr_price = isset($data['lr_price']) && is_numeric($data['lr_price']) ? (float)$data['lr_price'] : ($booking->booking_rate ?: 0);
+        if (array_key_exists('lr_image', $data) && !empty($data['lr_image'])) {
+            $booking->lr_image = $data['lr_image'];
+        }
+        $booking->lr_price = isset($data['lr_price']) && is_numeric($data['lr_price']) ? round((float)$data['lr_price'], 2) : ($booking->booking_rate ?: 0);
+        if (array_key_exists('transport_charge', $data)) {
+            $booking->transport_charge = is_numeric($data['transport_charge']) ? round((float)$data['transport_charge'], 2) : 0;
+        }
+        if (array_key_exists('loading_unloading_amount', $data)) {
+            $booking->loading_unloading_amount = is_numeric($data['loading_unloading_amount']) ? round((float)$data['loading_unloading_amount'], 2) : 0;
+        }
         $booking->status = $data['status'] ?? 'Booked';
         
         if (!empty($data['preferred_transport'])) {
             $booking->preferred_transport = $data['preferred_transport'];
         }
 
+        if (array_key_exists('driver_id', $data)) {
+            $booking->driver_id = $data['driver_id'];
+        }
         if (array_key_exists('delivery_agent_id', $data)) {
             $booking->delivery_agent_id = $data['delivery_agent_id'];
         }

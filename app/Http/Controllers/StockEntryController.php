@@ -64,28 +64,7 @@ class StockEntryController extends Controller
                     'item.storeCategory'
                 ])->whereHas('stockEntry', function ($q) use ($request) {
                     $q->where('entry_type', 'Finished Goods');
-
-                    if ($request->filled('date')) {
-                        try {
-                            $stockDate = Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
-                            $q->whereDate('stock_date', $stockDate);
-                        } catch (\Exception $e) {
-                        }
-                    }
-                    if ($request->filled('from_date')) {
-                        try {
-                            $fromDate = Carbon::createFromFormat('d-m-Y', $request->from_date)->format('Y-m-d');
-                            $q->whereDate('stock_date', '>=', $fromDate);
-                        } catch (\Exception $e) {
-                        }
-                    }
-                    if ($request->filled('to_date')) {
-                        try {
-                            $toDate = Carbon::createFromFormat('d-m-Y', $request->to_date)->format('Y-m-d');
-                            $q->whereDate('stock_date', '<=', $toDate);
-                        } catch (\Exception $e) {
-                        }
-                    }
+                    $this->applyStockDateFilters($q, $request);
                 });
 
                 if ($request->art_no) {
@@ -234,13 +213,7 @@ class StockEntryController extends Controller
                 }
                 $query = StockEntry::with(['grnEntry', 'warehouse', 'storeType', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.storeType', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType', 'stockEntryItems.warehouse']);
 
-                if ($request->filled('date')) {
-                    try {
-                        $stockDate = Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
-                        $query->whereDate('stock_date', $stockDate);
-                    } catch (\Exception $e) {
-                    }
-                }
+                $this->applyStockDateFilters($query, $request);
 
                 if ($request->material_category) {
                     $query->whereHas('stockEntryItems', function ($q) use ($request) {
@@ -1034,5 +1007,48 @@ class StockEntryController extends Controller
         return response()->streamDownload($callback, 'Finished_Goods_Stock_Sample.csv', [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    /**
+     * Apply date / date-range filters (`date`, `from_date`, `to_date`) onto a StockEntry query.
+     */
+    private function applyStockDateFilters($query, Request $request): void
+    {
+        $parseDate = function (?string $value): ?string {
+            $value = trim((string) $value);
+            if ($value === '') {
+                return null;
+            }
+            foreach (['d-m-Y', 'Y-m-d'] as $fmt) {
+                try {
+                    return Carbon::createFromFormat($fmt, $value)->format('Y-m-d');
+                } catch (\Exception $e) {
+                }
+            }
+            return null;
+        };
+
+        if ($request->filled('date')) {
+            $rawDate = trim((string) $request->date);
+            if (str_contains($rawDate, ' to ')) {
+                [$fromRaw, $toRaw] = array_pad(explode(' to ', $rawDate, 2), 2, '');
+                if ($from = $parseDate($fromRaw)) {
+                    $query->whereDate('stock_date', '>=', $from);
+                }
+                if ($to = $parseDate($toRaw)) {
+                    $query->whereDate('stock_date', '<=', $to);
+                }
+            } elseif ($single = $parseDate($rawDate)) {
+                $query->whereDate('stock_date', $single);
+            }
+        }
+
+        if ($request->filled('from_date') && ($fromDate = $parseDate($request->from_date))) {
+            $query->whereDate('stock_date', '>=', $fromDate);
+        }
+
+        if ($request->filled('to_date') && ($toDate = $parseDate($request->to_date))) {
+            $query->whereDate('stock_date', '<=', $toDate);
+        }
     }
 }

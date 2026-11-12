@@ -173,17 +173,10 @@
             <table class="email-main-card" role="presentation" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06); padding: 0; margin: 0 auto; border-collapse: separate;">
 
                 <!-- ================= 1. HEADER SECTION ================= -->
-                <!-- Top Right Casino Logo -->
-                <tr>
-                    <td class="card-content-cell" align="right" valign="top" style="padding: 24px 24px 4px 24px;">
-                        <img src="{{ $assetHost }}/assets/images/delivery_order/casino_header_logo.png" width="168" alt="CASINO - No Compromise" style="display: inline-block; width: 168px; max-width: 45%; height: auto; border: 0;">
-                    </td>
-                </tr>
-
                 <!-- Centered Hero Delivery Truck -->
                 <tr>
-                    <td class="card-content-cell" align="center" valign="middle" style="padding: 4px 24px 8px 24px;">
-                        <img class="truck-hero-img" src="{{ $assetHost }}/assets/images/dispatch_exact/truck_hd.jpg" width="370" alt="Casino Delivery Truck" style="display: block; width: 370px; max-width: 86%; height: auto; margin: 0 auto; border: 0;">
+                    <td class="card-content-cell" align="center" valign="middle" style="padding: 20px 24px 8px 24px;">
+                        <img class="truck-hero-img" src="{{ $assetHost }}/assets/images/dispatch_exact/truck_hd.jpg?v=2" width="370" alt="Casino - No Compromise Delivery Truck" style="display: block; width: 370px; max-width: 86%; height: auto; margin: 0 auto; border: 0;">
                     </td>
                 </tr>
 
@@ -414,7 +407,7 @@
 
                 <!-- ================= 4. FOOTER NOTIFICATION PANEL ================= -->
                 <tr>
-                    <td class="card-content-cell" valign="top" style="padding: 0 24px 12px 24px;">
+                    <td class="card-content-cell" valign="top" style="padding: 0 24px 4px 24px;">
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; background-color: #f0f7ff; border: 1.5px solid #bcd8fa; border-radius: 14px; overflow: hidden; border-collapse: separate;">
                             <tr>
                                 <!-- Left: Parcel Box Icon with Speed Lines -->

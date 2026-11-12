@@ -45,6 +45,7 @@ class PermissionSeeder extends Seeder
             /* Logistics Master */
             'shipping-methods' => ['create', 'edit', 'delete', 'view'],
             'transport-mode' => ['create', 'edit', 'delete', 'view'],
+            'drivers' => ['create', 'edit', 'delete', 'view'],
 
             /* Tailoring Specification Master */
             'fits'  => ['create','edit','delete','view'],

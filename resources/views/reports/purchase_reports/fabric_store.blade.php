@@ -612,6 +612,24 @@ $(document).ready(function() {
     $('#btn-excel').on('click', function(e) {
         e.preventDefault();
         let currentTabId = $('#report_type_select').val() || $('.tab-pane.active').attr('id');
+        if (currentTabId === 'stock-report') {
+            let brandId = $('select[name="brand_id"]').val() || '';
+            let fromDate = $('.start_date').val() || '';
+            let toDate = $('.end_date').val() || '';
+            let supplierId = $('select[name="supplier_id"]').val() || '';
+            let search = $('.datatables-stock_filter input').val() || '';
+
+            let exportUrl = "{{ url('purchase_reports/fabric') }}?export=fabric-stock-excel"
+                + "&brand_id=" + encodeURIComponent(brandId)
+                + "&from_date=" + encodeURIComponent(fromDate)
+                + "&to_date=" + encodeURIComponent(toDate)
+                + "&supplier_id=" + encodeURIComponent(supplierId)
+                + "&search=" + encodeURIComponent(search);
+
+            window.location.href = exportUrl;
+            return;
+        }
+
         if (currentTabId === 'brandwise-minstock-report') {
             if ($('#brandwisePoDrilldownContainer').is(':visible')) {
                 triggerFabricExport('.buttons-excel', $(this));

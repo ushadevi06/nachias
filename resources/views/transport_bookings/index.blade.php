@@ -146,7 +146,8 @@
                                     <th>Transport Name</th>
                                     <th>Driver</th>
                                     <th>LR Number</th>
-                                    <th>Freight (₹)</th>
+                                    <th>Loading / Unloading (₹)</th>
+                                    <th>Transport Charge (₹)</th>
                                     <th>Status</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -186,15 +187,17 @@
 
                 <div class="row g-3">
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Assigned Driver (Outside Driver)</label>
+                        <label class="form-label fw-semibold">Assigned Driver</label>
                         <select id="modal_driver_id" class="form-select select2-modal-tags">
-                            <option value="">Select or Type Outside Driver Name</option>
+                            <option value="">Select or Type Driver Name</option>
                             @foreach($drivers as $d)
-                                <option value="{{ $d['name'] }}">{{ $d['name'] }}</option>
+                                <option value="{{ $d['name'] }}" data-loading-amount="{{ number_format((float)($d['loading_unloading_amount'] ?? 0), 2, '.', '') }}">
+                                    {{ $d['name'] }}@if(($d['loading_unloading_amount'] ?? 0) > 0) (L/U: ₹{{ number_format((float)$d['loading_unloading_amount'], 2) }})@endif
+                                </option>
                             @endforeach
                         </select>
                         <small class="text-muted d-block mt-1">
-                            <i class="ri-information-line me-1"></i>You can select an existing driver or type any outside driver name directly (e.g. Ramesh Auto, Mani Tempo).
+                            <i class="ri-information-line me-1"></i>Select a driver from Master (auto-fills Loading/Unloading amount) or type a new outside driver name.
                         </small>
                     </div>
 
@@ -203,7 +206,7 @@
                         <input type="text" id="modal_transport_name" class="form-control" placeholder="e.g. AKR Transport, VRL, ABT">
                     </div>
 
-                    <div class="col-md-7">
+                    <div class="col-12">
                         <label class="form-label fw-semibold text-danger">LR Number * (Mandatory)</label>
                         <input type="text" id="modal_lr_no" class="form-control font-monospace" placeholder="Enter Physical LR Receipt No">
                         <div class="invalid-feedback fw-semibold mt-1" id="lr_error_text" style="display: none;">
@@ -212,9 +215,17 @@
                         <small class="text-muted d-block mt-1" id="lr_policy_hint">NO LR NUMBER = NO PAYMENT CLEARANCE</small>
                     </div>
 
-                    <div class="col-md-5">
-                        <label class="form-label fw-semibold">Freight Price (₹)</label>
-                        <input type="number" step="any" min="0" id="modal_lr_price" class="form-control text-end" placeholder="0.00">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Loading / Unloading (₹)</label>
+                        <input type="number" step="0.01" min="0" id="modal_lr_price" class="form-control text-end" placeholder="0.00">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-danger">Transport Charge (₹) * (Mandatory)</label>
+                        <input type="number" step="0.01" min="0" id="modal_transport_charge" class="form-control text-end" placeholder="0.00" required>
+                        <div class="invalid-feedback fw-semibold mt-1" id="transport_charge_error_text" style="display: none;">
+                            Transport Charge is required.
+                        </div>
                     </div>
 
                     <div class="col-md-6">
@@ -225,6 +236,24 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Box Number</label>
                         <input type="text" id="modal_box_number" class="form-control font-monospace" placeholder="e.g. 1/3, 2/3">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">LR Receipt Image (Image only)</label>
+                        <input type="file" id="modal_lr_image" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
+                        <div class="invalid-feedback fw-semibold mt-1" id="lr_image_error_text" style="display: none;">
+                            Only image files (JPG, JPEG, PNG, GIF, WEBP) are allowed.
+                        </div>
+                        <small class="text-muted d-block mt-1">Allowed formats: JPG, JPEG, PNG, GIF, WEBP (Max 5 MB). Shown automatically when QR is scanned.</small>
+                        <div id="modal_lr_image_preview_wrap" class="mt-2 d-none">
+                            <div class="d-flex align-items-center gap-2 p-2 border rounded bg-light">
+                                <img id="modal_lr_image_preview" src="" alt="LR Receipt Preview" class="rounded border" style="width: 56px; height: 56px; object-fit: cover;">
+                                <div class="flex-grow-1 small">
+                                    <div class="fw-semibold text-dark" id="modal_lr_image_label">Attached LR Image</div>
+                                    <a href="#" target="_blank" id="modal_lr_image_link" class="text-primary">View Full Image</a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-12">
@@ -320,7 +349,8 @@ $(function() {
             { data: 'transport_name' },
             { data: 'driver' },
             { data: 'lr_no', className: 'text-nowrap' },
-            { data: 'freight_price', className: 'text-end text-nowrap' },
+            { data: 'loading_unloading_price', className: 'text-end text-nowrap' },
+            { data: 'transport_charge', className: 'text-end text-nowrap' },
             { data: 'status', className: 'text-nowrap' },
             { data: 'action', orderable: false, searchable: false, className: 'text-center text-nowrap' }
         ],
@@ -428,6 +458,19 @@ $(function() {
     });
     $('#filter_date').on('input change', updatePrintSheetUrl);
 
+    let isPopulatingLrModal = false;
+
+    $(document).on('change', '#modal_driver_id', function() {
+        if (isPopulatingLrModal) return;
+        let selectedOpt = $(this).find('option:selected');
+        let luAmount = selectedOpt.data('loading-amount');
+        if (luAmount !== undefined && luAmount !== '') {
+            $('#modal_lr_price').val(parseFloat(luAmount).toFixed(2));
+        } else {
+            $('#modal_lr_price').val('0.00');
+        }
+    });
+
     // Open LR Modal
     $(document).on('click', '.btn-open-lr-modal', function() {
         let btn = $(this);
@@ -437,6 +480,7 @@ $(function() {
         let customer = btn.data('customer');
         let transport = btn.data('transport');
         let rate = btn.data('rate');
+        let transportCharge = btn.data('transport-charge');
         let lr = btn.data('lr');
         let driver = btn.data('driver');
         let driverName = btn.data('driver-name');
@@ -447,7 +491,6 @@ $(function() {
         let custEmail = btn.data('customer-email') || '';
         $('#modal_customer_email').val(custEmail);
         $('#modal_transport_name').val(transport || '');
-        $('#modal_lr_price').val(rate || '');
         $('#modal_lr_no').val(lr || '').removeClass('is-invalid');
         $('#modal_box_number').val(box || '');
         $('#lr_error_text').hide();
@@ -456,11 +499,12 @@ $(function() {
         $('#modal_booking_date').val(bDate);
         $('#modal_error_msg').html('');
 
+        isPopulatingLrModal = true;
         let selectVal = driver || driverName || '';
         if (selectVal) {
             let exists = false;
             $('#modal_driver_id option').each(function() {
-                if ($(this).val() == selectVal || $(this).text().trim() == driverName) {
+                if ($(this).val() == selectVal || $(this).text().trim().indexOf(driverName) === 0) {
                     exists = true;
                     selectVal = $(this).val();
                     return false;
@@ -478,7 +522,72 @@ $(function() {
             $('#modal_driver_id').val('').trigger('change');
         }
 
+        let parsedRate = parseFloat(rate);
+        if (!isNaN(parsedRate) && parsedRate > 0) {
+            $('#modal_lr_price').val(parsedRate.toFixed(2));
+        } else {
+            let optLu = $('#modal_driver_id').find('option:selected').data('loading-amount');
+            $('#modal_lr_price').val(optLu !== undefined && optLu !== '' ? parseFloat(optLu).toFixed(2) : '0.00');
+        }
+
+        let parsedTransportCharge = parseFloat(transportCharge);
+        $('#modal_transport_charge')
+            .val((lr || (!isNaN(parsedTransportCharge) && parsedTransportCharge > 0)) ? (isNaN(parsedTransportCharge) ? '' : parsedTransportCharge.toFixed(2)) : '')
+            .removeClass('is-invalid');
+        $('#transport_charge_error_text').hide();
+
+        let existingLrImageUrl = btn.data('lr-image-url') || '';
+        $('#modal_lr_image').val('').removeClass('is-invalid');
+        $('#lr_image_error_text').hide();
+        if (existingLrImageUrl) {
+            $('#modal_lr_image_preview').attr('src', existingLrImageUrl);
+            $('#modal_lr_image_link').attr('href', existingLrImageUrl).show();
+            $('#modal_lr_image_label').text('Current Attached LR Image');
+            $('#modal_lr_image_preview_wrap').removeClass('d-none');
+        } else {
+            $('#modal_lr_image_preview').attr('src', '');
+            $('#modal_lr_image_link').attr('href', '#').hide();
+            $('#modal_lr_image_preview_wrap').addClass('d-none');
+        }
+        isPopulatingLrModal = false;
+
         $('#updateLrModal').modal('show');
+    });
+
+    function validateLrImageFile(file) {
+        if (!file) return true;
+        let allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        let ext = (file.name.split('.').pop() || '').toLowerCase();
+        let allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        if ((file.type && !allowedTypes.includes(file.type.toLowerCase())) || !allowedExts.includes(ext)) {
+            return false;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            return 'size';
+        }
+        return true;
+    }
+
+    $(document).on('change', '#modal_lr_image', function() {
+        let file = this.files && this.files[0] ? this.files[0] : null;
+        if (!file) return;
+
+        let check = validateLrImageFile(file);
+        if (check !== true) {
+            $(this).val('').addClass('is-invalid');
+            $('#lr_image_error_text')
+                .text(check === 'size' ? 'LR image size must not exceed 5 MB.' : 'Only image files (JPG, JPEG, PNG, GIF, WEBP) are allowed.')
+                .show();
+            return;
+        }
+
+        $(this).removeClass('is-invalid');
+        $('#lr_image_error_text').hide();
+        let objUrl = URL.createObjectURL(file);
+        $('#modal_lr_image_preview').attr('src', objUrl);
+        $('#modal_lr_image_link').attr('href', objUrl).show();
+        $('#modal_lr_image_label').text('Selected: ' + file.name);
+        $('#modal_lr_image_preview_wrap').removeClass('d-none');
     });
 
     $(document).on('input', '#modal_lr_no', function() {
@@ -489,11 +598,20 @@ $(function() {
         }
     });
 
+    $(document).on('input', '#modal_transport_charge', function() {
+        let val = $(this).val().trim();
+        if (val !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0) {
+            $(this).removeClass('is-invalid');
+            $('#transport_charge_error_text').hide();
+        }
+    });
+
     // Save LR Details
     $('#btnSaveLr').click(function() {
         let id = $('#modal_booking_id').val();
         let lrNo = $('#modal_lr_no').val().trim();
         let lrPrice = $('#modal_lr_price').val().trim();
+        let transportCharge = $('#modal_transport_charge').val().trim();
         let transport = $('#modal_transport_name').val().trim();
         let rawDriver = $('#modal_driver_id').val();
         let driverId = rawDriver ? rawDriver.replace(/\s*\(New Outside Driver\)$/i, '').trim() : '';
@@ -508,24 +626,50 @@ $(function() {
             return;
         }
 
+        if (transportCharge === '' || isNaN(parseFloat(transportCharge)) || parseFloat(transportCharge) < 0) {
+            $('#modal_transport_charge').addClass('is-invalid').focus();
+            $('#transport_charge_error_text').text('Transport Charge is required.').show();
+            return;
+        }
+
+        let lrImageInput = document.getElementById('modal_lr_image');
+        let lrImageFile = lrImageInput && lrImageInput.files && lrImageInput.files[0] ? lrImageInput.files[0] : null;
+        if (lrImageFile) {
+            let check = validateLrImageFile(lrImageFile);
+            if (check !== true) {
+                $('#modal_lr_image').addClass('is-invalid').focus();
+                $('#lr_image_error_text')
+                    .text(check === 'size' ? 'LR image size must not exceed 5 MB.' : 'Only image files (JPG, JPEG, PNG, GIF, WEBP) are allowed.')
+                    .show();
+                return;
+            }
+        }
+
         let btn = $(this);
         let originalHtml = btn.html();
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
         $('#modal_error_msg').html('');
 
+        let formData = new FormData();
+        formData.append('_token', "{{ csrf_token() }}");
+        formData.append('lr_no', lrNo);
+        formData.append('lr_price', lrPrice);
+        formData.append('transport_charge', transportCharge);
+        formData.append('preferred_transport', transport);
+        formData.append('delivery_agent_id', driverId);
+        formData.append('booking_date', bookingDate);
+        formData.append('box_number', boxNumber);
+        formData.append('customer_email', customerEmail);
+        if (lrImageFile) {
+            formData.append('lr_image', lrImageFile);
+        }
+
         $.ajax({
             url: "{{ url('transport_bookings') }}/" + id + "/record_lr",
             type: "POST",
-            data: {
-                _token: "{{ csrf_token() }}",
-                lr_no: lrNo,
-                lr_price: lrPrice,
-                preferred_transport: transport,
-                delivery_agent_id: driverId,
-                booking_date: bookingDate,
-                box_number: boxNumber,
-                customer_email: customerEmail
-            },
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function(response) {
                 btn.prop('disabled', false).html(originalHtml);
                 if (response.success) {
@@ -548,10 +692,29 @@ $(function() {
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errMsg = xhr.responseJSON.message;
                 }
-                if (xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors.lr_no) {
-                    $('#modal_lr_no').addClass('is-invalid').focus();
-                    $('#lr_error_text').text(xhr.responseJSON.errors.lr_no[0]).show();
-                    $('#lr_policy_hint').hide();
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    if (xhr.responseJSON.errors.lr_no) {
+                        $('#modal_lr_no').addClass('is-invalid').focus();
+                        $('#lr_error_text').text(xhr.responseJSON.errors.lr_no[0]).show();
+                        $('#lr_policy_hint').hide();
+                    }
+                    if (xhr.responseJSON.errors.transport_charge) {
+                        $('#modal_transport_charge').addClass('is-invalid');
+                        if (!xhr.responseJSON.errors.lr_no) {
+                            $('#modal_transport_charge').focus();
+                        }
+                        $('#transport_charge_error_text').text(xhr.responseJSON.errors.transport_charge[0]).show();
+                    }
+                    if (xhr.responseJSON.errors.lr_image) {
+                        $('#modal_lr_image').addClass('is-invalid');
+                        if (!xhr.responseJSON.errors.lr_no && !xhr.responseJSON.errors.transport_charge) {
+                            $('#modal_lr_image').focus();
+                        }
+                        $('#lr_image_error_text').text(xhr.responseJSON.errors.lr_image[0]).show();
+                    }
+                    if (!xhr.responseJSON.errors.lr_no && !xhr.responseJSON.errors.transport_charge && !xhr.responseJSON.errors.lr_image) {
+                        $('#modal_error_msg').html('<div class="alert alert-danger py-1 mt-2">' + errMsg + '</div>');
+                    }
                 } else {
                     $('#modal_error_msg').html('<div class="alert alert-danger py-1 mt-2">' + errMsg + '</div>');
                 }

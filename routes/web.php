@@ -25,6 +25,7 @@ use App\Http\Controllers\RetailerController;
 use App\Http\Controllers\SalesAgentController;
 use App\Http\Controllers\ShippingMethodController;
 use App\Http\Controllers\TransportModeController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\StoreCategoryController;
 use App\Http\Controllers\RawMaterialController;
 use App\Http\Controllers\StandardConsumptionController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\BrandCategoryController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\GrnEntryController;
 use App\Http\Controllers\StockEntryController;
+use App\Http\Controllers\FgStockTakingController;
 use App\Http\Controllers\StockConsumableReturnController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\SalesInvoiceController;
@@ -201,6 +203,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['get', 'post'], 'transport_modes/add/{id?}', [TransportModeController::class, 'add']);
     Route::get('transport_modes/delete/{id}', [TransportModeController::class, 'destroy']);
     Route::post('transport_modes/status/{id}', [TransportModeController::class, 'updateStatus']);
+
+    /* Drivers */
+    Route::get('drivers', [DriverController::class, 'index']);
+    Route::match(['get', 'post'], 'drivers/add/{id?}', [DriverController::class, 'add']);
+    Route::get('drivers/delete/{id}', [DriverController::class, 'destroy']);
+    Route::post('drivers/status/{id}', [DriverController::class, 'updateStatus']);
 
     /* States */
     Route::get('/states', [StateController::class, 'index']);
@@ -514,6 +522,21 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('stock_entries/download-finished-goods-sample', [StockEntryController::class, 'downloadFinishedGoodsSample']);
     Route::get('stock_entries/download-scrap-material-sample', [StockEntryController::class, 'downloadScrapMaterialSample']);
     Route::get('labels/print/{id}', [\App\Http\Controllers\LabelController::class, 'print']);
+
+    /* FG Stock Taking */
+    Route::get('fg_stock_taking', [FgStockTakingController::class, 'index']);
+    Route::get('fg_stock_taking/logs', [FgStockTakingController::class, 'logs']);
+    Route::get('fg_stock_taking/sessions', [FgStockTakingController::class, 'sessionsList']);
+    Route::get('fg_stock_taking/session/{id}', [FgStockTakingController::class, 'showSession']);
+    Route::post('fg_stock_taking/load-brand', [FgStockTakingController::class, 'loadBrandSession']);
+    Route::get('fg_stock_taking/search-items', [FgStockTakingController::class, 'searchItems']);
+    Route::post('fg_stock_taking/quick-check', [FgStockTakingController::class, 'quickCheck']);
+    Route::post('fg_stock_taking/session/{id}/scan', [FgStockTakingController::class, 'scan']);
+    Route::post('fg_stock_taking/session/{id}/finalize', [FgStockTakingController::class, 'finalize']);
+    Route::post('fg_stock_taking/session/{id}/undo', [FgStockTakingController::class, 'undoScan']);
+    Route::post('fg_stock_taking/session/{id}/reset', [FgStockTakingController::class, 'resetSession']);
+    Route::get('fg_stock_taking/session/{id}/items', [FgStockTakingController::class, 'itemsData']);
+    Route::get('fg_stock_taking/session/{id}/export', [FgStockTakingController::class, 'exportExcel']);
 
     /* Store */
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);
@@ -835,6 +858,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Warehouse Report */
     Route::get('reports', [ReportController::class, 'index']);
     Route::get('warehouse_reports', [WarehouseReportController::class, 'index']);
+    Route::get('warehouse_reports/export/brandwise-fg-stock', [WarehouseReportController::class, 'exportBrandwiseFgStock']);
     Route::get('warehouse_reports/ajax/{type}', [WarehouseReportController::class, 'ajaxReportData']);
     Route::get('warehouse_reports/brandwise_stock_details/{id}', [WarehouseReportController::class, 'brandwiseStockDetails']);
     Route::get('warehouse_reports/brandwise_styles', [WarehouseReportController::class, 'getBrandwiseStyles']);

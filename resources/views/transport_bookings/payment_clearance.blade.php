@@ -177,7 +177,7 @@
                                                     <th>Driver</th>
                                                     <th>LR Number</th>
                                                     <th>Booking Date</th>
-                                                    <th class="text-end">LR Freight / Payout (₹)</th>
+                                                    <th class="text-end">Loading / Unloading (₹)</th>
                                                     <th>Payment Status</th>
                                                 </tr>
                                             </thead>
