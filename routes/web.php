@@ -281,6 +281,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Store location */
     Route::get('/store_location', [StoreLocationController::class, 'index']);
+    Route::get('/store_location/download-sample', [StoreLocationController::class, 'downloadSample']);
+    Route::post('/store_location/import', [StoreLocationController::class, 'import']);
     Route::match(['GET', 'POST'], '/store_location/add/{id?}', [StoreLocationController::class, 'add']);
     Route::get('/store_location/delete/{id}', [StoreLocationController::class, 'destroy']);
     Route::post('/store_location/status/{id}', [StoreLocationController::class, 'updateStatus']);
@@ -541,6 +543,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('fg_stock_taking/session/{id}/export', [FgStockTakingController::class, 'exportExcel']);
     Route::get('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'openStockEntryPage']);
     Route::post('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'storeOpenStockEntry']);
+    Route::get('fg_stock_taking/open-stock-logs', [FgStockTakingController::class, 'openStockLogs']);
+    Route::get('fg_stock_taking/open-stock-logs-data', [FgStockTakingController::class, 'openStockLogsData']);
+    Route::get('fg_stock_taking/open-stock-logs/export', [FgStockTakingController::class, 'exportOpenStockLogs']);
+    Route::delete('fg_stock_taking/open-stock-logs/{id}', [FgStockTakingController::class, 'deleteOpenStockLog']);
+    Route::post('fg_stock_taking/open-stock-logs/{id}/delete', [FgStockTakingController::class, 'deleteOpenStockLog']);
 
     /* Store */
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);
@@ -587,6 +594,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/print-sticker/{id}', [SalesInvoiceController::class, 'printSticker']);
     Route::get('sales_invoices/transport-sticker/{id}', [SalesInvoiceController::class, 'printTransportSticker']);
     Route::get('sales_invoices/courier-sticker/{id}', [SalesInvoiceController::class, 'printCourierSticker']);
+    Route::get('sales_invoices/carton-box-sticker/{id}', [SalesInvoiceController::class, 'printCartonBoxSticker'])->name('sales_invoices.carton_box_sticker');
     Route::match(['GET', 'POST'], 'sales_invoices/kachathu-cover/{id}', [SalesInvoiceController::class, 'printKachathuCover'])->name('sales_invoices.kachathu_cover');
     Route::get('sales_invoices/delivery-order/{id}', [SalesInvoiceController::class, 'downloadDeliveryOrder']);
     Route::get('sales_invoices/open-delivery-order/{id}', [SalesInvoiceController::class, 'downloadOpenDeliveryOrder']);

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Exports\FgStockTakingExport;
+use App\Exports\OpenStockLogsExport;
 use App\Models\Brand;
 use App\Models\Color;
 use App\Models\ItemPrice;
+use App\Models\OpenStockEntryLog;
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
 use App\Models\StockTakingItem;
@@ -19,6 +21,7 @@ use App\Models\Warehouse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
 
 class FgStockTakingController extends Controller
@@ -95,10 +98,6 @@ class FgStockTakingController extends Controller
             })
             ->where('sei.brand_id', $brandId);
 
-        if ($warehouseId) {
-            $query->whereRaw('COALESCE(sei.warehouse_id, se.warehouse_id, pr.warehouse_id) = ?', [$warehouseId]);
-        }
-
         $rows = $query->select(
             DB::raw("COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id, {$defaultFgStoreId}) as store_type_id"),
             DB::raw('SUM(COALESCE(sei.qty_in, 0) - COALESCE(sei.qty_out, 0)) as total_qty')
@@ -129,15 +128,9 @@ class FgStockTakingController extends Controller
                   ->orWhereNull('se.deleted_at');
             });
 
-        if ($warehouseId || $storeTypeId) {
-            $query->leftJoin('production_receipts as pr', 'pr.receipt_no', '=', 'se.reference_document');
-        }
-
-        if ($warehouseId) {
-            $query->whereRaw('COALESCE(sei.warehouse_id, se.warehouse_id, pr.warehouse_id) = ?', [$warehouseId]);
-        }
-
         if ($storeTypeId) {
+            $query->leftJoin('production_receipts as pr', 'pr.receipt_no', '=', 'se.reference_document');
+
             $defaultFgStoreId = StoreType::whereNull('deleted_at')
                 ->where('store_type_name', 'like', '%FINISHED GOODS%')
                 ->value('id') ?? 3;
@@ -735,6 +728,15 @@ class FgStockTakingController extends Controller
 
         $logsCount = StockTakingSession::count();
 
+        $openStockLogsCount = 0;
+        try {
+            if (Schema::hasTable('open_stock_entry_logs')) {
+                $openStockLogsCount = OpenStockEntryLog::count();
+            }
+        } catch (\Exception $e) {
+            $openStockLogsCount = 0;
+        }
+
         $storeCounts = [];
         if ($selectedBrandId) {
             $storeCounts = self::getBrandStoreCounts($selectedBrandId, $selectedWarehouseId);
@@ -755,6 +757,7 @@ class FgStockTakingController extends Controller
             'selectedStoreLocationId',
             'selectedSessionId',
             'logsCount',
+            'openStockLogsCount',
             'storeCounts'
         ));
     }
@@ -764,6 +767,171 @@ class FgStockTakingController extends Controller
         $this->authorizeAccess();
 
         return view('stock_taking.logs');
+    }
+
+    public function openStockLogs(Request $request)
+    {
+        $this->authorizeAccess();
+        OpenStockEntryLog::ensureTableExists();
+
+        $allBrands = Brand::whereNull('deleted_at')->where('status', 'Active')->orderBy('brand_name', 'asc')->get();
+        $warehouses = Warehouse::whereNull('deleted_at')->where('status', 'Active')->orderBy('warehouse_name', 'asc')->get();
+
+        return view('stock_taking.open_stock_logs', compact(
+            'allBrands',
+            'warehouses'
+        ));
+    }
+
+    public function openStockLogsData(Request $request)
+    {
+        $this->authorizeAccess();
+        OpenStockEntryLog::ensureTableExists();
+
+        $brandId = $request->input('brand_id');
+        $warehouseId = $request->input('warehouse_id');
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
+        $rawSearch = $request->input('search');
+        $search = trim((string) (is_array($rawSearch) ? ($rawSearch['value'] ?? '') : $rawSearch));
+
+        $baseQuery = OpenStockEntryLog::with([
+            'brand',
+            'warehouse',
+            'storeType',
+            'storeLocation',
+            'style',
+            'color',
+            'creator'
+        ]);
+
+        $recordsTotal = OpenStockEntryLog::count();
+
+        if (!empty($brandId)) {
+            $baseQuery->where('brand_id', $brandId);
+        }
+        if (!empty($warehouseId)) {
+            $baseQuery->where('warehouse_id', $warehouseId);
+        }
+        if (!empty($fromDate)) {
+            $baseQuery->whereDate('entry_date', '>=', $fromDate);
+        }
+        if (!empty($toDate)) {
+            $baseQuery->whereDate('entry_date', '<=', $toDate);
+        }
+
+        if ($search !== '') {
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('entry_no', 'like', "%{$search}%")
+                    ->orWhere('product_name', 'like', "%{$search}%")
+                    ->orWhere('art_no', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('size', 'like', "%{$search}%")
+                    ->orWhere('remarks', 'like', "%{$search}%")
+                    ->orWhere('header_remarks', 'like', "%{$search}%")
+                    ->orWhereHas('brand', fn($b) => $b->where('brand_name', 'like', "%{$search}%"))
+                    ->orWhereHas('warehouse', fn($w) => $w->where('warehouse_name', 'like', "%{$search}%"))
+                    ->orWhereHas('storeLocation', fn($sl) => $sl->where('store_location_name', 'like', "%{$search}%"))
+                    ->orWhereHas('creator', fn($u) => $u->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        $recordsFiltered = (clone $baseQuery)->count();
+
+        $orderColIdx = $request->input('order.0.column');
+        $dir = $request->input('order.0.dir', 'desc');
+
+        $sortable = [
+            1 => 'entry_date',
+            2 => 'entry_no',
+            3 => 'brand_id',
+            4 => 'product_name',
+            5 => 'art_no',
+            7 => 'size',
+            8 => 'sleeve_type',
+            9 => 'qty',
+            10 => 'price',
+            13 => 'sku',
+        ];
+
+        if ($orderColIdx !== null && isset($sortable[$orderColIdx])) {
+            $baseQuery->orderBy($sortable[$orderColIdx], $dir);
+        } else {
+            $baseQuery->orderBy('id', 'desc');
+        }
+
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        if ($length > 0) {
+            $baseQuery->skip($start)->take($length);
+        }
+
+        $items = $baseQuery->get();
+
+        $data = [];
+        $rowIndex = $start + 1;
+        foreach ($items as $row) {
+            $data[] = [
+                'DT_RowIndex' => $rowIndex++,
+                'id' => $row->id,
+                'entry_date' => $row->entry_date ? $row->entry_date->format('d-m-Y') : '-',
+                'entry_no' => $row->entry_no,
+                'brand_name' => $row->brand?->brand_name ?? ($row->brand?->name ?? '-'),
+                'product_name' => $row->product_name,
+                'art_no' => $row->art_no,
+                'style_name' => $row->style?->style_name ?? ($row->style?->name ?? '-'),
+                'size' => $row->size,
+                'sleeve_type' => $row->sleeve_type ?? '-',
+                'qty' => (float) $row->qty,
+                'price' => $row->price !== null ? number_format((float) $row->price, 2) : '-',
+                'store_location' => $row->storeLocation?->store_location_name ?? '-',
+                'warehouse' => $row->warehouse?->warehouse_name ?? '-',
+                'store_type' => $row->storeType?->store_type_name ?? '-',
+                'sku' => $row->sku,
+                'remarks' => $row->remarks ?? ($row->header_remarks ?? '-'),
+                'created_by' => $row->creator?->name ?? ($row->creator?->username ?? 'Admin'),
+                'created_at' => $row->created_at ? $row->created_at->format('d-m-Y h:i A') : '-',
+            ];
+        }
+
+        return response()->json([
+            'draw' => (int) $request->input('draw', 1),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    public function exportOpenStockLogs(Request $request)
+    {
+        $this->authorizeAccess();
+        OpenStockEntryLog::ensureTableExists();
+
+        $filters = [
+            'brand_id' => $request->input('brand_id'),
+            'warehouse_id' => $request->input('warehouse_id'),
+            'from_date' => $request->input('from_date'),
+            'to_date' => $request->input('to_date'),
+            'search' => $request->input('search'),
+        ];
+
+        $filename = 'open_stock_entry_logs_' . date('Ymd_His') . '.xlsx';
+        return Excel::download(new OpenStockLogsExport($filters), $filename);
+    }
+
+    public function deleteOpenStockLog($id)
+    {
+        $this->authorizeAccess();
+        OpenStockEntryLog::ensureTableExists();
+
+        $log = OpenStockEntryLog::findOrFail($id);
+        $entryNo = $log->entry_no;
+        $log->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Log item from Entry {$entryNo} deleted successfully."
+        ]);
     }
 
     public function openStockEntryPage(Request $request)
@@ -836,7 +1004,10 @@ class FgStockTakingController extends Controller
 
         $session = null;
         if (!$forceNew) {
-            $query = StockTakingSession::with(['brand', 'storeType', 'warehouse', 'starter', 'completer'])->where('brand_id', $brandId)->where('status', 'In Progress')->orderByDesc('id');
+            $query = StockTakingSession::with(['brand', 'storeType', 'warehouse', 'starter', 'completer'])
+                ->where('brand_id', $brandId)
+                ->where('status', 'In Progress')
+                ->orderByDesc('id');
 
             if ($storeTypeId) {
                 $query->where('store_type_id', $storeTypeId);
@@ -844,13 +1015,21 @@ class FgStockTakingController extends Controller
                 $query->whereNull('store_type_id');
             }
 
-            if ($warehouseId) {
-                $query->where('warehouse_id', $warehouseId);
-            } else {
-                $query->whereNull('warehouse_id');
-            }
-
             $session = $query->first();
+
+            // Self-healing: If an in-progress session has 0 scans, check if the old system stock snapshot is outdated compared to live stock
+            if ($session && floatval($session->total_scanned_qty) == 0) {
+                $storeCounts = self::getBrandStoreCounts($brandId);
+                $liveStoreQty = round(floatval($storeTypeId ? ($storeCounts[$storeTypeId] ?? 0) : array_sum($storeCounts)), 2);
+                if (abs(floatval($session->total_system_qty) - $liveStoreQty) > 0.001) {
+                    DB::transaction(function () use ($session) {
+                        StockTakingScanLog::where('session_id', $session->id)->delete();
+                        StockTakingItem::where('session_id', $session->id)->delete();
+                        $session->forceDelete();
+                    });
+                    $session = null;
+                }
+            }
         }
 
         $isNew = false;
@@ -1677,6 +1856,26 @@ class FgStockTakingController extends Controller
                 return ['error' => 'Session is finalized and cannot be modified.', 'code' => 422];
             }
 
+            if ($action === 'reset_all') {
+                $totalScanned = floatval($session->total_scanned_qty);
+
+                StockTakingItem::where('session_id', $session->id)->update([
+                    'scanned_qty' => 0,
+                    'store_location_id' => null,
+                    'last_scanned_at' => null,
+                ]);
+
+                $session->total_scanned_qty = 0;
+                $session->save();
+
+                StockTakingScanLog::where('session_id', $session->id)->delete();
+
+                return [
+                    'session' => $session,
+                    'message' => "All scanned counts in this session have been reset to 0 (-{$totalScanned} pcs).",
+                ];
+            }
+
             if ($itemId && $action === 'reset') {
                 $item = StockTakingItem::where('session_id', $session->id)->where('id', (int) $itemId)->lockForUpdate()->first();
                 if (!$item) {
@@ -2248,10 +2447,11 @@ class FgStockTakingController extends Controller
 
         $defaultUomId = Uom::where('uom_code', 'PCS')->orWhere('uom_name', 'PIECES')->value('id') ?? Uom::value('id') ?? 1;
 
-        $createdStockEntry = null;
-        $activeSessionUpdated = false;
+        OpenStockEntryLog::ensureTableExists();
+
         $savedItemsCount = 0;
         $totalQty = 0;
+        $entryNo = null;
 
         try {
             DB::transaction(function () use (
@@ -2262,25 +2462,21 @@ class FgStockTakingController extends Controller
                 $entryDate,
                 $items,
                 $defaultUomId,
-                &$createdStockEntry,
-                &$activeSessionUpdated,
+                &$entryNo,
                 &$savedItemsCount,
                 &$totalQty
             ) {
-                $maxSeq = StockEntry::withTrashed()->where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')->selectRaw('MAX(CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED)) as max_seq')->value('max_seq');
+                $datePrefix = Carbon::now()->format('Ymd');
+                $prefix = 'OSE-' . $datePrefix . '-';
+                $maxSeq = OpenStockEntryLog::withTrashed()
+                    ->where('entry_no', 'like', "{$prefix}%")
+                    ->selectRaw("MAX(CAST(SUBSTRING(entry_no, 14) AS UNSIGNED)) as max_seq")
+                    ->value('max_seq');
                 $nextSeq = ((int) $maxSeq) + 1;
-                $entryNo = 'SE' . str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
-                while (StockEntry::withTrashed()->where('stock_entry_no', $entryNo)->exists()) {
+                $entryNo = $prefix . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
+                while (OpenStockEntryLog::withTrashed()->where('entry_no', $entryNo)->exists()) {
                     $nextSeq++;
-                    $entryNo = 'SE' . str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
-                }
-
-                $totalAmount = 0;
-                foreach ($items as $item) {
-                    $qty = floatval($item['qty_in'] ?? 0);
-                    $price = floatval($item['price'] ?? 0);
-                    $totalQty += $qty;
-                    $totalAmount += ($qty * $price);
+                    $entryNo = $prefix . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
                 }
 
                 $firstItemLocation = null;
@@ -2292,22 +2488,7 @@ class FgStockTakingController extends Controller
                 }
                 $primaryLocationId = $defaultLocationId ?: ($firstItemLocation ?: StoreLocation::value('id'));
 
-                $createdStockEntry = StockEntry::create([
-                    'stock_entry_no' => $entryNo,
-                    'stock_date' => $entryDate->format('Y-m-d'),
-                    'entry_type' => 'Finished Goods',
-                    'warehouse_id' => $warehouseId,
-                    'store_type_id' => $storeTypeId,
-                    'to_store_location_id' => $primaryLocationId,
-                    'remarks' => $headerRemarks ?: 'Open Stock Entry via FG Stock Taking',
-                    'status' => 'Posted',
-                    'created_by' => auth()->id() ?? 1,
-                    'price' => $totalAmount,
-                ]);
-
-                $styleNames = Style::whereIn('id', array_filter(array_column($items, 'style_id')))->pluck('style_name', 'id')->toArray();
                 $allBrandsWithCode = Brand::whereNotNull('code')->where('code', '!=', '')->orderByRaw('LENGTH(code) DESC')->get();
-                $touchedSessions = [];
 
                 foreach ($items as $index => $item) {
                     $productName = trim((string) ($item['product_name'] ?? ''));
@@ -2319,7 +2500,7 @@ class FgStockTakingController extends Controller
                     $colorId = !empty($item['color_id']) ? (int) $item['color_id'] : null;
                     $rowLocationId = !empty($item['store_location_id']) ? (int) $item['store_location_id'] : $primaryLocationId;
                     $qtyIn = floatval($item['qty_in'] ?? 0);
-                    $price = floatval($item['price'] ?? 0);
+                    $price = isset($item['price']) && $item['price'] !== '' ? floatval($item['price']) : null;
                     $uomId = !empty($item['uom_id']) ? (int) $item['uom_id'] : $defaultUomId;
                     $itemRemarks = trim((string) ($item['remarks'] ?? ''));
 
@@ -2328,11 +2509,6 @@ class FgStockTakingController extends Controller
                         throw new \Exception("Row #" . ($index + 1) . ": SKU / Barcode is required.");
                     }
                     $sku = preg_replace('/[\s\x{00A0}\x{200B}\x{FEFF}]+/u', '', $rawSku);
-
-                    $existingBarcode = StockEntryItem::where('sku', $sku)->where('stock_type', 'finished_goods')->whereNotNull('size')->where('size', '!=', $size)->first();
-                    if ($existingBarcode) {
-                        throw new \Exception("Barcode '{$sku}' is already assigned to Size '{$existingBarcode->size}' in existing stock. Duplicate barcodes for different sizes are not allowed.");
-                    }
 
                     // Resolve row-level Brand ID
                     $itemBrand = null;
@@ -2353,100 +2529,46 @@ class FgStockTakingController extends Controller
                     }
                     $rowBrandId = $itemBrand ? (int) $itemBrand->id : null;
 
-                    StockEntryItem::create([
-                        'stock_entry_id' => $createdStockEntry->id,
-                        'stock_type' => 'finished_goods',
-                        'item_id' => null,
+                    OpenStockEntryLog::create([
+                        'entry_no' => $entryNo,
+                        'entry_date' => $entryDate->format('Y-m-d'),
+                        'warehouse_id' => $warehouseId,
+                        'store_type_id' => $storeTypeId,
+                        'brand_id' => $rowBrandId,
+                        'product_name' => $productName,
                         'art_no' => $artNo,
-                        'finished_item_code' => $productName,
+                        'style_id' => $styleId,
                         'size' => $size,
                         'color_id' => $colorId,
-                        'style_id' => $styleId,
-                        'brand_id' => $rowBrandId,
                         'sleeve_type' => $sleeveType,
-                        'store_location_id' => $rowLocationId,
-                        'store_type_id' => $storeTypeId,
-                        'warehouse_id' => $warehouseId,
-                        'uom_id' => $uomId,
-                        'qty_in' => $qtyIn,
-                        'qty_out' => 0,
+                        'qty' => $qtyIn,
                         'price' => $price,
+                        'store_location_id' => $rowLocationId,
                         'sku' => $sku,
+                        'uom_id' => $uomId,
+                        'remarks' => $itemRemarks,
+                        'header_remarks' => $headerRemarks,
+                        'status' => 'Logged',
+                        'created_by' => auth()->id() ?? 1,
                     ]);
 
                     $savedItemsCount++;
-
-                    // If active StockTakingSession exists for this row's brand, update it
-                    if ($rowBrandId) {
-                        if (!array_key_exists($rowBrandId, $touchedSessions)) {
-                            $sess = StockTakingSession::where('brand_id', $rowBrandId)->where('status', 'In Progress')
-                                ->where(function ($q) use ($storeTypeId) {
-                                    $q->whereNull('store_type_id')->orWhere('store_type_id', $storeTypeId);
-                                })
-                                ->where(function ($q) use ($warehouseId) {
-                                    $q->whereNull('warehouse_id')->orWhere('warehouse_id', $warehouseId);
-                                })
-                                ->orderBy('id', 'desc')
-                                ->first();
-                            $touchedSessions[$rowBrandId] = $sess;
-                        }
-
-                        $sessionForBrand = $touchedSessions[$rowBrandId];
-                        if ($sessionForBrand) {
-                            $activeSessionUpdated = true;
-                            $stItem = StockTakingItem::where('session_id', $sessionForBrand->id)->where('sku', $sku)->first();
-
-                            if ($stItem) {
-                                $stItem->system_qty = round(floatval($stItem->system_qty) + $qtyIn, 2);
-                                if (!$stItem->system_store_location_id && $rowLocationId) {
-                                    $stItem->system_store_location_id = $rowLocationId;
-                                }
-                                $stItem->save();
-                            } else {
-                                $styleName = $styleNames[$styleId] ?? '';
-                                StockTakingItem::create([
-                                    'session_id' => $sessionForBrand->id,
-                                    'sku' => $sku,
-                                    'style_id' => $styleId,
-                                    'style_name' => $styleName,
-                                    'art_no' => $artNo,
-                                    'finished_item_code' => $productName,
-                                    'size' => $size,
-                                    'sleeve_type' => $sleeveType,
-                                    'system_store_location_id' => $rowLocationId,
-                                    'system_qty' => round($qtyIn, 2),
-                                    'scanned_qty' => 0,
-                                    'rate' => round($price, 2),
-                                ]);
-                            }
-                        }
-                    }
-                }
-
-                // Recalculate totals for all touched active sessions
-                foreach ($touchedSessions as $sess) {
-                    if ($sess) {
-                        $sess->total_system_qty = round((float) StockTakingItem::where('session_id', $sess->id)->sum('system_qty'), 2);
-                        $sess->total_system_skus = StockTakingItem::where('session_id', $sess->id)->count();
-                        $sess->save();
-                    }
+                    $totalQty += $qtyIn;
                 }
             });
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Stock Entry created successfully',
-                    'redirect_url' => url('stock_entries?tab=finished_goods'),
-                    'entry_no' => $createdStockEntry->stock_entry_no,
-                    'stock_entry_id' => $createdStockEntry->id,
+                    'message' => 'Open Stock Created Successfully',
+                    'redirect_url' => url('fg_stock_taking/open-stock-logs'),
+                    'entry_no' => $entryNo,
                     'total_items' => $savedItemsCount,
                     'total_qty' => $totalQty,
-                    'active_session_updated' => $activeSessionUpdated,
                 ]);
             }
 
-            return redirect('stock_entries?tab=finished_goods')->with('success', 'Stock Entry created successfully');
+            return redirect('fg_stock_taking/open-stock-logs')->with('success', 'Open Stock Created Successfully');
         } catch (\Exception $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([

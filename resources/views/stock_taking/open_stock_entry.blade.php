@@ -12,11 +12,21 @@
                 @csrf
                 <div class="card mb-4">
                     <div class="card-body">
-                        <div class="card-header-box d-flex justify-content-between align-items-center mb-4">
-                            <h4>Add Open Stock Entry</h4>
-                            <a href="{{ url('fg_stock_taking') }}" class="btn btn-secondary">
-                                <i class="ri ri-arrow-left-line back-arrow"></i> Back to Stock Taking
-                            </a>
+                        <div class="card-header-box d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                            <h4 class="mb-0">Add Open Stock Entry</h4>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url('fg_stock_taking/open-stock-logs') }}" class="btn btn-outline-info">
+                                    <i class="ri ri-file-list-3-line me-1"></i> Open Stock Logs
+                                </a>
+                                <a href="{{ url('fg_stock_taking') }}" class="btn btn-secondary">
+                                    <i class="ri ri-arrow-left-line back-arrow"></i> Back to Stock Taking
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info py-2 px-3 mb-4 d-flex align-items-center gap-2 small">
+                            <i class="ri ri-information-line fs-5 text-info"></i>
+                            <div><strong>Audit-Only Note:</strong> Items entered here are recorded directly into <strong>Open Stock Entry Logs</strong> for audit tracking and physical count verification. They do not convert to live Finished Goods inventory or modify stock ledger balances.</div>
                         </div>
 
                         <div class="row g-4 mb-4">

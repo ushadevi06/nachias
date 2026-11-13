@@ -937,16 +937,14 @@
     </div>
     <script>
         $(document).ready(function() {
-            var stageMinDate = "{{ $stageStartFormatted ?? '' }}" || null;
-            var stageMaxDate = "{{ $stageDueFormatted ?? '' }}" || null;
+            var stageMinDate = null;
+            var stageMaxDate = null;
 
             var planDefaultDate = "{{ $defaultPlanDate }}";
             const planDatePicker = $("#plan_date").flatpickr({
                 dateFormat: "d-m-Y",
                 allowInput: true,
                 closeOnSelect: true,
-                minDate: stageMinDate,
-                maxDate: stageMaxDate,
                 defaultDate: planDefaultDate ? planDefaultDate : null,
                 onChange: function(selectedDates, dateStr, instance) {
                     if (dateStr) {
@@ -1228,15 +1226,6 @@
             function initRowControls($row, data = {}) {
                 var $el = $('#stage_select');
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
-                var stageStartDate = $selected.data('start-date');
-                var curMinDate = stageMinDate || null;
-                var curMaxDate = stageMaxDate || null;
-                if (!curMinDate && stageStartDate) {
-                    curMinDate = formatDateForPicker(stageStartDate);
-                }
-                if (!curMaxDate && stageDueDate) {
-                    curMaxDate = formatDateForPicker(stageDueDate);
-                }
 
                 var isCompletedRow = ($row.find('input[name*="[status]"]').val() === 'Completed') || ($row.find('.status-select-row').val() === 'Completed');
                 if (isCompletedRow) {
@@ -1251,8 +1240,6 @@
                         dateFormat: "d-m-Y",
                         allowInput: true,
                         closeOnSelect: true,
-                        minDate: curMinDate,
-                        maxDate: curMaxDate,
                         defaultDate: $issueInput.val() || null,
                         onChange: function(selectedDates, dateStr, instance) {
                             calculateRowHours($row);
@@ -1476,22 +1463,9 @@
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
                 var sDate = $selected.data('start-date');
                 var dDate = $selected.data('due-date');
-                if (sDate) stageMinDate = formatDateForPicker(sDate);
-                if (dDate) stageMaxDate = formatDateForPicker(dDate);
-
-                if (typeof planDatePicker !== 'undefined' && planDatePicker) {
-                    planDatePicker.set('minDate', stageMinDate);
-                    planDatePicker.set('maxDate', stageMaxDate);
-                }
-
                 $('#assignment-cards-container .assignment-row').each(function() {
                     var $row = $(this);
                     calculateRowHours($row);
-                    var issueFp = $row.find('.flatpickr-assignment.issue-date')[0] ? $row.find('.flatpickr-assignment.issue-date')[0]._flatpickr : null;
-                    if (issueFp) {
-                        issueFp.set('minDate', stageMinDate);
-                        issueFp.set('maxDate', stageMaxDate);
-                    }
                 });
 
                 $('.select2').trigger('change', [isInit]);

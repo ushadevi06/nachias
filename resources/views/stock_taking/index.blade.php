@@ -5,17 +5,19 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <!-- Header matching Stock Entry / Sales Invoice Scan style -->
             <div class="table-header-box mb-3">
                 <h4>FG Stock Taking</h4>
                 <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ url('stock_entries') }}" class="btn btn-secondary">
-                        <i class="ri ri-arrow-left-line back-arrow"></i> Back to Stock Entry
-                    </a>
                     <a href="{{ url('fg_stock_taking/logs') }}" class="btn btn-outline-primary" id="stock_taking_logs_btn">
                         <i class="ri ri-history-line me-1"></i> Stock Taking Logs
                         @if(($logsCount ?? 0) > 0)
                             <span class="badge bg-primary text-white ms-1" id="history_count_badge">{{ number_format($logsCount) }}</span>
+                        @endif
+                    </a>
+                    <a href="{{ url('fg_stock_taking/open-stock-logs') }}" class="btn btn-outline-info" id="btn_open_stock_logs">
+                        <i class="ri ri-file-list-3-line me-1"></i> Open Stock Logs
+                        @if(($openStockLogsCount ?? 0) > 0)
+                            <span class="badge bg-info text-white ms-1" id="open_stock_logs_badge">{{ number_format($openStockLogsCount) }}</span>
                         @endif
                     </a>
                     <a href="{{ url('fg_stock_taking/open-stock-entry') }}" class="btn btn-outline-success" id="btn_open_stock_entry">
@@ -30,6 +32,9 @@
                     <a href="javascript:void(0)" class="btn btn-success disabled" id="export_excel_btn" style="pointer-events: none; opacity: 0.5;">
                         <i class="ri ri-file-excel-line me-1"></i> Export Excel
                     </a>
+                    <a href="{{ url('stock_entries') }}" class="btn btn-secondary">
+                        <i class="ri ri-arrow-left-line back-arrow"></i> Back to Stock Entry
+                    </a>
                 </div>
             </div>
 
@@ -37,7 +42,7 @@
             <div class="card mb-3">
                 <div class="card-body">
                     <div class="row g-3 mb-3 align-items-end">
-                        <div class="col-md-3">
+                        <div class="col-xl-3 col-lg-3 col-md-3">
                             <label class="form-label fw-bold mb-1">Brand <span class="text-danger">*</span></label>
                             <select id="filter_brand_id" class="form-select select2" data-placeholder="Select Brand">
                                 <option value="">-- Select Brand --</option>
@@ -48,7 +53,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-xl-3 col-lg-3 col-md-3">
                             <label class="form-label fw-bold mb-1">Store</label>
                             <select id="filter_store_type_id" class="form-select select2" data-placeholder="All Stores">
                                 @php
@@ -68,7 +73,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-xl-2 col-lg-2 col-md-2">
                             <label class="form-label fw-bold mb-1">Warehouse</label>
                             <select id="filter_warehouse_id" class="form-select select2" data-placeholder="All Warehouses">
                                 <option value="">All Warehouses</option>
@@ -79,7 +84,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-xl-3 col-lg-3 col-md-3">
                             <label class="form-label fw-bold mb-1">Store Location</label>
                             <select id="filter_store_location_id" class="form-select select2" data-placeholder="Select Store Location">
                                 <option value="">-- Select Store Location --</option>
@@ -89,6 +94,11 @@
                                     </option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div class="col-xl-1 col-lg-1 col-md-1">
+                            <button type="button" class="btn btn-secondary w-100" id="btn_reset_stock_taking" title="Reset Filters and Screen" style="height: 38px; padding: 6px 4px; white-space: nowrap;">
+                                <i class="ri ri-refresh-line"></i> Reset
+                            </button>
                         </div>
                     </div>
 
@@ -532,19 +542,14 @@ $(document).ready(function() {
 
         if (Math.abs(moveQty) > 0.0001) {
             const sign = moveQty > 0 ? '+' : '';
-            $('#detail_movement_badge')
-                .removeClass('d-none')
-                .text('Live Movement: ' + sign + moveQty.toLocaleString());
+            $('#detail_movement_badge').removeClass('d-none').text('Live Movement: ' + sign + moveQty.toLocaleString());
         } else {
             $('#detail_movement_badge').addClass('d-none').text('');
         }
     }
 
     function showScanAlert(typeClass, htmlMsg) {
-        $('#scan_alert')
-            .removeClass('alert-success alert-warning alert-danger alert-info')
-            .addClass(typeClass)
-            .show();
+        $('#scan_alert').removeClass('alert-success alert-warning alert-danger alert-info').addClass(typeClass).show();
         $('#scan_msg').html(htmlMsg);
     }
 
@@ -562,7 +567,6 @@ $(document).ready(function() {
             }
 
             if (!val) {
-                // All Stores option
                 if (totalBrandQty !== undefined && totalBrandQty !== null && Number(totalBrandQty) > 0) {
                     $opt.text(baseName + ' (' + Number(totalBrandQty).toLocaleString() + ' pcs)');
                 } else {
@@ -1242,6 +1246,48 @@ $(document).ready(function() {
                 performUndo({ item_id: itemId, action: 'reset' });
             }
         });
+    });
+
+    $('#btn_reset_stock_taking').on('click', function(e) {
+        e.preventDefault();
+        const currentScanned = parseInt($('#stat_scanned').text().replace(/,/g, '')) || 0;
+
+        if (currentSessionId && currentScanned > 0 && !currentSessionFinalized) {
+            Swal.fire({
+                title: 'Reset Stock Taking',
+                html: `This session has <strong>${currentScanned}</strong> scanned pieces in progress.<br><br>What would you like to reset?`,
+                icon: 'question',
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonColor: '#696cff',
+                denyButtonColor: '#ff3e1d',
+                cancelButtonColor: '#8592a3',
+                confirmButtonText: '<i class="ri ri-refresh-line me-1"></i> Clear Screen (New Brand)',
+                denyButtonText: '<i class="ri ri-delete-bin-line me-1"></i> Reset Scanned Counts to 0',
+                cancelButtonText: 'Cancel'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    window.location.href = "{{ url('fg_stock_taking') }}";
+                } else if (res.isDenied) {
+                    Swal.fire({
+                        title: 'Confirm Reset Scanned Counts?',
+                        text: 'This will reset all scanned quantities in this active session back to 0. Are you sure?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ff3e1d',
+                        cancelButtonColor: '#8592a3',
+                        confirmButtonText: 'Yes, Reset All to 0',
+                        cancelButtonText: 'Cancel'
+                    }).then((conf) => {
+                        if (conf.isConfirmed) {
+                            performUndo({ action: 'reset_all' });
+                        }
+                    });
+                }
+            });
+        } else {
+            window.location.href = "{{ url('fg_stock_taking') }}";
+        }
     });
 
     $(document).on('click', '.btn-log-delete', function() {

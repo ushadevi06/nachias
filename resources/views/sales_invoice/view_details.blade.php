@@ -70,6 +70,11 @@
                                         @endif
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/carton-box-sticker/' . $invoice->id) }}" target="_blank">
+                                        <i class="ri ri-inbox-line me-1 text-primary"></i> Carton Box Sticker (What's Inside)
+                                    </a>
+                                </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item fw-bold {{ $invoice->kachathu_status === 'completed' ? 'text-success' : 'text-primary' }}" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#kachathuCoverModal">

@@ -2006,6 +2006,134 @@ class SalesInvoiceController extends Controller
         return view('sales_invoice.courier_sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
     }
 
+    public function printCartonBoxSticker($id)
+    {
+        $invoice = SalesInvoice::with([
+            'customer',
+            'brand',
+            'items.stockEntryItem.style',
+            'items.stockEntryItem.brand',
+            'items.item.style',
+            'items.brandCategory'
+        ])->findOrFail($id);
+
+        $invDate = $invoice->inv_date ? $invoice->inv_date->toDateString() : date('Y-m-d');
+
+        // Same customer & same date invoices count as total boxes
+        $sameDayInvoices = SalesInvoice::where('customer_id', $invoice->customer_id)
+            ->whereDate('inv_date', $invDate)
+            ->where('invoice_status', '!=', 'Cancelled')
+            ->orderBy('id', 'asc')
+            ->pluck('id')
+            ->toArray();
+
+        $totalBoxes = count($sameDayInvoices) ?: 1;
+        $currentBoxNo = (array_search($invoice->id, $sameDayInvoices) !== false)
+            ? (array_search($invoice->id, $sameDayInvoices) + 1)
+            : 1;
+
+        if (request()->has('box_no')) {
+            $currentBoxNo = (int) request('box_no');
+        }
+        if (request()->has('total_boxes')) {
+            $totalBoxes = (int) request('total_boxes');
+        }
+
+        // Brand Name resolution
+        $rawBrandName = strtoupper(
+            $invoice->brand->brand_name 
+            ?? $invoice->items->first()->stockEntryItem->brand->brand_name 
+            ?? $invoice->items->first()->brandCategory->brand_name 
+            ?? 'CASINO'
+        );
+        $brandName = str_contains($rawBrandName, 'CASINO') ? 'CASINO' : $rawBrandName;
+
+        // Shirt Sizes: Standard adult 36, 38, 40, 42, 44 as default
+        $standardSizes = ['36', '38', '40', '42', '44'];
+        $itemSizes = $invoice->items->pluck('size')->filter()->map(fn($s) => trim((string)$s))->unique()->toArray();
+
+        $hasAdultSizes = count(array_intersect($itemSizes, $standardSizes)) > 0;
+        if ($hasAdultSizes || empty($itemSizes)) {
+            $sizes = array_values(array_unique(array_merge($standardSizes, $itemSizes)));
+        } else {
+            $sizes = $itemSizes;
+        }
+
+        usort($sizes, function($a, $b) {
+            if (is_numeric($a) && is_numeric($b)) {
+                return (float)$a <=> (float)$b;
+            }
+            return strcmp((string)$a, (string)$b);
+        });
+
+        // Varieties: Plains, Checks, Stripes, Prints
+        $standardVarieties = ['PLAINS', 'CHECKS', 'STRIPES', 'PRINTS'];
+        $matrix = [];
+        foreach ($standardVarieties as $v) {
+            $matrix[$v] = array_fill_keys($sizes, 0);
+        }
+
+        foreach ($invoice->items as $item) {
+            $styleRaw = strtoupper(trim(
+                $item->stockEntryItem->style->style_name 
+                ?? $item->item->style->style_name 
+                ?? ''
+            ));
+
+            if (str_contains($styleRaw, 'PLAIN') || str_contains($styleRaw, 'WHITE') || str_contains($styleRaw, 'SOLID')) {
+                $varKey = 'PLAINS';
+            } elseif (str_contains($styleRaw, 'CHECK')) {
+                $varKey = 'CHECKS';
+            } elseif (str_contains($styleRaw, 'STRIPE')) {
+                $varKey = 'STRIPES';
+            } elseif (str_contains($styleRaw, 'PRINT')) {
+                $varKey = 'PRINTS';
+            } else {
+                $varKey = $styleRaw ?: 'OTHER';
+                if (!isset($matrix[$varKey])) {
+                    $matrix[$varKey] = array_fill_keys($sizes, 0);
+                }
+            }
+
+            $itemSize = trim((string) $item->size);
+            if (isset($matrix[$varKey][$itemSize])) {
+                $matrix[$varKey][$itemSize] += (int) $item->quantity;
+            }
+        }
+
+        // Row totals
+        $rowTotals = [];
+        foreach ($matrix as $var => $sizeCounts) {
+            $rowTotals[$var] = array_sum($sizeCounts);
+        }
+
+        // Column totals
+        $colTotals = array_fill_keys($sizes, 0);
+        foreach ($sizes as $s) {
+            foreach ($matrix as $var => $sizeCounts) {
+                $colTotals[$s] += $sizeCounts[$s] ?? 0;
+            }
+        }
+
+        $grandTotal = array_sum($colTotals);
+        $setting = Setting::first();
+        $is_print = true;
+
+        return view('sales_invoice.carton_box_sticker', compact(
+            'invoice',
+            'brandName',
+            'currentBoxNo',
+            'totalBoxes',
+            'sizes',
+            'matrix',
+            'rowTotals',
+            'colTotals',
+            'grandTotal',
+            'setting',
+            'is_print'
+        ));
+    }
+
     public function downloadDeliveryOrder($id, Request $request)
     {
         $invoice = SalesInvoice::with([
