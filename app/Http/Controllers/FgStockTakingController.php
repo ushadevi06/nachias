@@ -80,6 +80,10 @@ class FgStockTakingController extends Controller
 
     public static function getBrandStoreCounts(int $brandId, ?int $warehouseId = null): array
     {
+        $defaultFgStoreId = StoreType::whereNull('deleted_at')
+            ->where('store_type_name', 'like', '%FINISHED GOODS%')
+            ->value('id') ?? 3;
+
         $query = DB::table('stock_entry_items as sei')
             ->leftJoin('stock_entries as se', 'se.id', '=', 'sei.stock_entry_id')
             ->leftJoin('production_receipts as pr', 'pr.receipt_no', '=', 'se.reference_document')
@@ -96,10 +100,10 @@ class FgStockTakingController extends Controller
         }
 
         $rows = $query->select(
-            DB::raw('COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id) as store_type_id'),
+            DB::raw("COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id, {$defaultFgStoreId}) as store_type_id"),
             DB::raw('SUM(COALESCE(sei.qty_in, 0) - COALESCE(sei.qty_out, 0)) as total_qty')
         )
-            ->groupBy(DB::raw('COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id)'))
+            ->groupBy(DB::raw("COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id, {$defaultFgStoreId})"))
             ->havingRaw('SUM(COALESCE(sei.qty_in, 0) - COALESCE(sei.qty_out, 0)) > 0.0001')
             ->get();
 
@@ -134,7 +138,18 @@ class FgStockTakingController extends Controller
         }
 
         if ($storeTypeId) {
-            $query->whereRaw('COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id) = ?', [$storeTypeId]);
+            $defaultFgStoreId = StoreType::whereNull('deleted_at')
+                ->where('store_type_name', 'like', '%FINISHED GOODS%')
+                ->value('id') ?? 3;
+
+            if ((int) $storeTypeId === (int) $defaultFgStoreId) {
+                $query->where(function ($q) use ($storeTypeId) {
+                    $q->whereRaw('COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id) = ?', [$storeTypeId])
+                      ->orWhereNull(DB::raw('COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id)'));
+                });
+            } else {
+                $query->whereRaw('COALESCE(sei.store_type_id, se.store_type_id, pr.store_type_id) = ?', [$storeTypeId]);
+            }
         }
 
         return $query;
@@ -142,16 +157,13 @@ class FgStockTakingController extends Controller
 
     protected function loadActivePriceMaps(?array $filterArtNos = null): array
     {
-        $query = ItemPrice::whereNull('deleted_at')
-            ->where('status', 'Active');
+        $query = ItemPrice::whereNull('deleted_at')->where('status', 'Active');
 
         if (!empty($filterArtNos)) {
             $query->whereIn('art_no', $filterArtNos);
         }
 
-        $prices = $query->orderByDesc('effective_from')
-            ->orderByDesc('id')
-            ->get(['art_no', 'size', 'selling_price', 'unit_price']);
+        $prices = $query->orderByDesc('effective_from')->orderByDesc('id')->get(['art_no', 'size', 'selling_price', 'unit_price']);
 
         $byArtSize = [];
         $byArt = [];
@@ -706,20 +718,20 @@ class FgStockTakingController extends Controller
                   ->where('store_type_name', 'not like', '%fabric%')
                   ->where('store_type_name', 'not like', '%accessor%');
             })
-            ->orderBy('store_type_name')
+            ->orderBy('id','desc')
             ->get();
 
-        $warehouses = Warehouse::whereNull('deleted_at')->where('status', 'Active')->orderBy('warehouse_name')->get();
+        $warehouses = Warehouse::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
 
-        $storeLocations = StoreLocation::whereNull('deleted_at')->where('status', 'Active')->orderBy('store_location')->get();
+        $storeLocations = StoreLocation::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
 
-        $allBrands = Brand::whereNull('deleted_at')->where('status', 'Active')->orderBy('brand_name')->get();
+        $allBrands = Brand::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
 
-        $colors = Color::whereNull('deleted_at')->where('status', 'Active')->orderBy('color_name')->get();
+        $colors = Color::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
 
-        $styles = Style::whereNull('deleted_at')->where('status', 'Active')->orderBy('style_name')->get();
+        $styles = Style::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
 
-        $uoms = Uom::whereNull('deleted_at')->where('status', 'Active')->orderBy('uom_name')->get();
+        $uoms = Uom::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
 
         $logsCount = StockTakingSession::count();
 
@@ -772,7 +784,7 @@ class FgStockTakingController extends Controller
                   ->where('store_type_name', 'not like', '%fabric%')
                   ->where('store_type_name', 'not like', '%accessor%');
             })
-            ->orderBy('store_type_name')
+            ->orderBy('id','desc')
             ->get();
 
         $warehouses = Warehouse::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
@@ -900,7 +912,7 @@ class FgStockTakingController extends Controller
             'session' => $meta,
             'stats' => $stats,
             'store_counts' => $storeCounts,
-            'total_brand_qty' => round(floatval($session->total_system_qty), 0),
+            'total_brand_qty' => array_sum($storeCounts) ?: round(floatval($session->total_system_qty), 0),
         ]);
     }
 
@@ -1044,6 +1056,8 @@ class FgStockTakingController extends Controller
             ], 404);
         }
 
+        $storeCounts = self::getBrandStoreCounts($session->brand_id, $session->warehouse_id);
+
         return response()->json([
             'success' => true,
             'session_id' => $session->id,
@@ -1053,6 +1067,8 @@ class FgStockTakingController extends Controller
             'warehouse_id' => $session->warehouse_id,
             'session' => $this->formatSessionMeta($session),
             'stats' => $this->buildSummaryStats($session),
+            'store_counts' => $storeCounts,
+            'total_brand_qty' => array_sum($storeCounts) ?: round(floatval($session->total_system_qty), 0),
         ]);
     }
 
@@ -2216,7 +2232,6 @@ class FgStockTakingController extends Controller
 
         $validated = $validator->validated();
 
-        $brandId = (int) $validated['brand_id'];
         $warehouseId = (int) $validated['warehouse_id'];
         $storeTypeId = (int) $validated['store_type_id'];
         $defaultLocationId = !empty($validated['default_store_location_id']) ? (int) $validated['default_store_location_id'] : null;

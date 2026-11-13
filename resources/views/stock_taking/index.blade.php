@@ -51,7 +51,10 @@
                         <div class="col-md-3">
                             <label class="form-label fw-bold mb-1">Store</label>
                             <select id="filter_store_type_id" class="form-select select2" data-placeholder="All Stores">
-                                <option value="" data-base-name="All Stores">All Stores</option>
+                                @php
+                                    $allBrandQty = (!empty($selectedBrandId) && !empty($brands->firstWhere('id', $selectedBrandId)?->fg_total_qty)) ? $brands->firstWhere('id', $selectedBrandId)->fg_total_qty : null;
+                                @endphp
+                                <option value="" data-base-name="All Stores">All Stores{{ $allBrandQty ? ' (' . number_format($allBrandQty, 0) . ' pcs)' : '' }}</option>
                                 @foreach($storeTypes as $st)
                                     @php
                                         $pcs = isset($storeCounts[$st->id]) ? $storeCounts[$st->id] : null;
@@ -547,6 +550,8 @@ $(document).ready(function() {
 
     function updateStoreDropdownCounts(storeCounts, totalBrandQty) {
         const $storeSelect = $('#filter_store_type_id');
+        const curVal = $storeSelect.val();
+
         $storeSelect.find('option').each(function() {
             const $opt = $(this);
             const val = $opt.val();
@@ -574,7 +579,18 @@ $(document).ready(function() {
         });
 
         if (typeof $storeSelect.select2 === 'function') {
-            $storeSelect.trigger('change.select2');
+            if ($storeSelect.data('select2')) {
+                $storeSelect.select2('destroy');
+            }
+            $storeSelect.select2({
+                placeholder: $storeSelect.data('placeholder') || 'All Stores',
+                width: '100%',
+                allowClear: true,
+                dropdownParent: $('body')
+            });
+            if (curVal !== undefined && curVal !== null && curVal !== '') {
+                $storeSelect.val(curVal);
+            }
         }
     }
 
@@ -1273,6 +1289,10 @@ $(document).ready(function() {
 
         $.get(baseUrl + '/session/' + sessionId, function(res) {
             if (!res.success) return;
+
+            if (res.store_counts !== undefined) {
+                updateStoreDropdownCounts(res.store_counts, res.total_brand_qty || res.stats?.total_system_qty);
+            }
 
             $('#filter_brand_id').val(res.brand_id || '').trigger('change.select2');
             $('#filter_store_type_id').val(res.store_type_id || '').trigger('change.select2');

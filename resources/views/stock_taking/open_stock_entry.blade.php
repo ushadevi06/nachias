@@ -510,18 +510,30 @@ $(document).ready(function() {
 
             // Brand lookup
             const brandObj = OSE_BRANDS.find(b => b.code.toUpperCase() === brandPart || b.name.toUpperCase() === brandPart);
-            const selectedBrandId = $('#ose_brand_id').val();
-            const selectedBrandText = $('#ose_brand_id option:selected').text();
 
             if (!brandObj) {
                 $(this).addClass('is-invalid');
                 $errProd.text(`Brand prefix '${brandPart}' does not exist in Brands master.`);
-            } else if (selectedBrandId && brandObj.id !== parseInt(selectedBrandId, 10)) {
-                $(this).addClass('is-invalid');
-                $errProd.text(`Product Name specifies Brand '${brandObj.name}' (${brandObj.code}), but selected Brand is '${selectedBrandText}'.`);
             } else {
                 $(this).removeClass('is-invalid');
                 $errProd.text('');
+
+                // Cross-check with Art No brand if already entered
+                const artVal = ($row.find('.ose-art-no').val() || '').trim().toUpperCase();
+                if (artVal && !artVal.startsWith('CRYSTAL')) {
+                    let artBrand = null;
+                    for (let i = 0; i < OSE_BRANDS.length; i++) {
+                        const b = OSE_BRANDS[i];
+                        if (b.code && artVal.startsWith(b.code.toUpperCase())) {
+                            artBrand = b;
+                            break;
+                        }
+                    }
+                    if (artBrand && artBrand.id !== brandObj.id) {
+                        $(this).addClass('is-invalid');
+                        $errProd.text(`Art No belongs to Brand '${artBrand.name}' (${artBrand.code}), but Product Name specifies Brand '${brandObj.name}' (${brandObj.code}).`);
+                    }
+                }
             }
 
             // Style lookup and auto-select
@@ -587,12 +599,18 @@ $(document).ready(function() {
             }
         }
 
-        const selectedBrandId = $('#ose_brand_id').val();
-        const selectedBrandText = $('#ose_brand_id option:selected').text();
+        // Cross-check with Product Name brand if already entered
+        const prodVal = ($row.find('.ose-product-name').val() || '').trim().toUpperCase();
+        let prodBrand = null;
+        const prodParts = prodVal.split('-');
+        if (prodParts.length >= 2) {
+            const bp = prodParts[0].trim();
+            prodBrand = OSE_BRANDS.find(b => b.code.toUpperCase() === bp || b.name.toUpperCase() === bp);
+        }
 
-        if (brandMatch && selectedBrandId && brandMatch.id !== parseInt(selectedBrandId, 10)) {
+        if (brandMatch && prodBrand && brandMatch.id !== prodBrand.id) {
             $(this).addClass('is-invalid');
-            $errArt.text(`Art No belongs to Brand '${brandMatch.name}' (${brandMatch.code}), but selected Brand is '${selectedBrandText}'.`);
+            $errArt.text(`Art No belongs to Brand '${brandMatch.name}' (${brandMatch.code}), but Product Name specifies Brand '${prodBrand.name}' (${prodBrand.code}).`);
         } else {
             $(this).removeClass('is-invalid');
             $errArt.text('');
@@ -643,17 +661,10 @@ $(document).ready(function() {
         $(this).removeClass('is-invalid');
         $(this).next('.select2-container').removeClass('is-invalid');
         $(this).closest('td').find('.ose-err').text('');
-        $(this).closest('.col-md-6, .col-lg-3, .col-lg-9').find('.text-danger').text('').hide();
+        $(this).closest('.col-md-6, .col-lg-3, .col-12').find('.text-danger').text('').hide();
     });
 
-    $('#ose_brand_id').on('change select2:select', function() {
-        $('#ose_items_tbody tr').each(function() {
-            $(this).find('.ose-art-no').trigger('input');
-            $(this).find('.ose-product-name').trigger('input');
-        });
-    });
-
-    $('#ose_brand_id, #ose_warehouse_id, #ose_store_type_id, #ose_default_location_id').on('change select2:select', function() {
+    $('#ose_warehouse_id, #ose_store_type_id, #ose_default_location_id').on('change select2:select', function() {
         $(this).removeClass('is-invalid');
         $(this).next('.select2-container').removeClass('is-invalid');
         $(this).closest('.col-md-6, .col-lg-3').find('.text-danger').text('').hide();
