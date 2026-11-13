@@ -641,9 +641,17 @@ $isSuper = $user->id == 1;
                                             @endif
 
                                             @if($isSuper || $user->can('view stock-entry-raw-materials') || $user->can('view stock-entry-finished-goods'))
-                                                <li class="menu-item {{ (request()->is('stock_entries*') || request()->is('fg_stock_taking*')) ? 'active' : '' }}">
+                                                <li class="menu-item {{ request()->is('stock_entries*') ? 'active' : '' }}">
                                                     <a href="{{ url('stock_entries') }}" class="menu-link">
                                                         <div>Stock Entry</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+
+                                            @if($isSuper || $user->can('view stock-entry-finished-goods'))
+                                                <li class="menu-item {{ request()->is('fg_stock_taking*') ? 'active' : '' }}">
+                                                    <a href="{{ url('fg_stock_taking') }}" class="menu-link">
+                                                        <div>FG Stock Taking</div>
                                                     </a>
                                                 </li>
                                             @endif

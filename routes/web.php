@@ -535,8 +535,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('fg_stock_taking/session/{id}/finalize', [FgStockTakingController::class, 'finalize']);
     Route::post('fg_stock_taking/session/{id}/undo', [FgStockTakingController::class, 'undoScan']);
     Route::post('fg_stock_taking/session/{id}/reset', [FgStockTakingController::class, 'resetSession']);
+    Route::delete('fg_stock_taking/session/{id}', [FgStockTakingController::class, 'deleteSession']);
+    Route::post('fg_stock_taking/session/{id}/delete', [FgStockTakingController::class, 'deleteSession']);
     Route::get('fg_stock_taking/session/{id}/items', [FgStockTakingController::class, 'itemsData']);
     Route::get('fg_stock_taking/session/{id}/export', [FgStockTakingController::class, 'exportExcel']);
+    Route::get('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'openStockEntryPage']);
+    Route::post('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'storeOpenStockEntry']);
 
     /* Store */
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);

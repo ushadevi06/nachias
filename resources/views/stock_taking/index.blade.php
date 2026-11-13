@@ -9,7 +9,7 @@
             <div class="table-header-box mb-3">
                 <h4>FG Stock Taking</h4>
                 <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ url('stock_entries') }}" class="btn btn-secondary text-white">
+                    <a href="{{ url('stock_entries') }}" class="btn btn-secondary">
                         <i class="ri ri-arrow-left-line back-arrow"></i> Back to Stock Entry
                     </a>
                     <a href="{{ url('fg_stock_taking/logs') }}" class="btn btn-outline-primary" id="stock_taking_logs_btn">
@@ -17,6 +17,9 @@
                         @if(($logsCount ?? 0) > 0)
                             <span class="badge bg-primary text-white ms-1" id="history_count_badge">{{ number_format($logsCount) }}</span>
                         @endif
+                    </a>
+                    <a href="{{ url('fg_stock_taking/open-stock-entry') }}" class="btn btn-outline-success" id="btn_open_stock_entry">
+                        <i class="ri ri-inbox-archive-line me-1"></i> Open Stock Entry
                     </a>
                     <button type="button" class="btn btn-outline-primary d-none" id="start_new_btn">
                         <i class="ri ri-add-circle-line me-1"></i> Start New Count
@@ -48,10 +51,16 @@
                         <div class="col-md-3">
                             <label class="form-label fw-bold mb-1">Store</label>
                             <select id="filter_store_type_id" class="form-select select2" data-placeholder="All Stores">
-                                <option value="">All Stores</option>
+                                <option value="" data-base-name="All Stores">All Stores</option>
                                 @foreach($storeTypes as $st)
-                                    <option value="{{ $st->id }}" {{ ($selectedStoreTypeId ?? null) == $st->id ? 'selected' : '' }}>
-                                        {{ $st->store_type_name }}
+                                    @php
+                                        $pcs = isset($storeCounts[$st->id]) ? $storeCounts[$st->id] : null;
+                                        $pcsSuffix = ($pcs !== null && !empty($selectedBrandId)) ? ' (' . number_format($pcs, 0) . ' pcs)' : '';
+                                    @endphp
+                                    <option value="{{ $st->id }}"
+                                            data-base-name="{{ $st->store_type_name }}"
+                                            {{ ($selectedStoreTypeId ?? null) == $st->id ? 'selected' : '' }}>
+                                        {{ $st->store_type_name }}{{ $pcsSuffix }}
                                     </option>
                                 @endforeach
                             </select>
@@ -215,11 +224,12 @@
                                     <th>Variance</th>
                                     <th>Status</th>
                                     <th>Store Location</th>
+                                    <th class="text-center" style="width: 105px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="table_body">
                                 <tr>
-                                    <td colspan="9" class="text-center py-4 text-muted">
+                                    <td colspan="10" class="text-center py-4 text-muted">
                                         Please select a <strong>Brand</strong> above to load items and start scanning.
                                     </td>
                                 </tr>
@@ -288,6 +298,11 @@
         color: inherit;
         border-left-color: #696cff;
     }
+    #ose_items_table input.form-control-sm,
+    #ose_items_table select.form-select-sm {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.4rem;
+    }
 </style>
 @endsection
 
@@ -300,6 +315,7 @@ $(document).ready(function() {
     const baseUrl = '{{ url('fg_stock_taking') }}';
     let currentSessionId = null;
     let currentSessionFinalized = false;
+    let lastScannedLogId = null;
     let currentPage = 1;
     let searchTimer = null;
     let activeBrandXhr = null;
@@ -529,6 +545,39 @@ $(document).ready(function() {
         $('#scan_msg').html(htmlMsg);
     }
 
+    function updateStoreDropdownCounts(storeCounts, totalBrandQty) {
+        const $storeSelect = $('#filter_store_type_id');
+        $storeSelect.find('option').each(function() {
+            const $opt = $(this);
+            const val = $opt.val();
+            let baseName = $opt.attr('data-base-name');
+            if (!baseName) {
+                baseName = $opt.text().replace(/\s*\([\d,.]+\s*pcs\)\s*$/i, '').trim();
+                $opt.attr('data-base-name', baseName);
+            }
+
+            if (!val) {
+                // All Stores option
+                if (totalBrandQty !== undefined && totalBrandQty !== null && Number(totalBrandQty) > 0) {
+                    $opt.text(baseName + ' (' + Number(totalBrandQty).toLocaleString() + ' pcs)');
+                } else {
+                    $opt.text(baseName);
+                }
+            } else {
+                if (storeCounts && typeof storeCounts === 'object') {
+                    const count = storeCounts[val] !== undefined ? Number(storeCounts[val]) : 0;
+                    $opt.text(baseName + ' (' + count.toLocaleString() + ' pcs)');
+                } else {
+                    $opt.text(baseName);
+                }
+            }
+        });
+
+        if (typeof $storeSelect.select2 === 'function') {
+            $storeSelect.trigger('change.select2');
+        }
+    }
+
     function loadBrandSession(onLoaded, forceNew = false) {
         const brandId = $('#filter_brand_id').val();
         const storeTypeId = $('#filter_store_type_id').val();
@@ -545,17 +594,18 @@ $(document).ready(function() {
         }
 
         if (!brandId) {
+            updateStoreDropdownCounts(null, null);
             currentSessionId = null;
             currentPage = 1;
             setSessionEnabled(false, false);
             updateStats({ total_system_qty: 0, total_scanned_qty: 0, remaining_qty: 0, matched_skus: 0, coverage_pct: 0 });
             $('#pagination_bar').addClass('d-none');
-            $('#table_body').html('<tr><td colspan="9" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
+            $('#table_body').html('<tr><td colspan="10" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
             refocusScanner();
             return;
         }
 
-        $('#table_body').html('<tr><td colspan="9" class="text-center py-4 text-muted">Loading items...</td></tr>');
+        $('#table_body').html('<tr><td colspan="10" class="text-center py-4 text-muted">Loading items...</td></tr>');
 
         activeBrandXhr = $.ajax({
             url: baseUrl + '/load-brand',
@@ -569,6 +619,9 @@ $(document).ready(function() {
             },
             success: function(res) {
                 activeBrandXhr = null;
+                if (res.store_counts !== undefined) {
+                    updateStoreDropdownCounts(res.store_counts, res.total_brand_qty || res.stats?.total_system_qty);
+                }
                 currentSessionId = res.session_id;
                 currentPage = 1;
                 applySessionMeta(res.session);
@@ -585,6 +638,7 @@ $(document).ready(function() {
             },
             error: function(xhr, statusText) {
                 activeBrandXhr = null;
+                $('#start_new_btn').prop('disabled', false).html('<i class="ri ri-add-circle-line me-1"></i> Start New Count');
                 if (statusText === 'abort') return;
                 if (activeTableXhr) {
                     activeTableXhr.abort();
@@ -595,16 +649,26 @@ $(document).ready(function() {
                 $('#pagination_bar').addClass('d-none');
                 updateStats({ total_system_qty: 0, total_scanned_qty: 0, remaining_qty: 0, matched_skus: 0, coverage_pct: 0 });
                 const msg = xhr.responseJSON?.message || 'No positive Finished Goods stock found for this Brand.';
-                $('#table_body').html(`<tr><td colspan="9" class="text-center py-4 text-danger">${escapeHtml(msg)}</td></tr>`);
+                $('#table_body').html(`<tr><td colspan="10" class="text-center py-4 text-danger">${escapeHtml(msg)}</td></tr>`);
             }
         });
     }
+
+    let lastProcessedBarcode = '';
+    let lastProcessedTimestamp = 0;
 
     function processScannedBarcode(rawCode, allowRetry = true, allowDuplicate = false) {
         const code = String(rawCode || '').trim();
         hideBarcodeSuggestions();
         if (!code) return;
         $('#barcode_input').val('');
+
+        const now = Date.now();
+        if (!allowDuplicate && code === lastProcessedBarcode && (now - lastProcessedTimestamp) < 350) {
+            return;
+        }
+        lastProcessedBarcode = code;
+        lastProcessedTimestamp = now;
 
         if (currentSessionFinalized) {
             playBeep(210, 0.32, 'sawtooth');
@@ -613,7 +677,6 @@ $(document).ready(function() {
         }
 
         if (!currentSessionId) {
-            // Instant lookup if Brand not yet picked
             $.post(baseUrl + '/quick-check', {
                 _token: csrfToken,
                 code: code,
@@ -645,10 +708,14 @@ $(document).ready(function() {
             success: function(res) {
                 playStatusSound(res.scan_status);
                 updateStats(res.stats);
+                lastScannedLogId = res.log_id || null;
+                const undoBtn = (!currentSessionFinalized && res.log_id)
+                    ? `<button type="button" class="btn btn-sm btn-dark ms-2 fw-bold btn-undo-last-scan" data-log-id="${res.log_id}" title="Undo this scan (or press Ctrl+Z)"><i class="ri ri-arrow-go-back-line me-1"></i>Undo (-1)</button>`
+                    : '';
                 if (res.scan_status === 'matched') {
-                    showScanAlert('alert-success', `<i class="ri ri-checkbox-circle-line me-1"></i> <strong>${escapeHtml(res.message)}</strong>`);
+                    showScanAlert('alert-success', `<i class="ri ri-checkbox-circle-line me-1"></i> <strong>${escapeHtml(res.message)}</strong> ${undoBtn}`);
                 } else if (res.scan_status === 'excess') {
-                    showScanAlert('alert-warning', `<i class="ri ri-error-warning-line me-1"></i> <strong>${escapeHtml(res.message)}</strong>`);
+                    showScanAlert('alert-warning', `<i class="ri ri-error-warning-line me-1"></i> <strong>${escapeHtml(res.message)}</strong> ${undoBtn}`);
                 } else {
                     showScanAlert('alert-danger', `<i class="ri ri-close-circle-line me-1"></i> <strong>${escapeHtml(res.message)}</strong>`);
                 }
@@ -723,9 +790,31 @@ $(document).ready(function() {
     });
 
     $('#start_new_btn').on('click', function() {
-        if ($('#filter_brand_id').val()) {
-            loadBrandSession(null, true);
-        }
+        const brandId = $('#filter_brand_id').val();
+        if (!brandId) return;
+
+        const brandText = $('#filter_brand_id option:selected').text().trim();
+
+        Swal.fire({
+            title: 'Start New Stock Taking?',
+            html: `This will take a fresh system stock snapshot for <strong>${escapeHtml(brandText)}</strong> and start a new count session.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Start New Count',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#696cff'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            const $btn = $('#start_new_btn');
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Starting...');
+            showScanAlert('alert-info', '<i class="ri-loader-4-line ri-spin me-1"></i> <strong>Taking stock snapshot...</strong> Please wait a moment while items are prepared.');
+
+            loadBrandSession(() => {
+                $btn.prop('disabled', false).html('<i class="ri ri-add-circle-line me-1"></i> Start New Count');
+                showScanAlert('alert-success', '<i class="ri ri-checkbox-circle-line me-1"></i> <strong>New session started!</strong> Ready to scan barcodes.');
+            }, true);
+        });
     });
 
     function renderPagination(pg) {
@@ -808,10 +897,11 @@ $(document).ready(function() {
                         <th>Store Location</th>
                         <th>Qty</th>
                         <th>Status & Message</th>
+                        <th class="text-center" style="width: 75px;">Action</th>
                     </tr>
                 `);
                 if (!res.rows.length) {
-                    tbody.html('<tr><td colspan="7" class="text-center py-4 text-muted">No alerts recorded yet.</td></tr>');
+                    tbody.html('<tr><td colspan="8" class="text-center py-4 text-muted">No alerts recorded yet.</td></tr>');
                     return;
                 }
                 let html = '';
@@ -820,6 +910,16 @@ $(document).ready(function() {
                     if (r.scan_status === 'wrong_brand') badge = '<span class="badge bg-danger">Wrong Brand</span>';
                     else if (r.scan_status === 'zero_stock') badge = '<span class="badge bg-secondary">Zero Stock</span>';
                     else if (r.scan_status === 'duplicate') badge = '<span class="badge bg-warning text-dark">Duplicate</span>';
+
+                    let logActionHtml = '<span class="text-muted small">-</span>';
+                    if (!currentSessionFinalized && r.id) {
+                        logActionHtml = `
+                            <button type="button" class="btn btn-xs btn-outline-danger btn-log-delete" data-log-id="${r.id}" title="Delete this scan log" style="padding: 1px 6px;">
+                                <i class="ri ri-delete-bin-line"></i>
+                            </button>
+                        `;
+                    }
+
                     html += `
                         <tr>
                             <td class="small">${escapeHtml(r.time)}</td>
@@ -829,6 +929,7 @@ $(document).ready(function() {
                             <td>${escapeHtml(r.store_location || '-')}</td>
                             <td>${Number(r.qty).toFixed(0)}</td>
                             <td>${badge} <small class="ms-1">${escapeHtml(r.message)}</small></td>
+                            <td class="text-center">${logActionHtml}</td>
                         </tr>
                     `;
                 });
@@ -847,11 +948,12 @@ $(document).ready(function() {
                     <th>Variance</th>
                     <th>Status</th>
                     <th>Store Location</th>
+                    <th class="text-center" style="width: 105px;">Action</th>
                 </tr>
             `);
 
             if (!res.rows.length) {
-                tbody.html('<tr><td colspan="9" class="text-center py-4 text-muted">No items found for this filter.</td></tr>');
+                tbody.html('<tr><td colspan="10" class="text-center py-4 text-muted">No items found for this filter.</td></tr>');
                 return;
             }
 
@@ -892,6 +994,20 @@ $(document).ready(function() {
                     ? `<span class="badge bg-light text-dark border">${escapeHtml(r.store_location)}</span>`
                     : '<span class="text-muted">-</span>';
 
+                let actionHtml = '<span class="text-muted small">-</span>';
+                if (!currentSessionFinalized && scan > 0) {
+                    actionHtml = `
+                        <div class="d-inline-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-warning btn-item-decrement" data-id="${r.id}" data-sku="${escapeHtml(r.sku)}" title="Reduce scanned qty by 1 (-1)" style="padding: 1px 7px; font-weight: bold; font-size: 0.75rem;">
+                                <i class="ri ri-subtract-line"></i> 1
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-danger btn-item-reset" data-id="${r.id}" data-sku="${escapeHtml(r.sku)}" data-scan="${scan.toFixed(0)}" title="Reset scanned count to 0" style="padding: 1px 6px; font-size: 0.75rem;">
+                                <i class="ri ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+
                 html += `
                     <tr class="${rowCls}">
                         <td>
@@ -907,6 +1023,7 @@ $(document).ready(function() {
                         <td>${varHtml}</td>
                         <td>${badge}</td>
                         <td>${locHtml}</td>
+                        <td class="text-center">${actionHtml}</td>
                     </tr>
                 `;
             });
@@ -1013,7 +1130,6 @@ $(document).ready(function() {
         }
     });
 
-    // Mobile Camera Scanner matching sales_invoice/scan_items.blade.php
     let html5QrCode = null;
     let isCameraOpen = false;
     let camLock = false;
@@ -1054,6 +1170,93 @@ $(document).ready(function() {
             $('#reader').hide();
             showScanAlert('alert-danger', '<strong>Error:</strong> Could not start camera. Please ensure camera permissions are granted.');
         });
+    });
+
+    function performUndo(params) {
+        if (!currentSessionId || currentSessionFinalized) return;
+
+        const postData = Object.assign({ _token: csrfToken }, params);
+
+        $.ajax({
+            url: baseUrl + '/session/' + currentSessionId + '/undo',
+            type: 'POST',
+            data: postData,
+            success: function(res) {
+                playBeep(440, 0.15, 'sine');
+                updateStats(res.stats);
+                showScanAlert('alert-info', `<i class="ri ri-arrow-go-back-line me-1"></i> <strong>${escapeHtml(res.message)}</strong>`);
+                lastScannedLogId = null;
+                loadTable(currentPage);
+                refocusScanner();
+            },
+            error: function(xhr) {
+                playBeep(210, 0.3, 'sawtooth');
+                const msg = xhr.responseJSON?.message || 'Unable to undo scan.';
+                showScanAlert('alert-danger', `<i class="ri ri-error-warning-line me-1"></i> ${escapeHtml(msg)}`);
+                refocusScanner();
+            }
+        });
+    }
+
+    $(document).on('click', '.btn-undo-last-scan', function() {
+        const logId = $(this).data('log-id');
+        performUndo({ log_id: logId });
+    });
+
+    $(document).on('click', '.btn-item-decrement', function() {
+        const itemId = $(this).data('id');
+        performUndo({ item_id: itemId, action: 'decrement' });
+    });
+
+    $(document).on('click', '.btn-item-reset', function() {
+        const itemId = $(this).data('id');
+        const sku = $(this).data('sku');
+        const currentScan = $(this).data('scan');
+        Swal.fire({
+            title: 'Reset Scanned Qty?',
+            html: `Are you sure you want to reset scanned count for <strong>${escapeHtml(sku)}</strong> (current: <strong>${currentScan}</strong>) back to <strong>0</strong>?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Reset to 0',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performUndo({ item_id: itemId, action: 'reset' });
+            }
+        });
+    });
+
+    $(document).on('click', '.btn-log-delete', function() {
+        const logId = $(this).data('log-id');
+        Swal.fire({
+            title: 'Delete this scan entry?',
+            text: 'This will remove this scan entry and adjust the counted stock.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Delete',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performUndo({ log_id: logId });
+            }
+        });
+    });
+
+    $(document).on('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+            if (activeTag === 'input' && document.activeElement.id !== 'barcode_input' && $(document.activeElement).val().length > 0) {
+                return;
+            }
+            if (currentSessionId && !currentSessionFinalized) {
+                e.preventDefault();
+                performUndo(lastScannedLogId ? { log_id: lastScannedLogId } : {});
+            }
+        }
     });
 
     function openSessionById(sessionId) {
@@ -1101,6 +1304,21 @@ $(document).ready(function() {
     } else if ($('#filter_brand_id').val()) {
         loadBrandSession(null, false);
     }
+
+    $('#btn_open_stock_entry').on('click', function(e) {
+        e.preventDefault();
+        const brandId = $('#filter_brand_id').val();
+        const storeTypeId = $('#filter_store_type_id').val();
+        const warehouseId = $('#filter_warehouse_id').val();
+        const storeLocationId = $('#filter_store_location_id').val();
+        const params = new URLSearchParams();
+        if (brandId) params.append('brand_id', brandId);
+        if (storeTypeId) params.append('store_type_id', storeTypeId);
+        if (warehouseId) params.append('warehouse_id', warehouseId);
+        if (storeLocationId) params.append('store_location_id', storeLocationId);
+        const query = params.toString();
+        window.location.href = '{{ url("fg_stock_taking/open-stock-entry") }}' + (query ? '?' + query : '');
+    });
 });
 </script>
 @endsection
