@@ -542,10 +542,14 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('fg_stock_taking/session/{id}/items', [FgStockTakingController::class, 'itemsData']);
     Route::get('fg_stock_taking/session/{id}/export', [FgStockTakingController::class, 'exportExcel']);
     Route::get('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'openStockEntryPage']);
+    Route::get('fg_stock_taking/open-stock-entry/edit/{id}', [FgStockTakingController::class, 'openStockEntryPage']);
     Route::post('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'storeOpenStockEntry']);
+    Route::get('fg_stock_taking/get-item-price', [FgStockTakingController::class, 'getItemPrice']);
     Route::get('fg_stock_taking/open-stock-logs', [FgStockTakingController::class, 'openStockLogs']);
     Route::get('fg_stock_taking/open-stock-logs-data', [FgStockTakingController::class, 'openStockLogsData']);
     Route::get('fg_stock_taking/open-stock-logs/export', [FgStockTakingController::class, 'exportOpenStockLogs']);
+    Route::get('fg_stock_taking/open-stock-logs/details', [FgStockTakingController::class, 'openStockEntryDetails']);
+    Route::get('fg_stock_taking/open-stock-logs/view/{entry_no}', [FgStockTakingController::class, 'openStockEntryView']);
     Route::delete('fg_stock_taking/open-stock-logs/{id}', [FgStockTakingController::class, 'deleteOpenStockLog']);
     Route::post('fg_stock_taking/open-stock-logs/{id}/delete', [FgStockTakingController::class, 'deleteOpenStockLog']);
 
@@ -732,6 +736,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('production_receipts/export-excel', [ProductionReceiptController::class, 'exportExcel']);
     Route::get('production_receipts/report', [ProductionReceiptController::class, 'report']);
     Route::get('production_receipts/report/export', [ProductionReceiptController::class, 'exportReport']);
+    Route::get('production_receipts/pending-reasons/{jobCardId}', [ProductionReceiptController::class, 'getPendingReasons']);
+    Route::post('production_receipts/pending-reasons/{jobCardId}', [ProductionReceiptController::class, 'savePendingReasons']);
 
     /* Shifts */
     Route::get('shifts', [ShiftController::class, 'index']);

@@ -26,6 +26,7 @@ class SalesMarketingReportController extends Controller
         $customers = Customer::where('status', 'Active')->select('id', 'name', 'code')->orderBy('name', 'asc')->get();
         $executives = SalesAgent::where('status', 'Active')->select('id', 'name', 'code')->orderBy('name', 'asc')->get();
         $brands = Brand::where('status', 'Active')->select('id', 'brand_name', 'code')->orderBy('brand_name', 'asc')->get();
+        $zones = Zone::whereIn('status', ['active', 'Active'])->orderBy('zone_name', 'asc')->get();
 
         $orders = collect();
         $incentiveReport = [];
@@ -33,7 +34,7 @@ class SalesMarketingReportController extends Controller
         $outstandingReport = [];
         $creditNotes = collect();
 
-        return view('reports/sales_marketing_report', compact('orders', 'customers', 'executives', 'brands', 'incentiveReport', 'comparisonReport', 'outstandingReport', 'creditNotes'));
+        return view('reports/sales_marketing_report', compact('orders', 'customers', 'executives', 'brands', 'zones', 'incentiveReport', 'comparisonReport', 'outstandingReport', 'creditNotes'));
     }
 
     public function ajaxReportData(Request $request, $type)
@@ -2342,6 +2343,7 @@ class SalesMarketingReportController extends Controller
                     $fyEndYear = (int)($fyParts[1] ?? ($fyStartYear + 1));
 
                     $selectedQuarter = $request->filled('incentive_quarter') ? strtoupper(trim((string)$request->incentive_quarter)) : 'ALL';
+                    $selectedZoneId = $request->filled('zone_id') ? (int)$request->zone_id : null;
 
                     $multiplier = 12;
                     switch ($selectedQuarter) {
@@ -2420,6 +2422,59 @@ class SalesMarketingReportController extends Controller
                         ->select('cn.agent_id', DB::raw('SUM(cni.quantity) as return_qty'))
                         ->pluck('return_qty', 'cn.agent_id');
 
+                    $activeAgentIds = $agents->pluck('id')->all();
+
+                    $unassignedOrdersData = DB::table('sales_order_items as soi')
+                        ->join('sales_orders as so', 'soi.sale_order_id', '=', 'so.id')
+                        ->leftJoin('customers as c', 'c.id', '=', 'so.customer_id')
+                        ->whereNull('so.deleted_at')
+                        ->whereNull('soi.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('so.status')
+                              ->orWhereRaw('LOWER(so.status) != ?', ['cancelled']);
+                        })
+                        ->where('so.so_date', '>=', $incentiveFromDate)
+                        ->where('so.so_date', '<=', $incentiveToDate)
+                        ->where(function($q) use ($activeAgentIds) {
+                            $q->whereNull('so.agent_id')
+                              ->orWhere('so.agent_id', 0)
+                              ->orWhereNotIn('so.agent_id', $activeAgentIds);
+                        })
+                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId))
+                        ->groupBy(DB::raw('COALESCE(so.zone_id, c.zone_id)'))
+                        ->select(
+                            DB::raw('COALESCE(so.zone_id, c.zone_id) as zone_id'),
+                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) NOT LIKE '%discount%' AND COALESCE(so.sales_discount_percent, 0) <= 10 THEN soi.qty ELSE 0 END) as regular_qty"),
+                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) LIKE '%discount%' OR COALESCE(so.sales_discount_percent, 0) > 10 THEN soi.qty ELSE 0 END) as discount_qty")
+                        )
+                        ->get()
+                        ->keyBy('zone_id');
+
+                    $unassignedReturns = DB::table('credit_note_items as cni')
+                        ->join('credit_notes as cn', 'cni.credit_note_id', '=', 'cn.id')
+                        ->leftJoin('customers as c', 'c.id', '=', 'cn.customer_id')
+                        ->whereNull('cn.deleted_at')
+                        ->whereNull('cni.deleted_at')
+                        ->where(function($q) {
+                            $q->whereNull('cn.status')
+                              ->orWhereRaw('LOWER(cn.status) != ?', ['cancelled']);
+                        })
+                        ->whereIn('cn.reason', ['Unorder PCS', 'Customer Non Moving'])
+                        ->where('cn.note_date', '>=', $incentiveFromDate)
+                        ->where('cn.note_date', '<=', $incentiveToDate)
+                        ->where(function($q) use ($activeAgentIds) {
+                            $q->whereNull('cn.agent_id')
+                              ->orWhere('cn.agent_id', 0)
+                              ->orWhereNotIn('cn.agent_id', $activeAgentIds);
+                        })
+                        ->when($customerId, fn($q) => $q->where('cn.customer_id', $customerId))
+                        ->groupBy(DB::raw('COALESCE(cn.zone_id, c.zone_id)'))
+                        ->select(
+                            DB::raw('COALESCE(cn.zone_id, c.zone_id) as zone_id'),
+                            DB::raw('SUM(cni.quantity) as return_qty')
+                        )
+                        ->pluck('return_qty', 'zone_id');
+
                     $incentiveReport = [];
                     $setting = \App\Models\Setting::first();
                     $refinishingRate = floatval($setting->refinishing_amount ?? 0);
@@ -2434,7 +2489,16 @@ class SalesMarketingReportController extends Controller
                     $sumTotalNetIncentiveAmt = 0;
 
                     foreach ($agents as $agent) {
-                        if ($agentId && $agent->id != $agentId) continue;
+                        if ($agentId && $agentId !== 'all' && $agent->id != $agentId) continue;
+
+                        $agentZoneId = !empty($agent->zone_id) ? (int)$agent->zone_id : null;
+                        if ($selectedZoneId && $agentZoneId !== $selectedZoneId) {
+                            $mappedZoneName = !empty($agent->city_id) ? ($cityIdToZone[$agent->city_id] ?? null) : null;
+                            $selectedZoneName = $zones->firstWhere('id', $selectedZoneId)?->zone_name;
+                            if (!$mappedZoneName || $mappedZoneName !== $selectedZoneName) {
+                                continue;
+                            }
+                        }
 
                         $zoneName = '-';
                         if (!empty($agent->zone_id)) {
@@ -2502,6 +2566,78 @@ class SalesMarketingReportController extends Controller
                         }
                     }
 
+                    if (!$agentId || $agentId === 'unknown' || $agentId === 'all') {
+                        $allUnassignedZoneIds = array_unique(array_merge(
+                            $unassignedOrdersData->keys()->map(fn($k) => (string)$k)->all(),
+                            $unassignedReturns->keys()->map(fn($k) => (string)$k)->all()
+                        ));
+
+                        foreach ($allUnassignedZoneIds as $uZoneId) {
+                            if ($selectedZoneId && (int)$uZoneId !== $selectedZoneId) {
+                                continue;
+                            }
+
+                            $uRegularQty = floatval($unassignedOrdersData[$uZoneId]->regular_qty ?? 0);
+                            $uDiscountQty = floatval($unassignedOrdersData[$uZoneId]->discount_qty ?? 0);
+                            $uReturnQty = floatval($unassignedReturns[$uZoneId] ?? 0);
+
+                            if ($uRegularQty <= 0 && $uDiscountQty <= 0 && $uReturnQty <= 0) {
+                                continue;
+                            }
+
+                            $uZoneName = '-';
+                            if (!empty($uZoneId)) {
+                                $z = $zones->firstWhere('id', (int)$uZoneId);
+                                if ($z) {
+                                    $uZoneName = $z->zone_name;
+                                }
+                            }
+                            if ($uZoneName === '-') {
+                                $uZoneName = 'Unassigned';
+                            }
+
+                            $uAgentDisplay = '<span class="badge bg-label-secondary">Unknown</span> <small class="text-muted">(-)</small>';
+                            $uAgentRawName = $uZoneName . ' - Unknown (-)';
+
+                            if ($search) {
+                                if (stripos((string)$uZoneName, $search) === false &&
+                                    stripos((string)$uAgentRawName, $search) === false &&
+                                    stripos('Unknown', $search) === false &&
+                                    stripos('-', $search) === false) {
+                                    continue;
+                                }
+                            }
+
+                            $sumTotalAchieved += $uRegularQty;
+                            $sumTotalDiscount += $uDiscountQty;
+                            $sumTotalReturn += $uReturnQty;
+
+                            $incentiveReport[] = [
+                                'agent_id' => 'unknown_zone_' . ($uZoneId ?: 0),
+                                'agent_raw_name' => $uAgentRawName,
+                                'zone' => '<span class="fw-bold text-primary">' . htmlspecialchars((string)$uZoneName) . '</span>',
+                                'agent' => $uAgentDisplay,
+                                'target' => '<span class="text-muted">0</span>',
+                                'achieved' => '<span class="fw-bold text-dark">' . number_format($uRegularQty, 0) . '</span>',
+                                'discount_qty' => '<span class="text-muted">' . number_format($uDiscountQty, 0) . '</span>',
+                                'return_qty' => $uReturnQty > 0 
+                                    ? '<span class="text-danger fw-semibold">-' . number_format($uReturnQty, 0) . '</span>' 
+                                    : '<span class="text-muted">0</span>',
+                                'incentive_qty' => '<span class="text-muted">0</span>',
+                                'rate_per_pcs' => '<span class="text-muted">₹0.00</span>',
+                                'incentive_amt' => '<span class="text-muted">₹0.00</span>',
+                                'refinishing_amt' => '<span class="text-muted">₹0.00</span>',
+                                'net_incentive_amt' => '<span class="text-muted">₹0.00</span>',
+                            ];
+                        }
+                    }
+
+                    usort($incentiveReport, function($a, $b) {
+                        $zoneA = strip_tags($a['zone'] ?? '');
+                        $zoneB = strip_tags($b['zone'] ?? '');
+                        return strnatcasecmp($zoneA, $zoneB) ?: strnatcasecmp($a['agent_raw_name'] ?? '', $b['agent_raw_name'] ?? '');
+                    });
+
                     $totalRecords = count($incentiveReport);
                     $pagedIncentives = ($length > 0 && $length !== -1) ? array_slice($incentiveReport, $start, $length) : $incentiveReport;
 
@@ -2536,15 +2672,24 @@ class SalesMarketingReportController extends Controller
                         ]);
                     }
 
-                    $agent = SalesAgent::find($targetAgentId);
-                    if (!$agent) {
-                        return response()->json([
-                            'draw' => $draw,
-                            'recordsTotal' => 0,
-                            'recordsFiltered' => 0,
-                            'data' => [],
-                            'totals' => []
-                        ]);
+                    $isUnknownZone = is_string($targetAgentId) && str_starts_with($targetAgentId, 'unknown_zone_');
+                    $unknownZoneId = $isUnknownZone ? (int)str_replace('unknown_zone_', '', $targetAgentId) : null;
+
+                    $isZoneDrilldown = is_string($targetAgentId) && str_starts_with($targetAgentId, 'zone_');
+                    $drilldownZoneId = $isZoneDrilldown ? (int)str_replace('zone_', '', $targetAgentId) : null;
+
+                    $agent = null;
+                    if (!$isUnknownZone && !$isZoneDrilldown) {
+                        $agent = SalesAgent::find($targetAgentId);
+                        if (!$agent) {
+                            return response()->json([
+                                'draw' => $draw,
+                                'recordsTotal' => 0,
+                                'recordsFiltered' => 0,
+                                'data' => [],
+                                'totals' => []
+                            ]);
+                        }
                     }
 
                     $currMonth = (int)date('n');
@@ -2557,6 +2702,7 @@ class SalesMarketingReportController extends Controller
                     $fyEndYear = (int)($fyParts[1] ?? ($fyStartYear + 1));
 
                     $selectedQuarter = $request->filled('incentive_quarter') ? strtoupper(trim((string)$request->incentive_quarter)) : 'ALL';
+                    $selectedZoneId = $request->filled('zone_id') ? (int)$request->zone_id : null;
 
                     $multiplier = 12;
                     switch ($selectedQuarter) {
@@ -2592,8 +2738,11 @@ class SalesMarketingReportController extends Controller
                     $setting = \App\Models\Setting::first();
                     $refinishingRate = floatval($setting->refinishing_amount ?? 0);
 
-                    $soItems = DB::table('sales_order_items as soi')
+                    $activeAgentIds = SalesAgent::whereIn('status', ['active', 'Active'])->pluck('id')->all();
+
+                    $soQuery = DB::table('sales_order_items as soi')
                         ->join('sales_orders as so', 'soi.sale_order_id', '=', 'so.id')
+                        ->leftJoin('customers as c', 'c.id', '=', 'so.customer_id')
                         ->leftJoin('stock_entry_items as sei', 'soi.stock_entry_item_id', '=', 'sei.id')
                         ->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
                         ->whereNull('so.deleted_at')
@@ -2602,29 +2751,56 @@ class SalesMarketingReportController extends Controller
                             $q->whereNull('so.status')
                               ->orWhereRaw('LOWER(so.status) != ?', ['cancelled']);
                         })
-                        ->where('so.agent_id', $targetAgentId)
                         ->where('so.so_date', '>=', $incentiveFromDate)
                         ->where('so.so_date', '<=', $incentiveToDate)
-                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId))
-                        ->select(
-                            'soi.id',
-                            'soi.qty',
-                            'soi.rate',
-                            'soi.amount',
-                            'soi.art_no',
-                            'soi.sku',
-                            'soi.item_name',
-                            'soi.category_name',
-                            'soi.categories_path_val',
-                            'so.order_type',
-                            'so.sales_discount_percent',
-                            'sei.brand_id as stock_brand_id',
-                            'b.brand_name as stock_brand_name'
-                        )
-                        ->get();
+                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId));
 
-                    $cnItems = DB::table('credit_note_items as cni')
+                    if ($isZoneDrilldown) {
+                        if ($drilldownZoneId > 0) {
+                            $soQuery->where(function($q) use ($drilldownZoneId) {
+                                $q->where('so.zone_id', $drilldownZoneId)
+                                  ->orWhere(function($sub) use ($drilldownZoneId) {
+                                      $sub->whereNull('so.zone_id')->where('c.zone_id', $drilldownZoneId);
+                                  });
+                            });
+                        }
+                    } elseif ($isUnknownZone) {
+                        $soQuery->where(function($q) use ($activeAgentIds) {
+                            $q->whereNull('so.agent_id')
+                              ->orWhere('so.agent_id', 0)
+                              ->orWhereNotIn('so.agent_id', $activeAgentIds);
+                        });
+                        if ($unknownZoneId > 0) {
+                            $soQuery->where(function($q) use ($unknownZoneId) {
+                                $q->where('so.zone_id', $unknownZoneId)
+                                  ->orWhere(function($sub) use ($unknownZoneId) {
+                                      $sub->whereNull('so.zone_id')->where('c.zone_id', $unknownZoneId);
+                                  });
+                            });
+                        }
+                    } else {
+                        $soQuery->where('so.agent_id', $targetAgentId);
+                    }
+
+                    $soItems = $soQuery->select(
+                        'soi.id',
+                        'soi.qty',
+                        'soi.rate',
+                        'soi.amount',
+                        'soi.art_no',
+                        'soi.sku',
+                        'soi.item_name',
+                        'soi.category_name',
+                        'soi.categories_path_val',
+                        'so.order_type',
+                        'so.sales_discount_percent',
+                        'sei.brand_id as stock_brand_id',
+                        'b.brand_name as stock_brand_name'
+                    )->get();
+
+                    $cnQuery = DB::table('credit_note_items as cni')
                         ->join('credit_notes as cn', 'cni.credit_note_id', '=', 'cn.id')
+                        ->leftJoin('customers as c', 'c.id', '=', 'cn.customer_id')
                         ->leftJoin('stock_entry_items as sei1', 'cni.stock_entry_item_id', '=', 'sei1.id')
                         ->leftJoin('brands as b1', 'sei1.brand_id', '=', 'b1.id')
                         ->leftJoin('sales_invoice_items as sii', 'cni.sales_invoice_item_id', '=', 'sii.id')
@@ -2637,11 +2813,38 @@ class SalesMarketingReportController extends Controller
                               ->orWhereRaw('LOWER(cn.status) != ?', ['cancelled']);
                         })
                         ->whereIn('cn.reason', ['Unorder PCS', 'Customer Non Moving'])
-                        ->where('cn.agent_id', $targetAgentId)
                         ->where('cn.note_date', '>=', $incentiveFromDate)
                         ->where('cn.note_date', '<=', $incentiveToDate)
-                        ->when($customerId, fn($q) => $q->where('cn.customer_id', $customerId))
-                        ->select(
+                        ->when($customerId, fn($q) => $q->where('cn.customer_id', $customerId));
+
+                    if ($isZoneDrilldown) {
+                        if ($drilldownZoneId > 0) {
+                            $cnQuery->where(function($q) use ($drilldownZoneId) {
+                                $q->where('cn.zone_id', $drilldownZoneId)
+                                  ->orWhere(function($sub) use ($drilldownZoneId) {
+                                      $sub->whereNull('cn.zone_id')->where('c.zone_id', $drilldownZoneId);
+                                  });
+                            });
+                        }
+                    } elseif ($isUnknownZone) {
+                        $cnQuery->where(function($q) use ($activeAgentIds) {
+                            $q->whereNull('cn.agent_id')
+                              ->orWhere('cn.agent_id', 0)
+                              ->orWhereNotIn('cn.agent_id', $activeAgentIds);
+                        });
+                        if ($unknownZoneId > 0) {
+                            $cnQuery->where(function($q) use ($unknownZoneId) {
+                                $q->where('cn.zone_id', $unknownZoneId)
+                                  ->orWhere(function($sub) use ($unknownZoneId) {
+                                      $sub->whereNull('cn.zone_id')->where('c.zone_id', $unknownZoneId);
+                                  });
+                            });
+                        }
+                    } else {
+                        $cnQuery->where('cn.agent_id', $targetAgentId);
+                    }
+
+                    $cnItems = $cnQuery->select(
                             'cni.id',
                             'cni.quantity',
                             'cni.art_no',

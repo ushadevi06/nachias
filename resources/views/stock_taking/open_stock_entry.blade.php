@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'Add Open Stock Entry - ' . env('WEBSITE_NAME'))
+@section('title', (!empty($isEdit) ? 'Edit Open Stock Entry - ' . ($editEntryNo ?? '') : 'Add Open Stock Entry') . ' - ' . env('WEBSITE_NAME'))
 
 @section('content')
 <div class="container-xxl section-padding">
@@ -10,10 +10,19 @@
         <div class="col-lg-12">
             <form id="form_open_stock_entry" action="{{ url('fg_stock_taking/open-stock-entry') }}" method="POST" class="common-form" autocomplete="off" novalidate>
                 @csrf
+                @if(!empty($isEdit) && !empty($editEntryNo))
+                    <input type="hidden" name="existing_entry_no" value="{{ $editEntryNo }}">
+                @endif
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                            <h4 class="mb-0">Add Open Stock Entry</h4>
+                            <h4 class="mb-0">
+                                @if(!empty($isEdit))
+                                    Edit Open Stock Entry <span class="badge bg-primary text-white fs-6 ms-2">{{ $editEntryNo }}</span>
+                                @else
+                                    Add Open Stock Entry
+                                @endif
+                            </h4>
                             <div class="d-flex gap-2">
                                 <a href="{{ url('fg_stock_taking/open-stock-logs') }}" class="btn btn-outline-info">
                                     <i class="ri ri-file-list-3-line me-1"></i> Open Stock Logs
@@ -80,7 +89,7 @@
 
                             <div class="col-md-6 col-lg-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="entry_date" id="ose_entry_date" class="form-control flatpickr @error('entry_date') is-invalid @enderror" value="{{ old('entry_date', date('d-m-Y')) }}" placeholder="DD-MM-YYYY">
+                                    <input type="text" name="entry_date" id="ose_entry_date" class="form-control flatpickr @error('entry_date') is-invalid @enderror" value="{{ old('entry_date', $entryDate ?? date('d-m-Y')) }}" placeholder="DD-MM-YYYY">
                                     <label for="ose_entry_date">Stock Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('entry_date')
@@ -90,7 +99,7 @@
 
                             <div class="col-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="remarks" id="ose_remarks" class="form-control @error('remarks') is-invalid @enderror" value="{{ old('remarks') }}" placeholder="Enter Remarks">
+                                    <input type="text" name="remarks" id="ose_remarks" class="form-control @error('remarks') is-invalid @enderror" value="{{ old('remarks', $headerRemarks ?? '') }}" placeholder="Enter Remarks">
                                     <label for="ose_remarks">Remarks</label>
                                 </div>
                                 @error('remarks')
@@ -123,7 +132,6 @@
                                         <th style="min-width: 160px;">Art No <span class="text-danger">*</span></th>
                                         <th style="min-width: 220px;">Style <span class="text-danger">*</span></th>
                                         <th style="min-width: 150px;">Size <span class="text-danger">*</span></th>
-                                        <th style="min-width: 220px;">Color</th>
                                         <th style="min-width: 160px;">Sleeve</th>
                                         <th style="width: 120px; min-width: 120px;">Qty In <span class="text-danger">*</span></th>
                                         <th style="width: 130px; min-width: 130px;">Price (₹)</th>
@@ -145,8 +153,8 @@
                         </div>
 
                         <div class="button-box mt-4 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary text-uppercase px-4" id="btn_ose_submit">Submit</button>
-                            <a href="{{ url('fg_stock_taking') }}" class="btn btn-secondary text-uppercase">Cancel</a>
+                            <button type="submit" class="btn btn-primary text-uppercase px-4" id="btn_ose_submit">{{ !empty($isEdit) ? 'Update Entry' : 'Submit' }}</button>
+                            <a href="{{ url('fg_stock_taking/open-stock-logs') }}" class="btn btn-secondary text-uppercase">Cancel</a>
                         </div>
                     </div>
                 </div>
@@ -155,7 +163,47 @@
     </div>
 </div>
 
+<div id="ose_autocomplete_dropdown" class="ose-autocomplete-menu"></div>
+
 <style>
+    #ose_autocomplete_dropdown {
+        position: absolute;
+        z-index: 99999;
+        background: #ffffff;
+        border: 1px solid #d9dee3;
+        border-radius: 0.375rem;
+        box-shadow: 0 4px 18px rgba(50, 50, 93, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+        max-height: 250px;
+        overflow-y: auto;
+        display: none;
+        padding: 4px 0;
+    }
+    .ose-autocomplete-item {
+        padding: 8px 14px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        color: #566a7f;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.12s ease;
+    }
+    .ose-autocomplete-item:hover,
+    .ose-autocomplete-item.active {
+        background-color: #f2f3ff;
+        color: #696cff;
+        font-weight: 600;
+    }
+    .ose-autocomplete-item mark {
+        background-color: transparent;
+        color: #696cff;
+        font-weight: 700;
+        padding: 0;
+        text-decoration: underline;
+    }
+    #ose_items_table .ose-product-name {
+        text-transform: uppercase;
+    }
     #ose_items_table input.form-control,
     #ose_items_table select.form-select {
         height: 48px;
@@ -295,7 +343,8 @@ $(document).ready(function() {
     const OSE_UOMS = @json($uoms ?? []);
     const OSE_LOCATIONS = @json($storeLocations ?? []);
     const OSE_SIZES = ['38', '39', '40', '42', '44', '46', '48', '50', '36'];
-    const INITIAL_ITEMS = @json(old('items', []));
+    const OSE_PRODUCT_SUGGESTIONS = @json($productSuggestions ?? []);
+    const INITIAL_ITEMS = @json(old('items', $existingItems ?? []));
     const SERVER_ERRORS = @json(isset($errors) ? $errors->toArray() : []);
     let oseRowCounter = 0;
 
@@ -362,7 +411,7 @@ $(document).ready(function() {
             <tr class="ose-item-row" data-index="${idx}">
                 <td class="text-center small text-muted fw-bold ose-row-num">1</td>
                 <td>
-                    <input type="text" name="items[${idx}][product_name]" class="form-control ose-product-name ${errProd ? 'is-invalid' : ''}" value="${escapeHtml(productName)}" placeholder="e.g. CF-PLN-FS">
+                    <input type="text" name="items[${idx}][product_name]" class="form-control ose-product-name text-uppercase ${errProd ? 'is-invalid' : ''}" value="${escapeHtml(productName)}" placeholder="e.g. CF-PLN-FS" autocomplete="off">
                     <div class="text-danger small ose-err ose-err-product-name">${escapeHtml(errProd)}</div>
                 </td>
                 <td>
@@ -380,11 +429,6 @@ $(document).ready(function() {
                         ${sizeOptionsHtml}
                     </select>
                     <div class="text-danger small ose-err ose-err-size">${escapeHtml(errSize)}</div>
-                </td>
-                <td>
-                    <select name="items[${idx}][color_id]" class="form-select select2 ose-color" data-placeholder="Select Color">
-                        ${colorOptionsHtml}
-                    </select>
                 </td>
                 <td>
                     <select name="items[${idx}][sleeve_type]" class="form-select select2 ose-sleeve-type ${errSleeve ? 'is-invalid' : ''}" data-placeholder="Sleeve">
@@ -494,12 +538,160 @@ $(document).ready(function() {
         }
     }
 
-    $(document).on('input blur', '.ose-product-name', function(e) {
+    // ==========================================
+    // Custom JS Autocomplete for Product Name
+    // ==========================================
+    let $activeAutocompleteInput = null;
+    let activeItemIndex = -1;
+
+    function highlightMatch(text, query) {
+        if (!query) return escapeHtml(text);
+        const idx = text.toUpperCase().indexOf(query.toUpperCase());
+        if (idx === -1) return escapeHtml(text);
+        const before = escapeHtml(text.substring(0, idx));
+        const match = escapeHtml(text.substring(idx, idx + query.length));
+        const after = escapeHtml(text.substring(idx + query.length));
+        return `${before}<mark>${match}</mark>${after}`;
+    }
+
+    function positionAutocomplete($input) {
+        if (!$input || !$input.length) return;
+        const offset = $input.offset();
+        const height = $input.outerHeight();
+        const width = $input.outerWidth();
+        $('#ose_autocomplete_dropdown').css({
+            top: (offset.top + height + 2) + 'px',
+            left: offset.left + 'px',
+            minWidth: Math.max(width, 240) + 'px',
+            width: Math.max(width, 240) + 'px'
+        });
+    }
+
+    function showAutocomplete($input) {
+        $activeAutocompleteInput = $input;
+        const query = ($input.val() || '').trim().toUpperCase();
+
+        let matches = [];
+        if (!query) {
+            matches = OSE_PRODUCT_SUGGESTIONS.slice(0, 15);
+        } else {
+            const startsWith = [];
+            const contains = [];
+            for (let i = 0; i < OSE_PRODUCT_SUGGESTIONS.length; i++) {
+                const code = OSE_PRODUCT_SUGGESTIONS[i];
+                const upper = code.toUpperCase();
+                if (upper.startsWith(query)) {
+                    startsWith.push(code);
+                } else if (upper.includes(query)) {
+                    contains.push(code);
+                }
+            }
+            matches = startsWith.concat(contains).slice(0, 20);
+        }
+
+        if (!matches.length) {
+            $('#ose_autocomplete_dropdown').hide();
+            return;
+        }
+
+        let html = '';
+        matches.forEach((code, i) => {
+            const parts = code.split('-');
+            let hint = '';
+            if (parts.length >= 2) {
+                hint = parts[1];
+                if (parts.length >= 3) hint += ' · ' + (parts[2] === 'FS' ? 'Full' : 'Half');
+            }
+            html += `
+                <div class="ose-autocomplete-item ${i === 0 ? 'active' : ''}" data-code="${escapeHtml(code)}">
+                    <span>${highlightMatch(code, query)}</span>
+                    ${hint ? `<span class="badge bg-label-primary rounded-pill small ms-2">${escapeHtml(hint)}</span>` : ''}
+                </div>
+            `;
+        });
+
+        activeItemIndex = 0;
+        $('#ose_autocomplete_dropdown').html(html);
+        positionAutocomplete($input);
+        $('#ose_autocomplete_dropdown').show();
+    }
+
+    function selectAutocompleteItem($item) {
+        if (!$activeAutocompleteInput || !$item.length) return;
+        const code = $item.data('code');
+        $activeAutocompleteInput.val(code);
+        $activeAutocompleteInput.trigger('change');
+        $('#ose_autocomplete_dropdown').hide();
+        $activeAutocompleteInput.focus();
+    }
+
+    $(document).on('focus', '.ose-product-name', function() {
+        showAutocomplete($(this));
+    });
+
+    $(document).on('input', '.ose-product-name', function() {
+        showAutocomplete($(this));
+    });
+
+    $(document).on('keydown', '.ose-product-name', function(e) {
+        const $dropdown = $('#ose_autocomplete_dropdown');
+        if (!$dropdown.is(':visible')) {
+            if (e.key === 'ArrowDown') {
+                showAutocomplete($(this));
+                e.preventDefault();
+            }
+            return;
+        }
+
+        const $items = $dropdown.find('.ose-autocomplete-item');
+        if (!$items.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeItemIndex = (activeItemIndex + 1) % $items.length;
+            $items.removeClass('active').eq(activeItemIndex).addClass('active');
+            const itemEl = $items.get(activeItemIndex);
+            if (itemEl) itemEl.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeItemIndex = (activeItemIndex - 1 + $items.length) % $items.length;
+            $items.removeClass('active').eq(activeItemIndex).addClass('active');
+            const itemEl = $items.get(activeItemIndex);
+            if (itemEl) itemEl.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const $active = $items.eq(activeItemIndex);
+            if ($active.length) {
+                selectAutocompleteItem($active);
+            }
+        } else if (e.key === 'Escape') {
+            $dropdown.hide();
+        }
+    });
+
+    $(document).on('mousedown', '.ose-autocomplete-item', function(e) {
+        e.preventDefault();
+        selectAutocompleteItem($(this));
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#ose_autocomplete_dropdown, .ose-product-name').length) {
+            $('#ose_autocomplete_dropdown').hide();
+        }
+    });
+
+    $(window).on('resize scroll', function() {
+        if ($activeAutocompleteInput && $('#ose_autocomplete_dropdown').is(':visible')) {
+            positionAutocomplete($activeAutocompleteInput);
+        }
+    });
+
+    $(document).on('input blur change', '.ose-product-name', function(e) {
         const $row = $(this).closest('tr');
         let rawVal = $(this).val();
         let cleaned = stripInvisible(rawVal);
-        if (e.type === 'blur' && rawVal !== cleaned) {
-            $(this).val(cleaned);
+        if ((e.type === 'blur' || e.type === 'change') && rawVal !== cleaned.toUpperCase()) {
+            $(this).val(cleaned.toUpperCase());
         }
         const prod = cleaned.toUpperCase();
         const $errProd = $row.find('.ose-err-product-name');
@@ -576,6 +768,9 @@ $(document).ready(function() {
         } else {
             checkSleeveConsistency($row);
         }
+
+        // Auto fetch selling price
+        fetchItemSellingPrice($row);
     });
 
     $(document).on('input blur', '.ose-art-no', function(e) {
@@ -625,7 +820,81 @@ $(document).ready(function() {
             $(this).removeClass('is-invalid');
             $errArt.text('');
         }
+
+        // Auto generate barcode
+        autoGenerateBarcode($row);
+
+        // Auto fetch selling price
+        fetchItemSellingPrice($row);
     });
+
+    let priceFetchTimers = {};
+
+    function fetchItemSellingPrice($row) {
+        if (!$row || !$row.length) return;
+
+        const art = $.trim($row.find('.ose-art-no').val());
+        const prod = $.trim($row.find('.ose-product-name').val());
+        const size = $.trim($row.find('.ose-size').val());
+        const sleeve = $.trim($row.find('.ose-sleeve-type').val());
+
+        if (!art) return;
+
+        const rowKey = $row.attr('data-index') || $row.index();
+        if (priceFetchTimers[rowKey]) {
+            clearTimeout(priceFetchTimers[rowKey]);
+        }
+
+        priceFetchTimers[rowKey] = setTimeout(function() {
+            $.ajax({
+                url: "{{ url('fg_stock_taking/get-item-price') }}",
+                type: 'GET',
+                data: {
+                    art_no: art,
+                    product_name: prod,
+                    size: size,
+                    sleeve: sleeve
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res && res.success && res.found && res.selling_price) {
+                        const $priceInput = $row.find('.ose-price');
+                        $priceInput.val(res.selling_price).trigger('input');
+                    }
+                }
+            });
+        }, 150);
+    }
+
+    function computeBarcode(rawArt, sizeVal, sleeveVal) {
+        if (!rawArt) return '';
+        const art = String(rawArt).trim().toUpperCase();
+        if (!art) return '';
+
+        // Strip leading brand letters if followed by digits (e.g. CF12345-1 -> 12345-1, CB3119-2 -> 3119-2)
+        let cleanArt = art.replace(/^[A-Za-z]+[-_]?(?=\d)/, '');
+        // Convert hyphens into '0' (e.g. 12345-1 -> 1234501)
+        cleanArt = cleanArt.replace(/-/g, '0').replace(/[^A-Za-z0-9]/g, '');
+
+        const sizeCode = String(sizeVal || '').trim().replace(/[^A-Za-z0-9]/g, '');
+        const slv = String(sleeveVal || '').trim().toUpperCase();
+        const sleeveCode = (slv === 'HALF' || slv === 'HS' || slv === '02') ? '02' : '01';
+
+        if (cleanArt && sizeCode) {
+            return 'BC' + cleanArt + sizeCode + sleeveCode;
+        }
+        return '';
+    }
+
+    function autoGenerateBarcode($row) {
+        const art = $row.find('.ose-art-no').val();
+        const size = $row.find('.ose-size').val();
+        const sleeve = $row.find('.ose-sleeve-type').val();
+        const barcode = computeBarcode(art, size, sleeve);
+        if (barcode) {
+            $row.find('.ose-sku').val(barcode).trigger('input');
+        }
+    }
 
     $(document).on('input blur', '.ose-sku', function() {
         let raw = $(this).val();
@@ -661,9 +930,14 @@ $(document).ready(function() {
     $(document).on('change', '.ose-sleeve-type', function() {
         const $row = $(this).closest('tr');
         checkSleeveConsistency($row);
+        autoGenerateBarcode($row);
+        fetchItemSellingPrice($row);
     });
 
     $(document).on('change', '.ose-size', function() {
+        const $row = $(this).closest('tr');
+        autoGenerateBarcode($row);
+        fetchItemSellingPrice($row);
         checkDuplicateSkusInTable();
     });
 
@@ -683,6 +957,12 @@ $(document).ready(function() {
     if (Array.isArray(INITIAL_ITEMS) && INITIAL_ITEMS.length > 0) {
         INITIAL_ITEMS.forEach(function(item, idx) {
             addOseRow(item, idx);
+        });
+        // Auto-generate new format barcode and fetch latest price for existing/old rows
+        $('#ose_items_tbody tr').each(function() {
+            const $row = $(this);
+            autoGenerateBarcode($row);
+            fetchItemSellingPrice($row);
         });
     } else {
         addOseRow();
@@ -706,22 +986,26 @@ $(document).ready(function() {
             nextSize = OSE_SIZES[curIdx + 1];
         }
 
+        const artVal = $lastRow.find('.ose-art-no').val();
+        const sleeveVal = $lastRow.find('.ose-sleeve-type').val();
+        const nextSku = computeBarcode(artVal, nextSize, sleeveVal);
+
         const prefill = {
             product_name: $lastRow.find('.ose-product-name').val(),
-            art_no: $lastRow.find('.ose-art-no').val(),
+            art_no: artVal,
             style_id: $lastRow.find('.ose-style').val(),
             size: nextSize,
-            color_id: $lastRow.find('.ose-color').val(),
-            sleeve_type: $lastRow.find('.ose-sleeve-type').val(),
+            sleeve_type: sleeveVal,
             qty_in: $lastRow.find('.ose-qty').val(),
             price: $lastRow.find('.ose-price').val(),
             store_location_id: $lastRow.find('.ose-location').val(),
             uom_id: $lastRow.find('.ose-uom').val(),
-            sku: '',
+            sku: nextSku,
             remarks: $lastRow.find('.ose-remarks').val()
         };
 
         addOseRow(prefill);
+        fetchItemSellingPrice($('#ose_items_tbody tr').last());
     });
 
     $(document).on('click', '.btn-remove-ose-row', function() {
@@ -733,7 +1017,6 @@ $(document).ready(function() {
             $tbody.find('.ose-size').val('38').trigger('change');
             $tbody.find('.ose-sleeve-type').val('FULL').trigger('change');
             $tbody.find('.ose-style').val(OSE_STYLES[0]?.id || '').trigger('change');
-            $tbody.find('.ose-color').val('').trigger('change');
             $tbody.find('.ose-location').val('').trigger('change');
             $tbody.find('.ose-uom').val('').trigger('change');
         } else {

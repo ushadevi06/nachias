@@ -99,6 +99,9 @@ class FgStockTakingVarianceSheet implements FromArray, WithTitle, WithStyles, Wi
             fn($a, $b) => strnatcasecmp((string) $a['model']->size, (string) $b['model']->size),
         ])->values();
 
+        $allItemIds = $computedRows->pluck('model.id')->filter()->all();
+        $scannedLocMap = \App\Http\Controllers\FgStockTakingController::getItemScannedLocationsMap($this->session->id, $allItemIds);
+
         if ($computedRows->isEmpty()) {
             $rows[] = [1, '-', '-', '-', '-', '-', 0, 0, 0, '=MAX(0,H8+I8)', 0, '=MAX(0,J8-K8)', '=K8-J8', 'No Items', '=M8*G8', '-'];
         } else {
@@ -115,7 +118,10 @@ class FgStockTakingVarianceSheet implements FromArray, WithTitle, WithStyles, Wi
                     default => 'Pending',
                 };
 
-                $locationDisplay = $item->storeLocation?->store_location ?? '-';
+                $locationDisplay = '-';
+                if (floatval($calc['scanned_qty']) > 0.0001) {
+                    $locationDisplay = $scannedLocMap[$item->id] ?? ($item->storeLocation?->store_location ? ($item->storeLocation->store_location . ' - ' . (int)$calc['scanned_qty']) : '-');
+                }
 
                 $rows[] = [
                     $idx + 1,

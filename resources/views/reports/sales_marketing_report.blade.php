@@ -90,6 +90,19 @@
                         <option value="Q4">Q4 (Jan - Mar)</option>
                     </select>
                 </div>
+                <div class="col-12 col-md-3 col-xl-2" id="zone_filter_col" style="display: none;">
+                    <label class="form-label small fw-bold text-muted"><i class="ri ri-map-pin-line me-1"></i>Zone</label>
+                    <select class="form-select select2" name="zone_id" id="zone_id_filter" data-placeholder="All Zones">
+                        <option value="">All Zones</option>
+                        @if(isset($zones))
+                        @foreach($zones as $z)
+                        <option value="{{ $z->id }}" {{ request('zone_id') == $z->id ? 'selected' : '' }}>
+                            {{ $z->zone_name }}
+                        </option>
+                        @endforeach
+                        @endif
+                    </select>
+                </div>
 
                 <div class="col-12 col-md-2 col-xl-2" id="customer_filter_col">
                     <label class="form-label small fw-bold text-muted">Customer</label>
@@ -119,6 +132,7 @@
                     <label class="form-label small fw-bold text-muted">Sales Executive</label>
                     <select class="form-select select2" name="agent_id" id="agent_id_filter" data-placeholder="Select Executive">
                         <option value=""></option>
+                        <option value="unknown" {{ request('agent_id') == 'unknown' ? 'selected' : '' }}>Unknown / Unassigned (-)</option>
                         @foreach($executives as $executive)
                         <option value="{{ $executive->id }}" {{ request('agent_id') == $executive->id ? 'selected' : '' }}>
                             {{ $executive->name }} ({{ $executive->code }})
@@ -1336,6 +1350,7 @@ $(document).ready(function() {
                     d.gst_filing_status = $('select[name="gst_filing_status"]').val();
                     d.incentive_fy = $('select[name="incentive_fy"]').val();
                     d.incentive_quarter = $('select[name="incentive_quarter"]').val();
+                    d.zone_id = $('select[name="zone_id"]').val();
                 }
             },
             initComplete: function() {
@@ -1373,6 +1388,7 @@ $(document).ready(function() {
             $('#comparison_year_filter_col').hide();
             $('#incentive_fy_filter_col').show();
             $('#incentive_quarter_filter_col').show();
+            $('#zone_filter_col').show();
             $('#customer_filter_col').hide();
             $('select[name="customer_id"]').val('').trigger('change.select2');
             $('#invoice_status_filter_col').hide();
@@ -1384,11 +1400,15 @@ $(document).ready(function() {
             $('#brand_filter_col').hide();
             $('select[name="brand_id"]').val('').trigger('change.select2');
         } else if (reportType === 'comparison-report' || reportType === 'credit-note-comparison-report') {
+            $('#zone_filter_col').hide();
+            $('select[name="zone_id"]').val('').trigger('change.select2');
             $('#customer_filter_col').show();
             $('#sales_marketing_date_range_col').show();
             $('#comparison_year_filter_col').show();
             $('#incentive_fy_filter_col').hide();
             $('#incentive_quarter_filter_col').hide();
+            $('#zone_filter_col').hide();
+            $('select[name="zone_id"]').val('').trigger('change.select2');
             $('#brand_filter_col').show();
             $('#invoice_status_filter_col').hide();
             $('select[name="invoice_status"]').val('').trigger('change.select2');
@@ -1402,6 +1422,8 @@ $(document).ready(function() {
             $('#comparison_year_filter_col').hide();
             $('#incentive_fy_filter_col').hide();
             $('#incentive_quarter_filter_col').hide();
+            $('#zone_filter_col').hide();
+            $('select[name="zone_id"]').val('').trigger('change.select2');
             if (reportType === 'sales-gst-report' || reportType === 'sales-report') {
                 $('#invoice_status_filter_col').show();
                 $('#einvoice_status_filter_col').show();
@@ -1888,8 +1910,10 @@ $(document).ready(function() {
         $('select[name="einvoice_status"]').val('').trigger('change');
         $('select[name="gst_filing_status"]').val('').trigger('change');
         $('#comparison_year_filter').val(new Date().getFullYear()).trigger('change.select2');
-        $('#incentive_fy_filter').prop('selectedIndex', 0).trigger('change.select2');
+        const defaultFy = $('#incentive_fy_filter option[selected]').val() || '{{ $currentFyStart . "-" . ($currentFyStart + 1) }}';
+        $('#incentive_fy_filter').val(defaultFy).trigger('change.select2');
         $('#incentive_quarter_filter').prop('selectedIndex', 0).trigger('change.select2');
+        $('#zone_id_filter').val('').trigger('change.select2');
         if (typeof renderLostSalesBrandLevel === 'function') {
             renderLostSalesBrandLevel();
         }
@@ -1925,7 +1949,7 @@ $(document).ready(function() {
         loadActiveTabTable('incentive-report', false);
     });
 
-    $(document).on('change', '#incentive_fy_filter, #incentive_quarter_filter', function() {
+    $(document).on('change', '#incentive_fy_filter, #incentive_quarter_filter, #zone_id_filter, #agent_id_filter', function() {
         if ($('#report_type_select').val() === 'incentive-report') {
             if (currentIncentiveAgentId) {
                 loadActiveTabTable('incentive-brand-drilldown', true);

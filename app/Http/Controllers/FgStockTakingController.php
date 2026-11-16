@@ -17,6 +17,7 @@ use App\Models\StoreLocation;
 use App\Models\StoreType;
 use App\Models\Style;
 use App\Models\Uom;
+use App\Models\User;
 use App\Models\Warehouse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -471,6 +472,44 @@ class FgStockTakingController extends Controller
         return $map;
     }
 
+    public static function getItemScannedLocationsMap($sessionId, array $itemIds): array
+    {
+        if (empty($itemIds)) {
+            return [];
+        }
+
+        $logs = DB::table('stock_taking_scan_logs as l')
+            ->leftJoin('store_locations as sl', 'sl.id', '=', 'l.store_location_id')
+            ->where('l.session_id', $sessionId)
+            ->whereIn('l.stock_taking_item_id', $itemIds)
+            ->whereIn('l.scan_status', ['matched', 'excess'])
+            ->select(
+                'l.stock_taking_item_id',
+                'l.store_location_id',
+                DB::raw("COALESCE(NULLIF(TRIM(sl.store_location), ''), 'Unassigned') as loc_name"),
+                DB::raw('SUM(l.qty) as total_qty'),
+                DB::raw('MIN(l.id) as first_scan_id')
+            )
+            ->groupBy('l.stock_taking_item_id', 'l.store_location_id', 'loc_name')
+            ->orderBy('first_scan_id', 'ASC')
+            ->get();
+
+        $map = [];
+        foreach ($logs as $row) {
+            $qty = (float)$row->total_qty == (int)$row->total_qty ? (int)$row->total_qty : (float)$row->total_qty;
+            if ($qty > 0) {
+                $map[$row->stock_taking_item_id][] = $row->loc_name . ' (' . $qty . ' pcs)';
+            }
+        }
+
+        $result = [];
+        foreach ($map as $itemId => $locStrings) {
+            $result[$itemId] = implode(', ', $locStrings);
+        }
+
+        return $result;
+    }
+
     public static function classifyItemQuantities(float $snapshotSys, float $movementQty, float $scannedQty, float $rate = 0): array
     {
         $snapshotSys = round($snapshotSys, 2);
@@ -774,7 +813,13 @@ class FgStockTakingController extends Controller
         $this->authorizeAccess();
         OpenStockEntryLog::ensureTableExists();
 
-        $allBrands = Brand::whereNull('deleted_at')->where('status', 'Active')->orderBy('brand_name', 'asc')->get();
+        $allBrands = Brand::whereNull('deleted_at')
+            ->where('status', 'Active')
+            ->where('brand_name', 'not like', '%accessor%')
+            ->where('code', 'not like', '%-AS')
+            ->whereNotIn('code', ['DAS', 'CAS', 'COM-AS'])
+            ->orderBy('brand_name', 'asc')
+            ->get();
         $warehouses = Warehouse::whereNull('deleted_at')->where('status', 'Active')->orderBy('warehouse_name', 'asc')->get();
 
         return view('stock_taking.open_stock_logs', compact(
@@ -793,19 +838,9 @@ class FgStockTakingController extends Controller
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $rawSearch = $request->input('search');
-        $search = trim((string) (is_array($rawSearch) ? ($rawSearch['value'] ?? '') : $rawSearch));
+        $search = trim((string) (is_array($rawSearch) ? ($rawSearch['value'] ?? '') : ($rawSearch ?? '')));
 
-        $baseQuery = OpenStockEntryLog::with([
-            'brand',
-            'warehouse',
-            'storeType',
-            'storeLocation',
-            'style',
-            'color',
-            'creator'
-        ]);
-
-        $recordsTotal = OpenStockEntryLog::count();
+        $baseQuery = OpenStockEntryLog::query();
 
         if (!empty($brandId)) {
             $baseQuery->where('brand_id', $brandId);
@@ -831,66 +866,127 @@ class FgStockTakingController extends Controller
                     ->orWhere('header_remarks', 'like', "%{$search}%")
                     ->orWhereHas('brand', fn($b) => $b->where('brand_name', 'like', "%{$search}%"))
                     ->orWhereHas('warehouse', fn($w) => $w->where('warehouse_name', 'like', "%{$search}%"))
-                    ->orWhereHas('storeLocation', fn($sl) => $sl->where('store_location_name', 'like', "%{$search}%"))
                     ->orWhereHas('creator', fn($u) => $u->where('name', 'like', "%{$search}%"));
             });
         }
 
-        $recordsFiltered = (clone $baseQuery)->count();
+        $recordsTotal = OpenStockEntryLog::distinct('entry_no')->count('entry_no');
+        $recordsFiltered = (clone $baseQuery)->distinct('entry_no')->count('entry_no');
+
+        $groupedQuery = (clone $baseQuery)
+            ->select(
+                'entry_no',
+                'entry_date',
+                'warehouse_id',
+                'store_type_id',
+                'header_remarks',
+                'created_by',
+                DB::raw('MIN(id) as first_id'),
+                DB::raw('MIN(created_at) as created_at'),
+                DB::raw('COUNT(id) as total_items'),
+                DB::raw('SUM(qty) as total_qty'),
+                DB::raw('SUM(qty * COALESCE(price, 0)) as total_amount'),
+                DB::raw('GROUP_CONCAT(DISTINCT brand_id) as brand_ids'),
+                DB::raw('GROUP_CONCAT(DISTINCT store_location_id) as location_ids')
+            )
+            ->groupBy('entry_no', 'entry_date', 'warehouse_id', 'store_type_id', 'header_remarks', 'created_by');
 
         $orderColIdx = $request->input('order.0.column');
         $dir = $request->input('order.0.dir', 'desc');
-
         $sortable = [
             1 => 'entry_date',
             2 => 'entry_no',
-            3 => 'brand_id',
-            4 => 'product_name',
-            5 => 'art_no',
-            7 => 'size',
-            8 => 'sleeve_type',
-            9 => 'qty',
-            10 => 'price',
-            13 => 'sku',
+            5 => 'total_items',
+            6 => 'total_qty',
+            7 => 'total_amount',
         ];
 
         if ($orderColIdx !== null && isset($sortable[$orderColIdx])) {
-            $baseQuery->orderBy($sortable[$orderColIdx], $dir);
+            $groupedQuery->orderBy($sortable[$orderColIdx], $dir);
         } else {
-            $baseQuery->orderBy('id', 'desc');
+            $groupedQuery->orderBy('entry_date', 'desc')->orderBy('entry_no', 'desc');
         }
 
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
         if ($length > 0) {
-            $baseQuery->skip($start)->take($length);
+            $groupedQuery->skip($start)->take($length);
         }
 
-        $items = $baseQuery->get();
+        $entries = $groupedQuery->get();
+
+        $allBrandIds = [];
+        $allLocationIds = [];
+        $allWarehouseIds = [];
+        $allStoreTypeIds = [];
+        $allUserIds = [];
+
+        foreach ($entries as $e) {
+            if ($e->brand_ids) {
+                foreach (explode(',', $e->brand_ids) as $bid) {
+                    if ($bid) $allBrandIds[] = (int) $bid;
+                }
+            }
+            if ($e->location_ids) {
+                foreach (explode(',', $e->location_ids) as $lid) {
+                    if ($lid) $allLocationIds[] = (int) $lid;
+                }
+            }
+            if ($e->warehouse_id) $allWarehouseIds[] = (int) $e->warehouse_id;
+            if ($e->store_type_id) $allStoreTypeIds[] = (int) $e->store_type_id;
+            if ($e->created_by) $allUserIds[] = (int) $e->created_by;
+        }
+
+        $brandMap = Brand::whereIn('id', array_unique($allBrandIds))->pluck('brand_name', 'id');
+        $locMap = StoreLocation::whereIn('id', array_unique($allLocationIds))->pluck('store_location', 'id');
+        $whMap = Warehouse::whereIn('id', array_unique($allWarehouseIds))->pluck('warehouse_name', 'id');
+        $stMap = StoreType::whereIn('id', array_unique($allStoreTypeIds))->pluck('store_type_name', 'id');
+        $userMap = User::whereIn('id', array_unique($allUserIds))->pluck('name', 'id');
 
         $data = [];
         $rowIndex = $start + 1;
-        foreach ($items as $row) {
+        foreach ($entries as $e) {
+            $entryBrands = [];
+            if ($e->brand_ids) {
+                foreach (explode(',', $e->brand_ids) as $bid) {
+                    if (isset($brandMap[$bid])) $entryBrands[] = $brandMap[$bid];
+                }
+            }
+            $brandDisplay = !empty($entryBrands) ? implode(', ', array_unique($entryBrands)) : '-';
+
+            $entryLocs = [];
+            if ($e->location_ids) {
+                foreach (explode(',', $e->location_ids) as $lid) {
+                    if (isset($locMap[$lid])) $entryLocs[] = $locMap[$lid];
+                }
+            }
+            $locDisplay = !empty($entryLocs) ? implode(', ', array_unique($entryLocs)) : '-';
+
+            $whName = $whMap[$e->warehouse_id] ?? '-';
+            $stName = $stMap[$e->store_type_id] ?? '-';
+            $creatorName = $userMap[$e->created_by] ?? 'Admin';
+            $createdAt = $e->created_at ? Carbon::parse($e->created_at)->format('d-m-Y h:i A') : '-';
+
+            $editUrl = url('fg_stock_taking/open-stock-entry/edit/' . $e->first_id);
+            $viewUrl = url('fg_stock_taking/open-stock-logs/view/' . urlencode($e->entry_no));
+
             $data[] = [
                 'DT_RowIndex' => $rowIndex++,
-                'id' => $row->id,
-                'entry_date' => $row->entry_date ? $row->entry_date->format('d-m-Y') : '-',
-                'entry_no' => $row->entry_no,
-                'brand_name' => $row->brand?->brand_name ?? ($row->brand?->name ?? '-'),
-                'product_name' => $row->product_name,
-                'art_no' => $row->art_no,
-                'style_name' => $row->style?->style_name ?? ($row->style?->name ?? '-'),
-                'size' => $row->size,
-                'sleeve_type' => $row->sleeve_type ?? '-',
-                'qty' => (float) $row->qty,
-                'price' => $row->price !== null ? number_format((float) $row->price, 2) : '-',
-                'store_location' => $row->storeLocation?->store_location_name ?? '-',
-                'warehouse' => $row->warehouse?->warehouse_name ?? '-',
-                'store_type' => $row->storeType?->store_type_name ?? '-',
-                'sku' => $row->sku,
-                'remarks' => $row->remarks ?? ($row->header_remarks ?? '-'),
-                'created_by' => $row->creator?->name ?? ($row->creator?->username ?? 'Admin'),
-                'created_at' => $row->created_at ? $row->created_at->format('d-m-Y h:i A') : '-',
+                'id' => $e->first_id,
+                'entry_date' => $e->entry_date ? Carbon::parse($e->entry_date)->format('d-m-Y') : '-',
+                'entry_no' => $e->entry_no,
+                'brand_name' => $brandDisplay,
+                'warehouse' => $whName,
+                'store_type' => $stName,
+                'total_items' => (int) $e->total_items,
+                'total_qty' => (float) $e->total_qty,
+                'total_amount' => (float) $e->total_amount,
+                'store_location' => $locDisplay,
+                'remarks' => $e->header_remarks ?: '-',
+                'created_by' => $creatorName,
+                'created_at' => $createdAt,
+                'edit_url' => $editUrl,
+                'view_url' => $viewUrl,
             ];
         }
 
@@ -900,6 +996,107 @@ class FgStockTakingController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
         ]);
+    }
+
+    public function openStockEntryDetails(Request $request)
+    {
+        $this->authorizeAccess();
+        OpenStockEntryLog::ensureTableExists();
+
+        $entryNo = trim((string) $request->input('entry_no'));
+        if (!$entryNo) {
+            return response()->json(['success' => false, 'message' => 'Entry number required.'], 400);
+        }
+
+        $items = OpenStockEntryLog::with(['brand', 'style', 'color', 'storeLocation', 'warehouse', 'storeType', 'creator'])
+            ->where('entry_no', $entryNo)
+            ->orderBy('id', 'asc')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No items found for this entry.'], 404);
+        }
+
+        $formatted = $items->map(function ($it, $idx) {
+            return [
+                's_no' => $idx + 1,
+                'product_name' => $it->product_name,
+                'art_no' => $it->art_no,
+                'style_name' => $it->style?->style_name ?? ($it->style?->name ?? '-'),
+                'size' => $it->size,
+                'sleeve_type' => $it->sleeve_type ?? '-',
+                'qty' => (float) $it->qty,
+                'price' => $it->price !== null ? (float) $it->price : 0,
+                'total_val' => round((float)$it->qty * ((float)$it->price ?? 0), 2),
+                'store_location' => $it->storeLocation?->store_location ?? ($it->storeLocation?->store_location_name ?? '-'),
+                'sku' => $it->sku,
+                'remarks' => $it->remarks ?: '-',
+            ];
+        });
+
+        $first = $items->first();
+
+        return response()->json([
+            'success' => true,
+            'entry_no' => $entryNo,
+            'entry_date' => $first->entry_date ? $first->entry_date->format('d-m-Y') : '-',
+            'warehouse' => $first->warehouse?->warehouse_name ?? '-',
+            'store_type' => $first->storeType?->store_type_name ?? '-',
+            'remarks' => $first->header_remarks ?: '-',
+            'total_items' => $items->count(),
+            'total_qty' => $items->sum('qty'),
+            'total_amount' => $items->sum(fn($i) => (float)$i->qty * ((float)$i->price ?? 0)),
+            'items' => $formatted,
+        ]);
+    }
+
+    public function openStockEntryView($entryNo)
+    {
+        $this->authorizeAccess();
+        OpenStockEntryLog::ensureTableExists();
+
+        $entryNo = trim((string) $entryNo);
+        $items = OpenStockEntryLog::with([
+            'brand',
+            'warehouse',
+            'storeType',
+            'storeLocation',
+            'style',
+            'color',
+            'creator',
+            'uom'
+        ])
+            ->where('entry_no', $entryNo)
+            ->orderBy('id', 'asc')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return redirect('fg_stock_taking/open-stock-logs')->with('error', "Open Stock Entry {$entryNo} not found.");
+        }
+
+        $firstItem = $items->first();
+        $totalItems = $items->count();
+        $totalQty = $items->sum('qty');
+        $totalAmount = $items->sum(function ($it) {
+            return (float) $it->qty * ((float) ($it->price ?? 0));
+        });
+
+        $brands = $items->pluck('brand.brand_name')->filter()->unique()->values()->all();
+        $brandDisplay = !empty($brands) ? implode(', ', $brands) : '-';
+
+        $locations = $items->pluck('storeLocation.store_location')->filter()->unique()->values()->all();
+        $locationDisplay = !empty($locations) ? implode(', ', $locations) : '-';
+
+        return view('stock_taking.open_stock_view', compact(
+            'entryNo',
+            'items',
+            'firstItem',
+            'totalItems',
+            'totalQty',
+            'totalAmount',
+            'brandDisplay',
+            'locationDisplay'
+        ));
     }
 
     public function exportOpenStockLogs(Request $request)
@@ -919,31 +1116,101 @@ class FgStockTakingController extends Controller
         return Excel::download(new OpenStockLogsExport($filters), $filename);
     }
 
-    public function deleteOpenStockLog($id)
+    public function deleteOpenStockLog(Request $request, $id)
     {
         $this->authorizeAccess();
         OpenStockEntryLog::ensureTableExists();
 
-        $log = OpenStockEntryLog::findOrFail($id);
-        $entryNo = $log->entry_no;
-        $log->delete();
+        $entryNo = $request->input('entry_no');
+        if (!$entryNo) {
+            $log = OpenStockEntryLog::find($id);
+            $entryNo = $log ? $log->entry_no : null;
+        }
+
+        if ($entryNo) {
+            $deletedCount = OpenStockEntryLog::where('entry_no', $entryNo)->delete();
+            return response()->json([
+                'success' => true,
+                'message' => "Open stock entry {$entryNo} ({$deletedCount} items) deleted successfully."
+            ]);
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => "Log item from Entry {$entryNo} deleted successfully."
-        ]);
+            'success' => false,
+            'message' => 'Entry not found.'
+        ], 404);
     }
 
-    public function openStockEntryPage(Request $request)
+    public function openStockEntryPage(Request $request, $id = null)
     {
         $this->authorizeAccess();
+
+        $editId = $id ?: ($request->input('id') ?: null);
+        $editEntryNo = null;
+
+        if ($editId) {
+            if (is_numeric($editId)) {
+                $log = OpenStockEntryLog::find($editId);
+                $editEntryNo = $log ? $log->entry_no : null;
+            } else {
+                $editEntryNo = trim((string) $editId);
+            }
+        }
+
+        if (!$editEntryNo && $request->filled('entry_no')) {
+            $editEntryNo = trim((string) $request->input('entry_no'));
+        }
+
+        $existingItems = [];
+        $isEdit = false;
+        $entryDate = date('d-m-Y');
+        $headerRemarks = '';
 
         $selectedBrandId = $request->filled('brand_id') ? (int) $request->input('brand_id') : null;
         $selectedWarehouseId = $request->filled('warehouse_id') ? (int) $request->input('warehouse_id') : null;
         $selectedStoreTypeId = $request->filled('store_type_id') ? (int) $request->input('store_type_id') : null;
         $selectedStoreLocationId = $request->filled('store_location_id') ? (int) $request->input('store_location_id') : null;
 
-        $allBrands = Brand::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
+        if ($editEntryNo) {
+            $entryLogs = OpenStockEntryLog::where('entry_no', $editEntryNo)->orderBy('id', 'asc')->get();
+            if ($entryLogs->isNotEmpty()) {
+                $isEdit = true;
+                $firstLog = $entryLogs->first();
+                $selectedWarehouseId = (int) $firstLog->warehouse_id;
+                $selectedStoreTypeId = (int) $firstLog->store_type_id;
+                $selectedStoreLocationId = (int) $firstLog->store_location_id;
+                $entryDate = $firstLog->entry_date ? $firstLog->entry_date->format('d-m-Y') : date('d-m-Y');
+                $headerRemarks = $firstLog->header_remarks;
+
+                $existingItems = $entryLogs->map(function ($l) {
+                    return [
+                        'id' => $l->id,
+                        'product_name' => $l->product_name,
+                        'art_no' => $l->art_no,
+                        'style_id' => $l->style_id,
+                        'size' => $l->size,
+                        'color_id' => $l->color_id,
+                        'sleeve_type' => $l->sleeve_type,
+                        'qty_in' => (float) $l->qty,
+                        'price' => $l->price !== null ? (float) $l->price : '0.00',
+                        'store_location_id' => $l->store_location_id,
+                        'sku' => $l->sku,
+                        'uom_id' => $l->uom_id,
+                        'remarks' => $l->remarks,
+                    ];
+                })->values()->toArray();
+            }
+        }
+
+        $allBrands = Brand::whereNull('deleted_at')
+            ->where('status', 'Active')
+            ->where('brand_name', 'not like', '%accessor%')
+            ->where('code', 'not like', '%-AS')
+            ->whereNotIn('code', ['DAS', 'CAS', 'COM-AS'])
+            ->orderBy('brand_name', 'asc')
+            ->get();
+
+        $fgBrandCodes = $allBrands->pluck('code')->filter()->map(fn($c) => strtoupper(trim($c)))->all();
 
         $storeTypes = StoreType::whereNull('deleted_at')
             ->where('status', 'Active')
@@ -958,8 +1225,25 @@ class FgStockTakingController extends Controller
         $warehouses = Warehouse::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
         $storeLocations = StoreLocation::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
         $colors = Color::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
-        $styles = Style::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
+        $styles = Style::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','asc')->get();
         $uoms = Uom::whereNull('deleted_at')->where('status', 'Active')->orderBy('id','desc')->get();
+
+        $productSuggestions = [];
+        foreach ($allBrands as $b) {
+            $bCode = strtoupper(trim((string)($b->code ?? '')));
+            if (!$bCode) continue;
+            foreach ($styles as $s) {
+                $sCode = strtoupper(trim((string)($s->code ?? '')));
+                if (!$sCode) continue;
+                foreach (['FS', 'HS'] as $slv) {
+                    $comb = "{$bCode}-{$sCode}-{$slv}";
+                    if (!in_array($comb, $productSuggestions)) {
+                        $productSuggestions[] = $comb;
+                    }
+                }
+            }
+        }
+        sort($productSuggestions);
 
         return view('stock_taking.open_stock_entry', compact(
             'allBrands',
@@ -972,8 +1256,116 @@ class FgStockTakingController extends Controller
             'selectedBrandId',
             'selectedWarehouseId',
             'selectedStoreTypeId',
-            'selectedStoreLocationId'
+            'selectedStoreLocationId',
+            'isEdit',
+            'editEntryNo',
+            'existingItems',
+            'entryDate',
+            'headerRemarks',
+            'productSuggestions'
         ));
+    }
+
+    public function getItemPrice(Request $request)
+    {
+        $this->authorizeAccess();
+
+        $artNo = trim((string) $request->input('art_no', ''));
+        $productName = trim((string) $request->input('product_name', ''));
+        $size = trim((string) $request->input('size', ''));
+        $sleeve = strtoupper(trim((string) $request->input('sleeve', '')));
+
+        if ($artNo === '') {
+            return response()->json([
+                'success' => true,
+                'found' => false,
+                'selling_price' => null,
+                'unit_price' => null,
+            ]);
+        }
+
+        $sleeveCode = ($sleeve === 'HALF' || $sleeve === 'HS' || $sleeve === '02') ? 'HS' : 'FS';
+
+        $candidateCodes = [];
+        if ($productName !== '') {
+            $candidateCodes[] = strtoupper($productName);
+            if (preg_match('/-(FS|HS)$/i', $productName)) {
+                $base = preg_replace('/-(FS|HS)$/i', '', $productName);
+                $candidateCodes[] = strtoupper($base . '-' . $sleeveCode);
+            } else {
+                $candidateCodes[] = strtoupper($productName . '-' . $sleeveCode);
+            }
+        }
+        $candidateCodes = array_values(array_unique(array_filter($candidateCodes)));
+
+        $price = null;
+
+        // 1. Exact match: finished_item_code in candidates + art_no + size
+        if (!empty($candidateCodes) && $size !== '') {
+            $price = ItemPrice::where('status', 'Active')
+                ->where(function ($q) use ($artNo) {
+                    $q->where('art_no', $artNo)->orWhereRaw('TRIM(art_no) = ?', [$artNo]);
+                })
+                ->whereIn('finished_item_code', $candidateCodes)
+                ->where('size', $size)
+                ->orderByDesc('effective_from')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        // 2. Match: finished_item_code in candidates + art_no (fallback for size)
+        if (!$price && !empty($candidateCodes)) {
+            $price = ItemPrice::where('status', 'Active')
+                ->where(function ($q) use ($artNo) {
+                    $q->where('art_no', $artNo)->orWhereRaw('TRIM(art_no) = ?', [$artNo]);
+                })
+                ->whereIn('finished_item_code', $candidateCodes)
+                ->orderByDesc('effective_from')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        // 3. Fallback: art_no + size regardless of finished_item_code
+        if (!$price && $size !== '') {
+            $price = ItemPrice::where('status', 'Active')
+                ->where(function ($q) use ($artNo) {
+                    $q->where('art_no', $artNo)->orWhereRaw('TRIM(art_no) = ?', [$artNo]);
+                })
+                ->where('size', $size)
+                ->orderByDesc('effective_from')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        // 4. Fallback: art_no only
+        if (!$price) {
+            $price = ItemPrice::where('status', 'Active')
+                ->where(function ($q) use ($artNo) {
+                    $q->where('art_no', $artNo)->orWhereRaw('TRIM(art_no) = ?', [$artNo]);
+                })
+                ->orderByDesc('effective_from')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if ($price && (floatval($price->selling_price) > 0 || floatval($price->unit_price) > 0)) {
+            $sellingPrice = floatval($price->selling_price ?: $price->unit_price);
+            return response()->json([
+                'success' => true,
+                'found' => true,
+                'selling_price' => number_format($sellingPrice, 2, '.', ''),
+                'unit_price' => $price->unit_price ? number_format((float) $price->unit_price, 2, '.', '') : null,
+                'finished_item_code' => $price->finished_item_code,
+                'size' => $price->size,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'found' => false,
+            'selling_price' => null,
+            'unit_price' => null,
+        ]);
     }
 
     public function loadBrandSession(Request $request)
@@ -1744,6 +2136,9 @@ class FgStockTakingController extends Controller
                     'scanned_by' => auth()->id(),
                 ]);
 
+                $scannedLocMap = self::getItemScannedLocationsMap($session->id, [$sessionItem->id]);
+                $itemLocDisplay = $scannedLocMap[$sessionItem->id] ?? ($scannedLocationName ? ($scannedLocationName . ' (' . (int)$newScanned . ' pcs)') : $sessionItem->storeLocation?->store_location);
+
                 return [
                     'success' => true,
                     'scan_status' => $scanStatus,
@@ -1759,7 +2154,7 @@ class FgStockTakingController extends Controller
                         'system_store_location_id' => $sessionItem->system_store_location_id,
                         'system_store_location' => $sessionItem->systemStoreLocation?->store_location,
                         'store_location_id' => $sessionItem->store_location_id,
-                        'store_location' => $scannedLocationName ?? $sessionItem->storeLocation?->store_location,
+                        'store_location' => $itemLocDisplay,
                         'snapshot_qty' => $calc['snapshot_qty'],
                         'movement_qty' => $calc['movement_qty'],
                         'system_qty' => $effectiveSys,
@@ -1993,9 +2388,24 @@ class FgStockTakingController extends Controller
             ], 404);
         }
         $filter = (string) $request->input('filter', 'all');
-        $search = trim((string) $request->input('search', ''));
-        $perPage = min(250, max(10, (int) $request->input('per_page', 10)));
-        $page = max(1, (int) $request->input('page', 1));
+
+        $draw = (int) $request->input('draw', 1);
+        $rawSearch = $request->input('search');
+        $search = trim((string) (is_array($rawSearch) ? ($rawSearch['value'] ?? '') : ($rawSearch ?? '')));
+
+        $length = $request->input('length');
+        $start = $request->input('start');
+        if ($length !== null && $start !== null) {
+            $perPage = (int) $length > 0 ? (int) $length : 10;
+            $offset = max(0, (int) $start);
+            $page = (int) floor($offset / $perPage) + 1;
+        } else {
+            $perPage = min(250, max(10, (int) $request->input('per_page', 10)));
+            $page = max(1, (int) $request->input('page', 1));
+            $offset = ($page - 1) * $perPage;
+        }
+
+        $totalRecordsAll = StockTakingItem::where('session_id', $session->id)->count();
 
         if ($filter === 'alerts' || $filter === 'logs') {
             $logQuery = StockTakingScanLog::with(['scanner', 'storeLocation'])->where('session_id', $session->id)->orderByDesc('id');
@@ -2087,10 +2497,19 @@ class FgStockTakingController extends Controller
 
             $pageItems = $query->orderByDesc('last_scanned_at')->orderBy('style_name')->orderBy('art_no')->orderBy('size')->offset($offset)->limit($perPage)->get();
 
+            $pageItemIds = $pageItems->pluck('id')->all();
+            $scannedLocMap = self::getItemScannedLocationsMap($session->id, $pageItemIds);
+
             $pageRows = [];
             foreach ($pageItems as $it) {
                 $mv = floatval($movementMap[$it->sku] ?? 0);
                 $calc = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), floatval($it->rate));
+
+                $locDisplay = null;
+                if (floatval($calc['scanned_qty']) > 0.0001) {
+                    $locDisplay = $scannedLocMap[$it->id] ?? ($it->storeLocation?->store_location ? ($it->storeLocation->store_location . ' (' . (int)$calc['scanned_qty'] . ' pcs)') : $it->storeLocation?->store_location);
+                }
+
                 $pageRows[] = [
                     'id' => $it->id,
                     'sku' => $it->sku,
@@ -2109,12 +2528,16 @@ class FgStockTakingController extends Controller
                     'system_store_location_id' => $it->system_store_location_id,
                     'system_store_location' => $it->systemStoreLocation?->store_location,
                     'store_location_id' => $it->store_location_id,
-                    'store_location' => $it->storeLocation?->store_location,
+                    'store_location' => $locDisplay,
                     'last_scanned_at' => $it->last_scanned_at ? $it->last_scanned_at->format('h:i:s A') : '-',
                 ];
             }
 
             return response()->json([
+                'draw' => $draw,
+                'recordsTotal' => $totalRecordsAll,
+                'recordsFiltered' => $total,
+                'data' => $pageRows,
                 'mode' => 'items',
                 'rows' => $pageRows,
                 'pagination' => [
@@ -2180,7 +2603,22 @@ class FgStockTakingController extends Controller
         $offset = ($currentPage - 1) * $perPage;
         $pageRows = array_slice($filtered, $offset, $perPage);
 
+        $pageItemIds = array_column($pageRows, 'id');
+        $scannedLocMap = self::getItemScannedLocationsMap($session->id, $pageItemIds);
+        foreach ($pageRows as &$row) {
+            if (floatval($row['scanned_qty']) > 0.0001) {
+                $row['store_location'] = $scannedLocMap[$row['id']] ?? ($row['store_location'] ? ($row['store_location'] . ' (' . (int)$row['scanned_qty'] . ' pcs)') : $row['store_location']);
+            } else {
+                $row['store_location'] = null;
+            }
+        }
+        unset($row);
+
         return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $totalRecordsAll,
+            'recordsFiltered' => $total,
+            'data' => array_values($pageRows),
             'mode' => 'items',
             'rows' => array_values($pageRows),
             'pagination' => [
@@ -2267,6 +2705,7 @@ class FgStockTakingController extends Controller
         }
 
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'existing_entry_no' => 'nullable|string',
             'warehouse_id' => 'required|exists:warehouses,id',
             'store_type_id' => 'required|exists:store_types,id',
             'default_store_location_id' => 'nullable|exists:store_locations,id',
@@ -2449,6 +2888,8 @@ class FgStockTakingController extends Controller
 
         OpenStockEntryLog::ensureTableExists();
 
+        $existingEntryNo = $request->filled('existing_entry_no') ? trim((string) $request->input('existing_entry_no')) : null;
+
         $savedItemsCount = 0;
         $totalQty = 0;
         $entryNo = null;
@@ -2462,21 +2903,30 @@ class FgStockTakingController extends Controller
                 $entryDate,
                 $items,
                 $defaultUomId,
+                $existingEntryNo,
                 &$entryNo,
                 &$savedItemsCount,
                 &$totalQty
             ) {
-                $datePrefix = Carbon::now()->format('Ymd');
-                $prefix = 'OSE-' . $datePrefix . '-';
-                $maxSeq = OpenStockEntryLog::withTrashed()
-                    ->where('entry_no', 'like', "{$prefix}%")
-                    ->selectRaw("MAX(CAST(SUBSTRING(entry_no, 14) AS UNSIGNED)) as max_seq")
-                    ->value('max_seq');
-                $nextSeq = ((int) $maxSeq) + 1;
-                $entryNo = $prefix . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
-                while (OpenStockEntryLog::withTrashed()->where('entry_no', $entryNo)->exists()) {
-                    $nextSeq++;
+                if ($existingEntryNo) {
+                    if (!OpenStockEntryLog::where('entry_no', $existingEntryNo)->exists()) {
+                        throw new \Exception("Entry {$existingEntryNo} does not exist.");
+                    }
+                    $entryNo = $existingEntryNo;
+                    OpenStockEntryLog::where('entry_no', $existingEntryNo)->forceDelete();
+                } else {
+                    $datePrefix = Carbon::now()->format('Ymd');
+                    $prefix = 'OSE-' . $datePrefix . '-';
+                    $maxSeq = OpenStockEntryLog::withTrashed()
+                        ->where('entry_no', 'like', "{$prefix}%")
+                        ->selectRaw("MAX(CAST(SUBSTRING(entry_no, 14) AS UNSIGNED)) as max_seq")
+                        ->value('max_seq');
+                    $nextSeq = ((int) $maxSeq) + 1;
                     $entryNo = $prefix . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
+                    while (OpenStockEntryLog::withTrashed()->where('entry_no', $entryNo)->exists()) {
+                        $nextSeq++;
+                        $entryNo = $prefix . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
+                    }
                 }
 
                 $firstItemLocation = null;
@@ -2557,10 +3007,14 @@ class FgStockTakingController extends Controller
                 }
             });
 
+            $successMessage = $existingEntryNo
+                ? "Open Stock Entry {$entryNo} updated successfully."
+                : 'Open Stock Created Successfully';
+
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Open Stock Created Successfully',
+                    'message' => $successMessage,
                     'redirect_url' => url('fg_stock_taking/open-stock-logs'),
                     'entry_no' => $entryNo,
                     'total_items' => $savedItemsCount,
@@ -2568,7 +3022,7 @@ class FgStockTakingController extends Controller
                 ]);
             }
 
-            return redirect('fg_stock_taking/open-stock-logs')->with('success', 'Open Stock Created Successfully');
+            return redirect('fg_stock_taking/open-stock-logs')->with('success', $successMessage);
         } catch (\Exception $e) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([

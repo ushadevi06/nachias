@@ -41,64 +41,64 @@
             <!-- Main Card matching Sales Invoice Scan UI -->
             <div class="card mb-3">
                 <div class="card-body">
-                    <div class="row g-3 mb-3 align-items-end">
-                        <div class="col-xl-3 col-lg-3 col-md-3">
-                            <label class="form-label fw-bold mb-1">Brand <span class="text-danger">*</span></label>
-                            <select id="filter_brand_id" class="form-select select2" data-placeholder="Select Brand">
-                                <option value="">-- Select Brand --</option>
-                                @foreach($brands as $brand)
-                                    <option value="{{ $brand->id }}" {{ ($selectedBrandId ?? null) == $brand->id ? 'selected' : '' }}>
-                                        {{ $brand->brand_name }} ({{ number_format($brand->fg_sku_count) }} SKUs | {{ number_format($brand->fg_total_qty, 0) }} pcs)
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-xl-3 col-lg-3 col-md-3">
-                            <label class="form-label fw-bold mb-1">Store</label>
-                            <select id="filter_store_type_id" class="form-select select2" data-placeholder="All Stores">
-                                @php
-                                    $allBrandQty = (!empty($selectedBrandId) && !empty($brands->firstWhere('id', $selectedBrandId)?->fg_total_qty)) ? $brands->firstWhere('id', $selectedBrandId)->fg_total_qty : null;
-                                @endphp
-                                <option value="" data-base-name="All Stores">All Stores{{ $allBrandQty ? ' (' . number_format($allBrandQty, 0) . ' pcs)' : '' }}</option>
-                                @foreach($storeTypes as $st)
+                    <div class="filter-box mb-4">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-lg-12">
+                                <h5 class="mb-0">Filter</h5>
+                            </div>
+                            <div class="col-xl-3 col-lg-3 col-md-3">
+                                <select id="filter_brand_id" class="form-select select2" data-placeholder="Select Brand">
+                                    <option value="">Select Brand</option>
+                                    @foreach($brands as $brand)
+                                        <option value="{{ $brand->id }}" {{ ($selectedBrandId ?? null) == $brand->id ? 'selected' : '' }}>
+                                            {{ $brand->brand_name }} ({{ number_format($brand->fg_sku_count) }} SKUs | {{ number_format($brand->fg_total_qty, 0) }} pcs)
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-xl-3 col-lg-3 col-md-3">
+                                <select id="filter_store_type_id" class="form-select select2" data-placeholder="Select Store">
                                     @php
-                                        $pcs = isset($storeCounts[$st->id]) ? $storeCounts[$st->id] : null;
-                                        $pcsSuffix = ($pcs !== null && !empty($selectedBrandId)) ? ' (' . number_format($pcs, 0) . ' pcs)' : '';
+                                        $allBrandQty = (!empty($selectedBrandId) && !empty($brands->firstWhere('id', $selectedBrandId)?->fg_total_qty)) ? $brands->firstWhere('id', $selectedBrandId)->fg_total_qty : null;
                                     @endphp
-                                    <option value="{{ $st->id }}"
-                                            data-base-name="{{ $st->store_type_name }}"
-                                            {{ ($selectedStoreTypeId ?? null) == $st->id ? 'selected' : '' }}>
-                                        {{ $st->store_type_name }}{{ $pcsSuffix }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-xl-2 col-lg-2 col-md-2">
-                            <label class="form-label fw-bold mb-1">Warehouse</label>
-                            <select id="filter_warehouse_id" class="form-select select2" data-placeholder="All Warehouses">
-                                <option value="">All Warehouses</option>
-                                @foreach($warehouses as $wh)
-                                    <option value="{{ $wh->id }}" {{ ($selectedWarehouseId ?? null) == $wh->id ? 'selected' : '' }}>
-                                        {{ $wh->warehouse_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-xl-3 col-lg-3 col-md-3">
-                            <label class="form-label fw-bold mb-1">Store Location</label>
-                            <select id="filter_store_location_id" class="form-select select2" data-placeholder="Select Store Location">
-                                <option value="">-- Select Store Location --</option>
-                                @foreach($storeLocations as $loc)
-                                    <option value="{{ $loc->id }}" {{ ($selectedStoreLocationId ?? null) == $loc->id ? 'selected' : '' }}>
-                                        {{ $loc->store_location }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-xl-1 col-lg-1 col-md-1">
-                            <button type="button" class="btn btn-secondary w-100" id="btn_reset_stock_taking" title="Reset Filters and Screen" style="height: 38px; padding: 6px 4px; white-space: nowrap;">
-                                <i class="ri ri-refresh-line"></i> Reset
-                            </button>
+                                    <option value="" data-base-name="All Stores">All Stores{{ $allBrandQty ? ' (' . number_format($allBrandQty, 0) . ' pcs)' : '' }}</option>
+                                    @foreach($storeTypes as $st)
+                                        @php
+                                            $pcs = isset($storeCounts[$st->id]) ? $storeCounts[$st->id] : null;
+                                            $pcsSuffix = ($pcs !== null && !empty($selectedBrandId)) ? ' (' . number_format($pcs, 0) . ' pcs)' : '';
+                                        @endphp
+                                        <option value="{{ $st->id }}"
+                                                data-base-name="{{ $st->store_type_name }}"
+                                                {{ ($selectedStoreTypeId ?? null) == $st->id ? 'selected' : '' }}>
+                                            {{ $st->store_type_name }}{{ $pcsSuffix }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-xl-2 col-lg-2 col-md-2">
+                                <select id="filter_warehouse_id" class="form-select select2" data-placeholder="Select Warehouse">
+                                    <option value="">All Warehouses</option>
+                                    @foreach($warehouses as $wh)
+                                        <option value="{{ $wh->id }}" {{ ($selectedWarehouseId ?? null) == $wh->id ? 'selected' : '' }}>
+                                            {{ $wh->warehouse_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-xl-2 col-lg-2 col-md-2">
+                                <select id="filter_store_location_id" class="form-select select2" data-placeholder="Select Store Location">
+                                    <option value="">Select Store Location</option>
+                                    @foreach($storeLocations as $loc)
+                                        <option value="{{ $loc->id }}" {{ ($selectedStoreLocationId ?? null) == $loc->id ? 'selected' : '' }}>
+                                            {{ $loc->store_location }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-xl-2 col-lg-2 col-md-2 d-flex gap-2">
+                                <button type="button" id="btn_apply_filter" class="btn btn-primary text-uppercase">Filter</button>
+                                <button type="button" id="btn_reset_stock_taking" class="btn btn-secondary text-uppercase">Reset</button>
+                            </div>
                         </div>
                     </div>
 
@@ -200,33 +200,37 @@
                 </div>
             </div>
 
-            <!-- Items Table Card matching Sales Invoice Scan UI -->
+            <!-- Items Table Card with DataTables Integration -->
             <div class="card">
-                <div class="card-header bg-white fw-bold d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <span>Items Table</span>
-                    <div class="d-flex gap-2 align-items-center flex-wrap">
-                        <select id="table_per_page" class="form-select form-select-sm" style="width: auto;">
-                            <option value="10" selected>10 / page</option>
-                            <option value="25">25 / page</option>
-                            <option value="50">50 / page</option>
-                            <option value="100">100 / page</option>
-                            <option value="250">250 / page</option>
-                        </select>
-                        <select id="table_filter_select" class="form-select form-select-sm" style="width: auto;">
-                            <option value="all">All Items</option>
-                            <option value="pending">Pending</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="shortage">Shortage</option>
-                            <option value="excess">Excess</option>
-                        </select>
-                        <input type="text" id="table_search_input" class="form-control form-control-sm" style="width: 220px;" placeholder="Search SKU / Art No / Size...">
-                    </div>
+                <div class="card-header bg-white fw-bold">
+                    <span class="fs-5">Items Table</span>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped mb-0" id="items_table">
-                            <thead class="table-light" id="table_head">
+                <div class="card-body">
+                    <div class="filter-box mb-4">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-lg-12">
+                                <h5 class="mb-0">Filter</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="table_filter_select" class="form-select select2" data-placeholder="Select Status">
+                                    <option value="all" selected>All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="shortage">Shortage</option>
+                                    <option value="excess">Excess</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex gap-2">
+                                <button type="button" id="btn_table_filter" class="btn btn-primary text-uppercase">Filter</button>
+                                <button type="button" id="btn_table_reset" class="btn btn-secondary text-uppercase">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-datatable table-responsive">
+                        <table class="table table-bordered table-striped" id="items_table" style="width: 100%;">
+                            <thead class="table-light">
                                 <tr>
                                     <th>Item Name</th>
                                     <th>Art No</th>
@@ -240,7 +244,7 @@
                                     <th class="text-center" style="width: 105px;">Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="table_body">
+                            <tbody>
                                 <tr>
                                     <td colspan="10" class="text-center py-4 text-muted">
                                         Please select a <strong>Brand</strong> above to load items and start scanning.
@@ -250,11 +254,37 @@
                         </table>
                     </div>
                 </div>
-                <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 d-none" id="pagination_bar">
-                    <div class="small text-muted" id="pagination_info"></div>
-                    <nav aria-label="Items pagination">
-                        <ul class="pagination pagination-sm mb-0" id="pagination_links"></ul>
-                    </nav>
+            </div>
+
+            <!-- Store Locations Modal -->
+            <div class="modal fade" id="modalStoreLocations" tabindex="-1" aria-labelledby="modalStoreLocationsTitle" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content shadow border-0">
+                        <div class="modal-header border-bottom py-3">
+                            <h5 class="modal-title d-flex align-items-center gap-2" id="modalStoreLocationsTitle">
+                                <i class="ri ri-map-pin-2-fill text-primary fs-4"></i>
+                                <span>All Store Locations</span>
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body py-3">
+                            <div class="mb-3 d-flex flex-wrap gap-2 align-items-center justify-content-between p-2 bg-light rounded">
+                                <div>
+                                    <small class="text-muted d-block">Item / SKU</small>
+                                    <strong id="modal_loc_sku_display" class="text-dark fs-6">-</strong>
+                                </div>
+                                <div>
+                                    <span class="badge bg-primary text-white" id="modal_loc_total_badge">0 Locations</span>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 p-1" id="modal_loc_badges_container" style="max-height: 350px; overflow-y: auto;">
+                                <!-- badges rendered dynamically -->
+                            </div>
+                        </div>
+                        <div class="modal-footer py-2 border-top">
+                            <button type="button" class="btn btn-secondary text-uppercase btn-sm" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -452,10 +482,7 @@ $(document).ready(function() {
         }
 
         if (currentSessionFinalized) {
-            $('#detail_status_badge')
-                .removeClass('bg-primary')
-                .addClass('bg-dark')
-                .text('Finalized' + (meta.completed_at_display ? ' (' + meta.completed_at_display + ')' : ''));
+            $('#detail_status_badge').removeClass('bg-primary').addClass('bg-dark').text('Finalized' + (meta.completed_at_display ? ' (' + meta.completed_at_display + ')' : ''));
             if (meta.completed_by_name) {
                 $('#detail_finalized_by').text(meta.completed_by_name);
                 $('#detail_finalized_by_wrap').removeClass('d-none');
@@ -463,10 +490,7 @@ $(document).ready(function() {
                 $('#detail_finalized_by_wrap').addClass('d-none');
             }
         } else {
-            $('#detail_status_badge')
-                .removeClass('bg-dark')
-                .addClass('bg-primary')
-                .text('In Progress');
+            $('#detail_status_badge').removeClass('bg-dark').addClass('bg-primary').text('In Progress');
             $('#detail_finalized_by_wrap').addClass('d-none');
         }
 
@@ -477,10 +501,7 @@ $(document).ready(function() {
         currentSessionFinalized = !!isFinalized;
 
         if (enabled && currentSessionId) {
-            $('#export_excel_btn')
-                .attr('href', baseUrl + '/session/' + currentSessionId + '/export')
-                .removeClass('disabled')
-                .css({ 'pointer-events': 'auto', 'opacity': '1' });
+            $('#export_excel_btn').attr('href', baseUrl + '/session/' + currentSessionId + '/export').removeClass('disabled').css({ 'pointer-events': 'auto', 'opacity': '1' });
 
             if (isFinalized) {
                 $('#finalize_btn').prop('disabled', true);
@@ -498,10 +519,7 @@ $(document).ready(function() {
                 $('#finalized_notice').addClass('d-none');
             }
         } else {
-            $('#export_excel_btn')
-                .attr('href', 'javascript:void(0)')
-                .addClass('disabled')
-                .css({ 'pointer-events': 'none', 'opacity': '0.5' });
+            $('#export_excel_btn').attr('href', 'javascript:void(0)').addClass('disabled').css({ 'pointer-events': 'none', 'opacity': '0.5' });
             $('#finalize_btn').prop('disabled', true);
             $('#start_new_btn').addClass('d-none');
             $('#barcode_input').prop('disabled', false);
@@ -619,13 +637,20 @@ $(document).ready(function() {
             currentPage = 1;
             setSessionEnabled(false, false);
             updateStats({ total_system_qty: 0, total_scanned_qty: 0, remaining_qty: 0, matched_skus: 0, coverage_pct: 0 });
-            $('#pagination_bar').addClass('d-none');
-            $('#table_body').html('<tr><td colspan="10" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
+            if (itemsDataTable) {
+                itemsDataTable.destroy();
+                itemsDataTable = null;
+            }
+            $('#items_table tbody').html('<tr><td colspan="10" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
             refocusScanner();
             return;
         }
 
-        $('#table_body').html('<tr><td colspan="10" class="text-center py-4 text-muted">Loading items...</td></tr>');
+        if (itemsDataTable) {
+            itemsDataTable.destroy();
+            itemsDataTable = null;
+        }
+        $('#items_table tbody').html('<tr><td colspan="10" class="text-center py-4 text-muted">Loading items...</td></tr>');
 
         activeBrandXhr = $.ajax({
             url: baseUrl + '/load-brand',
@@ -666,10 +691,13 @@ $(document).ready(function() {
                 }
                 currentSessionId = null;
                 setSessionEnabled(false, false);
-                $('#pagination_bar').addClass('d-none');
+                if (itemsDataTable) {
+                    itemsDataTable.destroy();
+                    itemsDataTable = null;
+                }
                 updateStats({ total_system_qty: 0, total_scanned_qty: 0, remaining_qty: 0, matched_skus: 0, coverage_pct: 0 });
                 const msg = xhr.responseJSON?.message || 'No positive Finished Goods stock found for this Brand.';
-                $('#table_body').html(`<tr><td colspan="10" class="text-center py-4 text-danger">${escapeHtml(msg)}</td></tr>`);
+                $('#items_table tbody').html(`<tr><td colspan="10" class="text-center py-4 text-danger">${escapeHtml(msg)}</td></tr>`);
             }
         });
     }
@@ -828,7 +856,7 @@ $(document).ready(function() {
 
             const $btn = $('#start_new_btn');
             $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Starting...');
-            showScanAlert('alert-info', '<i class="ri-loader-4-line ri-spin me-1"></i> <strong>Taking stock snapshot...</strong> Please wait a moment while items are prepared.');
+            showScanAlert('alert-info', '<i class="ri ri-loader-4-line ri-spin me-1"></i> <strong>Taking stock snapshot...</strong> Please wait a moment while items are prepared.');
 
             loadBrandSession(() => {
                 $btn.prop('disabled', false).html('<i class="ri ri-add-circle-line me-1"></i> Start New Count');
@@ -837,239 +865,206 @@ $(document).ready(function() {
         });
     });
 
-    function renderPagination(pg) {
-        if (!pg || pg.total <= 0) {
-            $('#pagination_bar').addClass('d-none');
+    let itemsDataTable = null;
+
+    function initItemsDataTable() {
+        if ($.fn.DataTable.isDataTable('#items_table')) {
+            $('#items_table').DataTable().destroy();
+            $('#items_table tbody').empty();
+        }
+
+        if (!currentSessionId) {
+            $('#items_table tbody').html('<tr><td colspan="10" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
             return;
         }
 
-        $('#pagination_bar').removeClass('d-none');
-        $('#pagination_info').text(`Showing ${Number(pg.from).toLocaleString()} to ${Number(pg.to).toLocaleString()} of ${Number(pg.total).toLocaleString()} entries`);
-
-        const cur = pg.current_page;
-        const last = pg.last_page;
-        let html = '';
-
-        html += `<li class="page-item ${cur <= 1 ? 'disabled' : ''}">
-            <a class="page-link ajax-page-link" href="javascript:void(0)" data-page="${cur - 1}">&laquo; Prev</a>
-        </li>`;
-
-        const pages = [];
-        for (let p = 1; p <= last; p++) {
-            if (p === 1 || p === last || (p >= cur - 2 && p <= cur + 2)) {
-                pages.push(p);
+        itemsDataTable = $('#items_table').DataTable({
+            processing: true,
+            serverSide: true,
+            ordering: false,
+            responsive: true,
+            autoWidth: false,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, 250], [10, 25, 50, 100, 250]],
+            ajax: {
+                url: baseUrl + '/session/' + currentSessionId + '/items',
+                type: 'GET',
+                data: function (d) {
+                    d.filter = $('#table_filter_select').val() || 'all';
+                }
+            },
+            columns: [
+                {
+                    data: 'style_name',
+                    name: 'style_name',
+                    render: function (data, type, r) {
+                        const sleeve = r.sleeve_type && r.sleeve_type !== '-' ? ' (' + escapeHtml(r.sleeve_type) + ')' : '';
+                        return `${escapeHtml(r.style_name)}${sleeve}<br><small class="text-muted">Size: ${escapeHtml(r.size)}</small>`;
+                    }
+                },
+                {
+                    data: 'art_no',
+                    name: 'art_no',
+                    render: function (data) {
+                        return escapeHtml(data || '-');
+                    }
+                },
+                {
+                    data: 'sku',
+                    name: 'sku',
+                    render: function (data) {
+                        return `<span class="fw-bold">${escapeHtml(data || '-')}</span>`;
+                    }
+                },
+                {
+                    data: 'system_qty',
+                    name: 'system_qty',
+                    render: function (data, type, r) {
+                        const sys = Number(data || 0);
+                        const mv = Number(r.movement_qty || 0);
+                        const mvHtml = Math.abs(mv) > 0.0001
+                            ? `<br><small class="text-muted">(Snap: ${Number(r.snapshot_qty).toFixed(0)}, Move: ${mv > 0 ? '+' : ''}${mv.toFixed(0)})</small>`
+                            : '';
+                        return `${sys.toFixed(0)}${mvHtml}`;
+                    }
+                },
+                {
+                    data: 'scanned_qty',
+                    name: 'scanned_qty',
+                    render: function (data) {
+                        return `<span class="fw-bold">${Number(data || 0).toFixed(0)}</span>`;
+                    }
+                },
+                {
+                    data: 'remaining_qty',
+                    name: 'remaining_qty',
+                    render: function (data) {
+                        return Number(data || 0).toFixed(0);
+                    }
+                },
+                {
+                    data: 'variance',
+                    name: 'variance',
+                    render: function (data) {
+                        const diff = Number(data || 0);
+                        if (diff > 0.001) {
+                            return '<span class="text-warning fw-bold">+' + diff.toFixed(0) + '</span>';
+                        } else if (diff < -0.001) {
+                            return '<span class="text-danger fw-bold">' + diff.toFixed(0) + '</span>';
+                        } else {
+                            return '<span class="text-success fw-bold">0</span>';
+                        }
+                    }
+                },
+                {
+                    data: 'status',
+                    name: 'status',
+                    render: function (data, type, r) {
+                        const diff = Number(r.variance || 0);
+                        if (data === 'completed') {
+                            return '<span class="badge bg-success">Completed</span>';
+                        } else if (data === 'excess') {
+                            return '<span class="badge bg-warning text-dark">Excess (+' + Math.abs(diff).toFixed(0) + ')</span>';
+                        } else if (data === 'in_progress') {
+                            return '<span class="badge bg-info text-dark">In Progress</span>';
+                        }
+                        return '<span class="badge bg-secondary">Pending</span>';
+                    }
+                },
+                {
+                    data: 'store_location',
+                    name: 'store_location',
+                    render: function (data, type, r) {
+                        if (data && data !== '-') {
+                            const parts = String(data).split(',').map(s => s.trim()).filter(Boolean);
+                            if (parts.length === 0) {
+                                return '<span class="text-muted">-</span>';
+                            }
+                            if (parts.length <= 3) {
+                                return parts.map(p => renderLocationBadge(p)).join('');
+                            }
+                            const firstThree = parts.slice(0, 3).map(p => renderLocationBadge(p)).join('');
+                            const remainingCount = parts.length - 3;
+                            const allLocsEscaped = escapeHtml(JSON.stringify(parts));
+                            const skuLabel = escapeHtml((r.art_no ? r.art_no + ' (' + (r.sku || '') + ')' : (r.sku || '')));
+                            const moreBtn = `<button type="button" class="btn btn-xs btn-outline-primary btn-show-more-locs px-2 py-0 align-middle mb-1" data-sku="${skuLabel}" data-locations="${allLocsEscaped}" title="Click to view all ${parts.length} locations" style="font-size: 0.72rem; line-height: 1.5; border-radius: 4px; font-weight: 600;">+${remainingCount} more</button>`;
+                            return firstThree + moreBtn;
+                        }
+                        return '<span class="text-muted">-</span>';
+                    }
+                },
+                {
+                    data: 'id',
+                    name: 'action',
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center',
+                    render: function (data, type, r) {
+                        const scan = Number(r.scanned_qty || 0);
+                        if (!currentSessionFinalized && scan > 0) {
+                            return `
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-xs btn-outline-warning btn-item-decrement" data-id="${r.id}" data-sku="${escapeHtml(r.sku)}" title="Reduce scanned qty by 1 (-1)" style="padding: 1px 7px; font-weight: bold; font-size: 0.75rem;">
+                                        <i class="ri ri-subtract-line"></i> 1
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-outline-danger btn-item-reset" data-id="${r.id}" data-sku="${escapeHtml(r.sku)}" data-scan="${scan.toFixed(0)}" title="Reset scanned count to 0" style="padding: 1px 6px; font-size: 0.75rem;">
+                                        <i class="ri ri-delete-bin-line"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                        return '<span class="text-muted small">-</span>';
+                    }
+                }
+            ],
+            rowCallback: function (row, data) {
+                if (data.status === 'completed') {
+                    $(row).addClass('table-success');
+                } else if (data.status === 'excess') {
+                    $(row).addClass('table-warning');
+                }
+            },
+            language: {
+                emptyTable: 'No items found for this filter.',
+                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> Loading items...'
             }
-        }
-
-        let prev = null;
-        pages.forEach(p => {
-            if (prev !== null && p - prev > 1) {
-                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-            html += `<li class="page-item ${p === cur ? 'active' : ''}">
-                <a class="page-link ajax-page-link" href="javascript:void(0)" data-page="${p}">${p}</a>
-            </li>`;
-            prev = p;
         });
-
-        html += `<li class="page-item ${cur >= last ? 'disabled' : ''}">
-            <a class="page-link ajax-page-link" href="javascript:void(0)" data-page="${cur + 1}">Next &raquo;</a>
-        </li>`;
-
-        $('#pagination_links').html(html);
     }
 
     function loadTable(page) {
-        if (!currentSessionId) return;
-        if (page !== undefined && page !== null) {
-            currentPage = page;
+        if (!itemsDataTable) {
+            initItemsDataTable();
+        } else {
+            const expectedUrl = baseUrl + '/session/' + currentSessionId + '/items';
+            if (itemsDataTable.ajax.url() !== expectedUrl) {
+                itemsDataTable.ajax.url(expectedUrl).load();
+            } else {
+                itemsDataTable.ajax.reload(null, page === 1);
+            }
         }
-        if (activeTableXhr) {
-            activeTableXhr.abort();
-            activeTableXhr = null;
-        }
-        const reqSessionId = currentSessionId;
-        const filter = $('#table_filter_select').val() || 'all';
-        const search = $('#table_search_input').val() || '';
-        const perPage = $('#table_per_page').val() || 10;
-
-        activeTableXhr = $.get(baseUrl + '/session/' + reqSessionId + '/items', {
-            filter: filter,
-            search: search,
-            per_page: perPage,
-            page: currentPage
-        }, function(res) {
-            activeTableXhr = null;
-            if (!currentSessionId || reqSessionId !== currentSessionId) {
-                return;
-            }
-            const thead = $('#table_head');
-            const tbody = $('#table_body');
-            renderPagination(res.pagination);
-
-            if (res.mode === 'logs') {
-                thead.html(`
-                    <tr>
-                        <th>Time</th>
-                        <th>SKU / Barcode</th>
-                        <th>Detected Brand</th>
-                        <th>Art No / Size</th>
-                        <th>Store Location</th>
-                        <th>Qty</th>
-                        <th>Status & Message</th>
-                        <th class="text-center" style="width: 75px;">Action</th>
-                    </tr>
-                `);
-                if (!res.rows.length) {
-                    tbody.html('<tr><td colspan="8" class="text-center py-4 text-muted">No alerts recorded yet.</td></tr>');
-                    return;
-                }
-                let html = '';
-                res.rows.forEach(r => {
-                    let badge = '<span class="badge bg-danger">Not Found</span>';
-                    if (r.scan_status === 'wrong_brand') badge = '<span class="badge bg-danger">Wrong Brand</span>';
-                    else if (r.scan_status === 'zero_stock') badge = '<span class="badge bg-secondary">Zero Stock</span>';
-                    else if (r.scan_status === 'duplicate') badge = '<span class="badge bg-warning text-dark">Duplicate</span>';
-
-                    let logActionHtml = '<span class="text-muted small">-</span>';
-                    if (!currentSessionFinalized && r.id) {
-                        logActionHtml = `
-                            <button type="button" class="btn btn-xs btn-outline-danger btn-log-delete" data-log-id="${r.id}" title="Delete this scan log" style="padding: 1px 6px;">
-                                <i class="ri ri-delete-bin-line"></i>
-                            </button>
-                        `;
-                    }
-
-                    html += `
-                        <tr>
-                            <td class="small">${escapeHtml(r.time)}</td>
-                            <td><strong>${escapeHtml(r.resolved_sku || '-')}</strong></td>
-                            <td>${escapeHtml(r.detected_brand_name || '-')}</td>
-                            <td>${escapeHtml((r.art_no || '-') + ' / ' + (r.size || '-'))}</td>
-                            <td>${escapeHtml(r.store_location || '-')}</td>
-                            <td>${Number(r.qty).toFixed(0)}</td>
-                            <td>${badge} <small class="ms-1">${escapeHtml(r.message)}</small></td>
-                            <td class="text-center">${logActionHtml}</td>
-                        </tr>
-                    `;
-                });
-                tbody.html(html);
-                return;
-            }
-
-            thead.html(`
-                <tr>
-                    <th>Item Name</th>
-                    <th>Art No</th>
-                    <th>SKU / Barcode</th>
-                    <th>System Qty</th>
-                    <th>Scanned</th>
-                    <th>Remaining</th>
-                    <th>Variance</th>
-                    <th>Status</th>
-                    <th>Store Location</th>
-                    <th class="text-center" style="width: 105px;">Action</th>
-                </tr>
-            `);
-
-            if (!res.rows.length) {
-                tbody.html('<tr><td colspan="10" class="text-center py-4 text-muted">No items found for this filter.</td></tr>');
-                return;
-            }
-
-            let html = '';
-            res.rows.forEach(r => {
-                const sys = Number(r.system_qty || 0);
-                const scan = Number(r.scanned_qty || 0);
-                const rem = Number(r.remaining_qty !== undefined ? r.remaining_qty : Math.max(0, sys - scan));
-                const diff = Number(r.variance !== undefined ? r.variance : (scan - sys));
-                const mv = Number(r.movement_qty || 0);
-
-                let badge = '<span class="badge bg-secondary">Pending</span>';
-                let rowCls = '';
-                if (r.status === 'completed') {
-                    badge = '<span class="badge bg-success">Completed</span>';
-                    rowCls = 'table-success';
-                } else if (r.status === 'excess') {
-                    badge = '<span class="badge bg-warning text-dark">Excess (+' + Math.abs(diff).toFixed(0) + ')</span>';
-                    rowCls = 'table-warning';
-                } else if (r.status === 'in_progress') {
-                    badge = '<span class="badge bg-info text-dark">In Progress</span>';
-                }
-
-                let varHtml = '<span class="text-muted">0</span>';
-                if (diff > 0.001) {
-                    varHtml = '<span class="text-warning fw-bold">+' + diff.toFixed(0) + '</span>';
-                } else if (diff < -0.001) {
-                    varHtml = '<span class="text-danger fw-bold">' + diff.toFixed(0) + '</span>';
-                } else {
-                    varHtml = '<span class="text-success fw-bold">0</span>';
-                }
-
-                const mvHtml = Math.abs(mv) > 0.0001
-                    ? `<br><small class="text-muted">(Snap: ${Number(r.snapshot_qty).toFixed(0)}, Move: ${mv > 0 ? '+' : ''}${mv.toFixed(0)})</small>`
-                    : '';
-
-                const locHtml = r.store_location
-                    ? `<span class="badge bg-light text-dark border">${escapeHtml(r.store_location)}</span>`
-                    : '<span class="text-muted">-</span>';
-
-                let actionHtml = '<span class="text-muted small">-</span>';
-                if (!currentSessionFinalized && scan > 0) {
-                    actionHtml = `
-                        <div class="d-inline-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-xs btn-outline-warning btn-item-decrement" data-id="${r.id}" data-sku="${escapeHtml(r.sku)}" title="Reduce scanned qty by 1 (-1)" style="padding: 1px 7px; font-weight: bold; font-size: 0.75rem;">
-                                <i class="ri ri-subtract-line"></i> 1
-                            </button>
-                            <button type="button" class="btn btn-xs btn-outline-danger btn-item-reset" data-id="${r.id}" data-sku="${escapeHtml(r.sku)}" data-scan="${scan.toFixed(0)}" title="Reset scanned count to 0" style="padding: 1px 6px; font-size: 0.75rem;">
-                                <i class="ri ri-delete-bin-line"></i>
-                            </button>
-                        </div>
-                    `;
-                }
-
-                html += `
-                    <tr class="${rowCls}">
-                        <td>
-                            ${escapeHtml(r.style_name)} ${r.sleeve_type && r.sleeve_type !== '-' ? '(' + escapeHtml(r.sleeve_type) + ')' : ''}
-                            <br>
-                            <small class="text-muted">Size: ${escapeHtml(r.size)}</small>
-                        </td>
-                        <td>${escapeHtml(r.art_no)}</td>
-                        <td class="fw-bold">${escapeHtml(r.sku)}</td>
-                        <td>${sys.toFixed(0)}${mvHtml}</td>
-                        <td class="fw-bold">${scan.toFixed(0)}</td>
-                        <td>${rem.toFixed(0)}</td>
-                        <td>${varHtml}</td>
-                        <td>${badge}</td>
-                        <td>${locHtml}</td>
-                        <td class="text-center">${actionHtml}</td>
-                    </tr>
-                `;
-            });
-            tbody.html(html);
-        });
     }
 
+    $('#btn_apply_filter').on('click', function(e) {
+        e.preventDefault();
+        loadBrandSession(null, false);
+    });
     $('#filter_brand_id, #filter_store_type_id, #filter_warehouse_id').on('change', () => loadBrandSession(null, false));
     $('#filter_store_location_id').on('change', () => refocusScanner());
-    $('#table_filter_select, #table_per_page').on('change', () => loadTable(1));
+
+    $('#btn_table_filter').on('click', function(e) {
+        e.preventDefault();
+        loadTable(1);
+    });
+    $('#btn_table_reset').on('click', function(e) {
+        e.preventDefault();
+        $('#table_filter_select').val('all').trigger('change.select2');
+    });
+    $('#table_filter_select').on('change', () => loadTable(1));
     $(document).on('click', '.stat-card-filter', function() {
         const targetFilter = $(this).data('filter');
         if (!currentSessionId || !targetFilter) return;
         $('#table_filter_select').val(targetFilter).trigger('change');
         $('html, body').animate({ scrollTop: $('#items_table').closest('.card').offset().top - 70 }, 200);
-    });
-    $('#table_search_input').on('keyup', function() {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => loadTable(1), 250);
-    });
-    $(document).on('click', '.ajax-page-link', function(e) {
-        e.preventDefault();
-        const p = parseInt($(this).data('page'));
-        if (p && p > 0) {
-            loadTable(p);
-        }
     });
 
     $('#barcode_input').on('input', function() {
@@ -1287,6 +1282,7 @@ $(document).ready(function() {
             });
         } else {
             window.location.href = "{{ url('fg_stock_taking') }}";
+
         }
     });
 
@@ -1384,6 +1380,91 @@ $(document).ready(function() {
         if (storeLocationId) params.append('store_location_id', storeLocationId);
         const query = params.toString();
         window.location.href = '{{ url("fg_stock_taking/open-stock-entry") }}' + (query ? '?' + query : '');
+    });
+
+    function parseLocationAndQty(raw) {
+        if (!raw) return { loc: '', qty: null };
+        let str = String(raw).trim();
+        let qty = null;
+        let loc = str;
+
+        // Matches "LOC (X pcs)" or "LOC (X)"
+        let m = str.match(/^(.+?)\s*\(([\d.]+)\s*(?:pcs)?\)$/i);
+        if (m) {
+            loc = m[1].trim();
+            qty = m[2];
+        } else {
+            // Matches "LOC - X" or "LOC: X"
+            m = str.match(/^(.+?)\s+[-:]\s+([\d.]+)$/);
+            if (m) {
+                loc = m[1].trim();
+                qty = m[2];
+            }
+        }
+        return { loc: loc, qty: qty };
+    }
+
+    function renderLocationBadge(p) {
+        const item = parseLocationAndQty(p);
+        if (!item.loc) return '';
+        if (item.qty !== null && item.qty !== undefined) {
+            return `<span class="badge bg-light text-dark border me-1 mb-1 d-inline-flex align-items-center gap-1" style="font-weight: 500; font-size: 0.78rem;">
+                <i class="ri ri-map-pin-line text-muted"></i>
+                <span>${escapeHtml(item.loc)}</span>
+                <span class="badge bg-primary text-white rounded-pill px-1" style="font-size: 0.68rem; font-weight: 600;">${escapeHtml(item.qty)} pcs</span>
+            </span>`;
+        }
+        return `<span class="badge bg-light text-dark border me-1 mb-1" style="font-weight: 500; font-size: 0.78rem;"><i class="ri ri-map-pin-line text-muted me-1"></i>${escapeHtml(item.loc)}</span>`;
+    }
+
+    function renderModalLocationItem(p) {
+        const item = parseLocationAndQty(p);
+        if (!item.loc) return '';
+        if (item.qty !== null && item.qty !== undefined) {
+            return `<div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white w-100 mb-2 shadow-sm">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="ri ri-map-pin-2-fill text-primary fs-5"></i>
+                    <span class="fw-semibold text-dark fs-6">${escapeHtml(item.loc)}</span>
+                </div>
+                <span class="badge bg-primary fs-6 px-3 py-1 rounded-pill">${escapeHtml(item.qty)} pcs</span>
+            </div>`;
+        }
+        return `<div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white w-100 mb-2 shadow-sm">
+            <div class="d-flex align-items-center gap-2">
+                <i class="ri ri-map-pin-2-fill text-primary fs-5"></i>
+                <span class="fw-semibold text-dark fs-6">${escapeHtml(item.loc)}</span>
+            </div>
+        </div>`;
+    }
+
+    $(document).on('click', '.btn-show-more-locs', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const sku = $(this).data('sku') || '-';
+        let locs = [];
+        try {
+            locs = JSON.parse($(this).attr('data-locations') || '[]');
+        } catch (err) {
+            locs = [];
+        }
+
+        $('#modal_loc_sku_display').text(sku);
+        $('#modal_loc_total_badge').text(locs.length + (locs.length === 1 ? ' Location' : ' Locations'));
+
+        const badgesHtml = locs.map(l => renderModalLocationItem(l)).join('');
+
+        $('#modal_loc_badges_container').html(badgesHtml || '<span class="text-muted">No locations found</span>');
+
+        const locModalEl = document.getElementById('modalStoreLocations');
+        if (locModalEl) {
+            const modalObj = bootstrap.Modal.getOrCreateInstance(locModalEl);
+            modalObj.show();
+        }
+    });
+
+    $('#modalStoreLocations').on('hidden.bs.modal', function () {
+        refocusScanner();
     });
 });
 </script>

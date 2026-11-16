@@ -69,30 +69,58 @@
 
                     <!-- Standard Datatable -->
                     <div class="card-datatable table-responsive">
-                        <table class="open-stock-logs-table table">
+                        <table class="open-stock-logs-table table table-hover">
                             <thead class="table">
                                 <tr>
-                                    <th>#</th>
+                                    <th style="width: 50px;">#</th>
                                     <th>Date</th>
                                     <th>Entry No</th>
                                     <th>Brand</th>
-                                    <th>Product Name</th>
-                                    <th>Art No</th>
-                                    <th>Style</th>
-                                    <th>Size</th>
-                                    <th>Sleeve</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
-                                    <th>Store Location</th>
                                     <th>Warehouse</th>
-                                    <th>SKU / Barcode</th>
+                                    <th class="text-center">Total Items</th>
+                                    <th class="text-end">Total Qty</th>
+                                    <th class="text-end">Total Amount</th>
+                                    <th>Store Location</th>
+                                    <th>Remarks</th>
                                     <th>Logged By</th>
-                                    <th>Action</th>
+                                    <th class="text-center" style="min-width: 120px;">Action</th>
                                 </tr>
                             </thead>
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Store Locations Modal -->
+<div class="modal fade" id="modalLogsStoreLocations" tabindex="-1" aria-labelledby="modalLogsStoreLocationsTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="modalLogsStoreLocationsTitle">
+                    <i class="ri ri-map-pin-2-fill text-primary fs-4"></i>
+                    <span>Store Locations</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="mb-3 d-flex flex-wrap gap-2 align-items-center justify-content-between p-2 bg-light rounded">
+                    <div>
+                        <small class="text-muted d-block">Entry No</small>
+                        <strong id="modal_logs_loc_title" class="text-dark fs-6">-</strong>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary text-white" id="modal_logs_loc_total_badge">0 Locations</span>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 p-1" id="modal_logs_loc_badges_container" style="max-height: 350px; overflow-y: auto;">
+                    <!-- locations list -->
+                </div>
+            </div>
+            <div class="modal-footer py-2 border-top">
+                <button type="button" class="btn btn-secondary text-uppercase btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -157,57 +185,64 @@ $(function () {
                 name: 'brand_id'
             },
             {
-                data: 'product_name',
-                name: 'product_name',
-                render: function (data, type, row) {
-                    const rem = row.remarks && row.remarks !== '-' ? `<br><small class="text-muted">${escapeHtml(row.remarks)}</small>` : '';
-                    return `<strong>${escapeHtml(data)}</strong>${rem}`;
-                }
-            },
-            {
-                data: 'art_no',
-                name: 'art_no'
-            },
-            {
-                data: 'style_name',
-                name: 'style_name',
-                orderable: false
-            },
-            {
-                data: 'size',
-                name: 'size'
-            },
-            {
-                data: 'sleeve_type',
-                name: 'sleeve_type'
-            },
-            {
-                data: 'qty',
-                name: 'qty',
-                render: function (data) {
-                    return `<strong>${Number(data || 0).toLocaleString()}</strong>`;
-                }
-            },
-            {
-                data: 'price',
-                name: 'price',
-                render: function (data) {
-                    return data !== '-' ? `₹${data}` : '-';
-                }
-            },
-            {
-                data: 'store_location',
-                name: 'store_location',
-                orderable: false
-            },
-            {
                 data: 'warehouse',
                 name: 'warehouse',
                 orderable: false
             },
             {
-                data: 'sku',
-                name: 'sku'
+                data: 'total_items',
+                name: 'total_items',
+                className: 'text-center',
+                render: function (data) {
+                    return `<span class="badge bg-label-info">${Number(data || 0).toLocaleString()} items</span>`;
+                }
+            },
+            {
+                data: 'total_qty',
+                name: 'total_qty',
+                className: 'text-end',
+                render: function (data) {
+                    return `<strong>${Number(data || 0).toLocaleString()}</strong>`;
+                }
+            },
+            {
+                data: 'total_amount',
+                name: 'total_amount',
+                className: 'text-end',
+                render: function (data) {
+                    return `₹${Number(data || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+            },
+            {
+                data: 'store_location',
+                name: 'store_location',
+                orderable: false,
+                render: function (data, type, row) {
+                    if (data && data !== '-') {
+                        const parts = String(data).split(',').map(s => s.trim()).filter(Boolean);
+                        if (parts.length === 0) {
+                            return '<span class="text-muted">-</span>';
+                        }
+                        if (parts.length <= 3) {
+                            return parts.map(p => `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(p)}</span>`).join('');
+                        }
+                        const firstThree = parts.slice(0, 3).map(p => `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(p)}</span>`).join('');
+                        const remainingCount = parts.length - 3;
+                        const allLocsEscaped = escapeHtml(JSON.stringify(parts));
+                        const entryTitle = escapeHtml(row.entry_no || 'Entry Locations');
+                        const moreBtn = `<button type="button" class="btn btn-xs btn-outline-primary btn-show-more-locs px-2 py-0 align-middle mb-1" data-title="${entryTitle}" data-locations="${allLocsEscaped}" title="View all ${parts.length} locations" style="font-size: 0.72rem; line-height: 1.5; border-radius: 4px; font-weight: 600;">+${remainingCount} more</button>`;
+                        return firstThree + moreBtn;
+                    }
+                    return '<span class="text-muted">-</span>';
+                }
+            },
+            {
+                data: 'remarks',
+                name: 'remarks',
+                orderable: false,
+                render: function (data) {
+                    return data && data !== '-' ? `<span class="text-muted small">${escapeHtml(data)}</span>` : '-';
+                }
             },
             {
                 data: 'created_by',
@@ -222,11 +257,20 @@ $(function () {
                 name: 'action',
                 orderable: false,
                 searchable: false,
+                className: 'text-center',
                 render: function (data, type, row) {
                     return `
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-log" data-id="${row.id}" data-entry-no="${escapeHtml(row.entry_no)}" data-sku="${escapeHtml(row.sku)}" title="Delete Log Entry">
-                            <i class="ri ri-delete-bin-line"></i>
-                        </button>
+                        <div class="d-inline-flex gap-1">
+                            <a href="${escapeHtml(row.view_url)}" class="btn btn-sm btn-outline-info" title="View Details">
+                                <i class="ri ri-eye-line"></i>
+                            </a>
+                            <a href="${escapeHtml(row.edit_url)}" class="btn btn-sm btn-outline-primary" title="Edit Entry">
+                                <i class="ri ri-edit-line"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry" data-entry-no="${escapeHtml(row.entry_no)}" data-count="${row.total_items}" title="Delete Entry">
+                                <i class="ri ri-delete-bin-line"></i>
+                            </button>
+                        </div>
                     `;
                 }
             }
@@ -256,17 +300,17 @@ $(function () {
         window.location.href = "{{ url('fg_stock_taking/open-stock-logs/export') }}?" + params.toString();
     });
 
-    $(document).on('click', '.btn-delete-log', function () {
-        const id = $(this).data('id');
+    // Delete Entire Entry
+    $(document).on('click', '.btn-delete-entry', function () {
         const entryNo = $(this).data('entry-no');
-        const sku = $(this).data('sku');
+        const count = $(this).data('count') || '';
 
         Swal.fire({
-            title: 'Delete Log Item?',
-            html: `Are you sure you want to remove item <strong>${escapeHtml(sku)}</strong> from Entry <strong>${escapeHtml(entryNo)}</strong>?`,
+            title: 'Delete Entry?',
+            html: `Are you sure you want to delete Open Stock Entry <strong>${escapeHtml(entryNo)}</strong>${count ? ` (${count} items)` : ''}? This action cannot be undone.`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Yes, Delete',
+            confirmButtonText: 'Yes, Delete Entry',
             cancelButtonText: 'Cancel',
             confirmButtonColor: '#d33',
             cancelButtonColor: '#8592a3',
@@ -274,23 +318,26 @@ $(function () {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: "{{ url('fg_stock_taking/open-stock-logs') }}/" + id,
+                    url: "{{ url('fg_stock_taking/open-stock-logs') }}/0",
                     type: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    data: {
+                        entry_no: entryNo
                     },
                     success: function (res) {
                         if (res.success) {
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Deleted!',
-                                text: res.message || 'Log item deleted successfully.',
+                                text: res.message || 'Entry deleted successfully.',
                                 timer: 1500,
                                 showConfirmButton: false
                             });
                             table.ajax.reload(null, false);
                         } else {
-                            Swal.fire('Error', res.message || 'Could not delete item.', 'error');
+                            Swal.fire('Error', res.message || 'Could not delete entry.', 'error');
                         }
                     },
                     error: function (xhr) {
@@ -299,6 +346,34 @@ $(function () {
                 });
             }
         });
+    });
+
+    $(document).on('click', '.btn-show-more-locs', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const title = $(this).data('title') || 'Store Locations';
+        let locs = [];
+        try {
+            locs = JSON.parse($(this).attr('data-locations') || '[]');
+        } catch (err) {
+            locs = [];
+        }
+
+        $('#modal_logs_loc_title').text(title);
+        $('#modal_logs_loc_total_badge').text(locs.length + (locs.length === 1 ? ' Location' : ' Locations'));
+
+        const badgesHtml = locs.map(l =>
+            `<span class="badge bg-light text-dark border p-2 fs-6"><i class="ri ri-map-pin-2-line text-primary me-1"></i>${escapeHtml(l)}</span>`
+        ).join('');
+
+        $('#modal_logs_loc_badges_container').html(badgesHtml || '<span class="text-muted">No locations found</span>');
+
+        const locModalEl = document.getElementById('modalLogsStoreLocations');
+        if (locModalEl) {
+            const modalObj = bootstrap.Modal.getOrCreateInstance(locModalEl);
+            modalObj.show();
+        }
     });
 });
 </script>

@@ -232,4 +232,9 @@ class JobCardEntry extends Model
 
         return true;
     }
+
+    public function pendingReasons()
+    {
+        return $this->hasMany(\App\Models\JobCardPendingReason::class, 'job_card_id');
+    }
 }

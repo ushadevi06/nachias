@@ -18,6 +18,7 @@ use App\Models\Brand;
 use App\Models\Style;
 use App\Models\User;
 use App\Models\JobCardMatrixQuantity;
+use App\Models\JobCardPendingReason;
 use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -122,13 +123,57 @@ class ProductionReceiptController extends Controller
             $data = [];
             $i = $start + 1;
 
+            $jcIds = $receipts->pluck('job_card_id')->filter()->unique()->all();
+            $jcPendingMap = [];
+            if (!empty($jcIds)) {
+                $jcs = JobCardEntry::whereIn('id', $jcIds)->get(['id', 'job_card_no', 'grand_total_qty']);
+                $rcptTotals = DB::table('production_receipts as pr')
+                    ->join('production_receipt_items as pri', 'pri.production_receipt_id', '=', 'pr.id')
+                    ->whereIn('pr.job_card_id', $jcIds)
+                    ->groupBy('pr.job_card_id')
+                    ->select('pr.job_card_id', DB::raw('SUM(pri.qty_to_receive) as total_received'))
+                    ->pluck('total_received', 'job_card_id');
+
+                $savedReasonCounts = JobCardPendingReason::whereIn('job_card_id', $jcIds)
+                    ->groupBy('job_card_id')
+                    ->select('job_card_id', DB::raw('COUNT(*) as reason_count'), DB::raw('SUM(qty) as total_reason_qty'))
+                    ->get()
+                    ->keyBy('job_card_id');
+
+                foreach ($jcs as $jc) {
+                    $recv = (float) ($rcptTotals[$jc->id] ?? 0);
+                    $planned = (float) $jc->grand_total_qty;
+                    $pend = max(0, round($planned - $recv, 2));
+                    $rInfo = $savedReasonCounts[$jc->id] ?? null;
+
+                    $jcPendingMap[$jc->id] = [
+                        'planned' => $planned,
+                        'received' => $recv,
+                        'pending' => $pend,
+                        'reason_count' => $rInfo ? (int)$rInfo->reason_count : 0,
+                        'total_reason_qty' => $rInfo ? (float)$rInfo->total_reason_qty : 0,
+                    ];
+                }
+            }
+
             foreach ($receipts as $row) {
-                $action = '<div class="button-box">';
+                $action = '<div class="button-box d-flex gap-1 align-items-center">';
                 if ((auth()->id() == 1 || auth()->user()->can('edit production-receipts')) && $row->status !== 'Posted') {
                     $action .= '<a href="' . url('production_receipts/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('view_details production-receipts')) {
                     $action .= '<a href="' . url('production_receipts/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                }
+
+                if ($row->job_card_id && isset($jcPendingMap[$row->job_card_id])) {
+                    $pInfo = $jcPendingMap[$row->job_card_id];
+                    if ($pInfo['pending'] > 0 || $pInfo['reason_count'] > 0) {
+                        if ($pInfo['reason_count'] > 0) {
+                            $action .= '<button type="button" class="btn btn-xs btn-outline-success btn-pending-reason" data-job-card-id="' . $row->job_card_id . '" data-receipt-id="' . $row->id . '" data-job-card-no="' . e($row->jobCard?->job_card_no) . '" title="Pending: ' . $pInfo['pending'] . ' pcs (' . $pInfo['reason_count'] . ' reasons logged)" style="padding: 2px 7px; font-size: 0.75rem; white-space: nowrap;"><i class="ri ri-file-list-3-fill me-1"></i>Reason (' . $pInfo['reason_count'] . ')</button>';
+                        } else {
+                            $action .= '<button type="button" class="btn btn-xs btn-outline-warning btn-pending-reason" data-job-card-id="' . $row->job_card_id . '" data-receipt-id="' . $row->id . '" data-job-card-no="' . e($row->jobCard?->job_card_no) . '" title="Pending: ' . $pInfo['pending'] . ' pcs (Click to record reasons)" style="padding: 2px 7px; font-size: 0.75rem; white-space: nowrap;"><i class="ri ri-error-warning-line me-1"></i>+ Reason</button>';
+                        }
+                    }
                 }
                 $action .= '</div>';
 
@@ -2077,5 +2122,97 @@ class ProductionReceiptController extends Controller
             return unauthorizedRedirect();
         }
         return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ProductionReceiptReportExport($request), 'production_receipt_report_' . date('Ymd_His') . '.xlsx');
+    }
+
+    public function getPendingReasons(Request $request, $jobCardId)
+    {
+        $jc = JobCardEntry::with('serviceProvider')->findOrFail($jobCardId);
+
+        $receiptIds = ProductionReceipt::where('job_card_id', $jc->id)->pluck('id');
+        $receivedQty = (float) ProductionReceiptItem::whereIn('production_receipt_id', $receiptIds)->sum('qty_to_receive');
+        $plannedQty = floatval($jc->grand_total_qty);
+        $pendingQty = max(0, round($plannedQty - $receivedQty, 2));
+
+        $savedReasons = JobCardPendingReason::where('job_card_id', $jc->id)->get(['id', 'reason', 'qty', 'remarks']);
+        $totalAllocated = (float) $savedReasons->sum('qty');
+
+        return response()->json([
+            'success' => true,
+            'job_card_id' => $jc->id,
+            'job_card_no' => $jc->job_card_no,
+            'unit' => $jc->serviceProvider?->company_name ?? ($jc->cutting_issue_unit ?? '-'),
+            'planned_qty' => $plannedQty,
+            'received_qty' => $receivedQty,
+            'pending_qty' => $pendingQty,
+            'total_allocated' => $totalAllocated,
+            'balance_unallocated' => max(0, round($pendingQty - $totalAllocated, 2)),
+            'saved_reasons' => $savedReasons,
+            'allowed_reasons' => JobCardPendingReason::REASONS,
+        ]);
+    }
+
+    public function savePendingReasons(Request $request, $jobCardId)
+    {
+        $jc = JobCardEntry::findOrFail($jobCardId);
+
+        $receiptIds = ProductionReceipt::where('job_card_id', $jc->id)->pluck('id');
+        $receivedQty = (float) ProductionReceiptItem::whereIn('production_receipt_id', $receiptIds)->sum('qty_to_receive');
+        $plannedQty = floatval($jc->grand_total_qty);
+        $pendingQty = max(0, round($plannedQty - $receivedQty, 2));
+
+        $reasonsInput = $request->input('reasons', []);
+        if (!is_array($reasonsInput)) {
+            $reasonsInput = [];
+        }
+
+        $sumReasonQty = 0;
+        $cleanReasons = [];
+        foreach ($reasonsInput as $r) {
+            $reasonName = trim((string)($r['reason'] ?? ''));
+            $qty = floatval($r['qty'] ?? 0);
+            $remarks = trim((string)($r['remarks'] ?? ''));
+
+            if ($reasonName !== '' && $qty > 0) {
+                $sumReasonQty += $qty;
+                $cleanReasons[] = [
+                    'reason' => $reasonName,
+                    'qty' => $qty,
+                    'remarks' => $remarks ?: null,
+                ];
+            }
+        }
+
+        if ($sumReasonQty > ($pendingQty + 0.001)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Total reason quantity ({$sumReasonQty} pcs) cannot exceed pending quantity ({$pendingQty} pcs).",
+            ], 422);
+        }
+
+        $latestReceiptId = $request->input('production_receipt_id') ?: ProductionReceipt::where('job_card_id', $jc->id)->latest('id')->value('id');
+
+        DB::transaction(function () use ($jc, $cleanReasons, $latestReceiptId) {
+            JobCardPendingReason::where('job_card_id', $jc->id)->delete();
+
+            foreach ($cleanReasons as $cr) {
+                JobCardPendingReason::create([
+                    'job_card_id' => $jc->id,
+                    'job_card_no' => $jc->job_card_no,
+                    'production_receipt_id' => $latestReceiptId,
+                    'reason' => $cr['reason'],
+                    'qty' => $cr['qty'],
+                    'remarks' => $cr['remarks'],
+                    'created_by' => auth()->id(),
+                ]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pending reasons saved successfully.',
+            'total_allocated' => $sumReasonQty,
+            'balance_unallocated' => max(0, round($pendingQty - $sumReasonQty, 2)),
+            'saved_count' => count($cleanReasons),
+        ]);
     }
 }
