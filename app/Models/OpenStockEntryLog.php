@@ -26,6 +26,7 @@ class OpenStockEntryLog extends Model
         'color_id',
         'sleeve_type',
         'qty',
+        'mrp',
         'price',
         'store_location_id',
         'sku',
@@ -39,6 +40,7 @@ class OpenStockEntryLog extends Model
     protected $casts = [
         'entry_date' => 'date',
         'qty' => 'float',
+        'mrp' => 'float',
         'price' => 'float',
     ];
 
@@ -63,6 +65,7 @@ class OpenStockEntryLog extends Model
                 $table->unsignedBigInteger('color_id')->nullable();
                 $table->string('sleeve_type', 20)->nullable();
                 $table->decimal('qty', 10, 2)->default(0);
+                $table->decimal('mrp', 12, 2)->nullable();
                 $table->decimal('price', 12, 2)->nullable();
                 $table->unsignedBigInteger('store_location_id')->nullable()->index();
                 $table->string('sku', 100)->index();
@@ -74,6 +77,12 @@ class OpenStockEntryLog extends Model
                 $table->timestamps();
                 $table->softDeletes();
             });
+        } else {
+            if (!Schema::hasColumn('open_stock_entry_logs', 'mrp')) {
+                Schema::table('open_stock_entry_logs', function (Blueprint $table) {
+                    $table->decimal('mrp', 12, 2)->nullable()->after('qty');
+                });
+            }
         }
     }
 

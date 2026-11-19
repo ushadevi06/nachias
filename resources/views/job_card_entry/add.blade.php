@@ -1768,7 +1768,7 @@
             const grandTotal = $('#article-qty-matrix-grand-total').text().trim();
             const total = parseFloat(grandTotal) || 0;
 
-            @if($jobCard && ($hasTasks || $hasIssuedItems) && !$isFgConverted)
+            @if($jobCard && $hasTasks && !$isFgConverted)
             const lockedTargetQty = parseFloat("{{ (float)($jobCard->grand_total_qty ?? 0) - (float)($jobCard->additional_qty ?? 0) }}") || 0;
             if (Math.abs(total - lockedTargetQty) > 0.01) {
                 const diffVal = Math.round((total - lockedTargetQty) * 100) / 100;
@@ -1777,12 +1777,12 @@
                     icon: 'error',
                     title: 'Total Quantity Mismatch',
                     html: `<div class="text-start">` +
-                          `<p>Tasks have already been assigned / items issued for this Job Card.</p>` +
+                          `<p>Tasks have already been assigned for this Job Card.</p>` +
                           `<div class="p-2 border rounded bg-light mb-3">` +
                           `<div><b>Locked Target Quantity:</b> <span class="badge bg-primary fs-6">${lockedTargetQty} Pcs</span></div>` +
                           `<div class="mt-2"><b>Current Matrix Total:</b> <span class="badge bg-danger fs-6">${total} Pcs</span> (${diffMsg})</div>` +
                           `</div>` +
-                          `<p class="text-danger mb-0">Total cutting quantity cannot be increased or decreased. You can split sizes and sleeves freely, but the total sum must equal exactly <b>${lockedTargetQty} Pcs</b> before submitting.</p>` +
+                          `<p class="text-danger mb-0">Total cutting quantity cannot be increased or decreased while tasks are assigned. The total sum must equal exactly <b>${lockedTargetQty} Pcs</b> before submitting.</p>` +
                           `</div>`,
                     confirmButtonText: 'Understand & Adjust'
                 });

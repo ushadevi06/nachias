@@ -8,6 +8,7 @@ use App\Models\Brand;
 use App\Models\Color;
 use App\Models\ItemPrice;
 use App\Models\OpenStockEntryLog;
+use App\Models\Setting;
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
 use App\Models\StockTakingItem;
@@ -19,6 +20,7 @@ use App\Models\Style;
 use App\Models\Uom;
 use App\Models\User;
 use App\Models\Warehouse;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -407,9 +409,10 @@ class FgStockTakingController extends Controller
             $insertBatch = [];
             foreach ($rows as $r) {
                 $rate = $this->lookupRate($byArtSize, $byArt, $r->art_no, $r->size, floatval($r->entry_price));
+                $standardBarcode = self::resolveMasterBarcode($r->art_no, $r->size, $r->sleeve_type, (int) $brandId) ?: $r->effective_sku;
                 $insertBatch[] = [
                     'session_id' => $session->id,
-                    'sku' => $r->effective_sku,
+                    'sku' => $standardBarcode,
                     'style_id' => $r->style_id ? (int) $r->style_id : null,
                     'style_name' => $r->style_name ?: null,
                     'art_no' => $r->art_no ?: null,
@@ -450,6 +453,10 @@ class FgStockTakingController extends Controller
             ->where('sei.brand_id', (int) $session->brand_id)
             ->where('sei.created_at', '>', $session->started_at)
             ->where('sei.created_at', '<=', $endAt)
+            ->where(function ($q) use ($session) {
+                $q->whereNull('se.reference_document')
+                  ->orWhere('se.reference_document', '!=', $session->session_no);
+            })
             ->select(
                 DB::raw("{$effectiveSku} as effective_sku"),
                 DB::raw('(COALESCE(sei.qty_in, 0) - COALESCE(sei.qty_out, 0)) as net_delta')
@@ -510,23 +517,229 @@ class FgStockTakingController extends Controller
         return $result;
     }
 
-    public static function classifyItemQuantities(float $snapshotSys, float $movementQty, float $scannedQty, float $rate = 0): array
+    public static function getSessionOpenStockMap(StockTakingSession $session): array
+    {
+        if (!Schema::hasTable('open_stock_entry_logs')) {
+            return ['by_art_sku' => [], 'by_sku' => []];
+        }
+
+        $query = OpenStockEntryLog::where('brand_id', (int) $session->brand_id);
+        if (!empty($session->warehouse_id)) {
+            $query->where('warehouse_id', (int) $session->warehouse_id);
+        }
+        if (!empty($session->store_type_id)) {
+            $query->where('store_type_id', (int) $session->store_type_id);
+        }
+
+        $rows = $query->select(
+            'art_no',
+            'sku',
+            DB::raw('SUM(qty) as total_open_qty')
+        )
+        ->groupBy('art_no', 'sku')
+        ->get();
+
+        $map = [
+            'by_art_sku' => [],
+            'by_sku' => [],
+        ];
+
+        foreach ($rows as $row) {
+            $qty = round(floatval($row->total_open_qty), 2);
+            if ($qty > 0) {
+                $cleanSku = preg_replace('/[\s\x{00A0}\x{200B}\x{FEFF}]+/u', '', (string) $row->sku);
+                $skuKey = strtoupper($cleanSku);
+                $artKey = strtoupper(trim((string) $row->art_no));
+                $compositeKey = $artKey . '|' . $skuKey;
+
+                if ($compositeKey !== '|') {
+                    $map['by_art_sku'][$compositeKey] = ($map['by_art_sku'][$compositeKey] ?? 0.0) + $qty;
+                }
+                if ($skuKey !== '') {
+                    $map['by_sku'][$skuKey] = ($map['by_sku'][$skuKey] ?? 0.0) + $qty;
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    public static function lookupOpenStockQty(array $openStockMap, ?string $artNo, ?string $sku): float
+    {
+        $cleanSku = preg_replace('/[\s\x{00A0}\x{200B}\x{FEFF}]+/u', '', (string) $sku);
+        $skuKey = strtoupper($cleanSku);
+        $artKey = strtoupper(trim((string) $artNo));
+        $compositeKey = $artKey . '|' . $skuKey;
+
+        if ($compositeKey !== '|' && isset($openStockMap['by_art_sku'][$compositeKey])) {
+            return (float) $openStockMap['by_art_sku'][$compositeKey];
+        }
+        if ($skuKey !== '' && isset($openStockMap['by_sku'][$skuKey])) {
+            return (float) $openStockMap['by_sku'][$skuKey];
+        }
+
+        return 0.0;
+    }
+
+    public static function resolveMasterBarcode(?string $artNo, ?string $size, ?string $sleeve, ?int $brandId = null): ?string
+    {
+        if (empty($artNo) || empty($size)) {
+            return null;
+        }
+
+        if (!Schema::hasTable('barcode_masters')) {
+            return null;
+        }
+
+        $cleanArt = trim((string) $artNo);
+        $cleanSize = trim((string) $size);
+        $normalizedSleeve = null;
+        if (!empty($sleeve)) {
+            $s = strtoupper(trim((string) $sleeve));
+            if ($s === 'FULL' || $s === 'F/S' || str_contains($s, 'FULL') || str_contains($s, 'F/S')) {
+                $normalizedSleeve = 'F/S';
+            } elseif ($s === 'HALF' || $s === 'H/S' || str_contains($s, 'HALF') || str_contains($s, 'H/S')) {
+                $normalizedSleeve = 'H/S';
+            }
+        }
+
+        $q = DB::table('barcode_masters')
+            ->where('art_no', $cleanArt)
+            ->where('size', $cleanSize);
+
+        if ($brandId) {
+            $q->where('brand_id', $brandId);
+        }
+
+        if ($normalizedSleeve) {
+            $q->where('sleeve_type', $normalizedSleeve);
+        }
+
+        $bm = $q->first();
+        if (!$bm && $normalizedSleeve) {
+            $bm = DB::table('barcode_masters')
+                ->where('art_no', $cleanArt)
+                ->where('size', $cleanSize)
+                ->first();
+        }
+
+        if ($bm && !empty($bm->barcode_no)) {
+            return $bm->barcode_no;
+        }
+
+        // Standard 12-digit barcode formula fallback (matching Open Stock Entry & Nachias standard format)
+        $artDigits = preg_replace('/^[A-Za-z]+[-_]?(?=\d)/', '', $cleanArt);
+        $artDigits = str_replace('-', '0', $artDigits);
+        $artDigits = preg_replace('/[^A-Za-z0-9]/', '', $artDigits);
+
+        $sizeCode = preg_replace('/[^A-Za-z0-9]/', '', $cleanSize);
+        $slvCode = ($normalizedSleeve === 'H/S') ? '02' : '01';
+
+        if (!empty($artDigits) && !empty($sizeCode)) {
+            return 'BC' . $artDigits . $sizeCode . $slvCode;
+        }
+
+        return null;
+    }
+
+    public static function syncSessionOpenStockItems(StockTakingSession $session): void
+    {
+        if (!Schema::hasTable('open_stock_entry_logs')) {
+            return;
+        }
+
+        $query = OpenStockEntryLog::where('brand_id', (int) $session->brand_id);
+        if (!empty($session->warehouse_id)) {
+            $query->where('warehouse_id', (int) $session->warehouse_id);
+        }
+        if (!empty($session->store_type_id)) {
+            $query->where('store_type_id', (int) $session->store_type_id);
+        }
+
+        $openLogs = $query->orderBy('id', 'asc')->get();
+        if ($openLogs->isEmpty()) {
+            return;
+        }
+
+        $existingItems = StockTakingItem::where('session_id', $session->id)->get(['id', 'sku', 'art_no']);
+        $existingArtSku = [];
+        $existingSku = [];
+        foreach ($existingItems as $ei) {
+            $sKey = strtoupper(preg_replace('/[\s\x{00A0}\x{200B}\x{FEFF}]+/u', '', (string) $ei->sku));
+            $aKey = strtoupper(trim((string) $ei->art_no));
+            if ($aKey !== '' && $sKey !== '') {
+                $existingArtSku[$aKey . '|' . $sKey] = true;
+            }
+            if ($sKey !== '') {
+                $existingSku[$sKey] = true;
+            }
+        }
+
+        $hasCreated = false;
+        foreach ($openLogs as $log) {
+            $cleanSku = preg_replace('/[\s\x{00A0}\x{200B}\x{FEFF}]+/u', '', (string) $log->sku);
+            $sKey = strtoupper($cleanSku);
+            $aKey = strtoupper(trim((string) $log->art_no));
+            $composite = $aKey . '|' . $sKey;
+
+            if (($composite !== '|' && isset($existingArtSku[$composite])) || ($sKey !== '' && isset($existingSku[$sKey]))) {
+                continue;
+            }
+
+            StockTakingItem::create([
+                'session_id' => $session->id,
+                'sku' => $cleanSku ?: $log->sku,
+                'style_id' => $log->style_id ?: null,
+                'style_name' => $log->product_name ?: ($log->style?->style_name ?: null),
+                'art_no' => $log->art_no ?: null,
+                'finished_item_code' => null,
+                'size' => $log->size ?: null,
+                'sleeve_type' => $log->sleeve_type ?: null,
+                'system_qty' => 0,
+                'scanned_qty' => 0,
+                'rate' => round(floatval($log->price ?? $log->mrp ?? 0), 2),
+                'system_store_location_id' => $log->store_location_id ?: null,
+                'store_location_id' => null,
+            ]);
+
+            $hasCreated = true;
+            if ($composite !== '|') {
+                $existingArtSku[$composite] = true;
+            }
+            if ($sKey !== '') {
+                $existingSku[$sKey] = true;
+            }
+        }
+
+        if ($hasCreated) {
+            $session->total_system_skus = StockTakingItem::where('session_id', $session->id)->count();
+            $session->saveQuietly();
+        }
+    }
+
+    public static function classifyItemQuantities(float $snapshotSys, float $movementQty, float $scannedQty, float $rate = 0, float $openQty = 0): array
     {
         $snapshotSys = round($snapshotSys, 2);
         $movementQty = round($movementQty, 2);
-        $scannedQty = round($scannedQty, 2);
-        $effectiveSys = max(0.0, round($snapshotSys + $movementQty, 2));
-        $remaining = max(0.0, round($effectiveSys - $scannedQty, 2));
-        $variance = round($scannedQty - $effectiveSys, 2);
-        $matchedQty = min($scannedQty, $effectiveSys);
+        $openQty = round($openQty, 2);
+        $barcodeScanned = round($scannedQty, 2);
 
-        if ($effectiveSys > 0.0001 && abs($variance) < 0.001) {
+        $systemQty = max(0.0, round($snapshotSys + $movementQty, 2));
+        $totalCounted = round($barcodeScanned + $openQty, 2);
+
+        $remaining = max(0.0, round($systemQty - $totalCounted, 2));
+        $variance = round($totalCounted - $systemQty, 2);
+        $shortageQty = $variance < -0.001 ? round(abs($variance), 2) : 0.0;
+        $excessQty = $variance > 0.001 ? round($variance, 2) : 0.0;
+        $matchedQty = min($totalCounted, $systemQty);
+
+        if ($systemQty > 0.0001 && abs($variance) < 0.001) {
             $status = 'completed';
         } elseif ($variance > 0.001) {
             $status = 'excess';
-        } elseif ($effectiveSys > 0.0001 && $scannedQty <= 0.0001) {
+        } elseif ($systemQty > 0.0001 && $totalCounted <= 0.0001) {
             $status = 'pending';
-        } elseif ($effectiveSys > 0.0001 && $scannedQty < $effectiveSys - 0.001) {
+        } elseif ($systemQty > 0.0001 && $totalCounted < $systemQty - 0.001) {
             $status = 'in_progress';
         } else {
             $status = 'completed';
@@ -535,9 +748,15 @@ class FgStockTakingController extends Controller
         return [
             'snapshot_qty' => $snapshotSys,
             'movement_qty' => $movementQty,
-            'system_qty' => $effectiveSys,
-            'scanned_qty' => $scannedQty,
+            'open_qty' => $openQty,
+            'raw_system_qty' => $systemQty,
+            'system_qty' => $systemQty,
+            'effective_system_qty' => $systemQty,
+            'barcode_scanned_qty' => $barcodeScanned,
+            'scanned_qty' => $totalCounted,
             'remaining_qty' => $remaining,
+            'shortage_qty' => $shortageQty,
+            'excess_qty' => $excessQty,
             'matched_qty' => round($matchedQty, 2),
             'variance' => $variance,
             'variance_value' => round($variance * $rate, 2),
@@ -547,15 +766,20 @@ class FgStockTakingController extends Controller
 
     public static function computeSessionItemsState(StockTakingSession $session): array
     {
+        self::syncSessionOpenStockItems($session);
+
         $items = $session->relationLoaded('items')
             ? $session->items
             : StockTakingItem::where('session_id', $session->id)->get();
 
         $movementMap = self::getSessionMovementMap($session);
+        $openStockMap = self::getSessionOpenStockMap($session);
 
         $computed = [];
         $sumSnapshot = 0.0;
         $sumMovement = 0.0;
+        $sumOpen = 0.0;
+        $sumRawSys = 0.0;
         $sumSys = 0.0;
         $sumScan = 0.0;
         $sumMatchedQty = 0.0;
@@ -573,11 +797,14 @@ class FgStockTakingController extends Controller
 
         foreach ($items as $it) {
             $mv = floatval($movementMap[$it->sku] ?? 0);
+            $openQty = self::lookupOpenStockQty($openStockMap, $it->art_no, $it->sku);
             $rate = floatval($it->rate);
-            $q = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), $rate);
+            $q = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), $rate, $openQty);
 
             $sumSnapshot += $q['snapshot_qty'];
             $sumMovement += $q['movement_qty'];
+            $sumOpen += $q['open_qty'];
+            $sumRawSys += $q['system_qty'];
             $sumSys += $q['system_qty'];
             $sumScan += $q['scanned_qty'];
             $sumMatchedQty += $q['matched_qty'];
@@ -613,11 +840,14 @@ class FgStockTakingController extends Controller
         return [
             'rows' => $computed,
             'movement_map' => $movementMap,
+            'open_stock_map' => $openStockMap,
             'stats' => [
                 'total_skus' => count($computed),
                 'touched_skus' => $touchedSkus,
                 'total_snapshot_qty' => round($sumSnapshot, 2),
                 'total_movement_qty' => round($sumMovement, 2),
+                'total_open_qty' => round($sumOpen, 2),
+                'total_raw_system_qty' => round($sumRawSys, 2),
                 'total_system_qty' => round($sumSys, 2),
                 'total_scanned_qty' => round($sumScan, 2),
                 'total_matched_qty' => round($sumMatchedQty, 2),
@@ -813,13 +1043,11 @@ class FgStockTakingController extends Controller
         $this->authorizeAccess();
         OpenStockEntryLog::ensureTableExists();
 
-        $allBrands = Brand::whereNull('deleted_at')
-            ->where('status', 'Active')
-            ->where('brand_name', 'not like', '%accessor%')
-            ->where('code', 'not like', '%-AS')
-            ->whereNotIn('code', ['DAS', 'CAS', 'COM-AS'])
-            ->orderBy('brand_name', 'asc')
-            ->get();
+        if ($request->ajax()) {
+            return $this->openStockLogsData($request);
+        }
+
+        $allBrands = Brand::whereNull('deleted_at')->where('status', 'Active')->where('brand_name', 'not like', '%accessor%')->where('code', 'not like', '%-AS')->whereNotIn('code', ['DAS', 'CAS', 'COM-AS'])->orderBy('brand_name', 'asc')->get();
         $warehouses = Warehouse::whereNull('deleted_at')->where('status', 'Active')->orderBy('warehouse_name', 'asc')->get();
 
         return view('stock_taking.open_stock_logs', compact(
@@ -837,13 +1065,31 @@ class FgStockTakingController extends Controller
         $warehouseId = $request->input('warehouse_id');
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
+        $dateRange = $request->input('date_range');
+
+        if (!empty($dateRange)) {
+            $dates = explode(' to ', $dateRange);
+            if (count($dates) == 2) {
+                try {
+                    $fromDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                    $toDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->format('Y-m-d');
+                } catch (\Exception $e) {}
+            } elseif (count($dates) == 1 && trim($dates[0]) !== '') {
+                try {
+                    $fromDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                    $toDate = $fromDate;
+                } catch (\Exception $e) {}
+            }
+        }
+
         $rawSearch = $request->input('search');
         $search = trim((string) (is_array($rawSearch) ? ($rawSearch['value'] ?? '') : ($rawSearch ?? '')));
 
         $baseQuery = OpenStockEntryLog::query();
 
         if (!empty($brandId)) {
-            $baseQuery->where('brand_id', $brandId);
+            $matchingEntryNos = OpenStockEntryLog::where('brand_id', $brandId)->distinct()->pluck('entry_no')->all();
+            $baseQuery->whereIn('entry_no', !empty($matchingEntryNos) ? $matchingEntryNos : ['__NONE__']);
         }
         if (!empty($warehouseId)) {
             $baseQuery->where('warehouse_id', $warehouseId);
@@ -872,6 +1118,13 @@ class FgStockTakingController extends Controller
 
         $recordsTotal = OpenStockEntryLog::distinct('entry_no')->count('entry_no');
         $recordsFiltered = (clone $baseQuery)->distinct('entry_no')->count('entry_no');
+
+        // Overall grand totals for filtered entries
+        $totalsRow = (clone $baseQuery)
+            ->selectRaw('SUM(qty) as overall_qty, SUM(qty * COALESCE(price, 0)) as overall_amount')
+            ->first();
+        $overallTotalQty = (float) ($totalsRow->overall_qty ?? 0);
+        $overallTotalAmount = (float) ($totalsRow->overall_amount ?? 0);
 
         $groupedQuery = (clone $baseQuery)
             ->select(
@@ -995,6 +1248,8 @@ class FgStockTakingController extends Controller
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
+            'overallTotalQty' => $overallTotalQty,
+            'overallTotalAmount' => $overallTotalAmount,
         ]);
     }
 
@@ -1008,10 +1263,7 @@ class FgStockTakingController extends Controller
             return response()->json(['success' => false, 'message' => 'Entry number required.'], 400);
         }
 
-        $items = OpenStockEntryLog::with(['brand', 'style', 'color', 'storeLocation', 'warehouse', 'storeType', 'creator'])
-            ->where('entry_no', $entryNo)
-            ->orderBy('id', 'asc')
-            ->get();
+        $items = OpenStockEntryLog::with(['brand', 'style', 'color', 'storeLocation', 'warehouse', 'storeType', 'creator'])->where('entry_no', $entryNo)->orderBy('id', 'asc')->get();
 
         if ($items->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'No items found for this entry.'], 404);
@@ -1026,6 +1278,7 @@ class FgStockTakingController extends Controller
                 'size' => $it->size,
                 'sleeve_type' => $it->sleeve_type ?? '-',
                 'qty' => (float) $it->qty,
+                'mrp' => $it->mrp !== null && $it->mrp > 0 ? (float) $it->mrp : ($it->price ? round((float)$it->price * 1.5, 2) : 0),
                 'price' => $it->price !== null ? (float) $it->price : 0,
                 'total_val' => round((float)$it->qty * ((float)$it->price ?? 0), 2),
                 'store_location' => $it->storeLocation?->store_location ?? ($it->storeLocation?->store_location_name ?? '-'),
@@ -1104,11 +1357,30 @@ class FgStockTakingController extends Controller
         $this->authorizeAccess();
         OpenStockEntryLog::ensureTableExists();
 
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
+        $dateRange = $request->input('date_range');
+
+        if (!empty($dateRange)) {
+            $dates = explode(' to ', $dateRange);
+            if (count($dates) == 2) {
+                try {
+                    $fromDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                    $toDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->format('Y-m-d');
+                } catch (\Exception $e) {}
+            } elseif (count($dates) == 1 && trim($dates[0]) !== '') {
+                try {
+                    $fromDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                    $toDate = $fromDate;
+                } catch (\Exception $e) {}
+            }
+        }
+
         $filters = [
             'brand_id' => $request->input('brand_id'),
             'warehouse_id' => $request->input('warehouse_id'),
-            'from_date' => $request->input('from_date'),
-            'to_date' => $request->input('to_date'),
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
             'search' => $request->input('search'),
         ];
 
@@ -1192,6 +1464,7 @@ class FgStockTakingController extends Controller
                         'color_id' => $l->color_id,
                         'sleeve_type' => $l->sleeve_type,
                         'qty_in' => (float) $l->qty,
+                        'mrp' => $l->mrp !== null ? (float) $l->mrp : ($l->price ? round((float)$l->price * 1.5, 2) : '0.00'),
                         'price' => $l->price !== null ? (float) $l->price : '0.00',
                         'store_location_id' => $l->store_location_id,
                         'sku' => $l->sku,
@@ -1202,13 +1475,7 @@ class FgStockTakingController extends Controller
             }
         }
 
-        $allBrands = Brand::whereNull('deleted_at')
-            ->where('status', 'Active')
-            ->where('brand_name', 'not like', '%accessor%')
-            ->where('code', 'not like', '%-AS')
-            ->whereNotIn('code', ['DAS', 'CAS', 'COM-AS'])
-            ->orderBy('brand_name', 'asc')
-            ->get();
+        $allBrands = Brand::whereNull('deleted_at')->where('status', 'Active')->where('brand_name', 'not like', '%accessor%')->where('code', 'not like', '%-AS')->whereNotIn('code', ['DAS', 'CAS', 'COM-AS'])->orderBy('brand_name', 'asc')->get();
 
         $fgBrandCodes = $allBrands->pluck('code')->filter()->map(fn($c) => strtoupper(trim($c)))->all();
 
@@ -1349,12 +1616,20 @@ class FgStockTakingController extends Controller
         }
 
         if ($price && (floatval($price->selling_price) > 0 || floatval($price->unit_price) > 0)) {
-            $sellingPrice = floatval($price->selling_price ?: $price->unit_price);
+            $mrp = floatval($price->selling_price ?: 0);
+            $wsp = floatval($price->unit_price ?: 0);
+            if ($wsp <= 0 && $mrp > 0) {
+                $wsp = round($mrp / 1.5, 2);
+            } elseif ($mrp <= 0 && $wsp > 0) {
+                $mrp = round($wsp * 1.5, 2);
+            }
             return response()->json([
                 'success' => true,
                 'found' => true,
-                'selling_price' => number_format($sellingPrice, 2, '.', ''),
-                'unit_price' => $price->unit_price ? number_format((float) $price->unit_price, 2, '.', '') : null,
+                'mrp' => number_format($mrp, 2, '.', ''),
+                'wsp' => number_format($wsp, 2, '.', ''),
+                'selling_price' => number_format($wsp, 2, '.', ''),
+                'unit_price' => number_format($wsp, 2, '.', ''),
                 'finished_item_code' => $price->finished_item_code,
                 'size' => $price->size,
             ]);
@@ -1363,6 +1638,8 @@ class FgStockTakingController extends Controller
         return response()->json([
             'success' => true,
             'found' => false,
+            'mrp' => null,
+            'wsp' => null,
             'selling_price' => null,
             'unit_price' => null,
         ]);
@@ -1396,10 +1673,7 @@ class FgStockTakingController extends Controller
 
         $session = null;
         if (!$forceNew) {
-            $query = StockTakingSession::with(['brand', 'storeType', 'warehouse', 'starter', 'completer'])
-                ->where('brand_id', $brandId)
-                ->where('status', 'In Progress')
-                ->orderByDesc('id');
+            $query = StockTakingSession::with(['brand', 'storeType', 'warehouse', 'starter', 'completer'])->where('brand_id', $brandId)->where('status', 'In Progress')->orderByDesc('id');
 
             if ($storeTypeId) {
                 $query->where('store_type_id', $storeTypeId);
@@ -1409,7 +1683,6 @@ class FgStockTakingController extends Controller
 
             $session = $query->first();
 
-            // Self-healing: If an in-progress session has 0 scans, check if the old system stock snapshot is outdated compared to live stock
             if ($session && floatval($session->total_scanned_qty) == 0) {
                 $storeCounts = self::getBrandStoreCounts($brandId);
                 $liveStoreQty = round(floatval($storeTypeId ? ($storeCounts[$storeTypeId] ?? 0) : array_sum($storeCounts)), 2);
@@ -1439,37 +1712,7 @@ class FgStockTakingController extends Controller
         }
 
         $meta = $this->formatSessionMeta($session);
-
-        if ($isNew) {
-            $sysQty = round(floatval($session->total_system_qty), 2);
-            $sysSkus = (int) $session->total_system_skus;
-            $stats = [
-                'total_skus' => $sysSkus,
-                'touched_skus' => 0,
-                'total_snapshot_qty' => $sysQty,
-                'total_movement_qty' => 0.0,
-                'total_system_qty' => $sysQty,
-                'total_scanned_qty' => 0.0,
-                'total_matched_qty' => 0.0,
-                'remaining_qty' => $sysQty,
-                'variance_qty' => -$sysQty,
-                'variance_value' => 0.0,
-                'matched_skus' => 0,
-                'pending_skus' => $sysSkus,
-                'in_progress_skus' => 0,
-                'shortage_skus' => $sysSkus,
-                'shortage_qty' => $sysQty,
-                'excess_skus' => 0,
-                'excess_qty' => 0.0,
-                'coverage_pct' => 0.0,
-                'total_logs' => 0,
-                'alert_logs' => 0,
-                'wrong_brand_logs' => 0,
-                'duplicate_logs' => 0,
-            ];
-        } else {
-            $stats = $this->buildSummaryStats($session);
-        }
+        $stats = $this->buildSummaryStats($session);
 
         $storeCounts = self::getBrandStoreCounts($brandId, $warehouseId);
 
@@ -1533,6 +1776,7 @@ class FgStockTakingController extends Controller
             $finalizedBy = $s->completer?->name ?? '-';
             $completedAt = $s->completed_at ? $s->completed_at->format('d-m-Y h:i A') : '-';
             $exportUrl = url('fg_stock_taking/session/' . $s->id . '/export');
+            $pdfUrl = url('fg_stock_taking/session/' . $s->id . '/pdf');
             $viewUrl = url('fg_stock_taking?session_id=' . $s->id);
 
             return [
@@ -1557,6 +1801,7 @@ class FgStockTakingController extends Controller
                 'variance_qty' => $varQty,
                 'view_url' => $viewUrl,
                 'export_url' => $exportUrl,
+                'pdf_url' => $pdfUrl,
             ];
         };
 
@@ -1656,13 +1901,142 @@ class FgStockTakingController extends Controller
                 return ['already_finalized' => true, 'session' => $session];
             }
 
+            self::syncSessionOpenStockItems($session);
+            $state = self::computeSessionItemsState($session);
+            $rows = $state['rows'];
+
+            $adjustmentItems = [];
+            foreach ($rows as $entry) {
+                $item = $entry['model'];
+                $calc = $entry['calc'];
+                $ex = floatval($calc['excess_qty']);
+                $sh = floatval($calc['shortage_qty']);
+                $scanned = floatval($calc['scanned_qty'] ?? $item->scanned_qty);
+
+                $oldBarcode = $item->sku;
+
+                // Auto-convert old barcode format to new 12-digit standard format automatically during finalize
+                $masterBarcode = self::resolveMasterBarcode($item->art_no, $item->size, $item->sleeve_type, (int) $session->brand_id);
+                if ($masterBarcode && $oldBarcode !== $masterBarcode) {
+                    // 1. Permanently convert all historical inventory records for this brand to the new barcode format
+                    StockEntryItem::where('sku', $oldBarcode)
+                        ->where('brand_id', (int) $session->brand_id)
+                        ->update([
+                            'sku' => $masterBarcode,
+                            'barcode' => $masterBarcode,
+                        ]);
+
+                    // 2. Also convert scan logs for this session to the new barcode
+                    StockTakingScanLog::where('session_id', $session->id)
+                        ->where('resolved_sku', $oldBarcode)
+                        ->update(['resolved_sku' => $masterBarcode]);
+
+                    // 3. Safely update the session item without unique constraint collision
+                    $existingMasterRow = StockTakingItem::where('session_id', $session->id)
+                        ->where('sku', $masterBarcode)
+                        ->where('id', '!=', $item->id)
+                        ->first();
+
+                    if ($existingMasterRow) {
+                        $item->scanned_qty += floatval($existingMasterRow->scanned_qty);
+                        $item->system_qty += floatval($existingMasterRow->system_qty);
+                        $existingMasterRow->delete();
+                    }
+
+                    $item->sku = $masterBarcode;
+                }
+
+                if (Schema::hasColumn('stock_taking_items', 'excess_qty')) {
+                    $item->excess_qty = $ex;
+                }
+                if (Schema::hasColumn('stock_taking_items', 'shortage_qty')) {
+                    $item->shortage_qty = $sh;
+                }
+                $item->save();
+
+                $targetBarcode = $masterBarcode ?: $item->sku;
+
+                // Standard discrepancy adjustment directly on the new barcode
+                if ($ex > 0.0001 || $sh > 0.0001) {
+                    $adjustmentItems[] = [
+                        'item' => $item,
+                        'sku' => $targetBarcode,
+                        'qty_in' => $ex > 0 ? $ex : 0,
+                        'qty_out' => $sh > 0 ? $sh : 0,
+                        'excess_qty' => $ex,
+                        'shortage_qty' => $sh,
+                    ];
+                }
+            }
+
+            $adjustmentEntry = null;
+            if (!empty($adjustmentItems)) {
+                $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')->first();
+                $nextNumber = $lastEntry ? (int) substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+                $nextStockNo = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+                $targetWarehouseId = $session->warehouse_id ? (int) $session->warehouse_id : null;
+                $targetStoreTypeId = $session->store_type_id ?: (StoreType::where('store_type_name', 'like', '%finished%')->value('id') ?: (StoreType::value('id') ?: 1));
+
+                $adjustmentEntry = StockEntry::create([
+                    'stock_entry_no' => $nextStockNo,
+                    'stock_date' => now()->toDateString(),
+                    'entry_type' => 'Finished Goods',
+                    'warehouse_id' => $targetWarehouseId,
+                    'store_type_id' => $targetStoreTypeId,
+                    'reference_document' => $session->session_no,
+                    'remarks' => "Stock Taking {$session->session_no} Reconciliation Adjustment ({$session->brand?->brand_name})",
+                    'status' => 'Posted',
+                    'created_by' => auth()->id(),
+                ]);
+
+                $hasSeiExcess = Schema::hasColumn('stock_entry_items', 'excess_qty');
+                $hasSeiShortage = Schema::hasColumn('stock_entry_items', 'shortage_qty');
+
+                foreach ($adjustmentItems as $adj) {
+                    $it = $adj['item'];
+                    $locId = $it->store_location_id ?: $it->system_store_location_id;
+
+                    $seiData = [
+                        'stock_entry_id' => $adjustmentEntry->id,
+                        'stock_type' => 'finished_goods',
+                        'art_no' => $it->art_no,
+                        'sku' => $adj['sku'],
+                        'barcode' => $adj['sku'],
+                        'style_id' => $it->style_id,
+                        'brand_id' => $session->brand_id,
+                        'size' => $it->size,
+                        'sleeve_type' => $it->sleeve_type,
+                        'store_location_id' => $locId,
+                        'warehouse_id' => $targetWarehouseId,
+                        'store_type_id' => $targetStoreTypeId,
+                        'price' => floatval($it->rate),
+                        'qty_in' => $adj['qty_in'],
+                        'qty_out' => $adj['qty_out'],
+                    ];
+                    if ($hasSeiExcess) {
+                        $seiData['excess_qty'] = $adj['excess_qty'];
+                    }
+                    if ($hasSeiShortage) {
+                        $seiData['shortage_qty'] = $adj['shortage_qty'];
+                    }
+
+                    StockEntryItem::create($seiData);
+                }
+            }
+
             $session->status = 'Completed';
             $session->completed_by = auth()->id();
             $session->completed_at = now();
             $session->save();
             $session->load(['brand', 'storeType', 'warehouse', 'starter', 'completer']);
 
-            return ['success' => true, 'session' => $session];
+            return [
+                'success' => true,
+                'session' => $session,
+                'adjustment_entry_no' => $adjustmentEntry?->stock_entry_no,
+                'discrepancy_count' => count($adjustmentItems),
+            ];
         });
 
         if (!empty($res['missing'])) {
@@ -1675,13 +2049,22 @@ class FgStockTakingController extends Controller
 
         $session = $res['session'];
         $alreadyFinalized = !empty($res['already_finalized']);
+        $adjustmentEntryNo = $res['adjustment_entry_no'] ?? null;
+        $discCount = $res['discrepancy_count'] ?? 0;
+
+        if ($alreadyFinalized) {
+            $msg = "Stock taking session {$session->session_no} is already finalized.";
+        } elseif ($adjustmentEntryNo) {
+            $msg = "Stock taking session {$session->session_no} has been finalized. Adjustment Stock Entry {$adjustmentEntryNo} created with {$discCount} discrepancy items (Stock ledger updated).";
+        } else {
+            $msg = "Stock taking session {$session->session_no} has been finalized. Perfect match! No discrepancies found.";
+        }
 
         return response()->json([
             'success' => true,
             'already_finalized' => $alreadyFinalized,
-            'message' => $alreadyFinalized
-                ? "Stock taking session {$session->session_no} is already finalized."
-                : "Stock taking session {$session->session_no} has been finalized. Scanning is now locked.",
+            'adjustment_entry_no' => $adjustmentEntryNo,
+            'message' => $msg,
             'session' => $this->formatSessionMeta($session),
             'stats' => $this->buildSummaryStats($session),
         ]);
@@ -1779,10 +2162,12 @@ class FgStockTakingController extends Controller
 
                 if ($sessionItems->isNotEmpty()) {
                     $movementMap = self::getSessionMovementMap($session);
+                    $openStockMap = self::getSessionOpenStockMap($session);
                     $brandName = $session->brand?->brand_name ?? '-';
-                    $items = $sessionItems->map(function ($it) use ($movementMap, $brandName) {
+                    $items = $sessionItems->map(function ($it) use ($movementMap, $openStockMap, $brandName) {
                         $mv = floatval($movementMap[$it->sku] ?? 0);
-                        $calc = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), floatval($it->rate));
+                        $openQty = self::lookupOpenStockQty($openStockMap, $it->art_no, $it->sku);
+                        $calc = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), floatval($it->rate), $openQty);
                         return [
                             'sku' => $it->sku,
                             'art_no' => $it->art_no ?: '-',
@@ -1791,6 +2176,7 @@ class FgStockTakingController extends Controller
                             'sleeve_type' => $it->sleeve_type ?: '-',
                             'brand_name' => $brandName,
                             'system_qty' => $calc['system_qty'],
+                            'open_qty' => $calc['open_qty'],
                             'scanned_qty' => $calc['scanned_qty'],
                             'remaining_qty' => $calc['remaining_qty'],
                             'status' => $calc['status'],
@@ -1944,7 +2330,33 @@ class FgStockTakingController extends Controller
                 ];
             }
 
+            self::syncSessionOpenStockItems($session);
+
             $sessionItem = StockTakingItem::where('session_id', $session->id)->where('sku', $candidateCode)->lockForUpdate()->first();
+
+            if (!$sessionItem && Schema::hasTable('barcode_masters')) {
+                $bm = DB::table('barcode_masters')->where('barcode_no', $candidateCode)->first();
+                if ($bm) {
+                    $tryItem = StockTakingItem::where('session_id', $session->id)
+                        ->where('art_no', $bm->art_no)
+                        ->where('size', $bm->size)
+                        ->lockForUpdate()
+                        ->first();
+                    if ($tryItem) {
+                        $tryItem->sku = $bm->barcode_no;
+                        $tryItem->save();
+                        $sessionItem = $tryItem;
+                    }
+                }
+            }
+
+            if ($sessionItem) {
+                $masterBarcode = self::resolveMasterBarcode($sessionItem->art_no, $sessionItem->size, $sessionItem->sleeve_type, (int) $session->brand_id);
+                if ($masterBarcode && $sessionItem->sku !== $masterBarcode) {
+                    $sessionItem->sku = $masterBarcode;
+                    $sessionItem->save();
+                }
+            }
 
             $resolvedInfo = null;
             if (!$sessionItem) {
@@ -2042,11 +2454,13 @@ class FgStockTakingController extends Controller
 
                 $movementMap = self::getSessionMovementMap($session);
                 $movementQty = floatval($movementMap[$sessionItem->sku] ?? 0);
+                $openStockMap = self::getSessionOpenStockMap($session);
+                $openQty = self::lookupOpenStockQty($openStockMap, $sessionItem->art_no, $sessionItem->sku);
 
                 $currentScanned = floatval($sessionItem->scanned_qty);
                 $newScanned = round($currentScanned + $qty, 2);
-                $calc = self::classifyItemQuantities(floatval($sessionItem->system_qty), $movementQty, $newScanned, floatval($sessionItem->rate));
-                $effectiveSys = $calc['system_qty'];
+                $calc = self::classifyItemQuantities(floatval($sessionItem->system_qty), $movementQty, $newScanned, floatval($sessionItem->rate), $openQty);
+                $effectiveSys = $calc['effective_system_qty'];
                 $isExcess = $calc['status'] === 'excess';
                 $scanStatus = $isExcess ? 'excess' : 'matched';
 
@@ -2405,6 +2819,8 @@ class FgStockTakingController extends Controller
             $offset = ($page - 1) * $perPage;
         }
 
+        self::syncSessionOpenStockItems($session);
+
         $totalRecordsAll = StockTakingItem::where('session_id', $session->id)->count();
 
         if ($filter === 'alerts' || $filter === 'logs') {
@@ -2470,7 +2886,8 @@ class FgStockTakingController extends Controller
         }
 
         $movementMap = self::getSessionMovementMap($session);
-        $hasMovements = count($movementMap) > 0;
+        $openStockMap = self::getSessionOpenStockMap($session);
+        $hasMovements = count($movementMap) > 0 || !empty($openStockMap['by_sku']);
 
         $canUseSqlFilter = ($filter === 'all')
             || (!$hasMovements && in_array($filter, ['pending', 'in_progress', 'completed', 'matched', 'shortage', 'excess', 'scanned'], true));
@@ -2503,7 +2920,8 @@ class FgStockTakingController extends Controller
             $pageRows = [];
             foreach ($pageItems as $it) {
                 $mv = floatval($movementMap[$it->sku] ?? 0);
-                $calc = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), floatval($it->rate));
+                $openQty = self::lookupOpenStockQty($openStockMap, $it->art_no, $it->sku);
+                $calc = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), floatval($it->rate), $openQty);
 
                 $locDisplay = null;
                 if (floatval($calc['scanned_qty']) > 0.0001) {
@@ -2520,9 +2938,14 @@ class FgStockTakingController extends Controller
                     'rate' => floatval($it->rate),
                     'snapshot_qty' => $calc['snapshot_qty'],
                     'movement_qty' => $calc['movement_qty'],
+                    'open_qty' => $calc['open_qty'],
+                    'raw_system_qty' => $calc['raw_system_qty'],
+                    'effective_system_qty' => $calc['effective_system_qty'],
                     'system_qty' => $calc['system_qty'],
                     'scanned_qty' => $calc['scanned_qty'],
                     'remaining_qty' => $calc['remaining_qty'],
+                    'shortage_qty' => $calc['shortage_qty'],
+                    'excess_qty' => $calc['excess_qty'],
                     'variance' => $calc['variance'],
                     'status' => $calc['status'],
                     'system_store_location_id' => $it->system_store_location_id,
@@ -2556,7 +2979,8 @@ class FgStockTakingController extends Controller
         $filtered = [];
         foreach ($allMatchingItems as $it) {
             $mv = floatval($movementMap[$it->sku] ?? 0);
-            $calc = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), floatval($it->rate));
+            $openQty = self::lookupOpenStockQty($openStockMap, $it->art_no, $it->sku);
+            $calc = self::classifyItemQuantities(floatval($it->system_qty), $mv, floatval($it->scanned_qty), floatval($it->rate), $openQty);
             $status = $calc['status'];
 
             $include = match ($filter) {
@@ -2584,9 +3008,14 @@ class FgStockTakingController extends Controller
                 'rate' => floatval($it->rate),
                 'snapshot_qty' => $calc['snapshot_qty'],
                 'movement_qty' => $calc['movement_qty'],
+                'open_qty' => $calc['open_qty'],
+                'raw_system_qty' => $calc['raw_system_qty'],
+                'effective_system_qty' => $calc['effective_system_qty'],
                 'system_qty' => $calc['system_qty'],
                 'scanned_qty' => $calc['scanned_qty'],
                 'remaining_qty' => $calc['remaining_qty'],
+                'shortage_qty' => $calc['shortage_qty'],
+                'excess_qty' => $calc['excess_qty'],
                 'variance' => $calc['variance'],
                 'status' => $status,
                 'system_store_location_id' => $it->system_store_location_id,
@@ -2655,6 +3084,47 @@ class FgStockTakingController extends Controller
         return Excel::download(new FgStockTakingExport($session), $filename);
     }
 
+    public function exportPdf(Request $request, $id)
+    {
+        $this->authorizeAccess();
+
+        $session = StockTakingSession::with([
+            'brand',
+            'storeType',
+            'warehouse',
+            'storeLocation',
+            'starter',
+            'completer',
+            'items.systemStoreLocation',
+            'items.storeLocation',
+            'scanLogs.scanner',
+            'scanLogs.storeLocation',
+        ])->findOrFail($id);
+
+        $state = self::computeSessionItemsState($session);
+        $setting = Setting::first();
+
+        $allItemIds = collect($state['rows'])->pluck('model.id')->filter()->all();
+        $scannedLocMap = self::getItemScannedLocationsMap($session->id, $allItemIds);
+
+        $brandSlug = preg_replace('/[^A-Za-z0-9_-]+/', '_', (string) ($session->brand?->brand_name ?? 'BRAND'));
+        $filename = $session->session_no . '_' . $brandSlug . '_StockTaking_Report.pdf';
+
+        $pdf = Pdf::loadView('stock_taking.pdf', [
+            'session' => $session,
+            'state' => $state,
+            'setting' => $setting,
+            'scannedLocMap' => $scannedLocMap,
+        ]);
+        $pdf->setPaper('A4', 'landscape');
+
+        if ($request->query('download') == '1') {
+            return $pdf->download($filename);
+        }
+
+        return $pdf->stream($filename);
+    }
+
     public function storeOpenStockEntry(Request $request)
     {
         $this->authorizeAccess();
@@ -2700,6 +3170,8 @@ class FgStockTakingController extends Controller
                 $customAttributes["items.{$idx}.style_id"] = "Row #{$rowNum} Style";
                 $customAttributes["items.{$idx}.size"] = "Row #{$rowNum} Size";
                 $customAttributes["items.{$idx}.qty_in"] = "Row #{$rowNum} Qty In";
+                $customAttributes["items.{$idx}.mrp"] = "Row #{$rowNum} MRP";
+                $customAttributes["items.{$idx}.price"] = "Row #{$rowNum} WSP";
                 $customAttributes["items.{$idx}.sku"] = "Row #{$rowNum} SKU / Barcode";
             }
         }
@@ -2719,6 +3191,7 @@ class FgStockTakingController extends Controller
             'items.*.color_id' => 'nullable|exists:colors,id',
             'items.*.sleeve_type' => 'nullable|string|max:20',
             'items.*.qty_in' => 'required|numeric|min:0.01',
+            'items.*.mrp' => 'nullable|numeric|min:0',
             'items.*.price' => 'nullable|numeric|min:0',
             'items.*.store_location_id' => 'nullable|exists:store_locations,id',
             'items.*.sku' => 'required|string|max:100',
@@ -2917,10 +3390,7 @@ class FgStockTakingController extends Controller
                 } else {
                     $datePrefix = Carbon::now()->format('Ymd');
                     $prefix = 'OSE-' . $datePrefix . '-';
-                    $maxSeq = OpenStockEntryLog::withTrashed()
-                        ->where('entry_no', 'like', "{$prefix}%")
-                        ->selectRaw("MAX(CAST(SUBSTRING(entry_no, 14) AS UNSIGNED)) as max_seq")
-                        ->value('max_seq');
+                    $maxSeq = OpenStockEntryLog::withTrashed()->where('entry_no', 'like', "{$prefix}%")->selectRaw("MAX(CAST(SUBSTRING(entry_no, 14) AS UNSIGNED)) as max_seq")->value('max_seq');
                     $nextSeq = ((int) $maxSeq) + 1;
                     $entryNo = $prefix . str_pad((string) $nextSeq, 4, '0', STR_PAD_LEFT);
                     while (OpenStockEntryLog::withTrashed()->where('entry_no', $entryNo)->exists()) {
@@ -2950,7 +3420,11 @@ class FgStockTakingController extends Controller
                     $colorId = !empty($item['color_id']) ? (int) $item['color_id'] : null;
                     $rowLocationId = !empty($item['store_location_id']) ? (int) $item['store_location_id'] : $primaryLocationId;
                     $qtyIn = floatval($item['qty_in'] ?? 0);
+                    $mrp = isset($item['mrp']) && $item['mrp'] !== '' ? floatval($item['mrp']) : null;
                     $price = isset($item['price']) && $item['price'] !== '' ? floatval($item['price']) : null;
+                    if (($mrp === null || $mrp <= 0) && $price && $price > 0) {
+                        $mrp = round($price * 1.5, 2);
+                    }
                     $uomId = !empty($item['uom_id']) ? (int) $item['uom_id'] : $defaultUomId;
                     $itemRemarks = trim((string) ($item['remarks'] ?? ''));
 
@@ -2992,6 +3466,7 @@ class FgStockTakingController extends Controller
                         'color_id' => $colorId,
                         'sleeve_type' => $sleeveType,
                         'qty' => $qtyIn,
+                        'mrp' => $mrp,
                         'price' => $price,
                         'store_location_id' => $rowLocationId,
                         'sku' => $sku,

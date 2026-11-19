@@ -29,9 +29,32 @@
                     <button type="button" class="btn btn-primary" id="finalize_btn" disabled>
                         <i class="ri ri-lock-line me-1"></i> Finalize Stock Taking
                     </button>
-                    <a href="javascript:void(0)" class="btn btn-success disabled" id="export_excel_btn" style="pointer-events: none; opacity: 0.5;">
-                        <i class="ri ri-file-excel-line me-1"></i> Export Excel
-                    </a>
+                    <div class="btn-group" id="export_dropdown_group">
+                        <button type="button" class="btn btn-success dropdown-toggle disabled" id="export_dropdown_btn" data-bs-toggle="dropdown" aria-expanded="false" style="pointer-events: none; opacity: 0.5;">
+                            <i class="ri ri-download-2-line me-1"></i> Export
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="javascript:void(0)" id="export_excel_link">
+                                    <i class="ri ri-file-excel-line text-success fs-5 me-2"></i>
+                                    <div>
+                                        <div class="fw-semibold">Excel Format</div>
+                                        <div class="text-muted small" style="font-size: 11px;">Detailed items & scan logs (.xlsx)</div>
+                                    </div>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="javascript:void(0)" id="export_pdf_link" target="_blank">
+                                    <i class="ri ri-file-pdf-line text-danger fs-5 me-2"></i>
+                                    <div>
+                                        <div class="fw-semibold">PDF Format</div>
+                                        <div class="text-muted small" style="font-size: 11px;">Printable audit report with signatures</div>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     <a href="{{ url('stock_entries') }}" class="btn btn-secondary">
                         <i class="ri ri-arrow-left-line back-arrow"></i> Back to Stock Entry
                     </a>
@@ -236,9 +259,10 @@
                                     <th>Art No</th>
                                     <th>SKU / Barcode</th>
                                     <th>System Qty</th>
+                                    <th>Open Qty</th>
                                     <th>Scanned</th>
-                                    <th>Remaining</th>
-                                    <th>Variance</th>
+                                    <th>Shortage</th>
+                                    <th>Excess</th>
                                     <th>Status</th>
                                     <th>Store Location</th>
                                     <th class="text-center" style="width: 105px;">Action</th>
@@ -246,7 +270,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="10" class="text-center py-4 text-muted">
+                                    <td colspan="11" class="text-center py-4 text-muted">
                                         Please select a <strong>Brand</strong> above to load items and start scanning.
                                     </td>
                                 </tr>
@@ -293,6 +317,9 @@
 </div>
 
 <style>
+    .select2-container--default .select2-results > .select2-results__options {
+        max-height: 280px;
+    }
     .stat-card {
         border: 1px solid #dee2e6;
         border-radius: 8px;
@@ -354,6 +381,17 @@
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
 $(document).ready(function() {
+    if ($.fn.select2) {
+        if ($('#table_filter_select').hasClass('select2-hidden-accessible')) {
+            $('#table_filter_select').select2('destroy');
+        }
+        $('#table_filter_select').select2({
+            minimumResultsForSearch: Infinity,
+            width: '100%',
+            dropdownParent: $('#table_filter_select').closest('.col-md-3')
+        });
+    }
+
     const csrfToken = '{{ csrf_token() }}';
     const baseUrl = '{{ url('fg_stock_taking') }}';
     let currentSessionId = null;
@@ -501,7 +539,9 @@ $(document).ready(function() {
         currentSessionFinalized = !!isFinalized;
 
         if (enabled && currentSessionId) {
-            $('#export_excel_btn').attr('href', baseUrl + '/session/' + currentSessionId + '/export').removeClass('disabled').css({ 'pointer-events': 'auto', 'opacity': '1' });
+            $('#export_dropdown_btn').removeClass('disabled').css({ 'pointer-events': 'auto', 'opacity': '1' });
+            $('#export_excel_link').attr('href', baseUrl + '/session/' + currentSessionId + '/export');
+            $('#export_pdf_link').attr('href', baseUrl + '/session/' + currentSessionId + '/pdf');
 
             if (isFinalized) {
                 $('#finalize_btn').prop('disabled', true);
@@ -519,7 +559,9 @@ $(document).ready(function() {
                 $('#finalized_notice').addClass('d-none');
             }
         } else {
-            $('#export_excel_btn').attr('href', 'javascript:void(0)').addClass('disabled').css({ 'pointer-events': 'none', 'opacity': '0.5' });
+            $('#export_dropdown_btn').addClass('disabled').css({ 'pointer-events': 'none', 'opacity': '0.5' });
+            $('#export_excel_link').attr('href', 'javascript:void(0)');
+            $('#export_pdf_link').attr('href', 'javascript:void(0)');
             $('#finalize_btn').prop('disabled', true);
             $('#start_new_btn').addClass('d-none');
             $('#barcode_input').prop('disabled', false);
@@ -641,7 +683,7 @@ $(document).ready(function() {
                 itemsDataTable.destroy();
                 itemsDataTable = null;
             }
-            $('#items_table tbody').html('<tr><td colspan="10" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
+            $('#items_table tbody').html('<tr><td colspan="11" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
             refocusScanner();
             return;
         }
@@ -650,7 +692,7 @@ $(document).ready(function() {
             itemsDataTable.destroy();
             itemsDataTable = null;
         }
-        $('#items_table tbody').html('<tr><td colspan="10" class="text-center py-4 text-muted">Loading items...</td></tr>');
+        $('#items_table tbody').html('<tr><td colspan="11" class="text-center py-4 text-muted">Loading items...</td></tr>');
 
         activeBrandXhr = $.ajax({
             url: baseUrl + '/load-brand',
@@ -697,7 +739,7 @@ $(document).ready(function() {
                 }
                 updateStats({ total_system_qty: 0, total_scanned_qty: 0, remaining_qty: 0, matched_skus: 0, coverage_pct: 0 });
                 const msg = xhr.responseJSON?.message || 'No positive Finished Goods stock found for this Brand.';
-                $('#items_table tbody').html(`<tr><td colspan="10" class="text-center py-4 text-danger">${escapeHtml(msg)}</td></tr>`);
+                $('#items_table tbody').html(`<tr><td colspan="11" class="text-center py-4 text-danger">${escapeHtml(msg)}</td></tr>`);
             }
         });
     }
@@ -823,6 +865,21 @@ $(document).ready(function() {
         }).then((result) => {
             if (!result.isConfirmed) return;
 
+            const $btn = $('#finalize_btn');
+            const originalBtnHtml = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Finalizing...');
+
+            Swal.fire({
+                title: 'Finalizing Stock Taking...',
+                html: '<div class="text-muted small">Converting barcodes and updating inventory ledger.<br>Please wait...</div>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             $.post(baseUrl + '/session/' + currentSessionId + '/finalize', {
                 _token: csrfToken
             }, function(res) {
@@ -831,8 +888,39 @@ $(document).ready(function() {
                 updateStats(res.stats);
                 loadTable(1);
                 showScanAlert('alert-info', `<i class="ri ri-lock-fill me-1"></i> <strong>${escapeHtml(res.message)}</strong>`);
+
+                Swal.fire({
+                    title: 'Stock Taking Finalized!',
+                    html: `
+                        <div class="text-start mb-3">
+                            <p class="mb-2"><strong>${escapeHtml(res.message)}</strong></p>
+                            <div class="alert alert-success py-2 px-3 small mb-0">
+                                <i class="ri ri-checkbox-circle-line me-1"></i> Scanning has been locked and inventory ledger has been updated.
+                            </div>
+                        </div>
+                        <div class="text-muted small mb-2 fw-semibold">Download Stock Taking Reports:</div>
+                        <div class="d-flex justify-content-center gap-2 mt-2">
+                            <a href="${baseUrl}/session/${currentSessionId}/export" class="btn btn-success">
+                                <i class="ri ri-file-excel-line me-1"></i> Download Excel
+                            </a>
+                            <a href="${baseUrl}/session/${currentSessionId}/pdf" target="_blank" class="btn btn-danger">
+                                <i class="ri ri-file-pdf-line me-1"></i> Download PDF
+                            </a>
+                        </div>
+                    `,
+                    icon: 'success',
+                    showConfirmButton: true,
+                    confirmButtonText: 'Done',
+                    confirmButtonColor: '#696cff'
+                });
             }).fail(function(xhr) {
+                $btn.prop('disabled', false).html(originalBtnHtml);
                 showScanAlert('alert-danger', escapeHtml(xhr.responseJSON?.message || 'Unable to finalize session.'));
+                Swal.fire({
+                    title: 'Finalization Failed',
+                    text: xhr.responseJSON?.message || 'Unable to finalize session.',
+                    icon: 'error'
+                });
             });
         });
     });
@@ -874,7 +962,7 @@ $(document).ready(function() {
         }
 
         if (!currentSessionId) {
-            $('#items_table tbody').html('<tr><td colspan="10" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
+            $('#items_table tbody').html('<tr><td colspan="11" class="text-center py-4 text-muted">Please select a <strong>Brand</strong> above to load items and start scanning.</td></tr>');
             return;
         }
 
@@ -929,31 +1017,49 @@ $(document).ready(function() {
                     }
                 },
                 {
+                    data: 'open_qty',
+                    name: 'open_qty',
+                    render: function (data) {
+                        const oq = Number(data || 0);
+                        if (oq > 0.001) {
+                            return `<span class="badge bg-label-info fw-bold fs-6">+${oq.toFixed(0)}</span>`;
+                        }
+                        return '<span class="text-muted">0</span>';
+                    }
+                },
+                {
                     data: 'scanned_qty',
                     name: 'scanned_qty',
-                    render: function (data) {
-                        return `<span class="fw-bold">${Number(data || 0).toFixed(0)}</span>`;
-                    }
-                },
-                {
-                    data: 'remaining_qty',
-                    name: 'remaining_qty',
-                    render: function (data) {
-                        return Number(data || 0).toFixed(0);
-                    }
-                },
-                {
-                    data: 'variance',
-                    name: 'variance',
-                    render: function (data) {
-                        const diff = Number(data || 0);
-                        if (diff > 0.001) {
-                            return '<span class="text-warning fw-bold">+' + diff.toFixed(0) + '</span>';
-                        } else if (diff < -0.001) {
-                            return '<span class="text-danger fw-bold">' + diff.toFixed(0) + '</span>';
-                        } else {
-                            return '<span class="text-success fw-bold">0</span>';
+                    render: function (data, type, r) {
+                        const totalScan = Number(data || 0);
+                        const oq = Number(r.open_qty || 0);
+                        const bScan = Number(r.barcode_scanned_qty !== undefined ? r.barcode_scanned_qty : (totalScan - oq));
+                        if (oq > 0.001) {
+                            return `<span class="fw-bold">${totalScan.toFixed(0)}</span><br><small class="text-muted">(Scan: ${bScan.toFixed(0)}, Open: +${oq.toFixed(0)})</small>`;
                         }
+                        return `<span class="fw-bold">${totalScan.toFixed(0)}</span>`;
+                    }
+                },
+                {
+                    data: 'shortage_qty',
+                    name: 'shortage_qty',
+                    render: function (data) {
+                        const sh = Number(data || 0);
+                        if (sh > 0.001) {
+                            return `<span class="badge bg-label-danger fw-bold fs-6">-${sh.toFixed(0)}</span>`;
+                        }
+                        return '<span class="text-muted">0</span>';
+                    }
+                },
+                {
+                    data: 'excess_qty',
+                    name: 'excess_qty',
+                    render: function (data) {
+                        const ex = Number(data || 0);
+                        if (ex > 0.001) {
+                            return `<span class="badge bg-label-warning text-dark fw-bold fs-6">+${ex.toFixed(0)}</span>`;
+                        }
+                        return '<span class="text-muted">0</span>';
                     }
                 },
                 {
@@ -1057,7 +1163,12 @@ $(document).ready(function() {
     });
     $('#btn_table_reset').on('click', function(e) {
         e.preventDefault();
-        $('#table_filter_select').val('all').trigger('change.select2');
+        $('#table_filter_select').val('all').trigger('change');
+        if (itemsDataTable) {
+            itemsDataTable.search('').page(0).ajax.reload();
+        } else {
+            loadTable(1);
+        }
     });
     $('#table_filter_select').on('change', () => loadTable(1));
     $(document).on('click', '.stat-card-filter', function() {

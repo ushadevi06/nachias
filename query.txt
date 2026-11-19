@@ -62,6 +62,10 @@ ADD COLUMN `type` VARCHAR(50) NOT NULL DEFAULT 'On Roll' AFTER `status`;
 
 
 
+ALTER TABLE `stock_entry_items`
+  ADD COLUMN `excess_qty` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 AFTER `qty_out`,
+  ADD COLUMN `shortage_qty` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 AFTER `excess_qty`;
 
-
-
+ALTER TABLE `stock_taking_items`
+  ADD COLUMN `excess_qty` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 AFTER `scanned_qty`,
+  ADD COLUMN `shortage_qty` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 AFTER `excess_qty`;

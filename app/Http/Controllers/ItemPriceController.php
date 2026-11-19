@@ -25,8 +25,25 @@ class ItemPriceController extends Controller
         if ($request->ajax()) {
             $latestIds = DB::table('item_prices')
                 ->select(DB::raw('MAX(id) as id'))
-                ->whereNull('deleted_at')
-                ->groupBy('finished_item_code', 'art_no');
+                ->whereNull('deleted_at');
+
+            if (!empty($request->date_range)) {
+                $dates = explode(' to ', $request->date_range);
+                if (count($dates) === 2) {
+                    try {
+                        $from = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                        $to = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->format('Y-m-d');
+                        $latestIds->whereBetween('effective_from', [$from, $to]);
+                    } catch (\Exception $e) {}
+                } elseif (count($dates) === 1 && !empty(trim($dates[0]))) {
+                    try {
+                        $single = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                        $latestIds->whereDate('effective_from', $single);
+                    } catch (\Exception $e) {}
+                }
+            }
+
+            $latestIds->groupBy('finished_item_code', 'art_no');
 
             $prices = DB::table('item_prices')
                 ->joinSub($latestIds, 'latest', function($join) {
@@ -600,12 +617,12 @@ class ItemPriceController extends Controller
         return response()->json(array_slice($formattedResults, 0, 20));
     }
 
-    public function exportExcel()
+    public function exportExcel(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view item-prices')) {
             return unauthorizedRedirect();
         }
-        return Excel::download(new ItemPricesExport, 'item_prices_' . date('Ymd_His') . '.xlsx');
+        return Excel::download(new ItemPricesExport($request->all()), 'item_prices_' . date('Ymd_His') . '.xlsx');
     }
 
     public function import(Request $request)

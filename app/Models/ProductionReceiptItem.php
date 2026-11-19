@@ -23,6 +23,7 @@ class ProductionReceiptItem extends Model
         'unit_price',
         'mrp',
         'total_value',
+        'store_location_id',
         'uom_id',
         'uom_code',
         'ordered_qty',
@@ -52,5 +53,10 @@ class ProductionReceiptItem extends Model
     public function color()
     {
         return $this->belongsTo(Color::class, 'color_id');
+    }
+
+    public function storeLocation()
+    {
+        return $this->belongsTo(StoreLocation::class, 'store_location_id');
     }
 }

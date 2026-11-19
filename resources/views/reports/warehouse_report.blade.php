@@ -38,6 +38,7 @@
                         <option value="order-processing-time">⏱️ Order Processing</option>
                         <option value="stock-inward-sales">📊 Stock Inward & Sales</option>
                         <option value="brandwise-completion">📈 Brandwise Completion</option>
+                        <option value="job-card-tracking">📋 Job Card Tracking</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-4 col-xl-3">
@@ -55,7 +56,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" id="customer_filter_col" style="{{ in_array(request('report_type'), ['brand-stock', 'brandwise-stock']) ? 'display: none;' : '' }}">
+                <div class="col-6 col-md-4 col-xl-2" id="customer_filter_col" style="{{ in_array(request('report_type'), ['brand-stock', 'brandwise-stock', 'job-card-tracking']) ? 'display: none;' : '' }}">
                     <label class="form-label small fw-bold text-muted">Customer</label>
                     <select class="form-select select2" name="customer_id" id="customer_id_select" data-placeholder="Select Customer">
                         <option value=""></option>
@@ -64,7 +65,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-6 col-md-4 col-xl-2" id="warehouse_filter_col" style="{{ in_array(request('report_type'), ['stock-inward-sales', 'inward', 'stock-inward']) ? '' : 'display: none;' }}">
+                <div class="col-6 col-md-4 col-xl-2" id="warehouse_filter_col" style="{{ in_array(request('report_type'), ['stock-inward-sales', 'inward', 'stock-inward', 'job-card-tracking']) ? '' : 'display: none;' }}">
                     <label class="form-label small fw-bold text-muted">Warehouse</label>
                     <select class="form-select select2" name="warehouse_id" id="filter_warehouse_id">
                         <option value="all" {{ (request('warehouse_id') == 'all' || empty(request('warehouse_id'))) ? 'selected' : '' }}>All</option>
@@ -91,6 +92,24 @@
                         <option value="partially_delivery" {{ (request('order_status') == 'partially_delivery' || request('order_status') == 'partial') ? 'selected' : '' }}>Partially Delivery</option>
                         <option value="dispatched" {{ (request('order_status') == 'dispatched' || request('order_status') == 'completed') ? 'selected' : '' }}>Dispatched</option>
                         <option value="cancelled" {{ request('order_status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2" id="unit_filter_col" style="{{ request('report_type') == 'job-card-tracking' ? '' : 'display: none;' }}">
+                    <label class="form-label small fw-bold text-muted">Unit (Plant)</label>
+                    <select class="form-select select2" name="unit_id" id="filter_unit_id" data-placeholder="Select Unit">
+                        <option value="">All Units</option>
+                        @foreach($serviceProviders ?? [] as $sp)
+                            <option value="{{ $sp->id }}" {{ request('unit_id') == $sp->id ? 'selected' : '' }}>{{ $sp->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2" id="tracking_status_filter_col" style="{{ request('report_type') == 'job-card-tracking' ? '' : 'display: none;' }}">
+                    <label class="form-label small fw-bold text-muted">Tracking Status</label>
+                    <select class="form-select select2" name="tracking_status" id="filter_tracking_status" data-placeholder="All Status">
+                        <option value="">All Status</option>
+                        <option value="fully_received" {{ request('tracking_status') == 'fully_received' ? 'selected' : '' }}>Fully Received</option>
+                        <option value="partially_received" {{ request('tracking_status') == 'partially_received' ? 'selected' : '' }}>Partially Received</option>
+                        <option value="pending" {{ request('tracking_status') == 'pending' ? 'selected' : '' }}>Pending</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-1 col-xl-1 d-flex gap-1">
@@ -208,6 +227,11 @@
                 <!-- 11. Damage Sales Report -->
                 <div class="tab-pane fade" id="damage" role="tabpanel">
                     @include('reports.warehouse_report.damage_sales_split')
+                </div>
+
+                <!-- 12. Job Card Tracking Report -->
+                <div class="tab-pane fade" id="job-card-tracking" role="tabpanel">
+                    @include('reports.warehouse_report.job_card_tracking')
                 </div>
             </div>
         </div>
@@ -448,24 +472,36 @@ $(document).ready(function() {
             $('#top_warehouse_wrapper').hide();
         }
 
-        if (targetTabId === 'stock-inward-sales' || targetTabId === 'inward' || targetTabId === 'stock-inward') {
+        if (targetTabId === 'job-card-tracking') {
             $('#warehouse_filter_col').show();
-        } else {
-            $('#warehouse_filter_col').hide();
-        }
-
-        if (targetTabId === 'brand-stock' || targetTabId === 'brandwise-stock') {
-            $('#aging_filter_col').show();
+            $('#unit_filter_col').show();
+            $('#tracking_status_filter_col').show();
             $('#customer_filter_col').hide();
-        } else {
             $('#aging_filter_col').hide();
-            $('#customer_filter_col').show();
-        }
-
-        if (targetTabId === 'order-processing-time' || targetTabId === 'order-dispatch' || targetTabId === 'order-vs-dispatch') {
-            $('#order_status_filter_col').show();
-        } else {
             $('#order_status_filter_col').hide();
+        } else {
+            $('#unit_filter_col').hide();
+            $('#tracking_status_filter_col').hide();
+
+            if (targetTabId === 'stock-inward-sales' || targetTabId === 'inward' || targetTabId === 'stock-inward') {
+                $('#warehouse_filter_col').show();
+            } else {
+                $('#warehouse_filter_col').hide();
+            }
+
+            if (targetTabId === 'brand-stock' || targetTabId === 'brandwise-stock') {
+                $('#aging_filter_col').show();
+                $('#customer_filter_col').hide();
+            } else {
+                $('#aging_filter_col').hide();
+                $('#customer_filter_col').show();
+            }
+
+            if (targetTabId === 'order-processing-time' || targetTabId === 'order-dispatch' || targetTabId === 'order-vs-dispatch') {
+                $('#order_status_filter_col').show();
+            } else {
+                $('#order_status_filter_col').hide();
+            }
         }
     }
 
@@ -741,6 +777,10 @@ $(document).ready(function() {
             case 'brandwise-completion':
                 if (typeof window.initBrandwiseCompletionTable === 'function') window.initBrandwiseCompletionTable();
                 else if (typeof initBrandwiseCompletionTable === 'function') initBrandwiseCompletionTable();
+                break;
+            case 'job-card-tracking':
+                if (typeof window.initJobCardTrackingTable === 'function') window.initJobCardTrackingTable();
+                else if (typeof initJobCardTrackingTable === 'function') initJobCardTrackingTable();
                 break;
         }
 

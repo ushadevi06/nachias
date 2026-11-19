@@ -52,15 +52,11 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-2">
-                                <input type="date" id="filter_from_date" class="form-control" placeholder="From Date">
+                            <div class="col-md-3">
+                                <input type="text" id="filter_date_range" class="form-control" placeholder="Select Date Range">
                             </div>
 
-                            <div class="col-md-2">
-                                <input type="date" id="filter_to_date" class="form-control" placeholder="To Date">
-                            </div>
-
-                            <div class="col-md-2 d-flex gap-2">
+                            <div class="col-md-3 d-flex gap-2">
                                 <button type="button" id="btn_filter" class="btn btn-primary text-uppercase">Filter</button>
                                 <button type="button" id="btn_reset" class="btn btn-secondary text-uppercase">Reset</button>
                             </div>
@@ -69,7 +65,7 @@
 
                     <!-- Standard Datatable -->
                     <div class="card-datatable table-responsive">
-                        <table class="open-stock-logs-table table table-hover">
+                        <table class="open-stock-logs-table table nowrap">
                             <thead class="table">
                                 <tr>
                                     <th style="width: 50px;">#</th>
@@ -86,6 +82,14 @@
                                     <th class="text-center" style="min-width: 120px;">Action</th>
                                 </tr>
                             </thead>
+                            <tfoot>
+                                <tr class="table-light fw-bold">
+                                    <th colspan="6" class="text-end">Total:</th>
+                                    <th class="text-end" id="footer-total-qty">0</th>
+                                    <th class="text-end" id="footer-total-amount">₹0.00</th>
+                                    <th colspan="4"></th>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -142,6 +146,19 @@ $(function () {
         });
     }
 
+    if ($.fn.flatpickr) {
+        $('#filter_date_range').flatpickr({
+            mode: 'range',
+            dateFormat: 'd-m-Y',
+            allowInput: true,
+            onClose: function(selectedDates, dateStr, instance) {
+                if (selectedDates.length === 1) {
+                    instance.setDate([selectedDates[0], selectedDates[0]], true);
+                }
+            }
+        });
+    }
+
     const table = $('.open-stock-logs-table').DataTable({
         responsive: false,
         paging: true,
@@ -154,12 +171,11 @@ $(function () {
         serverSide: true,
         order: [[1, 'desc']],
         ajax: {
-            url: "{{ url('fg_stock_taking/open-stock-logs-data') }}",
+            url: "{{ url('fg_stock_taking/open-stock-logs') }}",
             data: function (d) {
                 d.brand_id = $('#filter_brand_id').val();
                 d.warehouse_id = $('#filter_warehouse_id').val();
-                d.from_date = $('#filter_from_date').val();
-                d.to_date = $('#filter_to_date').val();
+                d.date_range = $('#filter_date_range').val();
             }
         },
         columns: [
@@ -260,21 +276,58 @@ $(function () {
                 className: 'text-center',
                 render: function (data, type, row) {
                     return `
-                        <div class="d-inline-flex gap-1">
-                            <a href="${escapeHtml(row.view_url)}" class="btn btn-sm btn-outline-info" title="View Details">
-                                <i class="ri ri-eye-line"></i>
+                        <div class="button-box justify-content-center">
+                            <a href="${escapeHtml(row.view_url)}" class="btn btn-view" title="View Details">
+                                <i class="icon-base ri ri-eye-line"></i>
                             </a>
-                            <a href="${escapeHtml(row.edit_url)}" class="btn btn-sm btn-outline-primary" title="Edit Entry">
-                                <i class="ri ri-edit-line"></i>
+                            <a href="${escapeHtml(row.edit_url)}" class="btn btn-edit" title="Edit Entry">
+                                <i class="icon-base ri ri-edit-box-line"></i>
                             </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry" data-entry-no="${escapeHtml(row.entry_no)}" data-count="${row.total_items}" title="Delete Entry">
-                                <i class="ri ri-delete-bin-line"></i>
+                            <button type="button" class="btn btn-delete btn-delete-entry" data-entry-no="${escapeHtml(row.entry_no)}" data-count="${row.total_items}" title="Delete Entry">
+                                <i class="icon-base ri ri-delete-bin-line"></i>
                             </button>
                         </div>
                     `;
                 }
             }
-        ]
+        ],
+        footerCallback: function (row, data, start, end, display) {
+            let api = this.api();
+            let json = api.ajax.json();
+
+            let intVal = function (i) {
+                return typeof i === 'string'
+                    ? parseFloat(i.replace(/[\₹,]/g, '')) || 0
+                    : typeof i === 'number'
+                    ? i
+                    : 0;
+            };
+
+            if (json && typeof json.overallTotalQty !== 'undefined') {
+                let totalQty = json.overallTotalQty || 0;
+                let totalAmount = json.overallTotalAmount || 0;
+
+                $('#footer-total-qty').html(Number(totalQty).toLocaleString('en-IN'));
+                $('#footer-total-amount').html('₹' + Number(totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            } else {
+                let pageTotalQty = api
+                    .column(6, { page: 'current' })
+                    .data()
+                    .reduce(function (a, b) {
+                        return intVal(a) + intVal(b);
+                    }, 0);
+
+                let pageTotalAmount = api
+                    .column(7, { page: 'current' })
+                    .data()
+                    .reduce(function (a, b) {
+                        return intVal(a) + intVal(b);
+                    }, 0);
+
+                $('#footer-total-qty').html(Number(pageTotalQty).toLocaleString('en-IN'));
+                $('#footer-total-amount').html('₹' + Number(pageTotalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            }
+        }
     });
 
     $('#btn_filter').on('click', function () {
@@ -284,8 +337,7 @@ $(function () {
     $('#btn_reset').on('click', function () {
         $('#filter_brand_id').val('').trigger('change.select2');
         $('#filter_warehouse_id').val('').trigger('change.select2');
-        $('#filter_from_date').val('');
-        $('#filter_to_date').val('');
+        $('#filter_date_range').val('');
         table.search('').draw();
     });
 
@@ -293,14 +345,12 @@ $(function () {
         const params = new URLSearchParams({
             brand_id: $('#filter_brand_id').val() || '',
             warehouse_id: $('#filter_warehouse_id').val() || '',
-            from_date: $('#filter_from_date').val() || '',
-            to_date: $('#filter_to_date').val() || '',
+            date_range: $('#filter_date_range').val() || '',
             search: table.search() || ''
         });
         window.location.href = "{{ url('fg_stock_taking/open-stock-logs/export') }}?" + params.toString();
     });
 
-    // Delete Entire Entry
     $(document).on('click', '.btn-delete-entry', function () {
         const entryNo = $(this).data('entry-no');
         const count = $(this).data('count') || '';

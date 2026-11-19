@@ -35,7 +35,8 @@ class OpenStockLogsExport implements FromCollection, WithHeadings, WithMapping, 
         ])->orderBy('id', 'desc');
 
         if (!empty($this->filters['brand_id'])) {
-            $query->where('brand_id', $this->filters['brand_id']);
+            $matchingEntryNos = OpenStockEntryLog::where('brand_id', $this->filters['brand_id'])->distinct()->pluck('entry_no')->all();
+            $query->whereIn('entry_no', !empty($matchingEntryNos) ? $matchingEntryNos : ['__NONE__']);
         }
 
         if (!empty($this->filters['warehouse_id'])) {
@@ -77,7 +78,8 @@ class OpenStockLogsExport implements FromCollection, WithHeadings, WithMapping, 
             'Size',
             'Sleeve',
             'Qty (Pcs)',
-            'Price (Rs)',
+            'MRP (Rs)',
+            'WSP (Rs)',
             'Store Location',
             'Warehouse',
             'SKU / Barcode',
@@ -102,6 +104,7 @@ class OpenStockLogsExport implements FromCollection, WithHeadings, WithMapping, 
             $row->size ?? '',
             $row->sleeve_type ?? '',
             (float) ($row->qty ?? 0),
+            $row->mrp !== null && $row->mrp > 0 ? (float) $row->mrp : ($row->price ? round((float)$row->price * 1.5, 2) : ''),
             $row->price !== null ? (float) $row->price : '',
             $row->storeLocation->store_location_name ?? '-',
             $row->warehouse->warehouse_name ?? '-',

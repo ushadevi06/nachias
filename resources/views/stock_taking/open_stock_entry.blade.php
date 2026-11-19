@@ -124,8 +124,8 @@
                         </div>
 
                         <div class="table-responsive mb-3">
-                            <table class="table table-bordered align-middle" id="ose_items_table">
-                                <thead class="table-light">
+                            <table class="table align-middle" id="ose_items_table">
+                                <thead class="table">
                                     <tr class="text-uppercase small">
                                         <th style="width: 50px;" class="text-center">S.No</th>
                                         <th style="min-width: 200px;">Product Name <span class="text-danger">*</span></th>
@@ -134,7 +134,8 @@
                                         <th style="min-width: 150px;">Size <span class="text-danger">*</span></th>
                                         <th style="min-width: 160px;">Sleeve</th>
                                         <th style="width: 120px; min-width: 120px;">Qty In <span class="text-danger">*</span></th>
-                                        <th style="width: 130px; min-width: 130px;">Price (₹)</th>
+                                        <th style="width: 160px; min-width: 160px;">MRP (₹)</th>
+                                        <th style="width: 160px; min-width: 160px;">WSP (₹)</th>
                                         <th style="min-width: 220px;">Location</th>
                                         <th style="min-width: 180px;">SKU / Barcode <span class="text-danger">*</span></th>
                                         <th style="min-width: 150px;">UOM</th>
@@ -147,7 +148,7 @@
                             </table>
                         </div>
 
-                        <div class="d-flex justify-content-end align-items-center p-3 bg-light rounded mb-4 flex-wrap gap-4">
+                        <div class="d-flex justify-content-end align-items-center p-3 rounded mb-4 flex-wrap gap-4">
                             <div>Total Qty: <strong class="text-primary fs-5" id="ose_total_qty_display">0</strong> pcs</div>
                             <div>Total Amount: <strong class="text-success fs-5">₹<span id="ose_total_amount_display">0.00</span></strong></div>
                         </div>
@@ -342,7 +343,7 @@ $(document).ready(function() {
     const OSE_COLORS = @json($colors ?? []);
     const OSE_UOMS = @json($uoms ?? []);
     const OSE_LOCATIONS = @json($storeLocations ?? []);
-    const OSE_SIZES = ['38', '39', '40', '42', '44', '46', '48', '50', '36'];
+    const OSE_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50'];
     const OSE_PRODUCT_SUGGESTIONS = @json($productSuggestions ?? []);
     const INITIAL_ITEMS = @json(old('items', $existingItems ?? []));
     const SERVER_ERRORS = @json(isset($errors) ? $errors->toArray() : []);
@@ -369,8 +370,10 @@ $(document).ready(function() {
         const styleId = prefill ? (prefill.style_id || '') : (OSE_STYLES[0]?.id || '');
         const size = prefill ? (prefill.size || '38') : '38';
         const colorId = prefill ? (prefill.color_id || '') : '';
-        const sleeve = prefill ? (prefill.sleeve_type || 'FULL') : 'FULL';
+        const sleeveRaw = prefill ? String(prefill.sleeve_type || 'FULL').trim().toUpperCase() : 'FULL';
+        const sleeve = (sleeveRaw === 'HALF' || sleeveRaw === 'HS' || sleeveRaw === '02') ? 'HALF' : 'FULL';
         const qtyIn = prefill ? (prefill.qty_in !== undefined ? prefill.qty_in : 1) : 1;
+        const mrp = prefill ? (prefill.mrp !== undefined ? prefill.mrp : '0.00') : '0.00';
         const price = prefill ? (prefill.price !== undefined ? prefill.price : '0.00') : '0.00';
         const locId = prefill ? (prefill.store_location_id || defaultLoc) : defaultLoc;
         const sku = prefill ? (prefill.sku || '') : '';
@@ -403,8 +406,12 @@ $(document).ready(function() {
             return `<option value="${u.id}" ${isSel ? 'selected' : ''}>${escapeHtml(u.uom_code || u.uom_name)}</option>`;
         }).join('');
 
-        const sizeOptionsHtml = OSE_SIZES.map(s =>
-            `<option value="${s}" ${size === s ? 'selected' : ''}>${s}</option>`
+        let effectiveSizes = [...OSE_SIZES];
+        if (size && !effectiveSizes.includes(String(size))) {
+            effectiveSizes.push(String(size));
+        }
+        const sizeOptionsHtml = effectiveSizes.map(s =>
+            `<option value="${s}" ${String(size) === String(s) ? 'selected' : ''}>${s}</option>`
         ).join('');
 
         const rowHtml = `
@@ -442,7 +449,10 @@ $(document).ready(function() {
                     <div class="text-danger small ose-err ose-err-qty">${escapeHtml(errQty)}</div>
                 </td>
                 <td>
-                    <input type="number" name="items[${idx}][price]" class="form-control ose-price text-end" min="0" step="0.01" value="${price}">
+                    <input type="number" name="items[${idx}][mrp]" class="form-control ose-mrp text-end" min="0" step="0.01" value="${mrp}" placeholder="0.00">
+                </td>
+                <td>
+                    <input type="number" name="items[${idx}][price]" class="form-control ose-price text-end" min="0" step="0.01" value="${price}" placeholder="0.00">
                 </td>
                 <td>
                     <select name="items[${idx}][store_location_id]" class="form-select select2 ose-location" data-placeholder="Select Location">
@@ -857,9 +867,14 @@ $(document).ready(function() {
                 },
                 dataType: 'json',
                 success: function(res) {
-                    if (res && res.success && res.found && res.selling_price) {
-                        const $priceInput = $row.find('.ose-price');
-                        $priceInput.val(res.selling_price).trigger('input');
+                    if (res && res.success && res.found) {
+                        if (res.mrp !== undefined && res.mrp !== null) {
+                            $row.find('.ose-mrp').val(res.mrp);
+                        }
+                        const wspVal = res.wsp || res.selling_price || res.unit_price;
+                        if (wspVal) {
+                            $row.find('.ose-price').val(wspVal).trigger('input');
+                        }
                     }
                 }
             });
@@ -929,6 +944,16 @@ $(document).ready(function() {
 
     $(document).on('change', '.ose-sleeve-type', function() {
         const $row = $(this).closest('tr');
+        const sleeveVal = ($(this).val() || '').toUpperCase();
+        const $prodInput = $row.find('.ose-product-name');
+        let prod = $.trim($prodInput.val());
+        if (prod) {
+            if (sleeveVal === 'HALF' && prod.toUpperCase().endsWith('-FS')) {
+                $prodInput.val(prod.substring(0, prod.length - 3) + '-HS');
+            } else if (sleeveVal === 'FULL' && prod.toUpperCase().endsWith('-HS')) {
+                $prodInput.val(prod.substring(0, prod.length - 3) + '-FS');
+            }
+        }
         checkSleeveConsistency($row);
         autoGenerateBarcode($row);
         fetchItemSellingPrice($row);
@@ -980,23 +1005,18 @@ $(document).ready(function() {
         }
 
         const lastSize = $lastRow.find('.ose-size').val();
-        let nextSize = '38';
-        const curIdx = OSE_SIZES.indexOf(lastSize);
-        if (curIdx >= 0 && curIdx < OSE_SIZES.length - 1) {
-            nextSize = OSE_SIZES[curIdx + 1];
-        }
-
         const artVal = $lastRow.find('.ose-art-no').val();
         const sleeveVal = $lastRow.find('.ose-sleeve-type').val();
-        const nextSku = computeBarcode(artVal, nextSize, sleeveVal);
+        const nextSku = computeBarcode(artVal, lastSize, sleeveVal);
 
         const prefill = {
             product_name: $lastRow.find('.ose-product-name').val(),
             art_no: artVal,
             style_id: $lastRow.find('.ose-style').val(),
-            size: nextSize,
+            size: lastSize,
             sleeve_type: sleeveVal,
             qty_in: $lastRow.find('.ose-qty').val(),
+            mrp: $lastRow.find('.ose-mrp').val(),
             price: $lastRow.find('.ose-price').val(),
             store_location_id: $lastRow.find('.ose-location').val(),
             uom_id: $lastRow.find('.ose-uom').val(),
@@ -1013,6 +1033,7 @@ $(document).ready(function() {
         if ($tbody.find('tr').length <= 1) {
             $tbody.find('input').val('');
             $tbody.find('.ose-qty').val('1');
+            $tbody.find('.ose-mrp').val('0.00');
             $tbody.find('.ose-price').val('0.00');
             $tbody.find('.ose-size').val('38').trigger('change');
             $tbody.find('.ose-sleeve-type').val('FULL').trigger('change');
@@ -1032,7 +1053,16 @@ $(document).ready(function() {
         calculateOseSummary();
     });
 
-    $(document).on('input change', '.ose-qty, .ose-price', function() {
+    $(document).on('input', '.ose-mrp', function() {
+        const $row = $(this).closest('tr');
+        const mrp = parseFloat($(this).val()) || 0;
+        if (mrp > 0) {
+            const wsp = Math.round(mrp / 1.5);
+            $row.find('.ose-price').val(wsp.toFixed(2)).trigger('change');
+        }
+    });
+
+    $(document).on('input change', '.ose-qty, .ose-price, .ose-mrp', function() {
         calculateOseSummary();
     });
 

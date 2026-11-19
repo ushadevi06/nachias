@@ -15,9 +15,6 @@
                     <p class="text-muted small mb-0 font-monospace">Entry No: <strong>{{ $entryNo }}</strong></p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ url('fg_stock_taking/open-stock-entry/edit/' . $firstItem->id) }}" class="btn btn-primary">
-                        <i class="ri ri-edit-line me-1"></i> Edit Entry
-                    </a>
                     <a href="{{ url('fg_stock_taking/open-stock-logs') }}" class="btn btn-secondary">
                         <i class="ri ri-arrow-left-line back-arrow"></i> Back to Logs
                     </a>
@@ -128,7 +125,8 @@
                                     <th>Size</th>
                                     <th>Sleeve</th>
                                     <th class="text-end">Qty In</th>
-                                    <th class="text-end">Price (₹)</th>
+                                    <th class="text-end" style="min-width: 130px;">MRP (₹)</th>
+                                    <th class="text-end" style="min-width: 130px;">WSP (₹)</th>
                                     <th class="text-end">Total Value (₹)</th>
                                     <th>Store Location</th>
                                     <th>SKU / Barcode</th>
@@ -139,6 +137,7 @@
                                 @foreach($items as $idx => $it)
                                     @php
                                         $rowTotal = round((float) $it->qty * ((float) ($it->price ?? 0)), 2);
+                                        $mrpVal = $it->mrp !== null && $it->mrp > 0 ? (float) $it->mrp : ($it->price ? round((float)$it->price * 1.5, 2) : 0);
                                     @endphp
                                     <tr>
                                         <td class="text-center">{{ $idx + 1 }}</td>
@@ -148,6 +147,7 @@
                                         <td><span class="badge bg-label-dark">{{ $it->size }}</span></td>
                                         <td>{{ $it->sleeve_type ?: '-' }}</td>
                                         <td class="text-end"><strong>{{ number_format($it->qty) }}</strong></td>
+                                        <td class="text-end">₹{{ number_format($mrpVal, 2) }}</td>
                                         <td class="text-end">₹{{ number_format((float) ($it->price ?? 0), 2) }}</td>
                                         <td class="text-end"><strong>₹{{ number_format($rowTotal, 2) }}</strong></td>
                                         <td>{{ $it->storeLocation?->store_location ?? ($it->storeLocation?->store_location_name ?? '-') }}</td>
@@ -161,20 +161,13 @@
                                     <td colspan="6" class="text-end text-uppercase">Total:</td>
                                     <td class="text-end text-primary fs-6">{{ number_format($totalQty) }}</td>
                                     <td class="text-end">-</td>
+                                    <td class="text-end">-</td>
                                     <td class="text-end text-success fs-6">₹{{ number_format($totalAmount, 2) }}</td>
                                     <td colspan="3"></td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
-                </div>
-                <div class="card-footer bg-light d-flex justify-content-between align-items-center py-3">
-                    <a href="{{ url('fg_stock_taking/open-stock-logs') }}" class="btn btn-secondary">
-                        <i class="ri ri-arrow-left-line back-arrow"></i> Back to Logs
-                    </a>
-                    <a href="{{ url('fg_stock_taking/open-stock-entry/edit/' . $firstItem->id) }}" class="btn btn-primary">
-                        <i class="ri ri-edit-line me-1"></i> Edit Entry
-                    </a>
                 </div>
             </div>
         </div>

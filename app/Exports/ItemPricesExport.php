@@ -6,124 +6,198 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Carbon\Carbon;
 
-class ItemPricesExport implements FromCollection, WithHeadings, WithMapping
+class ItemPricesExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
+    protected array $filters;
+
+    public function __construct(array $filters = [])
+    {
+        $this->filters = $filters;
+    }
+
     /**
     * @return \Illuminate\Support\Collection
     */
     public function collection()
     {
-        $prices = DB::table('item_prices')
-            ->whereNull('deleted_at')
-            ->orderBy('effective_from', 'desc')
-            ->orderBy('id', 'desc')
+        // 1. Preload BarcodeMasters for fast lookup
+        $bmMap = [];
+        $bms = DB::table('barcode_masters')
+            ->select('art_no', 'size', 'sleeve_type', 'barcode_no')
+            ->whereNotNull('barcode_no')
+            ->where('barcode_no', '!=', '')
             ->get();
 
-        $grouped = [];
-        foreach ($prices as $price) {
-            $key = $price->finished_item_code . '|' . ($price->art_no ?? '');
-            if (!isset($grouped[$key])) {
-                $grouped[$key] = [
-                    'finished_item_code' => $price->finished_item_code,
-                    'art_no' => $price->art_no,
-                    'effective_from' => $price->effective_from,
-                    'status' => $price->status,
-                    'sizes' => []
-                ];
-            }
+        foreach ($bms as $bm) {
+            $art = strtolower(trim((string)$bm->art_no));
+            $sz = strtolower(trim((string)$bm->size));
+            $sl = strtolower(trim((string)$bm->sleeve_type));
+            $bmMap[$art . '|' . $sz . '|' . $sl] = $bm->barcode_no;
+        }
 
-            $supportedSizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
+        // 2. Fetch prices ordered by effective_from desc, id desc (picks latest price if revisions exist)
+        $query = DB::table('item_prices')
+            ->whereNull('deleted_at')
+            ->whereNotNull('art_no')
+            ->where('art_no', '!=', '')
+            ->where('art_no', '!=', '-');
 
-            if (!empty($price->size) && in_array((string)$price->size, $supportedSizes, true)) {
-                if (!isset($grouped[$key]['sizes'][$price->size])) {
-                    $grouped[$key]['sizes'][$price->size] = [
-                        'unit_price' => $price->unit_price,
-                        'selling_price' => $price->selling_price
-                    ];
-                }
-            } else {
-                // If size is null / empty / 'ALL', apply this common price to all standard sizes that are not yet set
-                foreach ($supportedSizes as $sz) {
-                    if (!isset($grouped[$key]['sizes'][$sz])) {
-                        $grouped[$key]['sizes'][$sz] = [
-                            'unit_price' => $price->unit_price,
-                            'selling_price' => $price->selling_price
-                        ];
-                    }
-                }
+        if (!empty($this->filters['date_range'])) {
+            $dates = explode(' to ', $this->filters['date_range']);
+            if (count($dates) === 2) {
+                try {
+                    $from = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                    $to = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->format('Y-m-d');
+                    $query->whereBetween('effective_from', [$from, $to]);
+                } catch (\Exception $e) {}
+            } elseif (count($dates) === 1 && !empty(trim($dates[0]))) {
+                try {
+                    $single = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->format('Y-m-d');
+                    $query->whereDate('effective_from', $single);
+                } catch (\Exception $e) {}
             }
         }
 
-        // Filter out items that have no valid prices in any size
-        $validGrouped = array_filter($grouped, function ($item) {
-            foreach ($item['sizes'] as $sizeData) {
-                if (floatval($sizeData['selling_price'] ?? 0) > 0 || floatval($sizeData['unit_price'] ?? 0) > 0) {
-                    return true;
-                }
+        $prices = $query->orderBy('effective_from', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $supportedSizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
+        $seenKeys = [];
+        $rows = [];
+
+        foreach ($prices as $p) {
+            $artNo = trim((string)($p->art_no ?? ''));
+            $itemCode = trim((string)($p->finished_item_code ?? ''));
+            $mrp = floatval($p->selling_price);
+            $sp = floatval($p->unit_price);
+            $status = $p->status ?? 'Active';
+            $eff = $p->effective_from ? Carbon::parse($p->effective_from)->format('d-m-Y') : '-';
+
+            // If specific size is present
+            $targetSizes = [];
+            if (!empty($p->size) && $p->size !== 'ALL') {
+                $targetSizes[] = (string)$p->size;
+            } else {
+                $targetSizes = $supportedSizes;
             }
-            return false;
+
+            foreach ($targetSizes as $sz) {
+                $uniqueKey = $itemCode . '|' . strtolower($artNo) . '|' . $sz;
+                if (isset($seenKeys[$uniqueKey])) {
+                    continue;
+                }
+                $seenKeys[$uniqueKey] = true;
+
+                // Determine sleeve from finished_item_code (e.g. FS -> Full, HS -> Half)
+                $sleeve = 'Full';
+                if (stripos($itemCode, '-HS') !== false || stripos($itemCode, 'HS') !== false) {
+                    $sleeve = 'Half';
+                }
+                $sleeveTypeShort = ($sleeve === 'Full') ? 'f/s' : 'h/s';
+                $sleeveCode = ($sleeve === 'Full') ? '01' : '02';
+
+                // Barcode resolution: 1. BarcodeMaster, 2. Auto-generate
+                $lookupKey = strtolower($artNo) . '|' . strtolower($sz) . '|' . $sleeveTypeShort;
+
+                if (!empty($artNo) && isset($bmMap[$lookupKey])) {
+                    $barcode = $bmMap[$lookupKey];
+                } else {
+                    if (empty($artNo)) {
+                        $barcode = '-';
+                    } else {
+                        $hasAlpha = preg_match('/[a-zA-Z]/', $artNo);
+                        $matchesExistingPattern = preg_match('/^([a-zA-Z]*)(\d+)(?:-(\d+))?$/', $artNo);
+
+                        if ($hasAlpha && !$matchesExistingPattern) {
+                            $cleanedArtNo = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $artNo));
+                            $cleanSize = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $sz));
+                            $barcode = 'BC' . $cleanedArtNo . $cleanSize . $sleeveCode;
+                        } else {
+                            preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $artNo, $matches);
+                            $numericBase = $matches[2] ?? '';
+                            $suffix = $matches[3] ?? '1';
+                            $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
+                            $formattedSize = str_pad(trim((string)$sz), 2, '0', STR_PAD_LEFT);
+                            $barcode = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+                        }
+                    }
+                }
+
+                $rows[] = [
+                    'finished_item_code' => $itemCode,
+                    'art_no' => $artNo ?: '-',
+                    'size' => $sz,
+                    'size_num' => is_numeric($sz) ? (int)$sz : 999,
+                    'mrp' => $mrp > 0 ? (float)$mrp : 0,
+                    'selling_price' => $sp > 0 ? (float)$sp : 0,
+                    'effective_from' => $eff,
+                    'status' => $status,
+                    'barcode' => $barcode,
+                ];
+            }
+        }
+
+        // Sort rows: Art No ASC, Finished Item Code ASC, Size ASC
+        usort($rows, function ($a, $b) {
+            $cmpArt = strnatcasecmp($a['art_no'], $b['art_no']);
+            if ($cmpArt !== 0) return $cmpArt;
+
+            $cmpCode = strnatcasecmp($a['finished_item_code'], $b['finished_item_code']);
+            if ($cmpCode !== 0) return $cmpCode;
+
+            return $a['size_num'] <=> $b['size_num'];
         });
 
-        return collect(array_values($validGrouped));
+        // Assign S.No
+        $sno = 1;
+        foreach ($rows as &$r) {
+            $r['sno'] = $sno++;
+        }
+        unset($r);
+
+        return collect($rows);
     }
 
     public function headings(): array
     {
         return [
+            'S.No',
             'Finished Item Code',
             'Art No',
-            'MRP 36',
-            'Selling Price 36',
-            'MRP 38',
-            'Selling Price 38',
-            'MRP 40',
-            'Selling Price 40',
-            'MRP 42',
-            'Selling Price 42',
-            'MRP 44',
-            'Selling Price 44',
-            'MRP 46',
-            'Selling Price 46',
-            'MRP 48',
-            'Selling Price 48',
-            'MRP 50',
-            'Selling Price 50',
+            'SIZE',
+            'MRP',
+            'Selling Price',
             'Effective From',
             'Status',
+            'Barcode',
         ];
     }
 
     public function map($row): array
     {
-        $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
-        
-        $mapped = [
+        return [
+            $row['sno'],
             $row['finished_item_code'],
-            $row['art_no'] ?? '-',
+            $row['art_no'],
+            $row['size'],
+            $row['mrp'],
+            $row['selling_price'],
+            $row['effective_from'],
+            $row['status'],
+            $row['barcode'],
         ];
+    }
 
-        foreach ($sizes as $size) {
-            if (isset($row['sizes'][$size])) {
-                $mrp = floatval($row['sizes'][$size]['selling_price']);
-                $sp = floatval($row['sizes'][$size]['unit_price']);
-
-                if ($mrp > 0 && $sp <= 0) {
-                    $sp = round($mrp / 1.5);
-                }
-
-                $mapped[] = $mrp > 0 ? number_format($mrp, 2, '.', '') : '';
-                $mapped[] = $sp > 0 ? number_format($sp, 2, '.', '') : '';
-            } else {
-                $mapped[] = '';
-                $mapped[] = '';
-            }
-        }
-
-        $mapped[] = $row['effective_from'] ? Carbon::parse($row['effective_from'])->format('d-m-Y') : '-';
-        $mapped[] = $row['status'] ?? 'Active';
-
-        return $mapped;
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

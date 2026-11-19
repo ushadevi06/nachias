@@ -197,6 +197,7 @@ class SalesInvoiceController extends Controller
                     }
 
                     $q->orWhere('invoice_status', 'like', "%{$search}%")
+                      ->orWhere('einvoice_status', 'like', "%{$search}%")
                       ->orWhere('delivery_status', 'like', "%{$search}%");
 
                     if (!empty($matchedCustomerIds)) {
@@ -2066,39 +2067,76 @@ class SalesInvoiceController extends Controller
             return strcmp((string)$a, (string)$b);
         });
 
-        // Varieties: Plains, Checks, Stripes, Prints
-        $standardVarieties = ['PLAINS', 'CHECKS', 'STRIPES', 'PRINTS'];
-        $matrix = [];
-        foreach ($standardVarieties as $v) {
-            $matrix[$v] = array_fill_keys($sizes, 0);
+        // Varieties directly from Style Master for items in this invoice
+        $itemArtNos = $invoice->items->pluck('art_no')->filter()->unique()->toArray();
+        $artStyleMap = [];
+        if (!empty($itemArtNos)) {
+            $artStyles = DB::table('stock_entry_items')
+                ->join('styles', 'stock_entry_items.style_id', '=', 'styles.id')
+                ->whereIn('stock_entry_items.art_no', $itemArtNos)
+                ->whereNull('stock_entry_items.deleted_at')
+                ->whereNull('styles.deleted_at')
+                ->select('stock_entry_items.art_no', 'styles.style_name')
+                ->get();
+            foreach ($artStyles as $as) {
+                if (!isset($artStyleMap[$as->art_no])) {
+                    $artStyleMap[$as->art_no] = $as->style_name;
+                }
+            }
+
+            $bmStyles = DB::table('barcode_masters')
+                ->join('styles', 'barcode_masters.style_id', '=', 'styles.id')
+                ->whereIn('barcode_masters.art_no', $itemArtNos)
+                ->whereNull('styles.deleted_at')
+                ->select('barcode_masters.art_no', 'styles.style_name')
+                ->get();
+            foreach ($bmStyles as $bs) {
+                if (!isset($artStyleMap[$bs->art_no])) {
+                    $artStyleMap[$bs->art_no] = $bs->style_name;
+                }
+            }
         }
 
+        $matrix = [];
         foreach ($invoice->items as $item) {
-            $styleRaw = strtoupper(trim(
-                $item->stockEntryItem->style->style_name 
-                ?? $item->item->style->style_name 
-                ?? ''
-            ));
+            $styleName = '';
+            if ($item->stockEntryItem && $item->stockEntryItem->style) {
+                $styleName = $item->stockEntryItem->style->style_name;
+            } elseif ($item->item && $item->item->style) {
+                $styleName = $item->item->style->style_name;
+            } elseif (!empty($item->art_no) && isset($artStyleMap[$item->art_no])) {
+                $styleName = $artStyleMap[$item->art_no];
+            }
 
-            if (str_contains($styleRaw, 'PLAIN') || str_contains($styleRaw, 'WHITE') || str_contains($styleRaw, 'SOLID')) {
-                $varKey = 'PLAINS';
-            } elseif (str_contains($styleRaw, 'CHECK')) {
-                $varKey = 'CHECKS';
-            } elseif (str_contains($styleRaw, 'STRIPE')) {
-                $varKey = 'STRIPES';
-            } elseif (str_contains($styleRaw, 'PRINT')) {
-                $varKey = 'PRINTS';
-            } else {
-                $varKey = $styleRaw ?: 'OTHER';
-                if (!isset($matrix[$varKey])) {
-                    $matrix[$varKey] = array_fill_keys($sizes, 0);
-                }
+            $varKey = strtoupper(trim($styleName)) ?: 'PLAIN';
+            if (!isset($matrix[$varKey])) {
+                $matrix[$varKey] = array_fill_keys($sizes, 0);
             }
 
             $itemSize = trim((string) $item->size);
             if (isset($matrix[$varKey][$itemSize])) {
                 $matrix[$varKey][$itemSize] += (int) $item->quantity;
             }
+        }
+
+        // Filter out varieties where all sizes are 0 (row total is 0)
+        $filteredMatrix = array_filter($matrix, function($sizeCounts) {
+            return array_sum($sizeCounts) > 0;
+        });
+
+        if (!empty($filteredMatrix)) {
+            $matrix = $filteredMatrix;
+        } elseif (empty($matrix)) {
+            $matrix['PLAIN'] = array_fill_keys($sizes, 0);
+        }
+
+        // Filter out varieties where all sizes are 0 (row total is 0)
+        $filteredMatrix = array_filter($matrix, function($sizeCounts) {
+            return array_sum($sizeCounts) > 0;
+        });
+
+        if (!empty($filteredMatrix)) {
+            $matrix = $filteredMatrix;
         }
 
         // Row totals

@@ -28,6 +28,57 @@ use App\Services\OrderaxeService;
 
 class SalesOrderController extends Controller
 {
+    private function buildSalesOrderQuery(Request $request, $isBulkAction = false)
+    {
+        $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id', 'desc');
+
+        if (!empty($request->customer_id)) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        $filterStatus = $isBulkAction ? $request->status_filter : $request->status;
+        if (!empty($filterStatus)) {
+            $query->where('status', $filterStatus);
+        }
+
+        if (!empty($request->so_date_range)) {
+            $dates = explode(' to ', $request->so_date_range);
+            if (count($dates) == 2) {
+                $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
+                $query->whereBetween('so_date', [$startDate, $endDate]);
+            }
+            elseif (count($dates) == 1 && trim($dates[0]) !== '') {
+                $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                $query->whereDate('so_date', $startDate);
+            }
+        }
+
+        $searchValue = is_array($request->search) ? ($request->search['value'] ?? '') : ($request->search ?? '');
+        if (!empty($searchValue)) {
+            $search = $searchValue;
+            $numericSearch = str_replace(['₹', ','], '', $search);
+
+            $query->where(function($q) use ($search, $numericSearch) {
+                $q->where('so_no', 'like', "%{$search}%")
+                  ->orWhere('order_no', 'like', "%{$search}%")
+                  ->orWhere('customer_po_ref', 'like', "%{$search}%")
+                  ->orWhere('total_qty', 'like', "%{$numericSearch}%")
+                  ->orWhere('total_amount', 'like', "%{$numericSearch}%")
+                  ->orWhereRaw("DATE_FORMAT(so_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%")
+                         ->orWhere('code', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('salesAgent', function($sq) use ($search) {
+                      $sq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        return $query;
+    }
+
     public function index(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view sales-order')) {
@@ -35,50 +86,7 @@ class SalesOrderController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id','desc');
-
-            if (!empty($request->customer_id)) {
-                $query->where('customer_id', $request->customer_id);
-            }
-
-            if (!empty($request->status)) {
-                $query->where('status', $request->status);
-            }
-
-            if (!empty($request->so_date_range)) {
-                $dates = explode(' to ', $request->so_date_range);
-                if (count($dates) == 2) {
-                    $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
-                    $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
-                    $query->whereBetween('so_date', [$startDate, $endDate]);
-                }
-                elseif (count($dates) == 1 && trim($dates[0]) !== '') {
-                    $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
-                    $query->whereDate('so_date', $startDate);
-                }
-            }
-
-            if ($request->has('search') && !empty($request->search['value'])) {
-                $search = $request->search['value'];
-                $numericSearch = str_replace(['₹', ','], '', $search);
-
-                $query->where(function($q) use ($search, $numericSearch) {
-                    $q->where('so_no', 'like', "%{$search}%")
-                      ->orWhere('order_no', 'like', "%{$search}%")
-                      ->orWhere('customer_po_ref', 'like', "%{$search}%")
-                      ->orWhere('total_qty', 'like', "%{$numericSearch}%")
-                      ->orWhere('total_amount', 'like', "%{$numericSearch}%")
-                      ->orWhereRaw("DATE_FORMAT(so_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
-                      ->orWhereHas('customer', function($cq) use ($search) {
-                          $cq->where('name', 'like', "%{$search}%")
-                             ->orWhere('code', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('salesAgent', function($sq) use ($search) {
-                          $sq->where('name', 'like', "%{$search}%");
-                      });
-                });
-            }
-
+            $query = $this->buildSalesOrderQuery($request);
             $totalRecords = $query->count();
 
             // Ordering
@@ -86,9 +94,21 @@ class SalesOrderController extends Controller
                 $orderColumnIndex = $request->order[0]['column'];
                 $orderDirection = $request->order[0]['dir'];
                 
-                $columns = ['id', 'so_no', 'so_date', 'customer_id', 'customer_po_ref', 'total_qty', 'sales_agent_id', 'status', 'total_amount'];
+                $columns = [
+                    0 => null, // checkbox
+                    1 => 'id', // DT_RowIndex
+                    2 => 'so_no',
+                    3 => 'so_date',
+                    4 => 'customer_id',
+                    5 => 'customer_po_ref',
+                    6 => 'total_qty',
+                    7 => 'sales_agent_id',
+                    8 => 'status',
+                    9 => 'total_amount',
+                    10 => null, // action
+                ];
                 
-                if (isset($columns[$orderColumnIndex])) {
+                if (isset($columns[$orderColumnIndex]) && $columns[$orderColumnIndex] !== null) {
                     if (in_array($columns[$orderColumnIndex], ['customer_id', 'sales_agent_id'])) {
                         $query->orderBy('id', 'desc'); // Fallback for related models
                     } else {
@@ -115,20 +135,20 @@ class SalesOrderController extends Controller
 
             foreach ($salesOrders as $so) {
                 $statusOptions = '';
-                $allStatuses = ['Draft', 'Pending', 'Approved', 'Rejected', 'Dispatched', 'Cancelled'];
+                $allStatuses = ['Draft', 'Pending', 'Approved', 'Rejected', 'Dispatched', 'Cancelled', 'Closed'];
                 foreach ($allStatuses as $status) {
                     $selected = $so->status === $status ? 'selected' : '';
                     $disabled = '';
 
                     if ($so->status === 'Draft') {
-                        if (!in_array($status, ['Draft', 'Pending', 'Approved', 'Rejected'])) $disabled = 'disabled';
+                        if (!in_array($status, ['Draft', 'Pending', 'Approved', 'Rejected', 'Closed'])) $disabled = 'disabled';
                     } elseif ($so->status === 'Pending') {
-                        if (!in_array($status, ['Pending', 'Approved', 'Rejected', 'Draft'])) $disabled = 'disabled';
+                        if (!in_array($status, ['Pending', 'Approved', 'Rejected', 'Draft', 'Closed'])) $disabled = 'disabled';
                     } elseif ($so->status === 'Approved') {
-                        if (!in_array($status, ['Approved', 'Cancelled', 'Dispatched'])) $disabled = 'disabled';
+                        if (!in_array($status, ['Approved', 'Cancelled', 'Dispatched', 'Closed'])) $disabled = 'disabled';
                     } elseif ($so->status === 'Rejected') {
                         if (!in_array($status, ['Rejected', 'Draft'])) $disabled = 'disabled';
-                    } elseif ($so->status === 'Cancelled' || $so->status === 'Dispatched') {
+                    } elseif ($so->status === 'Cancelled' || $so->status === 'Dispatched' || $so->status === 'Closed') {
                         if ($status !== $so->status) $disabled = 'disabled';
                     }
 
@@ -137,7 +157,7 @@ class SalesOrderController extends Controller
 
                 $statusDropdown = '
                 <div class="form-floating form-floating-outline">
-                    <select class="form-select so-status-change" data-id="' . $so->id . '" ' . ($so->status === 'Cancelled' ? 'disabled' : '') . '>
+                    <select class="form-select so-status-change" data-id="' . $so->id . '" ' . (in_array($so->status, ['Cancelled', 'Closed']) ? 'disabled' : '') . '>
                         ' . $statusOptions . '
                     </select>
                 </div>
@@ -157,7 +177,11 @@ class SalesOrderController extends Controller
                 // }
                 $action .= '</div>';
 
+                $isSelectable = !in_array($so->status, ['Cancelled', 'Closed', 'Dispatched']);
+                $checkbox = '<input type="checkbox" class="form-check-input so-row-checkbox" value="' . $so->id . '" data-so-no="' . e($so->so_no) . '" data-status="' . e($so->status) . '" ' . (!$isSelectable ? 'disabled title="Status is ' . e($so->status) . '"' : '') . '>';
+
                 $data[] = [
+                    'checkbox' => $checkbox,
                     'DT_RowIndex' => $count++,
                     'so_no' => $so->so_no . ($so->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $so->order_no . '</span>' : '') . ($so->orderaxe_id
                         ? '<br><span class="badge bg-label-warning mt-1" style="font-size:10px;"><i class="ri ri-refresh-line me-1"></i>Orderaxe</span>'
@@ -714,14 +738,14 @@ class SalesOrderController extends Controller
         $newStatus = $request->status;
         $valid = true;
         if ($oldStatus === 'Draft') {
-            if (!in_array($newStatus, ['Pending', 'Approved', 'Rejected', 'Draft'])) $valid = false;
+            if (!in_array($newStatus, ['Pending', 'Approved', 'Rejected', 'Draft', 'Closed'])) $valid = false;
         } elseif ($oldStatus === 'Pending') {
-            if (!in_array($newStatus, ['Approved', 'Rejected', 'Draft', 'Pending'])) $valid = false;
+            if (!in_array($newStatus, ['Approved', 'Rejected', 'Draft', 'Pending', 'Closed'])) $valid = false;
         } elseif ($oldStatus === 'Approved') {
-            if (!in_array($newStatus, ['Cancelled', 'Dispatched', 'Approved'])) $valid = false;
+            if (!in_array($newStatus, ['Cancelled', 'Dispatched', 'Approved', 'Closed'])) $valid = false;
         } elseif ($oldStatus === 'Rejected') {
             if (!in_array($newStatus, ['Draft', 'Rejected'])) $valid = false;
-        } elseif (in_array($oldStatus, ['Cancelled', 'Dispatched'])) {
+        } elseif (in_array($oldStatus, ['Cancelled', 'Dispatched', 'Closed'])) {
             if ($newStatus !== $oldStatus) $valid = false;
         }
 
@@ -755,11 +779,95 @@ class SalesOrderController extends Controller
 
             $salesOrder->save();
             DB::commit();
-            addLog('update_status', 'Sale Order Status', 'sales_orders', $id, ['old_status' => $oldStatus], $salesOrder->toArray());
+            $logDesc = "Sales Order {$salesOrder->so_no} status changed from {$oldStatus} to {$newStatus} by " . (auth()->user()->name ?? 'User');
+            addLog('update_status', 'Sale Order Status', 'sales_orders', $id, ['old_status' => $oldStatus], $salesOrder->toArray(), $logDesc);
             return response()->json(['success' => true, 'message' => 'Status updated successfully']);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'status' => 'required|string|in:Closed,Cancelled,Approved',
+            'select_all_matching' => 'nullable|boolean',
+            'so_ids' => 'required_without:select_all_matching|array',
+            'so_ids.*' => 'integer|exists:sales_orders,id'
+        ]);
+
+        $status = $request->status;
+
+        if ($request->boolean('select_all_matching')) {
+            $query = $this->buildSalesOrderQuery($request, true);
+            $orders = $query->get();
+        } else {
+            $soIds = $request->input('so_ids', []);
+            $orders = SalesOrder::whereIn('id', $soIds)->get();
+        }
+
+        if ($orders->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No sales orders found.'], 404);
+        }
+
+        $updatedCount = 0;
+        $skipped = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($orders as $so) {
+                // If closing: do not allow if already Dispatched, Cancelled, or Closed
+                if ($status === 'Closed') {
+                    if (in_array($so->status, ['Dispatched', 'Cancelled', 'Closed'])) {
+                        $skipped[] = "{$so->so_no} ({$so->status})";
+                        continue;
+                    }
+                }
+
+                $oldStatus = $so->status;
+                $so->status = $status;
+                $so->updated_by = auth()->id();
+                $so->save();
+
+                if ($updatedCount < 100) {
+                    $logDesc = "Sales Order {$so->so_no} status changed from {$oldStatus} to {$status} via Bulk Action by " . (auth()->user()->name ?? 'User');
+                    addLog('bulk_status_update', 'Sales Order Status', 'sales_orders', $so->id, [
+                        'old_status' => $oldStatus,
+                        'new_status' => $status,
+                    ], $so->toArray(), $logDesc);
+                }
+
+                $updatedCount++;
+            }
+
+            if ($updatedCount >= 100) {
+                $batchDesc = "Batch update: {$updatedCount} Sales Orders marked as {$status} via Bulk Action by " . (auth()->user()->name ?? 'User');
+                addLog('bulk_status_update', 'Sales Order Status Batch', 'sales_orders', null, [
+                    'total_records_updated' => $updatedCount,
+                    'status' => $status,
+                ], null, $batchDesc);
+            }
+
+            DB::commit();
+
+            $msg = "Successfully updated {$updatedCount} Sales Order(s) to {$status}.";
+            if (!empty($skipped)) {
+                $msg .= " (Skipped " . count($skipped) . " already finished/cancelled orders: " . implode(', ', array_slice($skipped, 0, 3)) . (count($skipped) > 3 ? '...' : '') . ")";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'updated_count' => $updatedCount,
+                'skipped_count' => count($skipped)
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to bulk update sales orders: ' . $e->getMessage()
+            ], 500);
         }
     }
 

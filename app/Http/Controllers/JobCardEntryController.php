@@ -378,10 +378,10 @@ class JobCardEntryController extends Controller
                         $hasReceipts = \App\Models\ProductionReceipt::where('job_card_id', $existingJc->id)->exists();
                         $isFg = ($existingJc->status === 'Production Completed' || $hasReceipts);
 
-                        if (($hasAssignedTasks || $hasIssued) && !$isFg) {
+                        if ($hasAssignedTasks && !$isFg) {
                             $originalTarget = (float) ($existingJc->grand_total_qty ?? 0) - (float) ($existingJc->additional_qty ?? 0);
                             if (abs($submittedGrandTotal - $originalTarget) > 0.01) {
-                                $validator->errors()->add('article_matrix', "Items have already been issued / tasks assigned for {$originalTarget} pcs. Total cutting quantity cannot be increased or decreased (Current Total: {$submittedGrandTotal} pcs). You can redistribute sizes and sleeves within {$originalTarget} pcs.");
+                                $validator->errors()->add('article_matrix', "Tasks have already been assigned for {$originalTarget} pcs. Total cutting quantity cannot be increased or decreased while tasks are assigned (Current Total: {$submittedGrandTotal} pcs). You can redistribute sizes and sleeves within {$originalTarget} pcs.");
                             }
                         }
                     }
@@ -1579,9 +1579,13 @@ class JobCardEntryController extends Controller
                                 $itemCodeFS = implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'FS'], function($v) { return $v !== ''; }));
                                 $itemNameFS = trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' F/S');
                                 
+                                $cleanEffectiveArtNo = trim($effectiveArtNo);
                                 $priceExistsFS = \App\Models\ItemPrice::where('status', 'Active')
                                     ->where('finished_item_code', $itemCodeFS)
-                                    ->where('art_no', $effectiveArtNo)
+                                    ->where(function($q) use ($cleanEffectiveArtNo) {
+                                        $q->where('art_no', $cleanEffectiveArtNo)
+                                          ->orWhereRaw("REPLACE(art_no, ' ', '') = ?", [str_replace(' ', '', $cleanEffectiveArtNo)]);
+                                    })
                                     ->where(function($q) use ($mq) {
                                         $q->where('size', $mq->size)->orWhereNull('size')->orWhere('size', '');
                                     })
@@ -1592,7 +1596,9 @@ class JobCardEntryController extends Controller
                                     $missingPrices[] = [
                                         'item_name' => $itemNameFS,
                                         'finished_item_code' => $itemCodeFS,
-                                        'art_no' => $effectiveArtNo
+                                        'art_no' => $effectiveArtNo,
+                                        'size' => $mq->size,
+                                        'sleeve' => 'F/S'
                                     ];
                                 }
 
@@ -1620,9 +1626,13 @@ class JobCardEntryController extends Controller
                                 $itemCodeHS = implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'HS'], function($v) { return $v !== ''; }));
                                 $itemNameHS = trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' H/S');
 
+                                $cleanEffectiveArtNo = trim($effectiveArtNo);
                                 $priceExistsHS = \App\Models\ItemPrice::where('status', 'Active')
                                     ->where('finished_item_code', $itemCodeHS)
-                                    ->where('art_no', $effectiveArtNo)
+                                    ->where(function($q) use ($cleanEffectiveArtNo) {
+                                        $q->where('art_no', $cleanEffectiveArtNo)
+                                          ->orWhereRaw("REPLACE(art_no, ' ', '') = ?", [str_replace(' ', '', $cleanEffectiveArtNo)]);
+                                    })
                                     ->where(function($q) use ($mq) {
                                         $q->where('size', $mq->size)->orWhereNull('size')->orWhere('size', '');
                                     })
@@ -1633,7 +1643,9 @@ class JobCardEntryController extends Controller
                                     $missingPrices[] = [
                                         'item_name' => $itemNameHS,
                                         'finished_item_code' => $itemCodeHS,
-                                        'art_no' => $effectiveArtNo
+                                        'art_no' => $effectiveArtNo,
+                                        'size' => $mq->size,
+                                        'sleeve' => 'H/S'
                                     ];
                                 }
 
@@ -2101,7 +2113,7 @@ class JobCardEntryController extends Controller
             $sizes = $batchGroup->flatMap->quantities->pluck('size')->unique()->toArray();
         }
         if (empty($sizes)) {
-            $sizes = ['36', '38', '40', '42', '44', '46'];
+            $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
         }
         if (!empty($sizes)) {
             usort($sizes, function($a, $b) {

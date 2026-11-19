@@ -18,8 +18,14 @@ use App\Models\Warehouse;
 use App\Models\WarehouseBrandCapacity;
 use App\Exports\BrandwiseFgStockExport;
 use App\Models\Style;
+use App\Models\JobCardEntry;
+use App\Models\JobCardPendingReason;
+use App\Models\ProductionReceipt;
+use App\Models\ProductionReceiptItem;
+use App\Models\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class WarehouseReportController extends Controller
 {
@@ -35,6 +41,7 @@ class WarehouseReportController extends Controller
         $stores = StoreType::where('status', 'Active')->get();
         $warehouses = Warehouse::where('status', 'Active')->orderBy('id', 'desc')->get();
         $customers = Customer::where('status', 'Active')->orderBy('id','desc')->get();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->orderBy('name', 'asc')->get(['id', 'name', 'code']);
         $defaultWarehouseId = $warehouses->first()?->id;
 
         if ($request->ajax()) {
@@ -224,6 +231,7 @@ class WarehouseReportController extends Controller
                 'urgent-orders' => 'reports.warehouse_report.urgent_orders',
                 'brandwise-lost-sales' => 'reports.warehouse_report.brandwise_lost_sales',
                 'stock-inward-sales' => 'reports.warehouse_report.stock_inward_sales',
+                'job-card-tracking' => 'reports.warehouse_report.job_card_tracking',
             ];
 
             if ($activeTab && isset($tabViews[$activeTab])) {
@@ -279,7 +287,8 @@ class WarehouseReportController extends Controller
             'stores',
             'warehouses',
             'customers',
-            'defaultWarehouseId'
+            'defaultWarehouseId',
+            'serviceProviders'
         ));
     }
 
@@ -2602,6 +2611,165 @@ class WarehouseReportController extends Controller
                     'recordsTotal' => $recordsTotal,
                     'recordsFiltered' => $recordsFiltered,
                     'total_qty' => $overallTotalQty,
+                    'data' => $data,
+                ]);
+
+            case 'job-card-tracking':
+                $baseQuery = DB::table('job_card_entries as jc')
+                    ->leftJoin('service_providers as sp', 'jc.service_provider_id', '=', 'sp.id')
+                    ->leftJoin('brands as b', 'jc.brand_id', '=', 'b.id')
+                    ->join('production_receipts as pr', function($join) {
+                        $join->on('jc.id', '=', 'pr.job_card_id')
+                             ->where('pr.status', '!=', 'Cancelled');
+                    })
+                    ->leftJoin('production_receipt_items as pri', 'pr.id', '=', 'pri.production_receipt_id')
+                    ->leftJoin('warehouses as wh', 'pr.warehouse_id', '=', 'wh.id')
+                    ->leftJoin('store_locations as item_sl', 'pri.store_location_id', '=', 'item_sl.id')
+                    ->leftJoin('store_locations as header_sl', 'pr.store_location_id', '=', 'header_sl.id')
+                    ->whereNull('jc.deleted_at')
+                    ->select(
+                        'jc.id',
+                        'jc.job_card_no',
+                        'jc.job_card_date',
+                        DB::raw('COALESCE(jc.grand_total_qty, 0) as planned_qty'),
+                        'sp.name as unit_name',
+                        'b.brand_name',
+                        DB::raw('COALESCE(SUM(pri.scan_qty), SUM(pri.qty_to_receive), 0) as total_received_qty'),
+                        DB::raw('MAX(pr.receipt_date) as last_receipt_date'),
+                        DB::raw('GROUP_CONCAT(DISTINCT COALESCE(wh.code, wh.warehouse_name) SEPARATOR ", ") as warehouse_names'),
+                        DB::raw('GROUP_CONCAT(DISTINCT COALESCE(item_sl.store_location, header_sl.store_location) SEPARATOR ", ") as store_locations')
+                    )
+                    ->groupBy('jc.id', 'jc.job_card_no', 'jc.job_card_date', 'jc.grand_total_qty', 'sp.name', 'b.brand_name');
+
+                if ($request->from_date) {
+                    $fDate = date('Y-m-d', strtotime(str_replace('/', '-', $request->from_date)));
+                    $baseQuery->where('pr.receipt_date', '>=', $fDate);
+                }
+                if ($request->to_date) {
+                    $tDate = date('Y-m-d', strtotime(str_replace('/', '-', $request->to_date)));
+                    $baseQuery->where('pr.receipt_date', '<=', $tDate);
+                }
+                if ($request->brand_id) {
+                    $baseQuery->where('jc.brand_id', $request->brand_id);
+                }
+                if ($request->unit_id) {
+                    $baseQuery->where('jc.service_provider_id', $request->unit_id);
+                }
+                if ($request->warehouse_id && $request->warehouse_id !== 'all') {
+                    $baseQuery->where('pr.warehouse_id', $request->warehouse_id);
+                }
+                if ($search) {
+                    $baseQuery->where(function($q) use ($search) {
+                        $q->where('jc.job_card_no', 'like', "%{$search}%")
+                          ->orWhere('sp.name', 'like', "%{$search}%")
+                          ->orWhere('wh.warehouse_name', 'like', "%{$search}%")
+                          ->orWhere('item_sl.store_location', 'like', "%{$search}%")
+                          ->orWhere('header_sl.store_location', 'like', "%{$search}%");
+                    });
+                }
+
+                $subQuery = DB::query()->fromSub($baseQuery, 'sub')
+                    ->select(
+                        'sub.*',
+                        DB::raw('GREATEST(0, sub.planned_qty - sub.total_received_qty) as pending_qty'),
+                        DB::raw("CASE 
+                            WHEN sub.total_received_qty >= sub.planned_qty AND sub.planned_qty > 0 THEN 'Fully Received'
+                            WHEN sub.total_received_qty > 0 THEN 'Partially Received'
+                            ELSE 'Pending'
+                        END as tracking_status")
+                    );
+
+                if ($request->tracking_status) {
+                    if ($request->tracking_status === 'fully_received') {
+                        $subQuery->where('sub.total_received_qty', '>=', DB::raw('sub.planned_qty'))->where('sub.planned_qty', '>', 0);
+                    } elseif ($request->tracking_status === 'partially_received') {
+                        $subQuery->where('sub.total_received_qty', '>', 0)->where('sub.total_received_qty', '<', DB::raw('sub.planned_qty'));
+                    } elseif ($request->tracking_status === 'pending') {
+                        $subQuery->where('sub.total_received_qty', '<=', 0);
+                    }
+                }
+
+                $kpiSub = clone $subQuery;
+                $kpiData = DB::query()->fromSub($kpiSub, 'kpi_sub')
+                    ->select(
+                        DB::raw('COUNT(*) as total_count'),
+                        DB::raw("SUM(CASE WHEN tracking_status = 'Fully Received' THEN 1 ELSE 0 END) as fully_count"),
+                        DB::raw("SUM(CASE WHEN tracking_status = 'Partially Received' THEN 1 ELSE 0 END) as partial_count"),
+                        DB::raw("SUM(CASE WHEN tracking_status = 'Pending' THEN 1 ELSE 0 END) as pending_count"),
+                        DB::raw('COALESCE(SUM(planned_qty), 0) as total_planned_qty'),
+                        DB::raw('COALESCE(SUM(total_received_qty), 0) as total_received_qty'),
+                        DB::raw('COALESCE(SUM(pending_qty), 0) as total_pending_qty')
+                    )->first();
+
+                $recordsTotal = (int)($kpiData->total_count ?? 0);
+                $recordsFiltered = $recordsTotal;
+
+                if ($length != -1) {
+                    $subQuery->skip($start)->take($length);
+                }
+
+                $records = $subQuery->orderBy('sub.last_receipt_date', 'desc')->orderBy('sub.id', 'desc')->get();
+
+                $jcIds = $records->pluck('id')->toArray();
+                $pendingReasons = JobCardPendingReason::whereIn('job_card_id', $jcIds)->get()->groupBy('job_card_id');
+
+                $data = [];
+                $rowIdx = $start + 1;
+                foreach ($records as $r) {
+                    $reasonsHtml = '';
+                    $reasonsList = $pendingReasons->get($r->id);
+                    if ($r->pending_qty > 0 && $reasonsList && $reasonsList->count() > 0) {
+                        foreach ($reasonsList as $pr) {
+                            $reasonsHtml .= '<span class="badge bg-label-warning me-1 mb-1" style="font-size: 11px;">' . e($pr->reason) . ' - ' . floatval($pr->qty) . '</span>';
+                        }
+                    } else {
+                        $reasonsHtml = '<span class="text-muted">-</span>';
+                    }
+
+                    $statusBadge = '';
+                    if ($r->tracking_status === 'Fully Received') {
+                        $statusBadge = '<span class="badge bg-label-success">Fully Received</span>';
+                    } elseif ($r->tracking_status === 'Partially Received') {
+                        $statusBadge = '<span class="badge bg-label-warning">Partially Received</span>';
+                    } else {
+                        $statusBadge = '<span class="badge bg-label-danger">Pending</span>';
+                    }
+
+                    $pendingDisplay = number_format($r->pending_qty, 0);
+
+                    $whDisplay = $r->warehouse_names ? '<span class="badge bg-label-info">' . e($r->warehouse_names) . '</span>' : '<span class="text-muted">-</span>';
+                    $locDisplay = $r->store_locations ? '<span class="badge bg-label-secondary">' . e($r->store_locations) . '</span>' : '<span class="text-muted">-</span>';
+                    $dateDisplay = $r->last_receipt_date ? date('d-m-Y', strtotime($r->last_receipt_date)) : '<span class="text-muted">-</span>';
+
+                    $data[] = [
+                        'index' => $rowIdx++,
+                        'job_card_no' => '<strong>' . e($r->job_card_no) . '</strong>',
+                        'unit_from' => e($r->unit_name ?: '-'),
+                        'warehouse_to' => $whDisplay,
+                        'store_location' => $locDisplay,
+                        'receipt_date' => $dateDisplay,
+                        'job_qty' => number_format($r->planned_qty, 0),
+                        'received_qty' => number_format($r->total_received_qty, 0),
+                        'pending_qty' => $pendingDisplay,
+                        'reasons' => $reasonsHtml,
+                        'status' => $statusBadge,
+                        'action' => '<a href="' . url('warehouse_reports/job_card_tracking_pdf/' . $r->id) . '" target="_blank" class="btn btn-xs btn-outline-danger" title="Print/View Tracking PDF" style="padding: 2px 7px; font-size: 0.75rem; white-space: nowrap;"><i class="ri ri-file-pdf-line me-1"></i>PDF</a>',
+                    ];
+                }
+
+                return response()->json([
+                    'draw' => $draw,
+                    'recordsTotal' => $recordsTotal,
+                    'recordsFiltered' => $recordsFiltered,
+                    'kpi' => [
+                        'total_job_cards' => (int)($kpiData->total_count ?? 0),
+                        'fully_received' => (int)($kpiData->fully_count ?? 0),
+                        'partially_received' => (int)($kpiData->partial_count ?? 0),
+                        'pending' => (int)($kpiData->pending_count ?? 0),
+                        'total_job_qty' => (float)($kpiData->total_planned_qty ?? 0),
+                        'total_received_qty' => (float)($kpiData->total_received_qty ?? 0),
+                        'total_pending_qty' => (float)($kpiData->total_pending_qty ?? 0),
+                    ],
                     'data' => $data,
                 ]);
 
@@ -5946,5 +6114,251 @@ class WarehouseReportController extends Controller
         $fileName = 'Brandwise_FG_Stocks_' . date('Ymd_His') . '.xlsx';
 
         return Excel::download(new BrandwiseFgStockExport($tree, $meta, $hasOtherSize), $fileName);
+    }
+
+    public function getJobCardTrackingDetails($id)
+    {
+        $jobCard = JobCardEntry::with(['serviceProvider', 'brand'])->find($id);
+        if (!$jobCard) {
+            return response()->json(['success' => false, 'message' => 'Job Card not found'], 404);
+        }
+
+        $receipts = ProductionReceipt::where('job_card_id', $id)
+            ->where('status', '!=', 'Cancelled')
+            ->with(['warehouse', 'storeLocation', 'employee', 'items.storeLocation'])
+            ->orderByDesc('receipt_date')
+            ->get();
+
+        $receiptsData = [];
+        $cumulativeReceived = 0;
+        foreach ($receipts as $r) {
+            $rQty = $r->items->sum(function($it) {
+                return (float)($it->scan_qty ?: $it->qty_to_receive ?: 0);
+            });
+            $cumulativeReceived += $rQty;
+
+            $locations = $r->items->map(function($it) {
+                return $it->storeLocation?->store_location;
+            })->filter()->unique()->values()->toArray();
+
+            $receiptsData[] = [
+                'receipt_no' => $r->receipt_no ?: $r->doc_no,
+                'receipt_date' => $r->receipt_date ? date('d-m-Y', strtotime($r->receipt_date)) : '-',
+                'warehouse' => $r->warehouse?->warehouse_name ?: '-',
+                'store_location' => count($locations) > 0 ? implode(', ', $locations) : ($r->storeLocation?->store_location ?: '-'),
+                'received_qty' => number_format($rQty, 0),
+                'employee' => $r->employee?->name ?: '-',
+                'status' => $r->status,
+            ];
+        }
+
+        $plannedQty = (float)($jobCard->grand_total_qty ?: 0);
+        $pendingQty = max(0, $plannedQty - $cumulativeReceived);
+
+        $pendingReasons = JobCardPendingReason::where('job_card_id', $id)->orderByDesc('id')->get();
+        $reasonsData = [];
+        foreach ($pendingReasons as $pr) {
+            $reasonsData[] = [
+                'id' => $pr->id,
+                'reason' => $pr->reason,
+                'qty' => floatval($pr->qty),
+                'remarks' => $pr->remarks ?: '-',
+                'created_at' => $pr->created_at ? $pr->created_at->format('d-m-Y H:i') : '-',
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'job_card' => [
+                'id' => $jobCard->id,
+                'job_card_no' => $jobCard->job_card_no,
+                'job_card_date' => $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '-',
+                'unit_name' => $jobCard->serviceProvider?->name ?: '-',
+                'brand_name' => $jobCard->brand?->brand_name ?: '-',
+                'planned_qty' => number_format($plannedQty, 0),
+                'received_qty' => number_format($cumulativeReceived, 0),
+                'pending_qty' => number_format($pendingQty, 0),
+                'raw_pending_qty' => $pendingQty,
+                'status' => ($cumulativeReceived >= $plannedQty && $plannedQty > 0) ? 'Fully Received' : (($cumulativeReceived > 0) ? 'Partially Received' : 'Pending'),
+            ],
+            'receipts' => $receiptsData,
+            'pending_reasons' => $reasonsData,
+            'reason_options' => JobCardPendingReason::REASONS,
+        ]);
+    }
+
+    public function saveJobCardTrackingReason(Request $request)
+    {
+        $request->validate([
+            'job_card_id' => 'required|exists:job_card_entries,id',
+            'reason' => 'required|string',
+            'qty' => 'required|numeric|min:0.01',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        $jobCard = JobCardEntry::find($request->job_card_id);
+
+        $reason = JobCardPendingReason::create([
+            'job_card_id' => $jobCard->id,
+            'job_card_no' => $jobCard->job_card_no,
+            'reason' => $request->reason,
+            'qty' => $request->qty,
+            'remarks' => $request->remarks,
+            'created_by' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pending reason logged successfully.',
+            'data' => $reason,
+        ]);
+    }
+
+    public function deleteJobCardTrackingReason($id)
+    {
+        $reason = JobCardPendingReason::find($id);
+        if (!$reason) {
+            return response()->json(['success' => false, 'message' => 'Reason not found'], 404);
+        }
+        $reason->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pending reason removed successfully.',
+        ]);
+    }
+
+    public function jobCardTrackingPdf($id)
+    {
+        $jobCard = JobCardEntry::with([
+            'purchaseOrder.items.rawMaterial',
+            'brand',
+            'season',
+            'serviceProvider',
+            'fabricDetails.quantities',
+            'sizeRatio',
+            'item',
+            'receiptStore',
+            'issueItems.rawMaterial'
+        ])->findOrFail($id);
+
+        $receipts = ProductionReceipt::with([
+            'items.storeLocation',
+            'warehouse',
+            'storeLocation'
+        ])->where('job_card_id', $id)
+          ->where('status', '!=', 'Cancelled')
+          ->orderBy('receipt_date', 'asc')
+          ->get();
+
+        $inwardMap = [];
+        $artLocationMap = [];
+        $storeLocations = [];
+        $warehouses = [];
+        $totalInwardedQty = 0;
+        $receiptDates = [];
+
+        // Build canonical map between fabric art_no and fg_art_no
+        $canonicalMap = [];
+        foreach ($jobCard->fabricDetails as $fd) {
+            $canonical = strtolower(trim((string)$fd->art_no));
+            $fabClean = strtolower(trim((string)$fd->art_no));
+            $fgClean = strtolower(trim((string)$fd->fg_art_no));
+
+            if ($fabClean !== '') $canonicalMap[$fabClean] = $canonical;
+            if ($fgClean !== '') $canonicalMap[$fgClean] = $canonical;
+
+            $fabNorm = preg_replace('/[^a-z0-9]/', '', $fabClean);
+            $fgNorm = preg_replace('/[^a-z0-9]/', '', $fgClean);
+            if ($fabNorm !== '') $canonicalMap[$fabNorm] = $canonical;
+            if ($fgNorm !== '') $canonicalMap[$fgNorm] = $canonical;
+        }
+
+        $resolveArt = function($str) use ($canonicalMap) {
+            $clean = strtolower(trim((string)$str));
+            $norm = preg_replace('/[^a-z0-9]/', '', $clean);
+            return $canonicalMap[$clean] ?? ($canonicalMap[$norm] ?? $clean);
+        };
+
+        foreach ($receipts as $rc) {
+            if ($rc->receipt_date) {
+                $receiptDates[] = date('d-m-Y', strtotime($rc->receipt_date));
+            }
+            if ($rc->warehouse) {
+                $warehouses[] = $rc->warehouse->warehouse_name ?? $rc->warehouse->code;
+            }
+            if ($rc->storeLocation && !empty($rc->storeLocation->store_location)) {
+                $storeLocations[] = $rc->storeLocation->store_location;
+            }
+
+            foreach ($rc->items as $it) {
+                $rawArt = strtolower(trim((string)$it->art_no));
+                $art = $resolveArt($it->art_no);
+                $sz = strtolower(trim((string)$it->size));
+                $variant = $it->size_variant ?? '';
+                $itemCode = $it->item_code ?? '';
+                $sleeve = 'FS';
+                if (stripos($variant, 'H/S') !== false || stripos($variant, 'HS') !== false || stripos($itemCode, '-HS') !== false || stripos($itemCode, '-H/S') !== false) {
+                    $sleeve = 'HS';
+                }
+
+                $qty = (float)($it->scan_qty ?? $it->qty_to_receive ?? 0);
+                $totalInwardedQty += $qty;
+
+                $artKeys = array_unique(array_filter([$art, $rawArt]));
+                foreach ($artKeys as $aKey) {
+                    $key = $aKey . '|' . $sleeve . '|' . $sz;
+                    $keySlash = $aKey . '|' . ($sleeve === 'FS' ? 'F/S' : 'H/S') . '|' . $sz;
+                    $fallbackArtKey = $aKey . '|' . $sz;
+
+                    $inwardMap[$key] = ($inwardMap[$key] ?? 0) + $qty;
+                    if ($keySlash !== $key) {
+                        $inwardMap[$keySlash] = ($inwardMap[$keySlash] ?? 0) + $qty;
+                    }
+                    $inwardMap[$fallbackArtKey] = ($inwardMap[$fallbackArtKey] ?? 0) + $qty;
+                }
+
+                $loc = $it->storeLocation->store_location ?? ($rc->storeLocation->store_location ?? null);
+                if ($loc) {
+                    $storeLocations[] = $loc;
+                    foreach ($artKeys as $aKey) {
+                        $locKeyWithSleeve = $aKey . '|' . $sleeve;
+                        $locKeySlash = $aKey . '|' . ($sleeve === 'FS' ? 'F/S' : 'H/S');
+                        $locKeyArt = $aKey;
+
+                        if (!isset($artLocationMap[$locKeyWithSleeve])) $artLocationMap[$locKeyWithSleeve] = [];
+                        if (!in_array($loc, $artLocationMap[$locKeyWithSleeve])) $artLocationMap[$locKeyWithSleeve][] = $loc;
+
+                        if (!isset($artLocationMap[$locKeySlash])) $artLocationMap[$locKeySlash] = [];
+                        if (!in_array($loc, $artLocationMap[$locKeySlash])) $artLocationMap[$locKeySlash][] = $loc;
+
+                        if (!isset($artLocationMap[$locKeyArt])) $artLocationMap[$locKeyArt] = [];
+                        if (!in_array($loc, $artLocationMap[$locKeyArt])) $artLocationMap[$locKeyArt][] = $loc;
+                    }
+                }
+            }
+        }
+
+        $uniqueLocations = array_values(array_unique(array_filter($storeLocations)));
+        $uniqueWarehouses = array_values(array_unique(array_filter($warehouses)));
+        $uniqueDates = array_values(array_unique(array_filter($receiptDates)));
+
+        $pendingReasons = JobCardPendingReason::where('job_card_id', $id)->get();
+
+        $pdf = Pdf::loadView('reports.warehouse_report.job_card_tracking_pdf', compact(
+            'jobCard',
+            'receipts',
+            'inwardMap',
+            'artLocationMap',
+            'uniqueLocations',
+            'uniqueWarehouses',
+            'uniqueDates',
+            'totalInwardedQty',
+            'pendingReasons'
+        ));
+        $pdf->setPaper('A4', 'landscape');
+
+        $filename = 'Job_Card_Tracking_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';
+        return $pdf->stream($filename);
     }
 }

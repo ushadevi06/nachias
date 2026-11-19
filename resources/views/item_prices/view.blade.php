@@ -7,7 +7,7 @@
             <div class="table-header-box">
                 <h4>Item Prices</h4>
                 <div class="d-flex gap-2">
-                    <a class="btn btn-outline-success" href="{{ url('item_prices/export-excel') }}">
+                    <a class="btn btn-outline-success" id="btn-export-excel" href="{{ url('item_prices/export-excel') }}">
                         <i class="icon-base ri ri-file-excel-line"></i> Export
                     </a>
                     @if(auth()->id() == 1 || auth()->user()->can('create item-prices'))
@@ -27,7 +27,21 @@
             </div>
             <div class="card">
                 <div class="card-body">
-                    <div class="card-datatable">
+                    <div class="filter-box mb-4">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-lg-12">
+                                <h5 class="mb-0">Filter</h5>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <input type="text" id="date_range" class="form-control" placeholder="Select Effective Date Range">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" id="filterBtn" class="btn btn-primary text-uppercase">FILTER</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary text-uppercase ms-1">RESET</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-datatable table-responsive">
                         <table class="table" id="itemPriceTable">
                             <thead>
                                 <tr>
@@ -92,7 +106,13 @@
             bootstrap.Modal.getOrCreateInstance(el).show();
         });
 
-        $('#itemPriceTable').DataTable({
+        $('#date_range').flatpickr({
+            mode: 'range',
+            dateFormat: 'd-m-Y',
+            allowInput: true
+        });
+
+        var table = $('#itemPriceTable').DataTable({
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -100,7 +120,12 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            ajax: "{{ url('item_prices') }}",
+            ajax: {
+                url: "{{ url('item_prices') }}",
+                data: function(d) {
+                    d.date_range = $('#date_range').val();
+                }
+            },
             columns: [{
                     data: 'DT_RowIndex'
                 },
@@ -130,6 +155,25 @@
                     searchable: false
                 },
             ]
+        });
+
+        $('#filterBtn').on('click', function() {
+            table.ajax.reload();
+        });
+
+        $('#resetBtn').on('click', function() {
+            $('#date_range').val('');
+            table.ajax.reload();
+        });
+
+        $('#btn-export-excel').on('click', function(e) {
+            e.preventDefault();
+            let url = "{{ url('item_prices/export-excel') }}";
+            let dr = $('#date_range').val();
+            if (dr) {
+                url += '?date_range=' + encodeURIComponent(dr);
+            }
+            window.location.href = url;
         });
 
         $(document).on('change', '.status-toggle', function() {

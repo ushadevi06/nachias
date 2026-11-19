@@ -27,6 +27,8 @@ class StockEntryItem extends Model
         'color_id',
         'qty_in',
         'qty_out',
+        'excess_qty',
+        'shortage_qty',
         'price',
         'sku',
         'qrcode',

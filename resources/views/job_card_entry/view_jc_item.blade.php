@@ -915,7 +915,8 @@ $(document).ready(function() {
                         if (response.error_type === 'missing_prices' && response.missing_prices && response.missing_prices.length > 0) {
                             let messageHtml = '';
                             response.missing_prices.forEach(function(missing) {
-                                messageHtml += `<li><b>${missing.item_name}</b> (Code: ${missing.finished_item_code}, Art: ${missing.art_no})</li>`;
+                                let sizeDetails = missing.size ? ` - <span class="badge bg-danger">Missing Size: ${missing.size}</span>` : '';
+                                messageHtml += `<li class="mb-2"><b>${missing.item_name}</b> (Code: ${missing.finished_item_code}, Art: ${missing.art_no})${sizeDetails}</li>`;
                             });
                             $('#modalMissingPricesList').html(messageHtml);
                             $('#editItemModal').modal('hide');

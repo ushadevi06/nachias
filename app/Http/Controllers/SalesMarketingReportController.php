@@ -682,7 +682,6 @@ class SalesMarketingReportController extends Controller
                         }
                     }
 
-                    // Any remaining in pool add to first row
                     foreach ($sizes as $sz) {
                         if ($pendingPool[$sz] > 0 && $pendingRows->count() > 0) {
                             $pendingRows[0]->{'size_' . $sz} += $pendingPool[$sz];
@@ -867,37 +866,75 @@ class SalesMarketingReportController extends Controller
                         return $u ?: '-';
                     };
 
+                    $normColorFunc = function($c) {
+                        $c = trim((string)$c);
+                        if ($c === '' || $c === '-') return '-';
+                        if (is_numeric($c)) {
+                            return (string)(int)$c;
+                        }
+                        return strtoupper($c);
+                    };
+
+                    $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
                     $delPartyMap = [];
+                    $delArtPool = [];
                     foreach ($delPartyQuery as $d) {
-                        $k = $d->so_id . '|' . trim($d->art_no) . '|' . trim($d->color) . '|' . $normPartySleeveFunc($d->sleeve);
-                        $delPartyMap[$k] = [
-                            '36' => floatval($d->size_36),
-                            '38' => floatval($d->size_38),
-                            '40' => floatval($d->size_40),
-                            '42' => floatval($d->size_42),
-                            '44' => floatval($d->size_44),
-                            '46' => floatval($d->size_46),
-                            '48' => floatval($d->size_48),
-                            '50' => floatval($d->size_50),
-                            'total' => floatval($d->total_qty),
-                        ];
+                        $k = $d->so_id . '|' . trim($d->art_no) . '|' . $normColorFunc($d->color) . '|' . $normPartySleeveFunc($d->sleeve);
+                        if (!isset($delPartyMap[$k])) {
+                            $delPartyMap[$k] = array_fill_keys($sizes, 0.0);
+                            $delPartyMap[$k]['total'] = 0.0;
+                        }
+                        foreach ($sizes as $sz) {
+                            $delPartyMap[$k][$sz] += floatval($d->{'size_' . $sz});
+                        }
+                        $delPartyMap[$k]['total'] += floatval($d->total_qty);
+
+                        // Also populate fallback pool for same SO, Art No and Sleeve
+                        $poolKey = $d->so_id . '|' . trim($d->art_no) . '|' . $normPartySleeveFunc($d->sleeve);
+                        if (!isset($delArtPool[$poolKey])) {
+                            $delArtPool[$poolKey] = array_fill_keys($sizes, 0.0);
+                        }
+                        foreach ($sizes as $sz) {
+                            $delArtPool[$poolKey][$sz] += floatval($d->{'size_' . $sz});
+                        }
                     }
 
                     $allPartyRows = $partyGrouped->get();
                     $pendingPartyRows = collect();
                     $tot36 = $tot38 = $tot40 = $tot42 = $tot44 = $tot46 = $tot48 = $tot50 = $totAllQty = 0;
-                    $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
 
                     foreach ($allPartyRows as $row) {
-                        $k = $row->so_id . '|' . trim($row->art_no) . '|' . trim($row->color) . '|' . $normPartySleeveFunc($row->sleeve);
-                        $d = $delPartyMap[$k] ?? null;
+                        $k = $row->so_id . '|' . trim($row->art_no) . '|' . $normColorFunc($row->color) . '|' . $normPartySleeveFunc($row->sleeve);
+                        $poolKey = $row->so_id . '|' . trim($row->art_no) . '|' . $normPartySleeveFunc($row->sleeve);
 
                         $remSizes = [];
                         $rowTot = 0;
                         foreach ($sizes as $sz) {
                             $ord = floatval($row->{'size_' . $sz});
-                            $dsp = $d ? floatval($d[$sz] ?? 0) : 0;
-                            $rem = max(0, $ord - $dsp);
+                            if ($ord <= 0) {
+                                $remSizes['size_' . $sz] = 0;
+                                continue;
+                            }
+
+                            // 1. First deduct from exact normalized color match
+                            $dsp = 0;
+                            if (isset($delPartyMap[$k][$sz]) && $delPartyMap[$k][$sz] > 0) {
+                                $dsp = min($ord, $delPartyMap[$k][$sz]);
+                                $delPartyMap[$k][$sz] -= $dsp;
+                                if (isset($delArtPool[$poolKey][$sz])) {
+                                    $delArtPool[$poolKey][$sz] -= $dsp;
+                                }
+                            }
+
+                            $rem = $ord - $dsp;
+
+                            // 2. Fallback: deduct from article pool within same SO if different color dispatched
+                            if ($rem > 0 && isset($delArtPool[$poolKey][$sz]) && $delArtPool[$poolKey][$sz] > 0) {
+                                $extraDsp = min($rem, $delArtPool[$poolKey][$sz]);
+                                $delArtPool[$poolKey][$sz] -= $extraDsp;
+                                $rem -= $extraDsp;
+                            }
+
                             $remSizes['size_' . $sz] = $rem;
                             $rowTot += $rem;
                         }
@@ -2384,23 +2421,28 @@ class SalesMarketingReportController extends Controller
                     ];
                     $periodLabel = ($quarterLabels[$selectedQuarter] ?? $selectedQuarter) . " (FY {$selectedFy})";
 
-                    $salesOrdersData = DB::table('sales_order_items as soi')
-                        ->join('sales_orders as so', 'soi.sale_order_id', '=', 'so.id')
-                        ->whereNull('so.deleted_at')
-                        ->whereNull('soi.deleted_at')
+                    $salesInvoicesData = DB::table('sales_invoice_items as sii')
+                        ->join('sales_invoices as si', 'sii.sales_invoice_id', '=', 'si.id')
+                        ->whereNull('si.deleted_at')
+                        ->whereNull('sii.deleted_at')
                         ->where(function($q) {
-                            $q->whereNull('so.status')
-                              ->orWhereRaw('LOWER(so.status) != ?', ['cancelled']);
+                            $q->where(function($sub) {
+                                $sub->whereNull('si.invoice_status')
+                                    ->orWhereRaw('LOWER(si.invoice_status) != ?', ['cancelled']);
+                            })->where(function($sub) {
+                                $sub->whereNull('si.einvoice_status')
+                                    ->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
+                            });
                         })
-                        ->where('so.so_date', '>=', $incentiveFromDate)
-                        ->where('so.so_date', '<=', $incentiveToDate)
-                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId))
-                        ->when($agentId, fn($q) => $q->where('so.agent_id', $agentId))
-                        ->groupBy('so.agent_id')
+                        ->where('si.inv_date', '>=', $incentiveFromDate)
+                        ->where('si.inv_date', '<=', $incentiveToDate)
+                        ->when($customerId, fn($q) => $q->where('si.customer_id', $customerId))
+                        ->when($agentId, fn($q) => $q->where('si.agent_id', $agentId))
+                        ->groupBy('si.agent_id')
                         ->select(
-                            'so.agent_id',
-                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) NOT LIKE '%discount%' AND COALESCE(so.sales_discount_percent, 0) <= 10 THEN soi.qty ELSE 0 END) as regular_qty"),
-                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) LIKE '%discount%' OR COALESCE(so.sales_discount_percent, 0) > 10 THEN soi.qty ELSE 0 END) as discount_qty")
+                            'si.agent_id',
+                            DB::raw("SUM(CASE WHEN COALESCE(si.discount_percent, 0) <= 10 THEN sii.quantity ELSE 0 END) as regular_qty"),
+                            DB::raw("SUM(CASE WHEN COALESCE(si.discount_percent, 0) > 10 THEN sii.quantity ELSE 0 END) as discount_qty")
                         )
                         ->get()
                         ->keyBy('agent_id');
@@ -2424,28 +2466,33 @@ class SalesMarketingReportController extends Controller
 
                     $activeAgentIds = $agents->pluck('id')->all();
 
-                    $unassignedOrdersData = DB::table('sales_order_items as soi')
-                        ->join('sales_orders as so', 'soi.sale_order_id', '=', 'so.id')
-                        ->leftJoin('customers as c', 'c.id', '=', 'so.customer_id')
-                        ->whereNull('so.deleted_at')
-                        ->whereNull('soi.deleted_at')
+                    $unassignedInvoicesData = DB::table('sales_invoice_items as sii')
+                        ->join('sales_invoices as si', 'sii.sales_invoice_id', '=', 'si.id')
+                        ->leftJoin('customers as c', 'c.id', '=', 'si.customer_id')
+                        ->whereNull('si.deleted_at')
+                        ->whereNull('sii.deleted_at')
                         ->where(function($q) {
-                            $q->whereNull('so.status')
-                              ->orWhereRaw('LOWER(so.status) != ?', ['cancelled']);
+                            $q->where(function($sub) {
+                                $sub->whereNull('si.invoice_status')
+                                    ->orWhereRaw('LOWER(si.invoice_status) != ?', ['cancelled']);
+                            })->where(function($sub) {
+                                $sub->whereNull('si.einvoice_status')
+                                    ->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
+                            });
                         })
-                        ->where('so.so_date', '>=', $incentiveFromDate)
-                        ->where('so.so_date', '<=', $incentiveToDate)
+                        ->where('si.inv_date', '>=', $incentiveFromDate)
+                        ->where('si.inv_date', '<=', $incentiveToDate)
                         ->where(function($q) use ($activeAgentIds) {
-                            $q->whereNull('so.agent_id')
-                              ->orWhere('so.agent_id', 0)
-                              ->orWhereNotIn('so.agent_id', $activeAgentIds);
+                            $q->whereNull('si.agent_id')
+                              ->orWhere('si.agent_id', 0)
+                              ->orWhereNotIn('si.agent_id', $activeAgentIds);
                         })
-                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId))
-                        ->groupBy(DB::raw('COALESCE(so.zone_id, c.zone_id)'))
+                        ->when($customerId, fn($q) => $q->where('si.customer_id', $customerId))
+                        ->groupBy('c.zone_id')
                         ->select(
-                            DB::raw('COALESCE(so.zone_id, c.zone_id) as zone_id'),
-                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) NOT LIKE '%discount%' AND COALESCE(so.sales_discount_percent, 0) <= 10 THEN soi.qty ELSE 0 END) as regular_qty"),
-                            DB::raw("SUM(CASE WHEN LOWER(COALESCE(so.order_type, '')) LIKE '%discount%' OR COALESCE(so.sales_discount_percent, 0) > 10 THEN soi.qty ELSE 0 END) as discount_qty")
+                            'c.zone_id',
+                            DB::raw("SUM(CASE WHEN COALESCE(si.discount_percent, 0) <= 10 THEN sii.quantity ELSE 0 END) as regular_qty"),
+                            DB::raw("SUM(CASE WHEN COALESCE(si.discount_percent, 0) > 10 THEN sii.quantity ELSE 0 END) as discount_qty")
                         )
                         ->get()
                         ->keyBy('zone_id');
@@ -2513,8 +2560,8 @@ class SalesMarketingReportController extends Controller
 
                         $monthlyTarget = floatval($agent->sales_target ?? 0);
                         $target = $monthlyTarget * $multiplier;
-                        $achieved = floatval($salesOrdersData[$agent->id]->regular_qty ?? 0);
-                        $discountQty = floatval($salesOrdersData[$agent->id]->discount_qty ?? 0);
+                        $achieved = floatval($salesInvoicesData[$agent->id]->regular_qty ?? 0);
+                        $discountQty = floatval($salesInvoicesData[$agent->id]->discount_qty ?? 0);
                         $returnQty = floatval($returnQuantities[$agent->id] ?? 0);
                         $ratePerPcs = floatval($agent->commission_value ?? 0);
 
@@ -2568,7 +2615,7 @@ class SalesMarketingReportController extends Controller
 
                     if (!$agentId || $agentId === 'unknown' || $agentId === 'all') {
                         $allUnassignedZoneIds = array_unique(array_merge(
-                            $unassignedOrdersData->keys()->map(fn($k) => (string)$k)->all(),
+                            $unassignedInvoicesData->keys()->map(fn($k) => (string)$k)->all(),
                             $unassignedReturns->keys()->map(fn($k) => (string)$k)->all()
                         ));
 
@@ -2577,8 +2624,8 @@ class SalesMarketingReportController extends Controller
                                 continue;
                             }
 
-                            $uRegularQty = floatval($unassignedOrdersData[$uZoneId]->regular_qty ?? 0);
-                            $uDiscountQty = floatval($unassignedOrdersData[$uZoneId]->discount_qty ?? 0);
+                            $uRegularQty = floatval($unassignedInvoicesData[$uZoneId]->regular_qty ?? 0);
+                            $uDiscountQty = floatval($unassignedInvoicesData[$uZoneId]->discount_qty ?? 0);
                             $uReturnQty = floatval($unassignedReturns[$uZoneId] ?? 0);
 
                             if ($uRegularQty <= 0 && $uDiscountQty <= 0 && $uReturnQty <= 0) {
@@ -2740,62 +2787,58 @@ class SalesMarketingReportController extends Controller
 
                     $activeAgentIds = SalesAgent::whereIn('status', ['active', 'Active'])->pluck('id')->all();
 
-                    $soQuery = DB::table('sales_order_items as soi')
-                        ->join('sales_orders as so', 'soi.sale_order_id', '=', 'so.id')
-                        ->leftJoin('customers as c', 'c.id', '=', 'so.customer_id')
-                        ->leftJoin('stock_entry_items as sei', 'soi.stock_entry_item_id', '=', 'sei.id')
+                    $invQuery = DB::table('sales_invoice_items as sii')
+                        ->join('sales_invoices as si', 'sii.sales_invoice_id', '=', 'si.id')
+                        ->leftJoin('customers as c', 'c.id', '=', 'si.customer_id')
+                        ->leftJoin('stock_entry_items as sei', 'sii.stock_entry_item_id', '=', 'sei.id')
                         ->leftJoin('brands as b', 'sei.brand_id', '=', 'b.id')
-                        ->whereNull('so.deleted_at')
-                        ->whereNull('soi.deleted_at')
+                        ->leftJoin('brands as sib', 'si.brand_id', '=', 'sib.id')
+                        ->whereNull('si.deleted_at')
+                        ->whereNull('sii.deleted_at')
                         ->where(function($q) {
-                            $q->whereNull('so.status')
-                              ->orWhereRaw('LOWER(so.status) != ?', ['cancelled']);
+                            $q->where(function($sub) {
+                                $sub->whereNull('si.invoice_status')
+                                    ->orWhereRaw('LOWER(si.invoice_status) != ?', ['cancelled']);
+                            })->where(function($sub) {
+                                $sub->whereNull('si.einvoice_status')
+                                    ->orWhereRaw('LOWER(si.einvoice_status) != ?', ['cancelled']);
+                            });
                         })
-                        ->where('so.so_date', '>=', $incentiveFromDate)
-                        ->where('so.so_date', '<=', $incentiveToDate)
-                        ->when($customerId, fn($q) => $q->where('so.customer_id', $customerId));
+                        ->where('si.inv_date', '>=', $incentiveFromDate)
+                        ->where('si.inv_date', '<=', $incentiveToDate)
+                        ->when($customerId, fn($q) => $q->where('si.customer_id', $customerId));
 
                     if ($isZoneDrilldown) {
                         if ($drilldownZoneId > 0) {
-                            $soQuery->where(function($q) use ($drilldownZoneId) {
-                                $q->where('so.zone_id', $drilldownZoneId)
-                                  ->orWhere(function($sub) use ($drilldownZoneId) {
-                                      $sub->whereNull('so.zone_id')->where('c.zone_id', $drilldownZoneId);
-                                  });
-                            });
+                            $invQuery->where('c.zone_id', $drilldownZoneId);
                         }
                     } elseif ($isUnknownZone) {
-                        $soQuery->where(function($q) use ($activeAgentIds) {
-                            $q->whereNull('so.agent_id')
-                              ->orWhere('so.agent_id', 0)
-                              ->orWhereNotIn('so.agent_id', $activeAgentIds);
+                        $invQuery->where(function($q) use ($activeAgentIds) {
+                            $q->whereNull('si.agent_id')
+                              ->orWhere('si.agent_id', 0)
+                              ->orWhereNotIn('si.agent_id', $activeAgentIds);
                         });
                         if ($unknownZoneId > 0) {
-                            $soQuery->where(function($q) use ($unknownZoneId) {
-                                $q->where('so.zone_id', $unknownZoneId)
-                                  ->orWhere(function($sub) use ($unknownZoneId) {
-                                      $sub->whereNull('so.zone_id')->where('c.zone_id', $unknownZoneId);
-                                  });
-                            });
+                            $invQuery->where('c.zone_id', $unknownZoneId);
                         }
                     } else {
-                        $soQuery->where('so.agent_id', $targetAgentId);
+                        $invQuery->where('si.agent_id', $targetAgentId);
                     }
 
-                    $soItems = $soQuery->select(
-                        'soi.id',
-                        'soi.qty',
-                        'soi.rate',
-                        'soi.amount',
-                        'soi.art_no',
-                        'soi.sku',
-                        'soi.item_name',
-                        'soi.category_name',
-                        'soi.categories_path_val',
-                        'so.order_type',
-                        'so.sales_discount_percent',
-                        'sei.brand_id as stock_brand_id',
-                        'b.brand_name as stock_brand_name'
+                    $invItems = $invQuery->select(
+                        'sii.id',
+                        'sii.quantity as qty',
+                        'sii.rate',
+                        'sii.amount',
+                        'sii.art_no',
+                        'sii.sku',
+                        DB::raw("'' as item_name"),
+                        DB::raw("'' as category_name"),
+                        DB::raw("'' as categories_path_val"),
+                        DB::raw("'' as order_type"),
+                        DB::raw("COALESCE(si.discount_percent, 0) as sales_discount_percent"),
+                        DB::raw("COALESCE(sei.brand_id, si.brand_id) as stock_brand_id"),
+                        DB::raw("COALESCE(b.brand_name, sib.brand_name) as stock_brand_name")
                     )->get();
 
                     $cnQuery = DB::table('credit_note_items as cni')
@@ -2858,7 +2901,7 @@ class SalesMarketingReportController extends Controller
 
                     $brandData = [];
 
-                    foreach ($soItems as $item) {
+                    foreach ($invItems as $item) {
                         $brandName = null;
                         if (!empty($item->stock_brand_name)) {
                             $brandName = trim($item->stock_brand_name);

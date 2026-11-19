@@ -87,50 +87,32 @@
 <!-- Modal Pending Reason Breakdown -->
 <div class="modal fade" id="modalPendingReasonBreakdown" tabindex="-1" aria-labelledby="modalPendingReasonTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow border-0">
-            <div class="modal-header border-bottom py-3">
-                <h5 class="modal-title d-flex align-items-center gap-2" id="modalPendingReasonTitle">
-                    <i class="ri ri-error-warning-fill text-warning fs-4"></i>
-                    <span>Pending Inward Reasons &bull; <strong class="text-primary" id="pr_modal_jc_no">-</strong></span>
+        <div class="modal-content">
+            <div class="modal-header border-bottom py-2">
+                <h5 class="modal-title fs-6" id="modalPendingReasonTitle">
+                    Pending Inward Reasons &bull; <span id="pr_modal_jc_no" class="fw-semibold">-</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body py-3">
-                <!-- KPI Summary -->
-                <div class="row g-2 mb-3 text-center">
-                    <div class="col-6 col-md-3">
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted d-block">Job Planned Qty</small>
-                            <span class="fs-6 fw-bold text-dark" id="pr_modal_planned">0</span> pcs
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted d-block">Received Qty</small>
-                            <span class="fs-6 fw-bold text-success" id="pr_modal_received">0</span> pcs
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted d-block">Balance Pending</small>
-                            <span class="fs-6 fw-bold text-danger" id="pr_modal_pending">0</span> pcs
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="p-2 border rounded bg-light">
-                            <small class="text-muted d-block">Allocated Reason Qty</small>
-                            <span class="fs-6 fw-bold text-primary" id="pr_modal_allocated">0</span> pcs
-                        </div>
-                    </div>
+                <!-- Simple Clean Summary -->
+                <div class="p-2 mb-3 bg-light rounded border d-flex justify-content-between align-items-center flex-wrap gap-2 text-dark small">
+                    <div>Job Planned: <strong id="pr_modal_planned">0</strong> pcs</div>
+                    <div class="text-muted">|</div>
+                    <div>Received: <strong id="pr_modal_received">0</strong> pcs</div>
+                    <div class="text-muted">|</div>
+                    <div>Pending: <strong id="pr_modal_pending">0</strong> pcs</div>
+                    <div class="text-muted">|</div>
+                    <div>Allocated: <strong id="pr_modal_allocated">0</strong> pcs</div>
                 </div>
 
-                <div class="alert alert-warning py-2 px-3 small d-flex align-items-center justify-content-between mb-3" id="pr_modal_alert_balance">
-                    <div>
-                        <i class="ri ri-information-line me-1"></i>
-                        Unallocated Pending Qty: <strong id="pr_modal_unallocated" class="fs-6">0</strong> pcs
-                    </div>
-                    <button type="button" class="btn btn-sm btn-primary py-1 px-3 text-uppercase" id="btn_pr_add_reason_row">
-                        <i class="ri ri-add-line me-1"></i> Add More Reason
+                <!-- Simple Header with Add Row button -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small text-muted">
+                        Unallocated Qty: <strong id="pr_modal_unallocated" class="text-dark">0</strong> pcs
+                    </span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn_pr_add_reason_row">
+                        <i class="ri ri-add-line me-1"></i> Add Reason
                     </button>
                 </div>
 
@@ -138,13 +120,13 @@
                     <input type="hidden" id="pr_modal_job_card_id" value="">
                     <input type="hidden" id="pr_modal_receipt_id" value="">
                     <div class="table-responsive">
-                        <table class="table table-bordered align-middle mb-0" id="table_pr_reasons">
+                        <table class="table table-bordered table-sm align-middle mb-0" id="table_pr_reasons">
                             <thead class="table-light">
-                                <tr class="small text-uppercase">
-                                    <th style="min-width: 220px;">Reason <span class="text-danger">*</span></th>
-                                    <th style="width: 150px;">Qty (Pcs) <span class="text-danger">*</span></th>
-                                    <th style="min-width: 180px;">Remarks (Optional)</th>
-                                    <th style="width: 50px;" class="text-center">Action</th>
+                                <tr>
+                                    <th>Reason *</th>
+                                    <th style="width: 130px;">Qty (Pcs) *</th>
+                                    <th>Remarks</th>
+                                    <th style="width: 45px;" class="text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody_pr_reasons">
@@ -155,19 +137,36 @@
                 </form>
             </div>
             <div class="modal-footer py-2 border-top d-flex justify-content-between align-items-center">
-                <span class="text-muted small" id="pr_modal_status_hint">
-                    Select reasons (Damaged, Alteration, Spl. Order Dispatch, QC Hold) and enter quantities.
-                </span>
+                <span class="text-muted small" id="pr_modal_status_hint"></span>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-secondary text-uppercase btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary text-uppercase btn-sm px-4" id="btn_pr_save_reasons">
-                        <i class="ri ri-save-line me-1"></i> Save Reasons
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm px-3" id="btn_pr_save_reasons">
+                        Save Reasons
                     </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    #modalPendingReasonBreakdown .select2-container {
+        width: 100% !important;
+    }
+    #modalPendingReasonBreakdown .select2-container .select2-selection--single {
+        height: 31px !important;
+        font-size: 0.8125rem;
+    }
+    #modalPendingReasonBreakdown .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 28px;
+    }
+    #modalPendingReasonBreakdown .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 28px;
+    }
+    #modalPendingReasonBreakdown .select2.is-invalid + .select2-container .select2-selection {
+        border-color: #dc3545 !important;
+    }
+</style>
 @endsection
 
 @section('scripts')
@@ -223,9 +222,6 @@
             table.ajax.reload();
         });
 
-        // ==========================================
-        // Pending Reasons Management Logic
-        // ==========================================
         const allowedReasons = ['Damaged', 'Alteration', 'Spl. Order Dispatch', 'QC Hold', 'Other'];
         let currentJobCardPendingQty = 0;
 
@@ -233,27 +229,48 @@
             return String(str ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
         }
 
+        function showFieldError($input, msg) {
+            $input.addClass('is-invalid');
+            const $container = $input.closest('td');
+            let $err = $container.find('.field-error-text');
+            if (!$err.length) {
+                $err = $('<div class="field-error-text text-danger small mt-1" style="font-size: 0.75rem; line-height: 1.2;"></div>');
+                $container.append($err);
+            }
+            $err.text(msg).show();
+        }
+
+        function clearFieldError($input) {
+            $input.removeClass('is-invalid');
+            const $container = $input.closest('td');
+            $container.find('.field-error-text').text('').hide();
+        }
+
         function buildReasonRow(reasonVal = '', qtyVal = '', remarksVal = '') {
             const optionsHtml = allowedReasons.map(r =>
                 `<option value="${escapeHtml(r)}" ${r === reasonVal ? 'selected' : ''}>${escapeHtml(r)}</option>`
             ).join('');
 
+            const formattedQty = (qtyVal !== '' && qtyVal !== null && !isNaN(qtyVal)) ? Math.round(Number(qtyVal)) : '';
+
             return `
                 <tr class="pr-reason-row">
-                    <td>
-                        <select class="form-select form-select-sm pr-reason-select" required>
-                            <option value="">-- Select Reason --</option>
+                    <td class="align-top">
+                        <select class="select2 form-select form-select-sm pr-reason-select" required>
+                            <option value="" ${!reasonVal ? 'selected disabled' : ''}>-- Select Reason --</option>
                             ${optionsHtml}
                         </select>
+                        <div class="field-error-text text-danger small mt-1" style="display: none; font-size: 0.75rem; line-height: 1.2;"></div>
                     </td>
-                    <td>
-                        <input type="number" class="form-control form-control-sm text-end pr-reason-qty" min="0.01" step="any" value="${qtyVal}" placeholder="e.g. 10" required>
+                    <td class="align-top">
+                        <input type="text" inputmode="numeric" class="form-control form-control-sm text-end pr-reason-qty" value="${formattedQty}" placeholder="Enter Qty" required>
+                        <div class="field-error-text text-danger small mt-1 text-end" style="display: none; font-size: 0.75rem; line-height: 1.2;"></div>
                     </td>
-                    <td>
+                    <td class="align-top">
                         <input type="text" class="form-control form-control-sm pr-reason-remarks" value="${escapeHtml(remarksVal || '')}" placeholder="Optional note">
                     </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger p-1 btn-pr-remove-reason" title="Remove row">
+                    <td class="text-center align-middle">
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-pr-remove-reason" title="Remove row">
                             <i class="ri ri-delete-bin-line"></i>
                         </button>
                     </td>
@@ -263,9 +280,15 @@
 
         function recalculateModalQuantities() {
             let totalAllocated = 0;
-            $('#tbody_pr_reasons .pr-reason-qty').each(function() {
-                const q = parseFloat($(this).val()) || 0;
-                totalAllocated += q;
+            let hasEmptyQty = false;
+
+            $('#tbody_pr_reasons .pr-reason-row').each(function() {
+                const qtyVal = $(this).find('.pr-reason-qty').val().trim();
+                if (qtyVal === '') {
+                    hasEmptyQty = true;
+                } else {
+                    totalAllocated += (parseInt(qtyVal, 10) || 0);
+                }
             });
 
             totalAllocated = Math.round(totalAllocated * 100) / 100;
@@ -275,19 +298,26 @@
             $('#pr_modal_unallocated').text(unallocated.toLocaleString());
 
             if (totalAllocated > currentJobCardPendingQty) {
-                $('#pr_modal_allocated').removeClass('text-primary').addClass('text-danger');
-                $('#pr_modal_alert_balance').removeClass('alert-warning alert-success').addClass('alert-danger');
-                $('#pr_modal_status_hint').html('<span class="text-danger fw-bold"><i class="ri ri-error-warning-line me-1"></i>Allocated reason quantity exceeds balance pending qty!</span>');
+                // Show error under the rows that exceed
+                let runningTotal = 0;
+                $('#tbody_pr_reasons .pr-reason-row').each(function() {
+                    const $qtyEl = $(this).find('.pr-reason-qty');
+                    const q = parseInt($qtyEl.val(), 10) || 0;
+                    runningTotal += q;
+                    if (runningTotal > currentJobCardPendingQty) {
+                        showFieldError($qtyEl, `Exceeds pending qty (${currentJobCardPendingQty} pcs)`);
+                    }
+                });
+                $('#pr_modal_status_hint').html('');
                 $('#btn_pr_save_reasons').prop('disabled', true);
+            } else if (hasEmptyQty) {
+                $('#pr_modal_status_hint').html('');
+                $('#btn_pr_save_reasons').prop('disabled', false);
             } else if (totalAllocated === currentJobCardPendingQty && currentJobCardPendingQty > 0) {
-                $('#pr_modal_allocated').removeClass('text-danger').addClass('text-success');
-                $('#pr_modal_alert_balance').removeClass('alert-danger alert-warning').addClass('alert-success');
-                $('#pr_modal_status_hint').html('<span class="text-success fw-bold"><i class="ri ri-checkbox-circle-line me-1"></i>100% of pending quantity fully allocated!</span>');
+                $('#pr_modal_status_hint').html('<span class="text-success small fw-semibold"><i class="ri ri-check-line me-1"></i>Pending quantity fully allocated.</span>');
                 $('#btn_pr_save_reasons').prop('disabled', false);
             } else {
-                $('#pr_modal_allocated').removeClass('text-danger text-success').addClass('text-primary');
-                $('#pr_modal_alert_balance').removeClass('alert-danger alert-success').addClass('alert-warning');
-                $('#pr_modal_status_hint').text('You can allocate the remaining ' + unallocated + ' pcs across reasons.');
+                $('#pr_modal_status_hint').text('Remaining to allocate: ' + unallocated + ' pcs');
                 $('#btn_pr_save_reasons').prop('disabled', false);
             }
         }
@@ -328,10 +358,11 @@
                         rowsHtml += buildReasonRow(r.reason, r.qty, r.remarks);
                     });
                 } else {
-                    rowsHtml = buildReasonRow('Damaged', currentJobCardPendingQty > 0 ? currentJobCardPendingQty : '', '');
+                    rowsHtml = buildReasonRow('', currentJobCardPendingQty > 0 ? currentJobCardPendingQty : '', '');
                 }
 
                 $('#tbody_pr_reasons').html(rowsHtml);
+                initReasonSelect2($('#tbody_pr_reasons'));
                 recalculateModalQuantities();
             }).fail(function(xhr) {
                 Swal.fire('Error', xhr.responseJSON?.message || 'Error loading details.', 'error');
@@ -339,28 +370,125 @@
             });
         });
 
+        function initReasonSelect2($container) {
+            if ($.fn.select2) {
+                const $targets = $container ? $container.find('.pr-reason-select') : $('#tbody_pr_reasons .pr-reason-select');
+                $targets.each(function() {
+                    if (!$(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2({
+                            dropdownParent: $('#modalPendingReasonBreakdown'),
+                            width: '100%',
+                            placeholder: '-- Select Reason --'
+                        });
+                    }
+                });
+            }
+        }
+
         $('#btn_pr_add_reason_row').on('click', function() {
             let totalAllocated = 0;
             $('#tbody_pr_reasons .pr-reason-qty').each(function() {
-                totalAllocated += (parseFloat($(this).val()) || 0);
+                totalAllocated += (parseInt($(this).val(), 10) || 0);
             });
-            const unallocated = Math.max(0, Math.round((currentJobCardPendingQty - totalAllocated) * 100) / 100);
+            const unallocated = Math.max(0, currentJobCardPendingQty - totalAllocated);
+            if (unallocated <= 0) {
+                if (window.Swal) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        title: `Pending qty (${currentJobCardPendingQty} pcs) is already 100% allocated.`,
+                        showConfirmButton: false,
+                        timer: 2200
+                    });
+                }
+                return;
+            }
             const defaultQty = unallocated > 0 ? unallocated : '';
-            $('#tbody_pr_reasons').append(buildReasonRow('Alteration', defaultQty, ''));
+            $('#tbody_pr_reasons').append(buildReasonRow('', defaultQty, ''));
+            initReasonSelect2($('#tbody_pr_reasons'));
             recalculateModalQuantities();
         });
 
         $(document).on('click', '.btn-pr-remove-reason', function() {
             if ($('#tbody_pr_reasons .pr-reason-row').length <= 1) {
                 $('#tbody_pr_reasons .pr-reason-row').find('input').val('');
-                $('#tbody_pr_reasons .pr-reason-row').find('select').val('');
+                $('#tbody_pr_reasons .pr-reason-row').find('select').val('').trigger('change');
             } else {
+                if ($.fn.select2) {
+                    $(this).closest('tr').find('.pr-reason-select').select2('destroy');
+                }
                 $(this).closest('tr').remove();
             }
             recalculateModalQuantities();
         });
 
-        $(document).on('input change', '.pr-reason-qty', function() {
+        $(document).on('change', '.pr-reason-select', function() {
+            if ($(this).val()) {
+                clearFieldError($(this));
+            }
+            recalculateModalQuantities();
+        });
+
+        $(document).on('keypress', '.pr-reason-qty', function(e) {
+            if (e.which < 48 || e.which > 57) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        $(document).on('input', '.pr-reason-qty', function() {
+            let $currentInput = $(this);
+            let val = $currentInput.val().replace(/[^0-9]/g, '');
+
+            let otherRowsTotal = 0;
+            $('#tbody_pr_reasons .pr-reason-qty').not($currentInput).each(function() {
+                otherRowsTotal += (parseInt($(this).val(), 10) || 0);
+            });
+            let maxAllowed = Math.max(0, currentJobCardPendingQty - otherRowsTotal);
+
+            if (val !== '') {
+                let num = parseInt(val, 10);
+                if (num > maxAllowed) {
+                    num = maxAllowed;
+                    val = num.toString();
+                    showFieldError($currentInput, `Max remaining qty is ${maxAllowed} pcs`);
+                } else if (num <= 0) {
+                    showFieldError($currentInput, 'Must be greater than 0');
+                } else {
+                    clearFieldError($currentInput);
+                }
+                $currentInput.val(val);
+            } else {
+                $currentInput.val('');
+                showFieldError($currentInput, 'Quantity is required');
+            }
+            recalculateModalQuantities();
+        });
+
+        $(document).on('blur', '.pr-reason-qty', function() {
+            const $currentInput = $(this);
+            const val = $currentInput.val().trim();
+
+            let otherRowsTotal = 0;
+            $('#tbody_pr_reasons .pr-reason-qty').not($currentInput).each(function() {
+                otherRowsTotal += (parseInt($(this).val(), 10) || 0);
+            });
+            let maxAllowed = Math.max(0, currentJobCardPendingQty - otherRowsTotal);
+
+            if (val === '') {
+                showFieldError($currentInput, 'Quantity is required');
+            } else {
+                const num = parseInt(val, 10);
+                if (num <= 0) {
+                    showFieldError($currentInput, 'Must be greater than 0');
+                } else if (num > maxAllowed) {
+                    $currentInput.val(maxAllowed);
+                    showFieldError($currentInput, `Max remaining qty is ${maxAllowed} pcs`);
+                } else {
+                    clearFieldError($currentInput);
+                }
+            }
             recalculateModalQuantities();
         });
 
@@ -373,36 +501,53 @@
             const reasons = [];
             let hasError = false;
 
-            $('#tbody_pr_reasons .pr-reason-row').each(function(idx) {
-                const reason = $(this).find('.pr-reason-select').val();
-                const qty = parseFloat($(this).find('.pr-reason-qty').val()) || 0;
-                const remarks = $(this).find('.pr-reason-remarks').val();
+            const $rows = $('#tbody_pr_reasons .pr-reason-row');
+            if ($rows.length === 0) {
+                Swal.fire('Validation Error', 'Please add at least one pending reason row.', 'warning');
+                return;
+            }
 
-                if (!reason && qty > 0) {
-                    $(this).find('.pr-reason-select').addClass('is-invalid');
+            $rows.each(function() {
+                const $row = $(this);
+                const $reasonEl = $row.find('.pr-reason-select');
+                const $qtyEl = $row.find('.pr-reason-qty');
+
+                const reason = $reasonEl.val();
+                const qtyStr = $qtyEl.val().trim();
+                const remarks = $row.find('.pr-reason-remarks').val();
+
+                if (!reason) {
+                    showFieldError($reasonEl, 'Please select a reason');
                     hasError = true;
                 } else {
-                    $(this).find('.pr-reason-select').removeClass('is-invalid');
+                    clearFieldError($reasonEl);
                 }
 
-                if (reason && qty <= 0) {
-                    $(this).find('.pr-reason-qty').addClass('is-invalid');
+                if (qtyStr === '') {
+                    showFieldError($qtyEl, 'Quantity is required');
                     hasError = true;
                 } else {
-                    $(this).find('.pr-reason-qty').removeClass('is-invalid');
-                }
-
-                if (reason && qty > 0) {
-                    reasons.push({
-                        reason: reason,
-                        qty: qty,
-                        remarks: remarks
-                    });
+                    const qty = parseInt(qtyStr, 10);
+                    if (isNaN(qty) || qty <= 0) {
+                        showFieldError($qtyEl, 'Must be greater than 0');
+                        hasError = true;
+                    } else if (qty > currentJobCardPendingQty) {
+                        showFieldError($qtyEl, `Cannot exceed ${currentJobCardPendingQty} pcs`);
+                        hasError = true;
+                    } else {
+                        clearFieldError($qtyEl);
+                        if (reason) {
+                            reasons.push({
+                                reason: reason,
+                                qty: qty,
+                                remarks: remarks
+                            });
+                        }
+                    }
                 }
             });
 
             if (hasError) {
-                Swal.fire('Validation Error', 'Please select a reason and enter a valid quantity for each row.', 'warning');
                 return;
             }
 

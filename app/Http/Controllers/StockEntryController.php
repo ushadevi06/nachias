@@ -65,6 +65,8 @@ class StockEntryController extends Controller
                 ])->whereHas('stockEntry', function ($q) use ($request) {
                     $q->where('entry_type', 'Finished Goods');
                     $this->applyStockDateFilters($q, $request);
+                })->where(function ($q) {
+                    $q->where('qty_in', '>', 0);
                 });
 
                 if ($request->art_no) {
@@ -203,7 +205,9 @@ class StockEntryController extends Controller
                         'sleeve_type' => $item->sleeve_type ?? '-',
                         'size' => $item->size ?? '-',
                         'sku' => $item->sku ?? '-',
-                        'total_qty' => '+' . number_format($item->qty_in, 2),
+                        'total_qty' => (floatval($item->qty_in ?? 0) > 0.0001)
+                            ? ('+' . number_format(floatval($item->qty_in), 2))
+                            : ((floatval($item->qty_out ?? 0) > 0.0001) ? ('-' . number_format(floatval($item->qty_out), 2)) : '0.00'),
                         'action' => $action,
                     ];
                 }

@@ -35,7 +35,7 @@ class ProductionReceiptController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation', 'warehouse', 'additionalBatch', 'employee', 'items'])->orderBy('id', 'desc');
+            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation', 'warehouse', 'additionalBatch', 'employee', 'items.storeLocation'])->orderBy('id', 'desc');
 
             $totalRecords = $query->count();
 
@@ -167,7 +167,7 @@ class ProductionReceiptController extends Controller
 
                 if ($row->job_card_id && isset($jcPendingMap[$row->job_card_id])) {
                     $pInfo = $jcPendingMap[$row->job_card_id];
-                    if ($pInfo['pending'] > 0 || $pInfo['reason_count'] > 0) {
+                    if ($pInfo['pending'] > 0) {
                         if ($pInfo['reason_count'] > 0) {
                             $action .= '<button type="button" class="btn btn-xs btn-outline-success btn-pending-reason" data-job-card-id="' . $row->job_card_id . '" data-receipt-id="' . $row->id . '" data-job-card-no="' . e($row->jobCard?->job_card_no) . '" title="Pending: ' . $pInfo['pending'] . ' pcs (' . $pInfo['reason_count'] . ' reasons logged)" style="padding: 2px 7px; font-size: 0.75rem; white-space: nowrap;"><i class="ri ri-file-list-3-fill me-1"></i>Reason (' . $pInfo['reason_count'] . ')</button>';
                         } else {
@@ -205,7 +205,9 @@ class ProductionReceiptController extends Controller
                     'receipt_date' => $row->receipt_date ? date('d-m-Y', strtotime($row->receipt_date)) : '-',
                     'warehouse' => $row->warehouse ? $row->warehouse->warehouse_name : '-',
                     'store' => $row->storeType ? $row->storeType->store_type_name : '-',
-                    'store_location' => $row->storeLocation ? $row->storeLocation->store_location : '-',
+                    'store_location' => ($row->items && $row->items->pluck('storeLocation.store_location')->filter()->unique()->isNotEmpty()) 
+                        ? $row->items->pluck('storeLocation.store_location')->filter()->unique()->implode(', ') 
+                        : ($row->storeLocation ? $row->storeLocation->store_location : '-'),
                     'responsible_person' => $employeeName,
                     'total_qty' => number_format($totalQty, 2),
                     'status' => $statusBadge,
@@ -333,9 +335,10 @@ class ProductionReceiptController extends Controller
                 'doc_date' => 'required|date_format:d-m-Y',
                 'warehouse_id' => $isCanvas ? 'nullable|exists:warehouses,id' : 'required|exists:warehouses,id',
                 'store_type_id' => 'required|exists:store_types,id',
-                'store_location_id' => 'required|exists:store_locations,id',
+                'store_location_id' => 'nullable|exists:store_locations,id',
                 'status' => 'required|in:Draft,Posted',
                 'items' => 'required|array|min:1',
+                'items.*.store_location_id' => 'nullable|exists:store_locations,id',
                 'remarks' => 'nullable|min:5|max:255',
             ];
 
@@ -347,6 +350,17 @@ class ProductionReceiptController extends Controller
             ];
 
             $request->validate($rules, $messages);
+
+            if ($request->has('items') && is_array($request->items)) {
+                foreach ($request->items as $idx => $itemData) {
+                    $scanQty = floatval($itemData['scan_qty'] ?? 0);
+                    if ($scanQty > 0 && empty($itemData['store_location_id'])) {
+                        return redirect()->back()->withInput()->withErrors([
+                            "items.{$idx}.store_location_id" => 'Store Location is required for received items.'
+                        ]);
+                    }
+                }
+            }
 
             if (!$id && $request->job_card_id) {
                 if ($request->is_additional && $request->job_card_fabric_detail_id) {
@@ -430,6 +444,16 @@ class ProductionReceiptController extends Controller
                     }
                 }
 
+                $firstStoreLocationId = null;
+                if ($request->has('items') && is_array($request->items)) {
+                    foreach ($request->items as $it) {
+                        if (floatval($it['scan_qty'] ?? 0) > 0 && !empty($it['store_location_id'])) {
+                            $firstStoreLocationId = $it['store_location_id'];
+                            break;
+                        }
+                    }
+                }
+
                 $data = [
                     'job_card_id' => $request->job_card_id,
                     'is_additional' => $request->is_additional ?? 0,
@@ -441,7 +465,7 @@ class ProductionReceiptController extends Controller
                     'doc_no' => $request->doc_no,
                     'doc_date' => $request->doc_date ? date('Y-m-d', strtotime($request->doc_date)) : null,
                     'store_type_id' => $request->store_type_id,
-                    'store_location_id' => $request->store_location_id,
+                    'store_location_id' => $firstStoreLocationId ?? $request->store_location_id ?? null,
                     'warehouse_id' => $request->warehouse_id ?? null,
                     'status' => $request->status,
                     'remarks' => $request->remarks,
@@ -476,6 +500,25 @@ class ProductionReceiptController extends Controller
                 if (!$hasQty) {
                     throw new \Exception('Please enter Qty To Receive for at least one item.');
                 }
+
+                $groupTotals = [];
+                if ($request->has('items') && is_array($request->items)) {
+                    foreach ($request->items as $itemData) {
+                        $scanQty = floatval($itemData['scan_qty'] ?? 0);
+                        if ($scanQty > 0) {
+                            $completedQty = floatval($itemData['completed_qty'] ?? 0);
+                            $alreadyReceived = floatval($itemData['qty_already_received'] ?? 0);
+                            $maxAllowed = $completedQty - $alreadyReceived;
+                            $gKey = ($itemData['art_no'] ?? '') . '_' . ($itemData['size_variant'] ?? ($itemData['size'] ?? '')) . '_' . ($itemData['color_id'] ?? '');
+
+                            $groupTotals[$gKey] = ($groupTotals[$gKey] ?? 0) + $scanQty;
+                            if ($groupTotals[$gKey] > ($maxAllowed + 0.0001)) {
+                                throw new \Exception('Total Qty To Receive (' . $groupTotals[$gKey] . ') across split rows cannot exceed available quantity (' . $maxAllowed . ') for item: ' . ($itemData['item_name'] ?? ''));
+                            }
+                        }
+                    }
+                }
+
                 if ($request->has('items') && is_array($request->items)) {
                     foreach ($request->items as $itemData) {
                         $scanQty = floatval($itemData['scan_qty'] ?? 0);
@@ -485,12 +528,9 @@ class ProductionReceiptController extends Controller
                             $alreadyReceived = floatval($itemData['qty_already_received'] ?? 0);
                             $qtyToReceive = $scanQty;
                             $maxAllowed = $completedQty - $alreadyReceived;
+                            $gKey = ($itemData['art_no'] ?? '') . '_' . ($itemData['size_variant'] ?? ($itemData['size'] ?? '')) . '_' . ($itemData['color_id'] ?? '');
 
-                            if ($qtyToReceive > ($maxAllowed + 0.0001)) {
-                                throw new \Exception('Qty To Receive (' . $qtyToReceive . ') cannot exceed available quantity (' . $maxAllowed . ') for item: ' . ($itemData['item_name'] ?? ''));
-                            }
-
-                            $balanceQty = $maxAllowed - $qtyToReceive;
+                            $balanceQty = max(0, $maxAllowed - ($groupTotals[$gKey] ?? $qtyToReceive));
                             $unitPrice = floatval($itemData['unit_price'] ?? 0);
                             $resolvedArtNo = $this->resolveReceiptItemArtNo($jobCardForArtResolution, $itemData);
                             ProductionReceiptItem::create([
@@ -506,6 +546,7 @@ class ProductionReceiptController extends Controller
                                 'unit_price' => $unitPrice,
                                 'mrp' => floatval($itemData['mrp'] ?? 0), 
                                 'total_value' => $qtyToReceive * $unitPrice,
+                                'store_location_id' => $itemData['store_location_id'] ?? null,
                                 'uom_id' => $itemData['uom_id'] ?? null,
                                 'uom_code' => $itemData['uom_code'] ?? '',
                                 'ordered_qty' => floatval($itemData['ordered_qty'] ?? 0),
@@ -1037,7 +1078,7 @@ class ProductionReceiptController extends Controller
                     'size' => $item->size,
                     'color_id' => $item->color_id,
                     'store_category_id' => $isCanvas ? 2 : null,
-                    'store_location_id' => $storeLocationId,
+                    'store_location_id' => $item->store_location_id ?: ($storeLocationId ?: ($receipt->store_location_id ?? null)),
                     'warehouse_id' => $receipt->warehouse_id ?? null,
                     'store_type_id' => $receipt->store_type_id ?? null,
                     'uom_id' => $uomId,
@@ -1695,20 +1736,33 @@ class ProductionReceiptController extends Controller
             $hasExistingCurrentItem = $excludeReceiptId ? $buildReceiptItemQuery()->exists() : false;
 
             if ($balance > 0 || $hasExistingCurrentItem) {
-                $scanQty = 0;
                 if ($excludeReceiptId) {
-                    $currentReceiptItem = $buildReceiptItemQuery()->first();
-                    if ($currentReceiptItem) {
-                        $scanQty = floatval($currentReceiptItem->qty_to_receive ?: $currentReceiptItem->scan_qty);
+                    $existingCurrentItems = $buildReceiptItemQuery()->get();
+                    if ($existingCurrentItems->isNotEmpty()) {
+                        foreach ($existingCurrentItems as $idx => $currentReceiptItem) {
+                            $rowItemData = $itemData;
+                            $scanQty = floatval($currentReceiptItem->qty_to_receive ?: $currentReceiptItem->scan_qty);
+                            $rowItemData['store_location_id'] = $currentReceiptItem->store_location_id;
+                            $rowItemData['qty_already_received'] = $alreadyRec;
+                            $rowItemData['scan_qty'] = $scanQty;
+                            $rowItemData['damage_qty'] = 0;
+                            $rowItemData['qty_to_receive'] = $scanQty;
+                            $rowItemData['balance_qty'] = $balance;
+                            $rowItemData['total_value'] = $scanQty * $itemData['unit_price'];
+                            $rowItemData['is_split'] = ($idx > 0);
+                            $items[] = $rowItemData;
+                        }
+                        continue;
                     }
                 }
 
                 $itemData['qty_already_received'] = $alreadyRec;
-                $itemData['scan_qty'] = $scanQty;
+                $itemData['scan_qty'] = 0;
                 $itemData['damage_qty'] = 0;
-                $itemData['qty_to_receive'] = $scanQty;
+                $itemData['qty_to_receive'] = 0;
                 $itemData['balance_qty'] = $balance;
-                $itemData['total_value'] = $scanQty * $itemData['unit_price'];
+                $itemData['total_value'] = 0;
+                $itemData['is_split'] = false;
 
                 $items[] = $itemData;
             }
@@ -1929,6 +1983,7 @@ class ProductionReceiptController extends Controller
             'warehouse',
             'employee',
             'items.uom',
+            'items.storeLocation',
             'additionalBatch'
         ])->findOrFail($id);
 
@@ -1977,6 +2032,7 @@ class ProductionReceiptController extends Controller
             'warehouse',
             'employee',
             'items.uom',
+            'items.storeLocation',
             'additionalBatch'
         ])->findOrFail($id);
 
@@ -2006,6 +2062,7 @@ class ProductionReceiptController extends Controller
             'warehouse',
             'employee',
             'items.uom',
+            'items.storeLocation',
             'additionalBatch'
         ])->findOrFail($id);
 

@@ -541,6 +541,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('fg_stock_taking/session/{id}/delete', [FgStockTakingController::class, 'deleteSession']);
     Route::get('fg_stock_taking/session/{id}/items', [FgStockTakingController::class, 'itemsData']);
     Route::get('fg_stock_taking/session/{id}/export', [FgStockTakingController::class, 'exportExcel']);
+    Route::get('fg_stock_taking/session/{id}/pdf', [FgStockTakingController::class, 'exportPdf']);
     Route::get('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'openStockEntryPage']);
     Route::get('fg_stock_taking/open-stock-entry/edit/{id}', [FgStockTakingController::class, 'openStockEntryPage']);
     Route::post('fg_stock_taking/open-stock-entry', [FgStockTakingController::class, 'storeOpenStockEntry']);
@@ -568,6 +569,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_orders/print/{id}', [SalesOrderController::class, 'print']);
     Route::get('sales_orders/delete/{id}', [SalesOrderController::class, 'destroy']);
     Route::post('sales_orders/status/{id}', [SalesOrderController::class, 'updateStatus']);
+    Route::post('sales_orders/bulk-update-status', [SalesOrderController::class, 'bulkUpdateStatus']);
     Route::post('sales_orders/update-delay-reason/{id}', [SalesOrderController::class, 'updateDelayReason']);
     Route::get('sales_orders/search-stock-items', [SalesOrderController::class, 'searchStockItems']);
     Route::get('sales_orders/sync-orderaxe', [SalesOrderController::class, 'syncOrderaxe']);
@@ -893,6 +895,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('warehouse_reports/stock_inward_sales_details', [WarehouseReportController::class, 'getStockInwardSalesDetails']);
     Route::get('warehouse_reports/stock_inward_sales_invoices', [WarehouseReportController::class, 'getStockInwardSalesInvoices']);
     Route::get('warehouse_reports/warehouse_summary_styles', [WarehouseReportController::class, 'getWarehouseSummaryStyles']);
+    Route::get('warehouse_reports/job_card_tracking_details/{id}', [WarehouseReportController::class, 'getJobCardTrackingDetails']);
+    Route::get('warehouse_reports/job_card_tracking_pdf/{id}', [WarehouseReportController::class, 'jobCardTrackingPdf']);
+    Route::post('warehouse_reports/job_card_tracking_reason/save', [WarehouseReportController::class, 'saveJobCardTrackingReason']);
+    Route::post('warehouse_reports/job_card_tracking_reason/delete/{id}', [WarehouseReportController::class, 'deleteJobCardTrackingReason']);
 
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);

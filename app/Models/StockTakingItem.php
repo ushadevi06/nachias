@@ -21,6 +21,8 @@ class StockTakingItem extends Model
         'store_location_id',
         'system_qty',
         'scanned_qty',
+        'excess_qty',
+        'shortage_qty',
         'rate',
         'last_scanned_at',
     ];
@@ -28,6 +30,8 @@ class StockTakingItem extends Model
     protected $casts = [
         'system_qty' => 'float',
         'scanned_qty' => 'float',
+        'excess_qty' => 'float',
+        'shortage_qty' => 'float',
         'rate' => 'float',
         'last_scanned_at' => 'datetime',
     ];

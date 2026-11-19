@@ -194,18 +194,6 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="store_location_id" id="store_location_id" class="form-select select2" data-placeholder="Select Location">
-                                        <option value="">Select Location</option>
-                                        @foreach($storeLocations as $location)
-                                            <option value="{{ $location->id }}" {{ old('store_location_id', $receipt->store_location_id ?? '') == $location->id ? 'selected' : '' }}>{{ $location->store_location }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="store_location_id">Store Location <span class="text-danger">*</span></label>
-                                </div>
-                                @error('store_location_id') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="form-select select2" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
                                         <option value="Draft" {{ old('status', $receipt->status ?? '') == 'Draft' ? 'selected' : '' }}>Draft</option>
@@ -215,7 +203,7 @@
                                 </div>
                                 @error('status') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-md-12 col-xl-8">
                                 <div class="form-floating form-floating-outline">
                                     <textarea name="remarks" id="remarks" class="form-control" placeholder="Enter Remarks" style="height: 48px;">{{ old('remarks', $receipt->remarks ?? '') }}</textarea>
                                     <label for="remarks">Remarks</label>
@@ -245,6 +233,8 @@
                                         <th>Qty Received</th>
                                         <th>Qty Balance</th>
                                         <th>Qty To Receive <span class="text-danger">*</span></th>
+                                        <th style="min-width: 170px;">Store Location <span class="text-danger">*</span></th>
+                                        <th style="width: 70px;" class="text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="items-tbody">
@@ -302,13 +292,77 @@
         $('.receipt-date, .doc-date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
         var itemDataStore = [];
+        var storeLocationsList = @json($storeLocations);
+        var itemRowCounter = 0;
+
+        function buildRowHtml(item, index, isCanvas) {
+            var scanQty = parseFloat(item.scan_qty || 0);
+            var alreadyRec = parseFloat(item.qty_already_received || 0);
+            var orderedQty = parseFloat(item.ordered_qty || 0);
+            var maxAvailable = parseFloat(item.balance_qty || (orderedQty - alreadyRec) || 0);
+            var currentBalance = Math.max(0, maxAvailable - scanQty);
+            var selectedLocId = item.store_location_id || '';
+            var isSplit = !!item.is_split;
+            var groupKey = (item.art_no || item.item_code || '') + '_' + (item.size_variant || item.size || '') + '_' + (item.color_id || '');
+
+            var locSelectHtml = '<select name="items[' + index + '][store_location_id]" class="form-select form-select-sm store-location-select select2" data-placeholder="Select Location">' +
+                '<option value="">Select Location</option>';
+            storeLocationsList.forEach(function(loc) {
+                var sel = (selectedLocId && selectedLocId == loc.id) ? ' selected' : '';
+                locSelectHtml += '<option value="' + loc.id + '"' + sel + '>' + loc.store_location + '</option>';
+            });
+            locSelectHtml += '</select>';
+
+            var showAddBtn = (!isSplit && currentBalance > 0.0001);
+            var actionBtnHtml = isSplit
+                ? '<button type="button" class="btn btn-sm btn-icon btn-danger btn-remove-split-row" title="Remove split row"><i class="ri ri-delete-bin-line" style="pointer-events: none;"></i></button>'
+                : '<button type="button" class="btn btn-sm btn-icon btn-success btn-add-split-row" data-index="' + index + '" title="Split to another store location"' + (!showAddBtn ? ' style="display:none;"' : '') + '><i class="ri ri-add-line" style="pointer-events: none;"></i></button>';
+
+            var itemNameDisplay = (item.item_code || item.item_name || '');
+            if (isSplit) {
+                itemNameDisplay += (itemNameDisplay ? ' ' : '') + '<span class="badge bg-label-info" style="font-size: 10px;">Split</span>';
+            }
+
+            var row = '<tr class="item-row ' + (isSplit ? 'split-row' : '') + '" data-index="' + index + '" data-group-key="' + groupKey + '" data-is-split="' + (isSplit ? '1' : '0') + '">' +
+                '<td>' + itemNameDisplay + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || item.item_code || '') + '"></td>' +
+                '<td class="col-art-no"' + (isCanvas ? ' style="display:none;"' : '') + '>' + (item.art_no || '-') + '</td>' +
+                '<td class="col-description"' + (isCanvas ? ' style="display:none;"' : '') + '>' + 
+                    (item.description || '') + 
+                    (!isSplit ? '<button type="button" class="btn btn-sm btn-link p-0 ms-1 btn-show-consumption" data-index="' + index + '" title="View Consumption Details"><i class="icon-base ri ri-information-line fs-5"></i></button>' : '') +
+                '</td>' +
+                '<td>' + (item.color || '-') + '<input type="hidden" name="items[' + index + '][color_id]" value="' + (item.color_id || '') + '"></td>' +
+                '<td>' + (item.size || '') + '<input type="hidden" name="items[' + index + '][size]" value="' + (item.size || '') + '"></td>' +
+                '<td class="text-end">' + 
+                    (!isSplit ? '<button type="button" class="btn btn-sm btn-label-primary p-1 btn-show-consumption" data-index="' + index + '">' + parseFloat(item.unit_price || 0).toFixed(2) + '</button>' : parseFloat(item.unit_price || 0).toFixed(2)) +
+                    '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '">' +
+                    '<input type="hidden" class="mrp" name="items[' + index + '][mrp]" value="' + parseFloat(item.mrp || 0).toFixed(2) + '">' +
+                '</td>' +
+                '<td class="text-end">' + (isSplit ? '-' : orderedQty.toFixed(2)) + '<input type="hidden" class="ordered-qty" name="items[' + index + '][ordered_qty]" value="' + orderedQty.toFixed(2) + '"></td>' +
+                '<td class="text-end">' + (isSplit ? '-' : '<span class="qty-received-text">' + (alreadyRec + scanQty).toFixed(2) + '</span>') + '<input type="hidden" class="qty-already-received" name="items[' + index + '][qty_already_received]" value="' + alreadyRec.toFixed(2) + '"></td>' +
+                '<td class="text-end">' + (isSplit ? '-' : '<span class="qty-balance-text">' + currentBalance.toFixed(2) + '</span>') + '<input type="hidden" class="balance-qty" name="items[' + index + '][balance_qty]" value="' + currentBalance.toFixed(2) + '"></td>' +
+                '<td><input type="number" step="0.01" class="form-control form-control-sm text-end scan-qty" name="items[' + index + '][scan_qty]" value="' + scanQty.toFixed(2) + '" min="0" data-max="' + maxAvailable.toFixed(2) + '"></td>' +
+                '<td style="min-width: 170px;">' + locSelectHtml + '</td>' +
+                '<td class="text-center align-middle">' + actionBtnHtml + '</td>' +
+                '<input type="hidden" name="items[' + index + '][item_id]" value="' + (item.item_id || '') + '">' +
+                '<input type="hidden" name="items[' + index + '][item_code]" value="' + (item.item_code || '') + '">' +
+                '<input type="hidden" name="items[' + index + '][art_no]" value="' + (item.art_no || '') + '">' +
+                '<input type="hidden" name="items[' + index + '][description]" value="' + (item.description || '') + '">' +
+                '<input type="hidden" name="items[' + index + '][size_variant]" value="' + (item.size_variant || '') + '">' +
+                '<input type="hidden" name="items[' + index + '][uom_id]" value="' + (item.uom_id || '') + '">' +
+                '<input type="hidden" name="items[' + index + '][uom_code]" value="' + (item.uom_code || '') + '">' +
+                '<input type="hidden" name="items[' + index + '][completed_qty]" value="' + (item.completed_qty || 0) + '">' +
+                '<input type="hidden" name="items[' + index + '][is_split]" value="' + (isSplit ? '1' : '0') + '">' +
+                '</tr>';
+
+            return row;
+        }
 
         function populateItemsGrid(items, isCanvas) {
             itemDataStore = items || [];
             var tbody = $('#items-tbody');
             tbody.empty();
             
-            var colSpan = isCanvas ? 8 : 10;
+            var colSpan = isCanvas ? 10 : 12;
             if (!items || items.length === 0) {
                 tbody.append('<tr><td colspan="' + colSpan + '" class="text-center">No items found</td></tr>');
                 $('#items-section').hide();
@@ -321,44 +375,26 @@
                 $('.col-art-no, .col-description').show();
             }
 
-            items.forEach(function(item, index) {
-                var scanQty = parseFloat(item.scan_qty || 0);
-                var alreadyRec = parseFloat(item.qty_already_received || 0);
-                var orderedQty = parseFloat(item.ordered_qty || 0);
-                var currentBalance = orderedQty - (alreadyRec + scanQty);
-
-                var row = '<tr data-index="' + index + '">' +
-                    '<td>' + (item.item_code || item.item_name || '') + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || item.item_code || '') + '"></td>' +
-                    '<td class="col-art-no"' + (isCanvas ? ' style="display:none;"' : '') + '>' + (item.art_no || '-') + '</td>' +
-                    '<td class="col-description"' + (isCanvas ? ' style="display:none;"' : '') + '>' + 
-                        (item.description || '') + 
-                        '<button type="button" class="btn btn-sm btn-link p-0 ms-1 btn-show-consumption" data-index="' + index + '" title="View Consumption Details">' +
-                        '<i class="icon-base ri ri-information-line fs-5"></i></button>' +
-                    '</td>' +
-                    '<td>' + (item.color || '-') + '<input type="hidden" name="items[' + index + '][color_id]" value="' + (item.color_id || '') + '"></td>' +
-                    '<td>' + (item.size || '') + '<input type="hidden" name="items[' + index + '][size]" value="' + (item.size || '') + '"></td>' +
-                    '<td class="text-end">' + 
-                        '<button type="button" class="btn btn-sm btn-label-primary p-1 btn-show-consumption" data-index="' + index + '">' +
-                            parseFloat(item.unit_price || 0).toFixed(2) + 
-                        '</button>' +
-                        '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '">' +
-                        '<input type="hidden" class="mrp" name="items[' + index + '][mrp]" value="' + parseFloat(item.mrp || 0).toFixed(2) + '">' +
-                    '</td>' +
-                    '<td class="text-end">' + orderedQty.toFixed(2) + '<input type="hidden" class="ordered-qty" name="items[' + index + '][ordered_qty]" value="' + orderedQty.toFixed(2) + '"></td>' +
-                    '<td class="text-end"><span class="qty-received-text">' + (alreadyRec + scanQty).toFixed(2) + '</span><input type="hidden" class="qty-already-received" name="items[' + index + '][qty_already_received]" value="' + alreadyRec.toFixed(2) + '"></td>' +
-                    '<td class="text-end"><span class="qty-balance-text">' + currentBalance.toFixed(2) + '</span><input type="hidden" class="balance-qty" name="items[' + index + '][balance_qty]" value="' + currentBalance.toFixed(2) + '"></td>' +
-                    '<td><input type="number" step="0.01" class="form-control form-control-sm text-end scan-qty" name="items[' + index + '][scan_qty]" value="' + scanQty.toFixed(2) + '" min="0" data-max="' + (item.balance_qty || 0).toFixed(2) + '"></td>' +
-                    '<input type="hidden" name="items[' + index + '][item_id]" value="' + (item.item_id || '') + '">' +
-                    '<input type="hidden" name="items[' + index + '][item_code]" value="' + (item.item_code || '') + '">' +
-                    '<input type="hidden" name="items[' + index + '][art_no]" value="' + (item.art_no || '') + '">' +
-                    '<input type="hidden" name="items[' + index + '][description]" value="' + (item.description || '') + '">' +
-                    '<input type="hidden" name="items[' + index + '][size_variant]" value="' + (item.size_variant || '') + '">' +
-                    '<input type="hidden" name="items[' + index + '][uom_id]" value="' + (item.uom_id || '') + '">' +
-                    '<input type="hidden" name="items[' + index + '][uom_code]" value="' + (item.uom_code || '') + '">' +
-                    '<input type="hidden" name="items[' + index + '][completed_qty]" value="' + (item.completed_qty || 0) + '">' +
-                    '</tr>';
-                tbody.append(row);
+            itemRowCounter = 0;
+            items.forEach(function(item) {
+                var rowHtml = buildRowHtml(item, itemRowCounter++, isCanvas);
+                tbody.append(rowHtml);
             });
+
+            tbody.find('.select2').select2({
+                width: '100%',
+                placeholder: 'Select Location'
+            });
+
+            var handledGroups = new Set();
+            items.forEach(function(item) {
+                var groupKey = (item.art_no || item.item_code || '') + '_' + (item.size_variant || item.size || '') + '_' + (item.color_id || '');
+                if (!handledGroups.has(groupKey)) {
+                    handledGroups.add(groupKey);
+                    recalculateGroupValues(groupKey);
+                }
+            });
+
             $('#items-section').show();
         }
 
@@ -426,38 +462,147 @@
             $('#consumptionModal').modal('show');
         });
         
-        function calculateRowValues(row) {
-            var scanQty = parseFloat(row.find('.scan-qty').val()) || 0;
-            var orderedQty = parseFloat(row.find('.ordered-qty').val()) || 0;
-            var alreadyReceived = parseFloat(row.find('.qty-already-received').val()) || 0;
-            var availableBalance = parseFloat(row.find('.scan-qty').data('max')) || 0;
-            
-            if (scanQty > availableBalance) {
+        function recalculateGroupValues(groupKey) {
+            var $groupRows = $('#items-tbody tr[data-group-key="' + groupKey + '"]');
+            if ($groupRows.length === 0) return;
+
+            var $firstRow = $groupRows.first();
+            var maxAvailable = parseFloat($firstRow.find('.scan-qty').data('max')) || 0;
+            var orderedQty = parseFloat($firstRow.find('.ordered-qty').val()) || 0;
+            var alreadyRec = parseFloat($firstRow.find('.qty-already-received').val()) || 0;
+
+            var totalScan = 0;
+            $groupRows.each(function() {
+                totalScan += parseFloat($(this).find('.scan-qty').val()) || 0;
+            });
+
+            var remainingBalance = Math.max(0, maxAvailable - totalScan);
+            $firstRow.find('.qty-balance-text').text(remainingBalance.toFixed(2));
+            $firstRow.find('.balance-qty').val(remainingBalance.toFixed(2));
+            $firstRow.find('.qty-received-text').text((alreadyRec + totalScan).toFixed(2));
+
+            var $addBtn = $firstRow.find('.btn-add-split-row');
+            if (remainingBalance > 0.0001) {
+                $addBtn.show();
+            } else {
+                $addBtn.hide();
+            }
+        }
+
+        $(document).on('input change', '.scan-qty', function() {
+            var $row = $(this).closest('tr');
+            var groupKey = $row.data('group-key');
+            var maxAvailable = parseFloat($(this).data('max')) || 0;
+
+            var otherRowsTotal = 0;
+            $('#items-tbody tr[data-group-key="' + groupKey + '"]').not($row).each(function() {
+                otherRowsTotal += parseFloat($(this).find('.scan-qty').val()) || 0;
+            });
+
+            var allowedForThisRow = Math.max(0, maxAvailable - otherRowsTotal);
+            var enteredVal = parseFloat($(this).val()) || 0;
+
+            if (enteredVal > (allowedForThisRow + 0.0001)) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Limit Exceeded',
-                    text: 'Qty To Receive cannot exceed Available Balance (' + availableBalance.toFixed(2) + ')',
+                    text: 'Qty To Receive cannot exceed remaining available balance (' + allowedForThisRow.toFixed(2) + ')',
                     confirmButtonColor: '#8c57ff',
                 });
-                scanQty = availableBalance;
-                row.find('.scan-qty').val(scanQty.toFixed(2));
-            }
-            
-            if (scanQty < 0) {
-                scanQty = 0;
-                row.find('.scan-qty').val('0.00');
+                enteredVal = allowedForThisRow;
+                $(this).val(enteredVal.toFixed(2));
             }
 
-            var totalReceived = alreadyReceived + scanQty;
-            row.find('.qty-received-text').text(totalReceived.toFixed(2));
+            if (enteredVal < 0) {
+                enteredVal = 0;
+                $(this).val('0.00');
+            }
 
-            var remainingBalance = orderedQty - totalReceived;
-            row.find('.qty-balance-text').text(remainingBalance.toFixed(2));
+            recalculateGroupValues(groupKey);
+        });
+
+        $(document).on('click', '.btn-add-split-row', function(e) {
+            e.preventDefault();
+            var $parentRow = $(this).closest('tr');
+            var parentIndex = $parentRow.data('index');
+            var groupKey = $parentRow.data('group-key');
+            var isCanvas = $('.col-art-no').is(':hidden');
+
+            var parentItem = itemDataStore[parentIndex];
+            if (!parentItem) {
+                parentItem = {
+                    item_id: $parentRow.find('input[name*="[item_id]"]').val(),
+                    item_code: $parentRow.find('input[name*="[item_code]"]').val(),
+                    item_name: $parentRow.find('input[name*="[item_name]"]').val(),
+                    art_no: $parentRow.find('input[name*="[art_no]"]').val(),
+                    description: $parentRow.find('input[name*="[description]"]').val(),
+                    color: $parentRow.find('input[name*="[color_id]"]').closest('td').text().trim(),
+                    color_id: $parentRow.find('input[name*="[color_id]"]').val(),
+                    size: $parentRow.find('input[name*="[size]"]').val(),
+                    size_variant: $parentRow.find('input[name*="[size_variant]"]').val(),
+                    unit_price: $parentRow.find('.unit-price').val(),
+                    mrp: $parentRow.find('.mrp').val(),
+                    ordered_qty: $parentRow.find('.ordered-qty').val(),
+                    qty_already_received: $parentRow.find('.qty-already-received').val(),
+                    completed_qty: $parentRow.find('input[name*="[completed_qty]"]').val(),
+                    balance_qty: $parentRow.find('.scan-qty').data('max'),
+                    uom_id: $parentRow.find('input[name*="[uom_id]"]').val(),
+                    uom_code: $parentRow.find('input[name*="[uom_code]"]').val(),
+                };
+            }
+
+            var maxAvailable = parseFloat($parentRow.find('.scan-qty').data('max')) || 0;
+            var currentGroupScan = 0;
+            $('#items-tbody tr[data-group-key="' + groupKey + '"]').each(function() {
+                currentGroupScan += parseFloat($(this).find('.scan-qty').val()) || 0;
+            });
+
+            var remainingForSplit = Math.max(0, maxAvailable - currentGroupScan);
+
+            var splitItem = $.extend({}, parentItem);
+            splitItem.is_split = true;
+            splitItem.scan_qty = remainingForSplit;
+            splitItem.store_location_id = '';
+
+            var newIndex = itemRowCounter++;
+            var splitRowHtml = buildRowHtml(splitItem, newIndex, isCanvas);
+
+            var $lastInGroup = $('#items-tbody tr[data-group-key="' + groupKey + '"]').last();
+            $lastInGroup.after(splitRowHtml);
+
+            var $newRow = $lastInGroup.next();
+            $newRow.find('.select2').select2({
+                width: '100%',
+                placeholder: 'Select Location'
+            });
+
+            recalculateGroupValues(groupKey);
+        });
+
+        function deleteSplitRow($btn) {
+            var $row = $btn.closest('tr');
+            if ($row.length === 0) return;
+            var groupKey = $row.data('group-key');
+
+            if ($row.find('.select2').data('select2')) {
+                try {
+                    $row.find('.select2').select2('close');
+                    $row.find('.select2').select2('destroy');
+                } catch(err) {}
+            }
+            $row.remove();
+
+            recalculateGroupValues(groupKey);
         }
 
-        $(document).on('input', '.scan-qty', function() {
-            var row = $(this).closest('tr');
-            calculateRowValues(row);
+        $(document).on('mousedown', '.btn-remove-split-row', function(e) {
+            e.preventDefault();
+            deleteSplitRow($(this));
+        });
+
+        $(document).on('click', '.btn-remove-split-row', function(e) {
+            e.preventDefault();
+            deleteSplitRow($(this));
         });
 
         $('#job_card_id').on('change', function() {
@@ -526,17 +671,53 @@
                             var responseItems = response.data.items;
                             
                             if (oldItems && Object.keys(oldItems).length > 0) {
-                                responseItems.forEach(function(item) {
-                                    var match = Object.values(oldItems).find(function(oi) {
-                                        return (oi.item_id == item.item_id || !oi.item_id) &&
-                                            (oi.art_no == item.art_no || !oi.art_no) &&
-                                            (oi.size_variant == item.size_variant || oi.size == item.size) &&
-                                            (oi.color_id == item.color_id || oi.color == item.color || !oi.color);
+                                var expandedItems = [];
+                                var matchedOldIndices = new Set();
+
+                                function getStrictItemKey(it) {
+                                    var art = (it.art_no || '').trim().toLowerCase();
+                                    var size = (it.size_variant || it.size || '').trim().toLowerCase();
+                                    var item = (it.item_code || it.item_name || it.item_id || '').trim().toLowerCase();
+                                    var color = (it.color_id || it.color || '').trim().toLowerCase();
+                                    return art + '||' + size + '||' + item + '||' + color;
+                                }
+
+                                responseItems.forEach(function(baseItem) {
+                                    var baseKey = getStrictItemKey(baseItem);
+                                    var matchingOldEntries = [];
+
+                                    Object.keys(oldItems).forEach(function(k) {
+                                        if (matchedOldIndices.has(k)) return;
+                                        var o = oldItems[k];
+                                        var oKey = getStrictItemKey(o);
+
+                                        var isMatch = (oKey === baseKey);
+                                        // Fallback for canvas which doesn't have art_no
+                                        if (!isMatch && response.data.is_canvas) {
+                                            var canvasBaseKey = (baseItem.size_variant || baseItem.size || '').trim().toLowerCase() + '||' + (baseItem.item_code || baseItem.item_name || '').trim().toLowerCase();
+                                            var canvasOKey = (o.size_variant || o.size || '').trim().toLowerCase() + '||' + (o.item_code || o.item_name || '').trim().toLowerCase();
+                                            isMatch = (canvasBaseKey === canvasOKey);
+                                        }
+
+                                        if (isMatch) {
+                                            matchingOldEntries.push(o);
+                                            matchedOldIndices.add(k);
+                                        }
                                     });
-                                    if (match && typeof match.scan_qty !== 'undefined') {
-                                        item.scan_qty = match.scan_qty;
+
+                                    if (matchingOldEntries.length > 0) {
+                                        matchingOldEntries.forEach(function(entry, idx) {
+                                            var clone = $.extend({}, baseItem);
+                                            clone.scan_qty = (typeof entry.scan_qty !== 'undefined' && entry.scan_qty !== '') ? entry.scan_qty : 0;
+                                            clone.store_location_id = entry.store_location_id || '';
+                                            clone.is_split = (entry.is_split === '1' || idx > 0);
+                                            expandedItems.push(clone);
+                                        });
+                                    } else {
+                                        expandedItems.push(baseItem);
                                     }
                                 });
+                                responseItems = expandedItems;
                             }
                             populateItemsGrid(responseItems, response.data.is_canvas);
                         } else {
@@ -571,8 +752,19 @@
 
         $('form').on('submit', function(e) {
             let totalScanQty = 0;
-            $('.scan-qty').each(function() {
-                totalScanQty += parseFloat($(this).val()) || 0;
+            let missingLocation = false;
+            let missingLocationRow = null;
+
+            $('#items-tbody tr').each(function() {
+                let scanQty = parseFloat($(this).find('.scan-qty').val()) || 0;
+                totalScanQty += scanQty;
+                if (scanQty > 0) {
+                    let locVal = $(this).find('.store-location-select').val();
+                    if (!locVal) {
+                        missingLocation = true;
+                        if (!missingLocationRow) missingLocationRow = $(this);
+                    }
+                }
             });
             
             if (totalScanQty <= 0) {
@@ -583,6 +775,20 @@
                     text: 'Please enter Qty To Receive for at least one item.',
                     confirmButtonColor: '#8c57ff',
                 });
+                return false;
+            }
+
+            if (missingLocation) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please select Store Location for all items with Qty To Receive.',
+                    confirmButtonColor: '#8c57ff',
+                });
+                if (missingLocationRow) {
+                    missingLocationRow.find('.store-location-select').focus();
+                }
                 return false;
             }
         });

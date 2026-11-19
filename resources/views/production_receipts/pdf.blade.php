@@ -152,6 +152,9 @@
                         @if(!empty($item->art_no))
                             <small class="art-label">[ Art No: <span class="art-value">{{ $item->art_no }}</span> ]</small>
                         @endif
+                        @if(!empty($item->storeLocation))
+                            <small style="color: #555;">[ Loc: <strong>{{ $item->storeLocation->store_location }}</strong> ]</small>
+                        @endif
                     </td>
                     <td class="text-center">{{ $item->size_variant }}</td>
                     <td class="text-center">{{ number_format($item->qty_to_receive, 2) }}</td>

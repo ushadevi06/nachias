@@ -83,7 +83,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Location</label>
-                            <p>{{ $receipt->storeLocation->store_location ?? '-' }}</p>
+                            <p>{{ ($receipt->items && $receipt->items->pluck('storeLocation.store_location')->filter()->unique()->isNotEmpty()) ? $receipt->items->pluck('storeLocation.store_location')->filter()->unique()->implode(', ') : ($receipt->storeLocation->store_location ?? '-') }}</p>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Status</label>
@@ -124,6 +124,7 @@
                                     <th>Art No</th>
                                     @endif
                                     <th>Size / Variant</th>
+                                    <th class="text-center">Location</th>
                                     <th class="text-center">Ordered Qty</th>
                                     <th class="text-center">Scan Qty</th>
                                     <th class="text-center">Received Qty</th>
@@ -146,6 +147,9 @@
                                         <td>{{ $item->resolved_art_no ?? $item->art_no ?? '-' }}</td>
                                         @endif
                                         <td>{{ $item->size_variant }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-label-secondary">{{ $item->storeLocation->store_location ?? ($receipt->storeLocation->store_location ?? '-') }}</span>
+                                        </td>
                                         <td class="text-center">{{ number_format($item->ordered_qty, 2) }}</td>
                                         <td class="text-center">{{ number_format($item->scan_qty, 2) }}</td>
                                         <td class="text-center fw-bold">{{ number_format($item->qty_to_receive, 2) }}</td>
@@ -157,7 +161,7 @@
                             </tbody>
                             <tfoot class="table-light">
                                 <tr class="fw-bold">
-                                    <td colspan="{{ $isCanvasReceipt ? '3' : '4' }}" class="text-end">Total Qty:</td>
+                                    <td colspan="{{ $isCanvasReceipt ? '4' : '5' }}" class="text-end">Total Qty:</td>
                                     <td class="text-center">{{ number_format($receipt->items->sum('ordered_qty'), 2) }}</td>
                                     <td class="text-center">{{ number_format($receipt->items->sum('scan_qty'), 2) }}</td>
                                     <td class="text-center">{{ number_format($receipt->items->sum('qty_to_receive'), 2) }}</td>

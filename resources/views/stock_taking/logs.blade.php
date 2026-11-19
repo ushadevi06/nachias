@@ -166,11 +166,14 @@ $(function () {
 
                     return `
                         <div class="d-flex gap-1 text-nowrap">
-                            <a href="${escapeHtml(row.view_url)}" class="btn btn-sm btn-outline-primary">
+                            <a href="${escapeHtml(row.view_url)}" class="btn btn-sm btn-outline-primary" title="View Session">
                                 <i class="ri ri-eye-line me-1"></i> View
                             </a>
                             <a href="${escapeHtml(row.export_url)}" class="btn btn-sm btn-outline-success" title="Export Excel">
                                 <i class="ri ri-file-excel-line me-1"></i> Excel
+                            </a>
+                            <a href="${escapeHtml(row.pdf_url)}" target="_blank" class="btn btn-sm btn-outline-danger" title="Export PDF">
+                                <i class="ri ri-file-pdf-line me-1"></i> PDF
                             </a>
                             ${deleteBtn}
                         </div>
