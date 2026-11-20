@@ -184,6 +184,9 @@
                         <div>Sales Order No.</div>
                         <div style="font-weight: bold; font-size: 12px; margin-bottom: 2px;">{{ !empty($salesOrder->order_no) ? $salesOrder->order_no : $salesOrder->so_no }}</div>
                         <div>Sales Order Date <strong style="font-size: 13px;">{{ $salesOrder->so_date->format('M, d, Y') }}</strong></div>
+                        @if($salesOrder->brand)
+                            <div>Brand <strong style="font-size: 13px;">{{ $salesOrder->brand->brand_name }}</strong></div>
+                        @endif
                         <div>Submitted By <strong style="font-size: 13px;">{{ $salesOrder->submitted_by ?? $salesOrder->salesAgent->name ?? '-' }}</strong></div>
                         @if($salesOrder->delivery_date != '')
                             <div>Delivery Date <strong style="font-size: 13px;">{{ $salesOrder->delivery_date->format('M, d, Y') }}</strong></div>

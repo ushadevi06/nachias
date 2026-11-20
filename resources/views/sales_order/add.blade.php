@@ -68,6 +68,18 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="brand_id" name="brand_id" class="select2 form-select @error('brand_id') is-invalid @enderror" data-placeholder="Select Brand">
+                                        <option value="">Select Brand</option>
+                                        @foreach($brands as $brand)
+                                        <option value="{{ $brand->id }}" {{ old('brand_id', $salesOrder->brand_id ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="brand_id">Brand <span class="text-danger">*</span></label>
+                                </div>
+                                @error('brand_id')<div class="text-danger mt-1">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating form-floating-outline">
                                     <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer">
                                         <option value="">Select Customer</option>
                                         @foreach($customers as $customer)
@@ -1166,18 +1178,33 @@ $(document).ready(function () {
 
         $el.autocomplete({
             source: function(request, response) {
+                const currentBrandId = $('#brand_id').val();
+                if (!currentBrandId) {
+                    if (isGlobalSearch) {
+                        response([{
+                            label: 'Please select Brand first in header',
+                            value: '',
+                            noResult: true
+                        }]);
+                    } else {
+                        response([]);
+                    }
+                    return;
+                }
+
                 let codeToSearch = request.term;
                 if (codeToSearch) {
                     codeToSearch = codeToSearch.split('|')[0].trim();
                 }
                 $.getJSON("{{ url('sales_orders/search-stock-items') }}", {
-                    term: codeToSearch
+                    term: codeToSearch,
+                    brand_id: currentBrandId
                 }, function(data) {
                     const results = Array.isArray(data) ? data : [];
 
                     if (isGlobalSearch && request.term && results.length === 0) {
                         response([{
-                            label: 'Barcode not found',
+                            label: 'Barcode not found for selected brand',
                             value: '',
                             noResult: true
                         }]);
@@ -1210,11 +1237,13 @@ $(document).ready(function () {
                 }
                 
                 if (ui.item) {
+                    let currentBrandId = $('#brand_id').val();
 					let sleeveParam = ui.item.sleeve_type ? `&sleeve_type=${encodeURIComponent(ui.item.sleeve_type)}` : '';
 					let sizeParam = ui.item.size ? `&size=${encodeURIComponent(ui.item.size)}` : '';
 					let itemCodeParam = ui.item.id ? `&item_code=${encodeURIComponent(ui.item.id)}` : '';
 					let artNoParam = ui.item.art_no ? `&art_no=${encodeURIComponent(ui.item.art_no)}` : '';
-                    let ajaxUrl = `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}${itemCodeParam}${artNoParam}&so_id={{ $salesOrder->id ?? '' }}`;
+                    let brandParam = currentBrandId ? `&brand_id=${encodeURIComponent(currentBrandId)}` : '';
+                    let ajaxUrl = `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}${itemCodeParam}${artNoParam}&so_id={{ $salesOrder->id ?? '' }}${brandParam}`;
                     if ($row.length) {
                         $this.val(ui.item.label);
 						$.ajax({
@@ -1224,11 +1253,15 @@ $(document).ready(function () {
                                 if (res.success) {
                                     populateRowData($row, res);
                                 } else {
-                                    alert("Failed to fetch item details. Please try again.");
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Item Not Allowed',
+                                        text: res.message || 'Failed to fetch item details.'
+                                    });
                                 }
                             },
                             error: function() {
-                                alert("Error fetching item stock. Please check your connection.");
+                                Swal.fire({ icon: 'error', title: 'Error', text: 'Error fetching item stock. Please check your connection.' });
                             }
                         });
                     } else if ($this.attr('id') === 'global_item_search') {
@@ -1240,12 +1273,16 @@ $(document).ready(function () {
                                     handleGlobalItemSelection(res);
 									$this.val('').focus();
                                 } else {
-                                    alert("Failed to fetch item details. Please try again.");
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Item Not Allowed',
+                                        text: res.message || 'Failed to fetch item details.'
+                                    });
                                     $this.val(ui.item.value).focus();
                                 }
                             },
                             error: function() {
-                                alert("Error fetching item stock. Please check your connection.");
+                                Swal.fire({ icon: 'error', title: 'Error', text: 'Error fetching item stock. Please check your connection.' });
                             }
                         });
                     }
@@ -1296,22 +1333,78 @@ $(document).ready(function () {
     $('#global_item_search').on('keydown', function(e) {
         if (e.which === 13) {
             e.preventDefault();
+            let currentBrandId = $('#brand_id').val();
+            if (!currentBrandId) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Select Brand First',
+                    text: 'Please select a Brand in the header before scanning or typing barcodes.',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    $('#brand_id').select2('open');
+                });
+                $(this).val('');
+                return false;
+            }
+
             let val = $(this).val();
             if (val) {
                 let codeToSearch = val.split('|')[0].trim();
+                let brandParam = `&brand_id=${encodeURIComponent(currentBrandId)}`;
                 $.ajax({
-                    url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(codeToSearch)}&so_id={{ $salesOrder->id ?? '' }}`,
+                    url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(codeToSearch)}&so_id={{ $salesOrder->id ?? '' }}${brandParam}`,
                     type: 'GET',
                     success: function(res) {
                         if (res.success) {
                             handleGlobalItemSelection(res);
                             $('#global_item_search').val('').focus();
                         } else {
-                            alert("Item not found or out of stock.");
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Item Not Allowed',
+                                text: res.message || 'Item not found, out of stock, or does not belong to the selected Brand.'
+                            });
+                            $('#global_item_search').select();
                         }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to communicate with server. Please try again.'
+                        });
                     }
                 });
             }
+        }
+    });
+
+    $('#global_item_search').on('focus', function() {
+        if (!$('#brand_id').val()) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Select Brand First',
+                text: 'Please select a Brand from the dropdown above before scanning items.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            $('#brand_id').select2('open');
+        }
+    });
+
+    $('#brand_id').on('change', function() {
+        let brandName = $(this).find('option:selected').text();
+        let existingRows = $('.item-row').filter(function() {
+            return $(this).find('.stock-item-select').val() || $(this).find('.sku-input').val();
+        });
+        if (existingRows.length > 0 && $(this).val()) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Brand Selected',
+                text: 'Active Brand is now: ' + brandName + '. Only items matching this brand can be scanned and added.',
+                timer: 3000,
+                showConfirmButton: false
+            });
         }
     });
 
@@ -1985,6 +2078,17 @@ $(document).ready(function () {
     let isCameraOpen = false;
 
     $('#btn_camera_scan').click(function() {
+        if (!isCameraOpen && !$('#brand_id').val()) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Select Brand First',
+                text: 'Please select a Brand before opening the camera to scan items.',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                $('#brand_id').select2('open');
+            });
+            return;
+        }
         if (isCameraOpen && html5QrCode) {
             html5QrCode.stop().then((ignore) => {
                 $('#reader').hide();

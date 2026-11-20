@@ -45,11 +45,20 @@
                             </li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="javascript:void(0)" id="export_summary_pdf_link" target="_blank">
+                                    <i class="ri ri-file-chart-line text-info fs-5 me-2"></i>
+                                    <div>
+                                        <div class="fw-semibold">Audit Summary PDF</div>
+                                        <div class="text-muted small" style="font-size: 11px;">1-Page Reconciliation Certificate (Signatures)</div>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
                                 <a class="dropdown-item d-flex align-items-center py-2" href="javascript:void(0)" id="export_pdf_link" target="_blank">
                                     <i class="ri ri-file-pdf-line text-danger fs-5 me-2"></i>
                                     <div>
-                                        <div class="fw-semibold">PDF Format</div>
-                                        <div class="text-muted small" style="font-size: 11px;">Printable audit report with signatures</div>
+                                        <div class="fw-semibold">Detailed PDF Report</div>
+                                        <div class="text-muted small" style="font-size: 11px;">Full SKU-by-SKU discrepancy breakdown</div>
                                     </div>
                                 </a>
                             </li>
@@ -453,7 +462,7 @@ $(document).ready(function() {
                         ${qtyBadge}
                     </div>
                     <div class="small text-muted mt-1">
-                        ${escapeHtml(it.style_name || '-')}${sleeveText} &bull; Size: <strong>${escapeHtml(it.size || '-')}</strong>${it.brand_name && it.brand_name !== '-' ? ' &bull; ' + escapeHtml(it.brand_name) : ''}
+                        ${escapeHtml(it.finished_item_code || it.item_name || it.style_name || '-')}${sleeveText} &bull; Size: <strong>${escapeHtml(it.size || '-')}</strong>${it.brand_name && it.brand_name !== '-' ? ' &bull; ' + escapeHtml(it.brand_name) : ''}
                     </div>
                 </button>
             `;
@@ -542,6 +551,7 @@ $(document).ready(function() {
             $('#export_dropdown_btn').removeClass('disabled').css({ 'pointer-events': 'auto', 'opacity': '1' });
             $('#export_excel_link').attr('href', baseUrl + '/session/' + currentSessionId + '/export');
             $('#export_pdf_link').attr('href', baseUrl + '/session/' + currentSessionId + '/pdf');
+            $('#export_summary_pdf_link').attr('href', baseUrl + '/session/' + currentSessionId + '/pdf?mode=summary');
 
             if (isFinalized) {
                 $('#finalize_btn').prop('disabled', true);
@@ -561,7 +571,7 @@ $(document).ready(function() {
         } else {
             $('#export_dropdown_btn').addClass('disabled').css({ 'pointer-events': 'none', 'opacity': '0.5' });
             $('#export_excel_link').attr('href', 'javascript:void(0)');
-            $('#export_pdf_link').attr('href', 'javascript:void(0)');
+            $('#export_pdf_link, #export_summary_pdf_link').attr('href', 'javascript:void(0)');
             $('#finalize_btn').prop('disabled', true);
             $('#start_new_btn').addClass('d-none');
             $('#barcode_input').prop('disabled', false);
@@ -809,7 +819,7 @@ $(document).ready(function() {
                 } else {
                     showScanAlert('alert-danger', `<i class="ri ri-close-circle-line me-1"></i> <strong>${escapeHtml(res.message)}</strong>`);
                 }
-                loadTable(1);
+                loadTable(false);
                 refocusScanner();
             },
             error: function(xhr) {
@@ -823,7 +833,7 @@ $(document).ready(function() {
                         `<i class="ri ri-spam-2-line me-1"></i> <strong>${escapeHtml(json.message)}</strong>
                          <button type="button" class="btn btn-sm btn-warning ms-2 fw-bold btn-override-dup" data-code="${encodedCode}">Count +1 Anyway</button>`
                     );
-                    loadTable(currentPage);
+                    loadTable(false);
                     refocusScanner();
                     return;
                 }
@@ -969,6 +979,7 @@ $(document).ready(function() {
         itemsDataTable = $('#items_table').DataTable({
             processing: true,
             serverSide: true,
+            searchDelay: 400,
             ordering: false,
             responsive: true,
             autoWidth: false,
@@ -983,11 +994,13 @@ $(document).ready(function() {
             },
             columns: [
                 {
-                    data: 'style_name',
-                    name: 'style_name',
+                    data: 'finished_item_code',
+                    name: 'finished_item_code',
+                    defaultContent: '-',
                     render: function (data, type, r) {
+                        const displayName = r.finished_item_code || r.item_name || r.style_name || '-';
                         const sleeve = r.sleeve_type && r.sleeve_type !== '-' ? ' (' + escapeHtml(r.sleeve_type) + ')' : '';
-                        return `${escapeHtml(r.style_name)}${sleeve}<br><small class="text-muted">Size: ${escapeHtml(r.size)}</small>`;
+                        return `${escapeHtml(displayName)}${sleeve}<br><small class="text-muted">Size: ${escapeHtml(r.size)}</small>`;
                     }
                 },
                 {
@@ -1000,7 +1013,11 @@ $(document).ready(function() {
                 {
                     data: 'sku',
                     name: 'sku',
-                    render: function (data) {
+                    render: function (data, type, r) {
+                        const master = r.master_barcode;
+                        if (master && master !== data) {
+                            return `<span class="fw-bold text-dark">${escapeHtml(master)}</span><br><small class="text-muted">${escapeHtml(data)}</small>`;
+                        }
                         return `<span class="fw-bold">${escapeHtml(data || '-')}</span>`;
                     }
                 },

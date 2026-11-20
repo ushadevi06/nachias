@@ -12,6 +12,9 @@
             <div class="table-header-box d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h4 class="mb-0">Open Stock Entry Logs</h4>
                 <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modal_import_white_stock">
+                        <i class="ri ri-file-upload-line me-1"></i> Import Stock Excel (White / Dhoti)
+                    </button>
                     <a href="{{ url('fg_stock_taking/open-stock-entry') }}" class="btn btn-outline-success">
                         <i class="ri ri-inbox-archive-line me-1"></i> Add Open Stock Entry
                     </a>
@@ -127,6 +130,61 @@
                 <button type="button" class="btn btn-secondary text-uppercase btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Import Stock Excel Matrix Modal (White / Dhoti) -->
+<div class="modal fade" id="modal_import_white_stock" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="{{ url('fg_stock_taking/import-white-stock-matrix') }}" method="POST" enctype="multipart/form-data" class="modal-content shadow">
+            @csrf
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fw-bold text-white mb-0">
+                    <i class="ri ri-file-excel-line me-1"></i> Import Stock Excel Matrix (White / Dhoti)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info py-2 small mb-3">
+                    <i class="ri ri-information-line me-1"></i> Upload the matrix stock sheet (e.g. <code>white stock.xlsx</code> or <code>Dhoti Stock.xls</code> with columns: Item Name, Sleeve / S/L, 36, 38, 40, 42, 44, 46, 48).
+                    It will auto-map products, resolve WSP/MRP prices, and attach standard barcodes.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Select Brand <span class="text-danger">*</span></label>
+                    <select name="brand_id" id="modal_import_brand_id" class="form-select" required>
+                        <option value="10" selected>CASINO DHOTI SET (CDS)</option>
+                        <option value="7">CASINO WHITE (CW)</option>
+                    </select>
+                    <small class="text-muted">Choose <strong>CASINO DHOTI SET</strong> for Dhoti Stock, or <strong>CASINO WHITE</strong> for White Stock.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Select Excel File (.xlsx, .xls) <span class="text-danger">*</span></label>
+                    <input type="file" name="matrix_file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Warehouse <span class="text-danger">*</span></label>
+                    <select name="warehouse_id" class="form-select" required>
+                        @foreach(\App\Models\Warehouse::whereNull('deleted_at')->get() as $wh)
+                            <option value="{{ $wh->id }}">{{ $wh->warehouse_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Store Type <span class="text-danger">*</span></label>
+                    <select name="store_type_id" class="form-select" required>
+                        @foreach(\App\Models\StoreType::whereNull('deleted_at')->where('store_type_name', 'like', '%FINISHED%')->get() as $st)
+                            <option value="{{ $st->id }}" selected>{{ $st->store_type_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary px-4 fw-bold">
+                    <i class="ri ri-upload-cloud-line me-1"></i> Upload & Import
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection

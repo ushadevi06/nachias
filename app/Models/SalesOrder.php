@@ -19,6 +19,7 @@ class SalesOrder extends Model
         'request_date',
         'order_type',
         'season_id',
+        'brand_id',
         'customer_id',
         'customer_po_ref',
         'store_id',
@@ -95,6 +96,11 @@ class SalesOrder extends Model
         'total_amount'    => 'decimal:2',
         'apply_box_discount' => 'boolean',
     ];
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
 
     public function customer()
     {

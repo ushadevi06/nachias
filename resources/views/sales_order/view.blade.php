@@ -49,6 +49,15 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4 col-lg-3">
+                                    <select name="brand_id" id="filter_brand" class="form-select select2"
+                                        data-placeholder="Select Brand">
+                                        <option value="">Select Brand</option>
+                                        @foreach(\App\Models\Brand::whereNull('deleted_at')->where('status', 'Active')->finishedGoods()->orderBy('brand_name', 'asc')->get() as $b)
+                                            <option value="{{ $b->id }}">{{ $b->brand_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-lg-3">
                                     <select name="status" id="filter_status" class="form-select select2"
                                         data-placeholder="Select Status">
                                         <option value="">Select Status</option>
@@ -190,6 +199,7 @@
                     url: "{{ url('sales_orders') }}",
                     data: function (d) {
                         d.customer_id = $('#filter_customer').val();
+                        d.brand_id = $('#filter_brand').val();
                         d.status = $('#filter_status').val();
                         d.so_date_range = $('#so_date_range').val();
                     }
@@ -375,6 +385,7 @@
                 selectedSoIds.clear();
                 updateBulkActionBar();
                 $('#filter_customer').val('').trigger('change');
+                $('#filter_brand').val('').trigger('change');
                 $('#filter_status').val('').trigger('change');
                 $('#so_date_range').val('');
                 table.ajax.reload();

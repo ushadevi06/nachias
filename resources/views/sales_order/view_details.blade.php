@@ -32,7 +32,12 @@
                 <div class="card-header py-3 bg-light" style="border-radius: 12px 12px 0 0;">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold text-dark text-uppercase small">General Information</h5>
-                        <span class="badge bg-white text-primary px-3 py-2">SO: #{{ $salesOrder->so_no }}</span>
+                        <div>
+                            @if(!empty($salesOrder->order_no))
+                                <span class="badge bg-white text-info border px-3 py-2 me-1">Orderaxe: #{{ $salesOrder->order_no }}</span>
+                            @endif
+                            <span class="badge bg-white text-primary px-3 py-2">SO: #{{ $salesOrder->so_no }}</span>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body p-4">
@@ -40,6 +45,18 @@
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">SO No</div>
                             <div class="fw-bold text-primary">{{ $salesOrder->so_no }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Orderaxe No</div>
+                            <div class="fw-bold text-dark">
+                                @if(!empty($salesOrder->order_no))
+                                    <span class="text-info font-monospace px-2 py-1 fs-6">{{ $salesOrder->order_no }}</span>
+                                @elseif(!empty($salesOrder->orderaxe_id))
+                                    <span class="text-info">Synced</span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">SO Date</div>
@@ -56,6 +73,16 @@
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Delivery Date</div>
                             <div class="fw-bold text-dark">{{ $salesOrder->delivery_date ? \Carbon\Carbon::parse($salesOrder->delivery_date)->format('d M, Y') : '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Brand</div>
+                            <div class="fw-bold text-dark">
+                                @if($salesOrder->brand)
+                                    <span class="badge bg-light text-primary border font-monospace px-2 py-1 fs-6">{{ $salesOrder->brand->brand_name }}</span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Season</div>

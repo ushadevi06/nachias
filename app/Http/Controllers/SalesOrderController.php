@@ -15,6 +15,7 @@ use App\Models\ShippingMethod;
 use App\Models\TransportMode;
 use App\Models\ServiceProvider;
 use App\Models\BrandCategory;
+use App\Models\Brand;
 use App\Models\Item;
 use App\Models\Color;
 use App\Models\Uom;
@@ -30,10 +31,14 @@ class SalesOrderController extends Controller
 {
     private function buildSalesOrderQuery(Request $request, $isBulkAction = false)
     {
-        $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id', 'desc');
+        $query = SalesOrder::with(['customer', 'salesAgent', 'brand'])->orderBy('id', 'desc');
 
         if (!empty($request->customer_id)) {
             $query->where('customer_id', $request->customer_id);
+        }
+
+        if (!empty($request->brand_id)) {
+            $query->where('brand_id', $request->brand_id);
         }
 
         $filterStatus = $isBulkAction ? $request->status_filter : $request->status;
@@ -72,6 +77,9 @@ class SalesOrderController extends Controller
                   })
                   ->orWhereHas('salesAgent', function($sq) use ($search) {
                       $sq->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('brand', function($bq) use ($search) {
+                      $bq->where('brand_name', 'like', "%{$search}%");
                   });
             });
         }
@@ -187,7 +195,7 @@ class SalesOrderController extends Controller
                         ? '<br><span class="badge bg-label-warning mt-1" style="font-size:10px;"><i class="ri ri-refresh-line me-1"></i>Orderaxe</span>'
                         : ''),
                     'so_date' => $so->so_date ? $so->so_date->format('d-m-Y') : '-',
-                    'customer_name' => $so->customer ? ($so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>') : '-',
+                    'customer_name' => ($so->customer ? ($so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>') : '-') . ($so->brand ? '<br><span class="badge bg-label-primary mt-1" style="font-size:10px;"><i class="ri ri-price-tag-3-line me-1"></i>' . e($so->brand->brand_name) . '</span>' : ''),
                     'customer_po_ref' => $so->customer_po_ref ?? '-',
                     'total_qty' => number_format($so->total_qty, 2),
                     'sales_agent' => $so->salesAgent ? $so->salesAgent->name : '-',
@@ -247,6 +255,7 @@ class SalesOrderController extends Controller
                 'delivery_date' => 'nullable|date_format:d-m-Y',
                 'order_type' => 'required|string|max:50',
                 'season_id' => 'nullable|exists:seasons,id',
+                'brand_id' => 'required|exists:brands,id',
                 'customer_id' => 'required|exists:customers,id',
                 'customer_po_ref' => 'nullable|string|min:3|max:50',
                 'store_id' => 'required|exists:store_types,id',
@@ -379,6 +388,7 @@ class SalesOrderController extends Controller
                     'delivery_date' => $request->delivery_date ?Carbon::createFromFormat('d-m-Y', $request->delivery_date)->format('Y-m-d') : null,
                     'order_type' => $request->order_type,
                     'season_id' => $request->season_id,
+                    'brand_id' => $request->brand_id,
                     'customer_id' => $request->customer_id,
                     'customer_po_ref' => $request->customer_po_ref,
                     'store_id' => $request->store_id,
@@ -627,6 +637,7 @@ class SalesOrderController extends Controller
         $customers = Customer::where('status', 'Active')->orderBy('id', 'desc')->get();
         $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $brands = Brand::whereNull('deleted_at')->where('status', 'Active')->finishedGoods()->orderBy('brand_name', 'asc')->get();
 
         $availableStockItems = DB::table('stock_entry_items')
             ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
@@ -693,7 +704,7 @@ class SalesOrderController extends Controller
         $transportModes = TransportMode::where('status', 'Active')->orderBy('id','desc')->get();
         $serviceProviders = ServiceProvider::where('status', 'Active')->orderBy('id','desc')->get();
 
-        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders', 'charges'));
+        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'brands', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders', 'charges'));
 
     }
 
@@ -702,7 +713,7 @@ class SalesOrderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details sales-order')) {
             return unauthorizedRedirect();
         }
-        $salesOrder = SalesOrder::with(['customer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom', 'items.stockEntryItem'])->findOrFail($id);
+        $salesOrder = SalesOrder::with(['customer', 'salesAgent', 'store', 'season', 'brand', 'items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom', 'items.stockEntryItem'])->findOrFail($id);
         return view('sales_order.view_details', compact('salesOrder'));
     }
 
@@ -1006,8 +1017,17 @@ class SalesOrderController extends Controller
         $sleeveType = $request->sleeve_type;
         $size = $request->size;
 		$artNo = $request->art_no;
+		$brandId = $request->brand_id;
 		
         $exactMatchQuery = DB::table('stock_entry_items')->where('sku', $code)->where('stock_type', 'finished_goods')->whereNull('deleted_at');
+        if ($brandId) {
+            $exactMatchQuery->where(function($q) use ($brandId) {
+                $q->where('stock_entry_items.brand_id', $brandId)
+                  ->orWhereExists(function($sq) use ($brandId) {
+                      $sq->select(DB::raw(1))->from('items')->whereColumn('items.id', 'stock_entry_items.item_id')->where('items.brand_id', $brandId);
+                  });
+            });
+        }
         if ($itemCode) {
             $exactMatchQuery->where('finished_item_code', $itemCode);
         }
@@ -1025,12 +1045,22 @@ class SalesOrderController extends Controller
         $query = DB::table('stock_entry_items')
             ->select('stock_entry_items.*', 'items.name as item_name', 'brands.brand_name', 'brand_categories.id as brand_cat_id')
             ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
-            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
+            ->leftJoin('brands', function($j) {
+                $j->on('items.brand_id', '=', 'brands.id')
+                  ->orOn('stock_entry_items.brand_id', '=', 'brands.id');
+            })
             ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
             ->whereNotNull('stock_entry_items.sku')
             ->where('stock_entry_items.sku', '!=', '');
+
+        if ($brandId) {
+            $query->where(function($q) use ($brandId) {
+                $q->where('stock_entry_items.brand_id', $brandId)
+                  ->orWhere('items.brand_id', $brandId);
+            });
+        }
 
         if ($exactMatch) {
             $query->where('sku', $code);
@@ -1137,20 +1167,60 @@ class SalesOrderController extends Controller
             ]);
         }
 
-        return response()->json(['success' => false]);
+        if (!empty($brandId)) {
+            $otherBrandItem = DB::table('stock_entry_items')
+                ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
+                ->leftJoin('brands', function($j) {
+                    $j->on('items.brand_id', '=', 'brands.id')
+                      ->orOn('stock_entry_items.brand_id', '=', 'brands.id');
+                })
+                ->where('stock_entry_items.stock_type', 'finished_goods')
+                ->whereNull('stock_entry_items.deleted_at')
+                ->where(function($q) use ($code) {
+                    $q->where('stock_entry_items.sku', $code)
+                      ->orWhere('stock_entry_items.barcode', $code)
+                      ->orWhere('stock_entry_items.finished_item_code', $code);
+                })
+                ->whereNotNull('brands.brand_name')
+                ->select('brands.brand_name')
+                ->first();
+
+            if ($otherBrandItem && !empty($otherBrandItem->brand_name)) {
+                $selBrand = Brand::find($brandId);
+                $selBrandName = $selBrand ? $selBrand->brand_name : 'Selected Brand';
+                return response()->json([
+                    'success' => false,
+                    'message' => "Item belongs to '{$otherBrandItem->brand_name}', but current order brand is '{$selBrandName}'. Only items from '{$selBrandName}' can be added!"
+                ]);
+            }
+        }
+
+        return response()->json(['success' => false, 'message' => 'Item not found or out of stock.']);
     }
 
     public function searchStockItems(Request $request)
     {
         $term = $request->term;
-        $results = DB::table('stock_entry_items')
+        $brandId = $request->brand_id;
+        $query = DB::table('stock_entry_items')
             ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
-            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
+            ->leftJoin('brands', function($j) {
+                $j->on('items.brand_id', '=', 'brands.id')
+                  ->orOn('stock_entry_items.brand_id', '=', 'brands.id');
+            })
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
             ->whereNotNull('stock_entry_items.sku')
-            ->where('stock_entry_items.sku', '!=', '')
-            ->where(function ($query) use ($term) {
+            ->where('stock_entry_items.sku', '!=', '');
+
+        if (!empty($brandId)) {
+            $query->where(function($q) use ($brandId) {
+                $q->where('stock_entry_items.brand_id', $brandId)
+                  ->orWhere('items.brand_id', $brandId);
+            });
+        }
+
+        $results = $query->where(function ($query) use ($term) {
                 $query->where('stock_entry_items.finished_item_code', 'LIKE', "%{$term}%")
                       ->orWhere('stock_entry_items.sku', 'LIKE', "%{$term}%")
                       ->orWhere('stock_entry_items.barcode', 'LIKE', "%{$term}%")

@@ -33,4 +33,11 @@ class Brand extends Model
     {
         return $query->where('status', 'Active');
     }
+
+    public function scopeFinishedGoods($query)
+    {
+        return $query->where('brand_name', 'not like', '%accessor%')
+            ->where('code', 'not like', '%-AS')
+            ->whereNotIn('code', ['DAS', 'CAS', 'COM-AS']);
+    }
 }

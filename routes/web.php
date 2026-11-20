@@ -553,6 +553,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('fg_stock_taking/open-stock-logs/view/{entry_no}', [FgStockTakingController::class, 'openStockEntryView']);
     Route::delete('fg_stock_taking/open-stock-logs/{id}', [FgStockTakingController::class, 'deleteOpenStockLog']);
     Route::post('fg_stock_taking/open-stock-logs/{id}/delete', [FgStockTakingController::class, 'deleteOpenStockLog']);
+    Route::post('fg_stock_taking/import-white-stock-matrix', [FgStockTakingController::class, 'importWhiteStockMatrix']);
 
     /* Store */
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);

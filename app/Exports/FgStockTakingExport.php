@@ -123,11 +123,13 @@ class FgStockTakingVarianceSheet implements FromArray, WithTitle, WithStyles, Wi
                     $locationDisplay = $scannedLocMap[$item->id] ?? ($item->storeLocation?->store_location ? ($item->storeLocation->store_location . ' - ' . (int)$calc['scanned_qty']) : '-');
                 }
 
+                $masterBarcode = \App\Http\Controllers\FgStockTakingController::resolveMasterBarcode($item->art_no, $item->size, $item->sleeve_type, (int) $this->session->brand_id) ?: $item->sku;
+
                 $rows[] = [
                     $idx + 1,
-                    $item->style_name ?: '-',
+                    $item->finished_item_code ?: ($item->style_name ?: '-'),
                     $item->art_no ?: '-',
-                    $item->sku,
+                    $masterBarcode,
                     $item->sleeve_type ?: '-',
                     $item->size ?: '-',
                     floatval($item->rate),

@@ -22,6 +22,16 @@
                                 <h5 class="mb-0">Filter</h5>
                             </div>
                             <div class="col-md-4 col-lg-3">
+                                <select id="history_brand_filter" class="form-select select2" data-placeholder="Select Brand">
+                                    <option value="">All Brands</option>
+                                    @if(isset($brands))
+                                        @foreach($brands as $b)
+                                            <option value="{{ $b->id }}">{{ $b->brand_name }}</option>
+                                        @endforeach
+                                    @endif
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
                                 <select id="history_status_filter" class="form-select select2" data-placeholder="Filter Status">
                                     <option value="all" selected>All Status</option>
                                     <option value="finalized">Finalized</option>
@@ -68,6 +78,7 @@ $(function () {
     }
 
     let currentStatusFilter = 'all';
+    let currentBrandFilter = '';
 
     const table = $('.stock-taking-logs-table').DataTable({
         responsive: true,
@@ -84,6 +95,7 @@ $(function () {
             url: "{{ url('fg_stock_taking/sessions') }}",
             data: function (d) {
                 d.status = currentStatusFilter;
+                d.brand_id = currentBrandFilter;
             }
         },
         columns: [
@@ -160,20 +172,23 @@ $(function () {
                 render: function (data, type, row) {
                     const deleteBtn = row.raw_status === 'In Progress' ? `
                         <button type="button" class="btn btn-sm btn-outline-danger btn-delete-session" data-id="${row.id}" data-session-no="${escapeHtml(row.session_no)}" title="Delete Session">
-                            <i class="ri ri-delete-bin-line me-1"></i> Delete
+                            <i class="ri ri-delete-bin-line"></i>
                         </button>
                     ` : '';
 
                     return `
                         <div class="d-flex gap-1 text-nowrap">
                             <a href="${escapeHtml(row.view_url)}" class="btn btn-sm btn-outline-primary" title="View Session">
-                                <i class="ri ri-eye-line me-1"></i> View
+                                <i class="ri ri-eye-line"></i>
                             </a>
-                            <a href="${escapeHtml(row.export_url)}" class="btn btn-sm btn-outline-success" title="Export Excel">
-                                <i class="ri ri-file-excel-line me-1"></i> Excel
+                            <a href="${escapeHtml(row.export_url)}" class="btn btn-sm btn-outline-success" title="Download Excel">
+                                <i class="ri ri-file-excel-line"></i>
                             </a>
-                            <a href="${escapeHtml(row.pdf_url)}" target="_blank" class="btn btn-sm btn-outline-danger" title="Export PDF">
-                                <i class="ri ri-file-pdf-line me-1"></i> PDF
+                            <a href="${escapeHtml(row.summary_pdf_url || (row.pdf_url + '?mode=summary'))}" target="_blank" class="btn btn-sm btn-outline-info" title="Stock Audit Summary PDF">
+                                <i class="ri ri-file-chart-line"></i>
+                            </a>
+                            <a href="${escapeHtml(row.pdf_url)}" target="_blank" class="btn btn-sm btn-outline-danger" title="Detailed PDF Report">
+                                <i class="ri ri-file-pdf-line"></i>
                             </a>
                             ${deleteBtn}
                         </div>
@@ -185,12 +200,15 @@ $(function () {
 
     $('#logs_filter_btn').on('click', function () {
         currentStatusFilter = $('#history_status_filter').val() || 'all';
+        currentBrandFilter = $('#history_brand_filter').val() || '';
         table.ajax.reload();
     });
 
     $('#logs_reset_btn').on('click', function () {
         $('#history_status_filter').val('all').trigger('change.select2');
+        $('#history_brand_filter').val('').trigger('change.select2');
         currentStatusFilter = 'all';
+        currentBrandFilter = '';
         table.search('').draw();
     });
 
